@@ -40,6 +40,10 @@
 
 * { box-sizing: border-box; }
 
+/* Атрибут hidden должен реально прятать элемент, даже если класс задаёт
+   display:flex (иначе .tb-group / .tb-admin-badge перебивают hidden). */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
