@@ -30,7 +30,6 @@
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyDbxRZK5rGRfv8iDJoiPosOS4Tw0h-4hbw",
   authDomain:        "nexus-117f0.firebaseapp.com",
-  // databaseURL берётся из Firebase Console → Realtime Database (вверху страницы)
   databaseURL:       "https://nexus-117f0-default-rtdb.firebaseio.com",
   projectId:         "nexus-117f0",
   storageBucket:     "nexus-117f0.firebasestorage.app",
@@ -40,4 +39,4 @@ const FIREBASE_CONFIG = {
 
 // Твой Google UID — оставь пустым при первом входе.
 // После входа появится окошко с UID — вставь его сюда.
-const ADMIN_UID = "";
+const ADMIN_UID = "K0wFqjgmfMN6noIKqfWKf45brQ03";
