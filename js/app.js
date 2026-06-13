@@ -891,17 +891,39 @@
         render();
       });
 
-      // Показать UID человеку, чтобы он прислал его для добавления в админы
+      // Показать UID прямо на странице (надёжнее alert/prompt, которые
+      // браузер может молча блокировать) — с кнопкой «Копировать».
       function showUid(uid) {
         console.log("Ваш UID:", uid);
-        // лучшая попытка скопировать в буфер обмена (https — работает на github.io)
-        try { if (navigator.clipboard) navigator.clipboard.writeText(uid); } catch (e) {}
-        // prompt показывает UID в выделенном поле — легко скопировать (Ctrl+C)
-        prompt(
-          "Ваш аккаунт пока не администратор.\n\n" +
-          "Скопируйте этот UID и отправьте владельцу сайта, чтобы вас добавили:",
-          uid
-        );
+        const old = document.getElementById("uidBanner");
+        if (old) old.remove();
+
+        const box = document.createElement("div");
+        box.id = "uidBanner";
+        box.className = "uid-banner";
+        box.innerHTML =
+          '<button class="uid-banner-close" title="Закрыть">✕</button>' +
+          '<div class="uid-banner-title">Вы пока не администратор</div>' +
+          '<div class="uid-banner-sub">Скопируйте свой UID и отправьте владельцу сайта, чтобы вас добавили:</div>' +
+          '<div class="uid-banner-row">' +
+            '<input class="uid-banner-input" readonly />' +
+            '<button class="btn primary uid-banner-copy" type="button">Копировать</button>' +
+          '</div>';
+        document.body.appendChild(box);
+
+        const input = box.querySelector(".uid-banner-input");
+        input.value = uid;            // значение через свойство, не через innerHTML
+        input.focus();
+        input.select();
+
+        box.querySelector(".uid-banner-copy").addEventListener("click", () => {
+          input.focus(); input.select();
+          let ok = false;
+          try { ok = document.execCommand("copy"); } catch (e) {}
+          try { if (navigator.clipboard) navigator.clipboard.writeText(uid); } catch (e) {}
+          box.querySelector(".uid-banner-copy").textContent = ok ? "Скопировано ✓" : "Выделено — Ctrl+C";
+        });
+        box.querySelector(".uid-banner-close").addEventListener("click", () => box.remove());
       }
 
       // Следим за состоянием авторизации

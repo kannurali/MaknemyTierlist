@@ -94,6 +94,41 @@ html, body {
   gap: 6px;
 }
 
+/* Баннер с UID для не-админов (показывается на странице, а не через alert) */
+.uid-banner {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  width: min(460px, 92vw);
+  background: linear-gradient(180deg, #14213f, #0e1830);
+  border: 1px solid rgba(120, 190, 255, .45);
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .7);
+  padding: 16px 18px;
+  color: #eaf4ff;
+}
+.uid-banner-title { font-family: var(--display); font-size: 19px; color: var(--cyan); letter-spacing: .5px; margin-bottom: 4px; }
+.uid-banner-sub { font-size: 13px; color: #9fc2ee; margin-bottom: 12px; line-height: 1.3; padding-right: 18px; }
+.uid-banner-row { display: flex; gap: 8px; }
+.uid-banner-input {
+  flex: 1; min-width: 0;
+  background: rgba(8, 16, 32, .8);
+  border: 1px solid rgba(120, 190, 255, .3);
+  border-radius: 8px; padding: 10px 11px;
+  color: #eaf4ff; font-size: 13px;
+  font-family: "Consolas", "Courier New", monospace;
+}
+.uid-banner-input:focus { outline: none; border-color: var(--cyan); }
+.uid-banner-copy { flex: none; white-space: nowrap; }
+.uid-banner-close {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none;
+  color: #9fc2ee; font-size: 16px; line-height: 1; cursor: pointer;
+}
+.uid-banner-close:hover { color: #fff; }
+
 .btn {
   font-family: var(--ui);
   font-size: 13px;
