@@ -37,6 +37,8 @@ const FIREBASE_CONFIG = {
   appId:             "1:928095415814:web:27b4da6d4b952819da1d87"
 };
 
-// Твой Google UID — оставь пустым при первом входе.
-// После входа появится окошко с UID — вставь его сюда.
-const ADMIN_UID = "K0wFqjgmfMN6noIKqfWKf45brQ03";
+// Список UID всех администраторов.
+// Чтобы добавить нового: попроси его нажать "Войти", скопируй его UID из попапа и добавь строкой ниже.
+const ADMIN_UIDS = [
+  "K0wFqjgmfMN6noIKqfWKf45brQ03",  // главный
+];

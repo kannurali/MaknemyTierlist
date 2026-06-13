@@ -894,18 +894,19 @@
       auth.onAuthStateChanged(user => {
         if (!user) { setAdminMode(false); return; }
 
-        if (ADMIN_UID === "") {
-          // Первый запуск: показываем UID чтобы вставить в конфиг
+        const uids = typeof ADMIN_UIDS !== "undefined" ? ADMIN_UIDS : [];
+        if (!uids.length) {
+          // Первый запуск: список пуст — показываем UID для добавления в конфиг
           alert(
             "Ваш UID:\n" + user.uid +
-            "\n\nВставьте его в js/firebase-config.js → ADMIN_UID, " +
+            "\n\nДобавьте его в js/firebase-config.js → ADMIN_UIDS, " +
             "затем задеплойте снова."
           );
           auth.signOut();
           return;
         }
 
-        if (user.uid === ADMIN_UID) {
+        if (uids.includes(user.uid)) {
           setAdminMode(true);
         } else {
           alert("Этот Google-аккаунт не является администратором.");
