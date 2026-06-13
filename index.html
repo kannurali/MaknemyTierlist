@@ -7,6 +7,15 @@
 <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- ============ Floating auth control (top-right corner) ============ -->
+  <div class="auth-dock" id="authDock">
+    <button class="btn" id="btnLogin" title="Войти как администратор">🔑 Войти</button>
+    <div class="tb-admin-badge" id="adminBadge" hidden>
+      <span class="tb-admin-text">👑 Админ</span>
+      <button class="btn small ghost" id="btnLogout">Выйти</button>
+    </div>
+  </div>
+
   <!-- ================= Toolbar ================= -->
   <div class="toolbar" id="toolbar">
     <div class="tb-brand">NEXUS<span>EDITOR</span></div>
@@ -49,15 +58,6 @@
       <button class="btn" id="btnExport" title="Сохранить как JSON">Экспорт</button>
       <button class="btn" id="btnImport" title="Загрузить JSON">Импорт</button>
       <button class="btn danger" id="btnReset" title="Сбросить к шаблону">Сброс</button>
-    </div>
-
-    <!-- Авторизация -->
-    <div class="tb-group">
-      <button class="btn" id="btnLogin" title="Войти как администратор">🔑 Войти</button>
-      <div class="tb-admin-badge" id="adminBadge" hidden>
-        <span class="tb-admin-text">👑 Админ</span>
-        <button class="btn small ghost" id="btnLogout">Выйти</button>
-      </div>
     </div>
 
     <input type="file" id="importFile" accept="application/json" hidden />

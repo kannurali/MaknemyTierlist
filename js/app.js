@@ -595,6 +595,7 @@
   let editingId = null;
 
   function openModal(iid) {
+    if (!isAdmin) return; // редактировать может только администратор
     const found = findItem(iid);
     if (!found) return;
     editingId = iid;
