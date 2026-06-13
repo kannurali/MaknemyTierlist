@@ -891,28 +891,32 @@
         render();
       });
 
+      // Показать UID человеку, чтобы он прислал его для добавления в админы
+      function showUid(uid) {
+        console.log("Ваш UID:", uid);
+        // лучшая попытка скопировать в буфер обмена (https — работает на github.io)
+        try { if (navigator.clipboard) navigator.clipboard.writeText(uid); } catch (e) {}
+        // prompt показывает UID в выделенном поле — легко скопировать (Ctrl+C)
+        prompt(
+          "Ваш аккаунт пока не администратор.\n\n" +
+          "Скопируйте этот UID и отправьте владельцу сайта, чтобы вас добавили:",
+          uid
+        );
+      }
+
       // Следим за состоянием авторизации
       auth.onAuthStateChanged(user => {
         if (!user) { setAdminMode(false); return; }
 
         const uids = typeof ADMIN_UIDS !== "undefined" ? ADMIN_UIDS : [];
-        if (!uids.length) {
-          // Первый запуск: список пуст — показываем UID для добавления в конфиг
-          alert(
-            "Ваш UID:\n" + user.uid +
-            "\n\nДобавьте его в js/firebase-config.js → ADMIN_UIDS, " +
-            "затем задеплойте снова."
-          );
+        if (!uids.length || !uids.includes(user.uid)) {
+          // Не в списке админов — показываем UID и выходим
+          showUid(user.uid);
           auth.signOut();
           return;
         }
 
-        if (uids.includes(user.uid)) {
-          setAdminMode(true);
-        } else {
-          alert("Этот Google-аккаунт не является администратором.");
-          auth.signOut();
-        }
+        setAdminMode(true);
       });
 
       $("#btnLogin").addEventListener("click", () => {
