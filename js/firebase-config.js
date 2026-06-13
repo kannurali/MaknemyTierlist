@@ -30,7 +30,7 @@
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyDbxRZK5rGRfv8iDJoiPosOS4Tw0h-4hbw",
   authDomain:        "nexus-117f0.firebaseapp.com",
-  databaseURL:       "https://nexus-117f0-default-rtdb.firebaseio.com",
+  databaseURL:       "https://nexus-117f0-default-rtdb.europe-west1.firebasedatabase.app",
   projectId:         "nexus-117f0",
   storageBucket:     "nexus-117f0.firebasestorage.app",
   messagingSenderId: "928095415814",
