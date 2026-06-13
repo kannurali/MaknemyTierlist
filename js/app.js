@@ -804,6 +804,20 @@
         useCORS: true,
         allowTaint: false,
         logging: false,
+        // html2canvas не умеет CSS blend-mode, поэтому фон выходил «цветным».
+        // В клоне для экспорта подменяем фон на заранее посчитанную синюю
+        // версию (bg.png × #091640) и убираем blend-mode у лепестков.
+        onclone: (doc) => {
+          const url = new URL("assets/bg-export.png", location.href).href;
+          const s = doc.getElementById("stage");
+          if (s) {
+            s.style.backgroundImage = 'url("' + url + '")';
+            s.style.backgroundColor = "#091640";
+            s.style.backgroundBlendMode = "normal";
+          }
+          const p = doc.querySelector(".petals");
+          if (p) p.style.mixBlendMode = "normal";
+        },
       });
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
