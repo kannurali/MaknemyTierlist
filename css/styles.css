@@ -311,7 +311,11 @@ html, body {
 /* ===================== Tiers ===================== */
 .tiers { display: flex; flex-direction: column; gap: 1.2cqw; flex: 1; }
 
-.tier { position: relative; display: flex; flex-direction: column; gap: .7cqw; }
+.tier { position: relative; display: flex; flex-direction: column; gap: 1cqw; }
+/* группа «плашка + ряд предметов». При переполнении тир показывает несколько
+   таких групп — каждая отдельный ряд со своей плашкой и небольшим отступом
+   (через gap у .tier), а не один «удвоенный» по высоте блок. */
+.tier-rowgroup { display: flex; flex-direction: column; gap: .7cqw; }
 
 /* --- label band: halftone dots fading to clear center, light edge lines --- */
 .tier-band {
@@ -356,9 +360,7 @@ html, body {
 /* --- items track: translucent panel with halftone tile --- */
 .tier-items {
   display: flex; flex-wrap: wrap;
-  /* row-gap даёт перенесённым предметам отдельный ряд с небольшим отступом,
-     чтобы тир не выглядел «удвоенным» при переполнении */
-  column-gap: .55cqw; row-gap: 1.8cqw;
+  column-gap: .55cqw; row-gap: .9cqw;
   align-content: flex-start;
   min-height: 10cqw;
   border-radius: 1.4cqw;

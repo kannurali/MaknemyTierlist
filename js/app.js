@@ -240,12 +240,25 @@
     });
   }
 
-  function renderTier(tier, ti) {
-    const sec = document.createElement("section");
-    sec.className = "tier";
-    sec.dataset.id = tier.id;
+  // Сколько ячеек помещается в один ряд при текущей ширине сцены.
+  // cqw = 1% inline-размера .stage (container-type: inline-size).
+  function itemsPerRow() {
+    const cs = getComputedStyle(stage);
+    const contentW = stage.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+    if (!contentW || contentW < 60) return 0; // сцена ещё не разложена
+    const cqw = contentW / 100;
+    const cellW   = 8.2 * cqw;
+    const colGap  = 0.55 * cqw;
+    const panelPad = 0.8 * cqw;            // .tier-items padding слева+справа
+    const innerW  = contentW - 2 * panelPad - 2; // -2 на рамку панели
+    const per = Math.floor((innerW + colGap) / (cellW + colGap) + 1e-6);
+    return Math.max(1, per);
+  }
 
-    // label band (дорожка-плашка как в макете)
+  // Плашка-заголовок тира. Инструменты/редактирование — только у первой
+  // плашки (isFirst); у плашек-продолжений логотип/название повторяются,
+  // но без кнопок и без contenteditable.
+  function renderBand(tier, ti, isFirst) {
     const band = document.createElement("div");
     band.className = "tier-band";
 
@@ -258,41 +271,73 @@
       band.appendChild(img);
     } else {
       const label = document.createElement("div");
-      label.className = "tier-label";
+      label.className = "tier-label" + (isFirst ? "" : " cont-label");
       label.textContent = tier.label || "";
-      label.contentEditable = "true";
       label.spellcheck = false;
-      label.addEventListener("blur", () => { tier.label = label.textContent.trim(); save(); });
-      label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
+      if (isFirst) {
+        label.addEventListener("blur", () => { tier.label = label.textContent.trim(); save(); });
+        label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
+      }
       band.appendChild(label);
     }
 
-    const tools = document.createElement("div");
-    tools.className = "tier-tools edit-only";
-    tools.appendChild(toolBtn("🖼", "Загрузить логотип тира", () => pickTierLogo(tier.id)));
-    if (tier.logo) tools.appendChild(toolBtn("Т", "Убрать логотип (показывать текст)", () => { tier.logo = ""; save(); render(); }));
-    tools.appendChild(toolBtn("▲", "Выше", () => moveTier(ti, -1)));
-    tools.appendChild(toolBtn("▼", "Ниже", () => moveTier(ti, +1)));
-    tools.appendChild(toolBtn("✕", "Удалить тир", () => deleteTier(tier.id)));
-    band.appendChild(tools);
-    sec.appendChild(band);
+    if (isFirst) {
+      const tools = document.createElement("div");
+      tools.className = "tier-tools edit-only";
+      tools.appendChild(toolBtn("🖼", "Загрузить логотип тира", () => pickTierLogo(tier.id)));
+      if (tier.logo) tools.appendChild(toolBtn("Т", "Убрать логотип (показывать текст)", () => { tier.logo = ""; save(); render(); }));
+      tools.appendChild(toolBtn("▲", "Выше", () => moveTier(ti, -1)));
+      tools.appendChild(toolBtn("▼", "Ниже", () => moveTier(ti, +1)));
+      tools.appendChild(toolBtn("✕", "Удалить тир", () => deleteTier(tier.id)));
+      band.appendChild(tools);
+    }
+    return band;
+  }
 
-    // items dropzone (дорожка с предметами)
-    const list = document.createElement("div");
-    list.className = "tier-items";
-    list.dataset.tier = tier.id;
-    tier.items.forEach(item => list.appendChild(renderCell(item, tier)));
+  function renderTier(tier, ti) {
+    const sec = document.createElement("section");
+    sec.className = "tier";
+    sec.dataset.id = tier.id;
 
-    // add-item ghost
-    const add = document.createElement("div");
-    add.className = "cell-add edit-only";
-    add.title = "Добавить предмет";
-    add.textContent = "＋";
-    add.addEventListener("click", () => addItem(tier.id));
-    list.appendChild(add);
+    // Разбиваем предметы тира на ряды: каждый ряд — отдельная плашка-тир со
+    // своей шапкой и небольшим отступом, чтобы тир «не удваивался» в одной
+    // полосе при переполнении. Данные тира не меняем — это только верстка.
+    const per = itemsPerRow();
+    const chunks = [];
+    if (per > 0 && tier.items.length > per) {
+      for (let i = 0; i < tier.items.length; i += per) chunks.push(tier.items.slice(i, i + per));
+    } else {
+      chunks.push(tier.items.slice());
+    }
+    if (!chunks.length) chunks.push([]); // пустой тир — одна плашка
 
-    setupDropzone(list, tier);
-    sec.appendChild(list);
+    chunks.forEach((chunk, ci) => {
+      const isFirst = ci === 0;
+      const isLast  = ci === chunks.length - 1;
+
+      const group = document.createElement("div");
+      group.className = "tier-rowgroup";
+      group.appendChild(renderBand(tier, ti, isFirst));
+
+      const list = document.createElement("div");
+      list.className = "tier-items";
+      list.dataset.tier = tier.id;
+      chunk.forEach(item => list.appendChild(renderCell(item, tier)));
+
+      if (isLast) {
+        const add = document.createElement("div");
+        add.className = "cell-add edit-only";
+        add.title = "Добавить предмет";
+        add.textContent = "＋";
+        add.addEventListener("click", () => addItem(tier.id));
+        list.appendChild(add);
+      }
+
+      setupDropzone(list, tier);
+      group.appendChild(list);
+      sec.appendChild(group);
+    });
+
     return sec;
   }
 
@@ -741,8 +786,8 @@
     const on = editToggle.checked;
     stage.classList.toggle("editing", on);
     document.querySelectorAll(".edit-only").forEach(el => { el.style.display = on ? "" : "none"; });
-    // contenteditable only in edit mode
-    document.querySelectorAll(".tier-label, #tlDate, .ad-text, .cr-role, .cr-name").forEach(el => {
+    // contenteditable only in edit mode (плашки-продолжения .cont-label не редактируются)
+    document.querySelectorAll(".tier-label:not(.cont-label), #tlDate, .ad-text, .cr-role, .cr-name").forEach(el => {
       el.contentEditable = on ? "true" : "false";
     });
   }
@@ -1010,11 +1055,11 @@
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initFirebase();
-  // refit values when the stage size or fonts change
+  // при смене ширины пересчитываем разбивку на ряды (itemsPerRow) и подгон цифр
   let resizeT = null;
   window.addEventListener("resize", () => {
     clearTimeout(resizeT);
-    resizeT = setTimeout(fitValues, 100);
+    resizeT = setTimeout(render, 150);
   });
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(fitValues).catch(() => {});
