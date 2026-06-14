@@ -217,18 +217,25 @@
     fitValues();
   }
 
-  // Scale each value down so it never overflows its strip.
+  // Ужимаем значение по ШРИФТУ (а не transform: scale), чтобы строка
+  // перекомпоновывалась и цифры с бейджем оставались по центру — без
+  // съезжания/наложения. Размер берём из CSS (cqw) и при необходимости
+  // уменьшаем в px; на ресайзе/смене шрифта пересчитывается заново.
   function fitValues() {
     requestAnimationFrame(() => {
       tiersEl.querySelectorAll(".cell-strip").forEach(strip => {
         const val = strip.querySelector(".cell-value");
         if (!val) return;
-        val.style.transform = "scale(1)";
+        val.style.fontSize = "";                 // сброс к базовому размеру из CSS
+        const base = parseFloat(getComputedStyle(val).fontSize);
+        if (!base) return;
         const badge = strip.querySelector(".tbadge");
-        const avail = strip.clientWidth * 0.92 - (badge ? badge.offsetWidth + 4 : 0);
-        const w = val.scrollWidth;
-        const scale = w > avail ? avail / w : 1;
-        val.style.transform = "scale(" + scale.toFixed(3) + ")";
+        const gap = parseFloat(getComputedStyle(strip).columnGap) || 0;
+        const avail = strip.clientWidth - (badge ? badge.offsetWidth + gap : 0) - 1;
+        const w = val.getBoundingClientRect().width;
+        if (avail > 0 && w > avail) {
+          val.style.fontSize = (base * avail / w).toFixed(2) + "px";
+        }
       });
     });
   }

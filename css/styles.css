@@ -356,7 +356,9 @@ html, body {
 /* --- items track: translucent panel with halftone tile --- */
 .tier-items {
   display: flex; flex-wrap: wrap;
-  column-gap: .55cqw; row-gap: .9cqw;
+  /* row-gap даёт перенесённым предметам отдельный ряд с небольшим отступом,
+     чтобы тир не выглядел «удвоенным» при переполнении */
+  column-gap: .55cqw; row-gap: 1.8cqw;
   align-content: flex-start;
   min-height: 10cqw;
   border-radius: 1.4cqw;
@@ -391,28 +393,24 @@ html, body {
   image-rendering: auto;
   pointer-events: none;
 }
-/* dark strip behind value — bleeds into gaps so neighbours connect into a line */
+/* value + type badge row (без тёмной подложки — цифры лежат прямо на дорожке) */
 .cell-strip {
   position: relative;
   margin-top: .15cqw;
-  width: calc(100% + .55cqw);
+  width: 100%;
   height: 2.5cqw;
-  background: linear-gradient(180deg, rgba(9,16,38,.82), rgba(18,30,60,.68));
-  box-shadow: inset 0 1px 0 rgba(140,190,255,.25), inset 0 -1px 0 rgba(0,0,0,.4);
   display: flex; align-items: center; justify-content: center;
   gap: .35cqw;
-  overflow: hidden;
 }
 .cell-value {
   font-family: var(--display);
   font-size: 2cqw;
   color: #fff;
   letter-spacing: .04cqw;
-  text-shadow: 0 1px 2px rgba(0,0,0,.85);
+  /* без подложки нужна более плотная тень, чтобы белые цифры читались на дорожке */
+  text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.7), 0 0 1px rgba(0,0,0,.9);
   line-height: 1;
   white-space: nowrap;
-  transform-origin: center center;
-  will-change: transform;
 }
 
 /* type badge — coloured chip next to the value (как в макете) */
@@ -554,6 +552,8 @@ html, body {
 .legend-col { display: flex; flex-direction: column; gap: .5cqw; }
 .lg {
   display: flex; align-items: center; gap: .7cqw;
+  font-family: var(--display);
+  letter-spacing: .03cqw;
   font-size: 1.7cqw; color: #dbeaff; white-space: nowrap;
 }
 .lg .tbadge, .lg .dot, .lg .trend { flex: none; }
@@ -568,7 +568,7 @@ html, body {
 }
 .flink { display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
 .fl-title { font-family: var(--display); font-size: 1.7cqw; color: var(--cyan); letter-spacing: .5px; text-shadow: 0 0 6px rgba(79,214,255,.4); }
-.fl-sub { font-size: 1.4cqw; color: #aecbff; }
+.fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.4cqw; color: #aecbff; }
 .flink:hover .fl-title { color: #fff; }
 
 /* ===================== Credits / team ===================== */
@@ -592,7 +592,7 @@ html, body {
   text-shadow: 0 0 6px rgba(79,214,255,.4);
   outline: none;
 }
-.cr-name { font-size: 1.5cqw; color: #eaf4ff; font-weight: 600; outline: none; }
+.cr-name { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.5cqw; color: #eaf4ff; font-weight: 600; outline: none; }
 .editing .cr-role, .editing .cr-name { cursor: text; }
 .cr-role:focus, .cr-name:focus { background: rgba(79,214,255,.12); border-radius: 3px; }
 .credit-del {
