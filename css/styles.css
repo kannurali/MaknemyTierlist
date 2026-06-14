@@ -535,10 +535,9 @@ html, body {
 .ad-img { max-width: 100%; max-height: 12cqw; border-radius: .6cqw; display: block; }
 .ad-tools { display: flex; gap: .5cqw; flex-wrap: wrap; justify-content: center; }
 
-/* скрытая ссылка рекламы: курсор-рука на кликабельных частях + значок 🔗 */
-.stage:not(.editing) .ad-block.has-link .ad-img,
-.stage:not(.editing) .ad-block.has-link .ad-text { cursor: pointer; }
-.ad-block.has-link .ad-link-badge { cursor: pointer; }
+/* скрытая ссылка рекламы: вся карточка кликабельна (курсор-рука) + значок 🔗 */
+.stage:not(.editing) .ad-block.has-link,
+.stage:not(.editing) .ad-block.has-link * { cursor: pointer; }
 .ad-link-badge {
   position: absolute; top: .6cqw; right: .6cqw; z-index: 4;
   width: 2.7cqw; height: 2.7cqw; border-radius: 50%;

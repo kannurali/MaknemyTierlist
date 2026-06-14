@@ -448,13 +448,16 @@
       if (e) e.preventDefault();
       window.open(state.ad.link, "_blank", "noopener");
     };
+    // Вся карточка рекламы — одна кликабельная зона: клик в ЛЮБОЙ части
+    // (любая точка картинки, поля вокруг неё, текст) открывает ссылку в
+    // обычном режиме. Один обработчик на блок — без двойного срабатывания.
+    ad.addEventListener("click", openLink);
     // значок-индикатор «это ссылка» (🔗) — на картинке, либо в углу блока
     const makeBadge = () => {
       const b = document.createElement("span");
       b.className = "ad-link-badge";
       b.textContent = "🔗";
       b.title = "Это ссылка — нажмите по рекламе, чтобы открыть";
-      b.addEventListener("click", openLink);
       return b;
     };
 
@@ -470,7 +473,7 @@
       img.className = "ad-img";
       img.src = state.ad.image;
       img.alt = "Реклама";
-      img.addEventListener("click", openLink);
+      img.draggable = false;
       wrap.appendChild(img);
       if (hasLink) wrap.appendChild(makeBadge()); // 🔗 поверх картинки
       ad.appendChild(wrap);
@@ -482,7 +485,6 @@
     txt.spellcheck = false;
     txt.addEventListener("blur", () => { state.ad.text = txt.textContent.trim(); save(); });
     txt.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); txt.blur(); } });
-    txt.addEventListener("click", openLink);
     ad.appendChild(txt);
 
     // если картинки нет — значок-ссылку ставим в угол блока
