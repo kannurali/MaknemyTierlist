@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/favicon.ico?v=1" sizes="any" />
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1" />
-<link rel="stylesheet" href="css/styles.css?v=8" />
+<link rel="stylesheet" href="css/styles.css?v=9" />
 </head>
 <body>
   <!-- ============ Floating auth control (top-right corner) ============ -->
@@ -32,7 +32,8 @@
 
     <div class="tb-group filters" id="filters">
       <span class="tb-label">Показать:</span>
-      <button class="chip" data-f="fruits" title="Обычные фрукты, мутации, хроматики">Фрукты</button>
+      <button class="chip" data-f="fruits" title="Обычные фрукты и хроматики">Фрукты</button>
+      <button class="chip" data-f="mutations" title="Мутации">Мутации</button>
       <button class="chip" data-f="perms" title="Перманентные фрукты">Пермы</button>
       <button class="chip" data-f="passes" title="Геймпассы">Пассы</button>
       <button class="chip" data-f="skins" title="Скины">Скины</button>
@@ -122,21 +123,8 @@
         </div>
       </section>
 
-      <!-- Footer -->
-      <footer class="tl-footer" id="tlFooter">
-        <a class="flink" href="https://discord.gg/A4ZG8sxCM" target="_blank" rel="noopener">
-          <span class="fl-title">МОЙ ДИСКОРД</span><span class="fl-sub">discord.gg/A4ZG8sxCM</span></a>
-        <a class="flink" href="https://t.me/mksvtnc" target="_blank" rel="noopener">
-          <span class="fl-title">МОЙ ТЕЛЕГРАММ</span><span class="fl-sub">t.me/mksvtnc</span></a>
-        <a class="flink" href="https://t.me/bfsnews" target="_blank" rel="noopener">
-          <span class="fl-title">BLOX FRUITS NEWS</span><span class="fl-sub">t.me/bfsnews</span></a>
-        <a class="flink" href="https://t.me/mksvtnc" target="_blank" rel="noopener">
-          <span class="fl-title">ВСЕ РОЗЫГРЫШИ ТУТ</span><span class="fl-sub">t.me/mksvtnc</span></a>
-        <a class="flink" href="https://discord.gg/Q9PO6UG9Q4" target="_blank" rel="noopener">
-          <span class="fl-title">CHARLOTTE TM</span><span class="fl-sub">discord.gg/Q9PO6UG9Q4</span></a>
-        <a class="flink" href="https://t.me/typeopozitivegg" target="_blank" rel="noopener">
-          <span class="fl-title">ПОМОЩНИК</span><span class="fl-sub">t.me/typeopozitivegg</span></a>
-      </footer>
+      <!-- Footer (ссылки рендерятся из state в renderFooter — редактируемые) -->
+      <footer class="tl-footer" id="tlFooter"></footer>
 
       <!-- Credits / team -->
       <section class="credits" id="credits"></section>
@@ -216,6 +204,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=5"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>

@@ -20,7 +20,7 @@
       title: "NEXUS\nTIER LIST",
       date: "17.02.2026",
       autoSort: true,
-      filters: { fruits: true, perms: true, passes: true, skins: true },
+      filters: { fruits: true, mutations: true, perms: true, passes: true, skins: true },
       ad: { text: "МЕСТО ДЛЯ ВАШЕЙ РЕКЛАМЫ — t.me/mksvtnc", image: "" },
       credits: [
         { role: "Автор", name: "Maknemy" },
@@ -28,6 +28,14 @@
         { role: "Аналитик", name: "—" },
         { role: "Помощник аналитика", name: "—" },
         { role: "Кодер сайта", name: "—" },
+      ],
+      footer: [
+        { title: "МОЙ ДИСКОРД",       sub: "discord.gg/A4ZG8sxCM",   href: "https://discord.gg/A4ZG8sxCM" },
+        { title: "МОЙ ТЕЛЕГРАММ",     sub: "t.me/mksvtnc",           href: "https://t.me/mksvtnc" },
+        { title: "BLOX FRUITS NEWS",  sub: "t.me/bfsnews",           href: "https://t.me/bfsnews" },
+        { title: "ВСЕ РОЗЫГРЫШИ ТУТ", sub: "t.me/mksvtnc",           href: "https://t.me/mksvtnc" },
+        { title: "CHARLOTTE TM",      sub: "discord.gg/Q9PO6UG9Q4",  href: "https://discord.gg/Q9PO6UG9Q4" },
+        { title: "ПОМОЩНИК",          sub: "t.me/typeopozitivegg",   href: "https://t.me/typeopozitivegg" },
       ],
       tiers: [
         {
@@ -80,6 +88,7 @@
       merged.ad = Object.assign({}, d.ad, data.ad || {});
       merged.filters = Object.assign({}, d.filters, data.filters || {});
       if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
+      if (!Array.isArray(merged.footer) || !merged.footer.length) merged.footer = d.footer;
       if (typeof merged.autoSort !== "boolean") merged.autoSort = true;
       // old saves: give default tiers their logos back
       merged.tiers.forEach(t => {
@@ -132,6 +141,7 @@
   const editToggle = $("#editToggle");
   const autoSortToggle = $("#autoSortToggle");
   const creditsEl = $("#credits");
+  const footerEl = $("#tlFooter");
 
   // ---------- Helpers ----------
   function findTier(tid) { return state.tiers.find(t => t.id === tid); }
@@ -154,11 +164,12 @@
     const n = parseFloat(s);
     return isNaN(n) ? NaN : n * mult;
   }
-  // Фрукты (f/m/cr/пусто) · Пермы (p) · Пассы (gp) · Скины (s)
+  // Фрукты (f/cr/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s)
   function groupOf(type) {
     if (type === "p") return "perms";
     if (type === "gp") return "passes";
     if (type === "s") return "skins";
+    if (type === "m") return "mutations";
     return "fruits";
   }
 
@@ -211,6 +222,7 @@
       if (ti === adAfter) tiersEl.appendChild(renderAd());
     });
     if (!state.tiers.length) tiersEl.appendChild(renderAd());
+    renderFooter();
     renderCredits();
     applyFilters();
     applyEditMode();
@@ -498,6 +510,71 @@
   }
 
   // ============================================================
+  //  FOOTER (ссылки соцсетей — редактируемые: текст + URL)
+  // ============================================================
+  function renderFooter() {
+    footerEl.innerHTML = "";
+    state.footer.forEach((lnk, idx) => {
+      const a = document.createElement("a");
+      a.className = "flink";
+      a.href = lnk.href || "#";
+      a.target = "_blank";
+      a.rel = "noopener";
+      // в режиме редактирования ссылка не открывается — можно править текст
+      a.addEventListener("click", e => { if (stage.classList.contains("editing")) e.preventDefault(); });
+
+      const title = document.createElement("span");
+      title.className = "fl-title";
+      title.textContent = lnk.title || "";
+      title.spellcheck = false;
+      title.addEventListener("blur", () => { lnk.title = title.textContent.trim(); save(); });
+      title.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); title.blur(); } });
+
+      const sub = document.createElement("span");
+      sub.className = "fl-sub";
+      sub.textContent = lnk.sub || "";
+      sub.spellcheck = false;
+      sub.addEventListener("blur", () => { lnk.sub = sub.textContent.trim(); save(); });
+      sub.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sub.blur(); } });
+
+      const tools = document.createElement("div");
+      tools.className = "flink-tools edit-only";
+      const urlBtn = document.createElement("button");
+      urlBtn.textContent = "🔗";
+      urlBtn.title = "Изменить ссылку (URL)";
+      urlBtn.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        const v = prompt("Ссылка (URL):", lnk.href || "");
+        if (v !== null) { lnk.href = v.trim(); save(); render(); }
+      });
+      const del = document.createElement("button");
+      del.className = "danger";
+      del.textContent = "✕";
+      del.title = "Удалить ссылку";
+      del.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        state.footer.splice(idx, 1); save(); render();
+      });
+      tools.appendChild(urlBtn); tools.appendChild(del);
+
+      a.appendChild(title);
+      a.appendChild(sub);
+      a.appendChild(tools);
+      footerEl.appendChild(a);
+    });
+
+    const add = document.createElement("button");
+    add.className = "flink-add edit-only";
+    add.textContent = "＋ ссылка";
+    add.title = "Добавить ссылку";
+    add.addEventListener("click", () => {
+      state.footer.push({ title: "НАЗВАНИЕ", sub: "ссылка", href: "https://" });
+      save(); render();
+    });
+    footerEl.appendChild(add);
+  }
+
+  // ============================================================
   //  DRAG & DROP
   // ============================================================
   let dragData = null; // { itemId, fromTierId }
@@ -623,29 +700,31 @@
   });
 
   // ============================================================
-  //  FILTERS (Фрукты / Пермы / Пассы / Скины)
+  //  FILTERS (Фрукты / Мутации / Пермы / Пассы / Скины)
   // ============================================================
+  const FILTER_KEYS = ["fruits", "mutations", "perms", "passes", "skins"];
+  const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
   const filtersEl = $("#filters");
   function applyFilters() {
     const f = state.filters;
-    ["fruits", "perms", "passes", "skins"].forEach(key => {
+    FILTER_KEYS.forEach(key => {
       stage.classList.toggle("hide-" + key, !f[key]);
       const chip = filtersEl.querySelector(`.chip[data-f="${key}"]`);
       if (chip) chip.classList.toggle("active", !!f[key]);
     });
     const all = filtersEl.querySelector('.chip[data-f="all"]');
-    all.classList.toggle("active", f.fruits && f.perms && f.passes && f.skins);
+    all.classList.toggle("active", allFiltersOn());
   }
   filtersEl.addEventListener("click", e => {
     const chip = e.target.closest(".chip");
     if (!chip) return;
     const key = chip.dataset.f;
     if (key === "all") {
-      state.filters = { fruits: true, perms: true, passes: true, skins: true };
+      FILTER_KEYS.forEach(k => state.filters[k] = true);
     } else {
       state.filters[key] = !state.filters[key];
       // нельзя выключить всё разом — хотя бы одна категория остаётся
-      if (!state.filters.fruits && !state.filters.perms && !state.filters.passes && !state.filters.skins) {
+      if (!FILTER_KEYS.some(k => state.filters[k])) {
         state.filters[key] = true;
         return;
       }
@@ -787,7 +866,7 @@
     stage.classList.toggle("editing", on);
     document.querySelectorAll(".edit-only").forEach(el => { el.style.display = on ? "" : "none"; });
     // contenteditable only in edit mode (плашки-продолжения .cont-label не редактируются)
-    document.querySelectorAll(".tier-label:not(.cont-label), #tlDate, .ad-text, .cr-role, .cr-name").forEach(el => {
+    document.querySelectorAll(".tier-label:not(.cont-label), #tlDate, .ad-text, .cr-role, .cr-name, .fl-title, .fl-sub").forEach(el => {
       el.contentEditable = on ? "true" : "false";
     });
   }
@@ -846,6 +925,7 @@
         state.ad = Object.assign({}, d.ad, data.ad || {});
         state.filters = Object.assign({}, d.filters, data.filters || {});
         if (!Array.isArray(state.credits) || !state.credits.length) state.credits = d.credits;
+        if (!Array.isArray(state.footer) || !state.footer.length) state.footer = d.footer;
         dateEl.textContent = state.date || "";
         autoSortToggle.checked = state.autoSort;
         save(); render();
@@ -973,6 +1053,7 @@
         merged.ad      = Object.assign({}, d.ad,      data.ad      || {});
         merged.filters = Object.assign({}, d.filters, data.filters || {});
         if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
+        if (!Array.isArray(merged.footer) || !merged.footer.length) merged.footer = d.footer;
         merged.tiers.forEach(t => {
           if (!t.logo && TIER_LOGOS[t.label]) t.logo = TIER_LOGOS[t.label];
         });

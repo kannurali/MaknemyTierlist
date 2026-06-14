@@ -461,10 +461,11 @@ html, body {
 .cell-add:hover { background: rgba(50,80,140,.4); border-color: var(--cyan); color: #fff; }
 
 /* ===================== Filters (view) ===================== */
-.stage.hide-fruits .cell[data-group="fruits"],
-.stage.hide-perms  .cell[data-group="perms"],
-.stage.hide-passes .cell[data-group="passes"],
-.stage.hide-skins  .cell[data-group="skins"] { display: none; }
+.stage.hide-fruits    .cell[data-group="fruits"],
+.stage.hide-mutations .cell[data-group="mutations"],
+.stage.hide-perms     .cell[data-group="perms"],
+.stage.hide-passes    .cell[data-group="passes"],
+.stage.hide-skins     .cell[data-group="skins"] { display: none; }
 
 /* ===================== Badges / dots / trends (shared) =====================
    Оригинальные пиксельные иконки из макета (assets/badge-*.png, dot-*.png,
@@ -568,10 +569,32 @@ html, body {
   gap: .6cqw 1.4cqw;
   padding: .6cqw .4cqw 0;
 }
-.flink { display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
+.flink { position: relative; display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
 .fl-title { font-family: var(--display); font-size: 1.7cqw; color: var(--cyan); letter-spacing: .5px; text-shadow: 0 0 6px rgba(79,214,255,.4); }
 .fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.4cqw; color: #aecbff; }
 .flink:hover .fl-title { color: #fff; }
+/* в режиме редактирования у ссылки видны кнопки: 🔗 (URL) и ✕ (удалить) */
+.editing .flink .fl-title, .editing .flink .fl-sub { cursor: text; }
+.flink-tools { position: absolute; top: -1.1cqw; right: -.2cqw; display: none; gap: .3cqw; z-index: 5; }
+.editing .flink:hover .flink-tools { display: flex; }
+.flink-tools button {
+  width: 2.1cqw; height: 2.1cqw; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.4);
+  background: rgba(15,25,45,.95); color: #fff;
+  font-size: 1cqw; line-height: 1; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.flink-tools button:hover { background: var(--cyan-deep); }
+.flink-tools button.danger:hover { background: rgba(160,44,44,.9); border-color: #ff6b5e; }
+.flink-add {
+  align-self: center;
+  font-family: var(--ui); font-size: 1.4cqw; font-weight: 700;
+  color: #9fc2ee; cursor: pointer;
+  border: 1px dashed rgba(150,200,255,.5);
+  border-radius: .8cqw; background: rgba(30,50,90,.3);
+  padding: .5cqw 1cqw;
+}
+.flink-add:hover { border-color: var(--cyan); color: #fff; }
 
 /* ===================== Credits / team ===================== */
 .credits {
