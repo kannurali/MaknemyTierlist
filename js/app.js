@@ -289,14 +289,29 @@
   // ============================================================
   //  RENDER
   // ============================================================
+  // Предметы тира, проходящие активные фильтры (Фрукты/Мутации/Пермы/…)
+  function visibleItemsOf(tier) {
+    return tier.items.filter(it => state.filters[groupOf(it.type)]);
+  }
+
   function render() {
     tiersEl.innerHTML = "";
-    const adAfter = Math.ceil(state.tiers.length / 2) - 1; // середина тирлиста
+    const editing = editToggle.checked;
+    // С учётом фильтров показываем только тиры, где остался хотя бы один
+    // предмет; предметы внутри переупаковываются без «дырок». Полностью
+    // пустой тир (0 предметов) показываем лишь в режиме редактирования —
+    // чтобы его можно было наполнить.
+    const vis = [];
     state.tiers.forEach((tier, ti) => {
-      tiersEl.appendChild(renderTier(tier, ti));
-      if (ti === adAfter) tiersEl.appendChild(renderAd());
+      const items = visibleItemsOf(tier);
+      if (items.length || (editing && !tier.items.length)) vis.push({ tier, ti, items });
     });
-    if (!state.tiers.length) tiersEl.appendChild(renderAd());
+    const adAfter = Math.ceil(vis.length / 2) - 1; // середина видимого тирлиста
+    vis.forEach((v, idx) => {
+      tiersEl.appendChild(renderTier(v.tier, v.ti, v.items));
+      if (idx === adAfter) tiersEl.appendChild(renderAd());
+    });
+    if (!vis.length) tiersEl.appendChild(renderAd());
     renderFooter();
     renderCredits();
     applyFilters();
@@ -396,20 +411,20 @@
     return band;
   }
 
-  function renderTier(tier, ti) {
+  function renderTier(tier, ti, items) {
     const sec = document.createElement("section");
     sec.className = "tier";
     sec.dataset.id = tier.id;
 
-    // Разбиваем предметы тира на ряды: каждый ряд — отдельная плашка-тир со
-    // своей шапкой и небольшим отступом, чтобы тир «не удваивался» в одной
+    // Разбиваем ВИДИМЫЕ предметы тира на ряды: каждый ряд — отдельная плашка-тир
+    // со своей шапкой и небольшим отступом, чтобы тир «не удваивался» в одной
     // полосе при переполнении. Данные тира не меняем — это только верстка.
     const per = itemsPerRow();
     const chunks = [];
-    if (per > 0 && tier.items.length > per) {
-      for (let i = 0; i < tier.items.length; i += per) chunks.push(tier.items.slice(i, i + per));
+    if (per > 0 && items.length > per) {
+      for (let i = 0; i < items.length; i += per) chunks.push(items.slice(i, i + per));
     } else {
-      chunks.push(tier.items.slice());
+      chunks.push(items.slice());
     }
     if (!chunks.length) chunks.push([]); // пустой тир — одна плашка
 
@@ -830,15 +845,15 @@
   const FILTER_KEYS = ["fruits", "mutations", "perms", "passes", "skins"];
   const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
   const filtersEl = $("#filters");
+  // Подсветка чипов под текущие фильтры. Само скрытие предметов/тиров —
+  // в render(): предметы переупаковываются, пустые тиры пропадают.
   function applyFilters() {
-    const f = state.filters;
     FILTER_KEYS.forEach(key => {
-      stage.classList.toggle("hide-" + key, !f[key]);
       const chip = filtersEl.querySelector(`.chip[data-f="${key}"]`);
-      if (chip) chip.classList.toggle("active", !!f[key]);
+      if (chip) chip.classList.toggle("active", !!state.filters[key]);
     });
     const all = filtersEl.querySelector('.chip[data-f="all"]');
-    all.classList.toggle("active", allFiltersOn());
+    if (all) all.classList.toggle("active", allFiltersOn());
   }
   filtersEl.addEventListener("click", e => {
     const chip = e.target.closest(".chip");
@@ -855,8 +870,7 @@
       }
     }
     save();
-    applyFilters();
-    fitValues();
+    render(); // перерисовываем: предметы переупаковываются, пустые тиры пропадают
   });
 
   // ============================================================
@@ -995,7 +1009,9 @@
       el.contentEditable = on ? "true" : "false";
     });
   }
-  editToggle.addEventListener("change", applyEditMode);
+  // Перерисовываем при смене режима: пустые тиры появляются (для наполнения)
+  // или прячутся, плюс обновляются элементы редактирования.
+  editToggle.addEventListener("change", render);
 
   autoSortToggle.checked = state.autoSort;
   autoSortToggle.addEventListener("change", () => {

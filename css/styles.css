@@ -460,12 +460,8 @@ html, body {
 .editing .cell-add { display: flex; }
 .cell-add:hover { background: rgba(50,80,140,.4); border-color: var(--cyan); color: #fff; }
 
-/* ===================== Filters (view) ===================== */
-.stage.hide-fruits    .cell[data-group="fruits"],
-.stage.hide-mutations .cell[data-group="mutations"],
-.stage.hide-perms     .cell[data-group="perms"],
-.stage.hide-passes    .cell[data-group="passes"],
-.stage.hide-skins     .cell[data-group="skins"] { display: none; }
+/* Фильтры теперь применяются в JS (render): скрытые типы не рендерятся,
+   предметы переупаковываются, а пустые тиры не отображаются. */
 
 /* ===================== Badges / dots / trends (shared) =====================
    Оригинальные пиксельные иконки из макета (assets/badge-*.png, dot-*.png,
