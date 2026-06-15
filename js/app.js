@@ -316,16 +316,19 @@
         if (items.length || !tier.items.length) blocks.push({ tier, ti, items });
       });
     } else {
-      // Просмотр: переливаем ВСЕ видимые предметы в блоки по ITEMS_PER_BLOCK,
-      // заполняя верхние блоки ближайшими предметами снизу — без пустых мест.
-      // Плашки, на которые не хватило предметов, не показываем.
+      // Просмотр: переливаем ВСЕ видимые предметы в блоки, заполняя верхние
+      // блоки ближайшими предметами снизу — без пустых мест. В один блок берём
+      // столько, сколько ВЛЕЗАЕТ в ряд (на телефоне ~6), но не больше
+      // ITEMS_PER_BLOCK (на десктопе 11) — чтобы каждый ряд был заполнен целиком
+      // и не оставалось коротких «хвостов» по 5 штук.
+      const blockSize = Math.min(itemsPerRow() || ITEMS_PER_BLOCK, ITEMS_PER_BLOCK);
       const flat = [];
       state.tiers.forEach(tier => { for (const it of visibleItemsOf(tier)) flat.push(it); });
       blocks = [];
-      for (let i = 0; i < flat.length; i += ITEMS_PER_BLOCK) {
+      for (let i = 0; i < flat.length; i += blockSize) {
         const bi = blocks.length;
         const tier = state.tiers[Math.min(bi, state.tiers.length - 1)];
-        blocks.push({ tier, ti: bi, items: flat.slice(i, i + ITEMS_PER_BLOCK) });
+        blocks.push({ tier, ti: bi, items: flat.slice(i, i + blockSize) });
       }
     }
 
