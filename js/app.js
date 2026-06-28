@@ -242,11 +242,11 @@
     const n = parseFloat(s);
     return isNaN(n) ? NaN : n * mult;
   }
-  // Фрукты (f/cr/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s)
+  // Фрукты (f/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s/cr — хроматики идут со скинами)
   function groupOf(type) {
     if (type === "p") return "perms";
     if (type === "gp") return "passes";
-    if (type === "s") return "skins";
+    if (type === "s" || type === "cr") return "skins";
     if (type === "m") return "mutations";
     return "fruits";
   }
