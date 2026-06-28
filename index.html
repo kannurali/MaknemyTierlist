@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NexusTierlist</title>
+<title>Maknemy Tierlist</title>
 <link rel="icon" href="assets/favicon.ico?v=1" sizes="any" />
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1" />
-<link rel="stylesheet" href="css/styles.css?v=15" />
+<link rel="stylesheet" href="css/styles.css?v=16" />
 </head>
 <body>
   <!-- ============ Floating auth control (top-right corner) ============ -->
@@ -27,7 +27,7 @@
 
   <!-- ================= Toolbar ================= -->
   <div class="toolbar" id="toolbar">
-    <div class="tb-brand">NEXUS<span>EDITOR</span></div>
+    <div class="tb-brand">MAKNEMY<span>EDITOR</span></div>
 
     <!-- Кнопки редактирования — только для админа -->
     <div class="tb-group" id="tbEdit" hidden>
@@ -91,7 +91,7 @@
         <img class="bf-logo" src="assets/bf-logo-trim.png" alt="Blox Fruits" />
         <div class="title-block">
           <div class="date" id="tlDate" spellcheck="false" title="Кликните, чтобы изменить дату">17.02.2026</div>
-          <h1 class="tl-title" id="tlTitle">NEXUS<br/>TIER LIST</h1>
+          <h1 class="tl-title" id="tlTitle">MAKNEMY<br/>TIER LIST</h1>
         </div>
         <img class="brand-logo" src="assets/brand-logos.png" alt="Логотип" />
       </header>
@@ -161,6 +161,17 @@
           <input type="text" id="mValue" inputmode="numeric" placeholder="Напр. 60000" />
         </div>
         <div class="field">
+          <label>Описание (необязательно)</label>
+          <textarea id="mDesc" rows="3" placeholder="Кратко о фрукте — показывается при наведении"></textarea>
+        </div>
+        <div class="field">
+          <label class="switch new-switch" title="Показать значок NEW на предмете (новый или изменённый)">
+            <input type="checkbox" id="mNew" />
+            <span class="track"><span class="thumb"></span></span>
+            <span class="switch-label">Значок «NEW» (новый / изменён)</span>
+          </label>
+        </div>
+        <div class="field">
           <label>Тип фрукта</label>
           <div class="seg seg-toggle" id="mFruit">
             <button data-v="f" class="active">Обычный <small>F</small></button>
@@ -210,6 +221,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=5"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=16"></script>
+  <script src="js/app.js?v=17"></script>
 </body>
 </html>
