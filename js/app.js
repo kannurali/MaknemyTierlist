@@ -15,9 +15,10 @@
   function defaultState() {
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
+      desc: "", flag: false,
     });
     return {
-      title: "NEXUS\nTIER LIST",
+      title: "MAKNEMY\nTIER LIST",
       date: "17.02.2026",
       autoSort: true,
       filters: { fruits: true, mutations: true, perms: false, passes: true, skins: true },
@@ -241,11 +242,11 @@
     const n = parseFloat(s);
     return isNaN(n) ? NaN : n * mult;
   }
-  // Фрукты (f/cr/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s)
+  // Фрукты (f/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s/cr — хроматики идут со скинами)
   function groupOf(type) {
     if (type === "p") return "perms";
     if (type === "gp") return "passes";
-    if (type === "s") return "skins";
+    if (type === "s" || type === "cr") return "skins";
     if (type === "m") return "mutations";
     return "fruits";
   }
@@ -542,6 +543,35 @@
     }
     cell.appendChild(strip);
 
+    // значок NEW — новый/изменённый предмет (виден всем, попадает в PNG)
+    if (item.flag) {
+      const nb = document.createElement("span");
+      nb.className = "cell-new";
+      nb.textContent = "NEW";
+      cell.appendChild(nb);
+    }
+
+    // всплывающая подсказка при наведении: название + описание
+    const nm = (item.name || "").trim();
+    const ds = (item.desc || "").trim();
+    if ((nm && nm !== "Item") || ds) {
+      const tip = document.createElement("div");
+      tip.className = "cell-tip";
+      if (nm && nm !== "Item") {
+        const tn = document.createElement("div");
+        tn.className = "tip-name";
+        tn.textContent = nm;
+        tip.appendChild(tn);
+      }
+      if (ds) {
+        const td = document.createElement("div");
+        td.className = "tip-desc";
+        td.textContent = ds;
+        tip.appendChild(td);
+      }
+      cell.appendChild(tip);
+    }
+
     // edit controls
     const edit = document.createElement("div");
     edit.className = "cell-edit";
@@ -826,7 +856,7 @@
   function addItem(tid) {
     const t = findTier(tid);
     if (!t) return;
-    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "" };
+    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "", desc: "", flag: true };
     t.items.push(item);
     save(); render();
     openModal(item.id);
@@ -914,6 +944,8 @@
     const it = found.item;
     $("#mName").value = it.name || "";
     $("#mValue").value = it.value || "";
+    $("#mDesc").value = it.desc || "";
+    $("#mNew").checked = !!it.flag;
     $("#mIconPreview").src = it.icon || DEFAULT_ICON;
     setType(it.type || "f");
     setSeg("#mDemand", it.demand || "");
@@ -998,6 +1030,8 @@
     const oldVal = it.value;
     it.name = $("#mName").value.trim();
     it.value = $("#mValue").value.trim();
+    it.desc = $("#mDesc").value.trim();
+    it.flag = $("#mNew").checked;
     it.icon = $("#mIconPreview").src;
     it.type = getType();
     it.demand = getSeg("#mDemand");

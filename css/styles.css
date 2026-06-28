@@ -430,11 +430,23 @@ html, body {
   align-items: center;
   cursor: grab;
   user-select: none;
+  transition: transform .14s ease;
 }
 .cell.dragging { opacity: .4; }
+/* наведение на предмет — подсвечиваем всю ячейку со всеми элементами */
+.cell:hover { transform: translateY(-.35cqw) scale(1.06); z-index: 8; }
+.cell:hover .cell-value { color: #fff; text-shadow: 0 0 .5cqw rgba(79,214,255,.9), 0 1px 2px rgba(0,0,0,.95); }
 .cell-icon {
   width: 100%; height: 6.4cqw;
   display: flex; align-items: center; justify-content: center;
+  border-radius: 1cqw;
+  transition: background .15s;
+}
+.cell:hover .cell-icon {
+  background: radial-gradient(circle at 50% 45%, rgba(79,214,255,.28), rgba(79,214,255,0) 72%);
+}
+.cell:hover .cell-icon img {
+  filter: drop-shadow(0 0 .6cqw rgba(79,214,255,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55));
 }
 .cell-icon img {
   max-width: 92%; max-height: 100%;
@@ -491,6 +503,43 @@ html, body {
   display: flex; align-items: center; justify-content: center;
 }
 .cell-edit button:hover { background: var(--cyan-deep); }
+
+/* значок NEW — новый / изменённый предмет */
+.cell-new {
+  position: absolute; top: -.4cqw; left: -.5cqw; z-index: 7;
+  font-family: var(--ui); font-weight: 800; font-size: 1.15cqw; line-height: 1;
+  color: #fff; letter-spacing: .04cqw;
+  background: linear-gradient(180deg, #ff5a5a, #e0218a);
+  border: .12cqw solid rgba(255,255,255,.9);
+  border-radius: .55cqw; padding: .28cqw .4cqw .22cqw;
+  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+/* всплывающая подсказка предмета (название + описание) при наведении */
+.cell-tip {
+  position: absolute;
+  bottom: calc(100% + .3cqw);
+  left: 50%;
+  transform: translateX(-50%) translateY(.3cqw);
+  width: max-content; max-width: 24cqw;
+  background: linear-gradient(180deg, #14213f, #0e1830);
+  border: 1px solid rgba(120,190,255,.5);
+  border-radius: .8cqw;
+  padding: .6cqw .8cqw;
+  box-shadow: 0 .6cqw 2cqw rgba(0,0,0,.6);
+  opacity: 0; visibility: hidden;
+  transition: opacity .15s, transform .15s;
+  pointer-events: none;
+  z-index: 30;
+  text-align: center;
+}
+.cell:hover .cell-tip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.tip-name { font-family: var(--display); font-size: 1.8cqw; color: var(--cyan); letter-spacing: .04cqw; }
+.tip-desc { font-family: var(--ui); font-size: 1.35cqw; color: #dbeaff; margin-top: .25cqw; line-height: 1.25; white-space: normal; }
+/* в режиме редактирования подсказку не показываем — мешает кнопкам/перетаскиванию */
+.editing .cell-tip { display: none; }
 
 /* add-item ghost cell */
 .cell-add {
@@ -728,6 +777,14 @@ html, body {
   border-radius: 8px; padding: 10px 12px; color: #eaf4ff; font-size: 15px; font-family: var(--ui);
 }
 .field input[type="text"]:focus { outline: none; border-color: var(--cyan); }
+.field textarea {
+  background: rgba(8, 16, 32, .8);
+  border: 1px solid rgba(120,190,255,.3);
+  border-radius: 8px; padding: 10px 12px; color: #eaf4ff; font-size: 14px;
+  font-family: var(--ui); resize: vertical; min-height: 64px; line-height: 1.35;
+}
+.field textarea:focus { outline: none; border-color: var(--cyan); }
+.field .new-switch { flex-direction: row; }
 
 .icon-field { flex-direction: row; align-items: center; gap: 14px; }
 .icon-preview {
@@ -840,4 +897,10 @@ html, body {
   .cr-name { font-size: 2.5cqw; }
   .ad-text { font-size: 3.6cqw; }
   .ad-chip { font-size: 2cqw; }
+
+  /* подсказка и значок NEW крупнее под палец/экран */
+  .cell-new { font-size: 2cqw; border-radius: 1cqw; padding: .45cqw .65cqw .35cqw; }
+  .cell-tip { max-width: 40cqw; border-radius: 1.4cqw; padding: 1cqw 1.2cqw; }
+  .tip-name { font-size: 3cqw; }
+  .tip-desc { font-size: 2.3cqw; }
 }
