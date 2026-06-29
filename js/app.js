@@ -551,24 +551,16 @@
       cell.appendChild(nb);
     }
 
-    // всплывающая подсказка при наведении: название + описание
+    // всплывающая подсказка при наведении: ТОЛЬКО название.
+    // Описание показывается в отдельном окне по клику (openViewModal).
     const nm = (item.name || "").trim();
-    const ds = (item.desc || "").trim();
-    if ((nm && nm !== "Item") || ds) {
+    if (nm && nm !== "Item") {
       const tip = document.createElement("div");
       tip.className = "cell-tip";
-      if (nm && nm !== "Item") {
-        const tn = document.createElement("div");
-        tn.className = "tip-name";
-        tn.textContent = nm;
-        tip.appendChild(tn);
-      }
-      if (ds) {
-        const td = document.createElement("div");
-        td.className = "tip-desc";
-        td.textContent = ds;
-        tip.appendChild(td);
-      }
+      const tn = document.createElement("div");
+      tn.className = "tip-name";
+      tn.textContent = nm;
+      tip.appendChild(tn);
       cell.appendChild(tip);
     }
 
@@ -579,9 +571,13 @@
     edit.appendChild(miniBtn("✕", "Удалить", e => { e.stopPropagation(); deleteItem(item.id); }));
     cell.appendChild(edit);
 
-    // double click / click in edit mode → modal
-    cell.addEventListener("dblclick", () => openModal(item.id));
-    cell.addEventListener("click", () => { if (stage.classList.contains("editing")) openModal(item.id); });
+    // Клик в режиме редактирования → окно редактирования (админ).
+    // Обычный клик (просмотр) → окно с предметом: иконка, цена, название, описание.
+    cell.addEventListener("dblclick", () => { if (stage.classList.contains("editing")) openModal(item.id); });
+    cell.addEventListener("click", () => {
+      if (stage.classList.contains("editing")) openModal(item.id);
+      else openViewModal(item.id);
+    });
 
     setupDraggable(cell, item, tier);
     return cell;
@@ -955,6 +951,35 @@
   }
   function closeModal() { modal.hidden = true; editingId = null; }
 
+  // ----- Окно ПРОСМОТРА предмета (для всех посетителей) -----
+  // Показывает иконку, название, цену и описание. Открывается кликом по
+  // предмету в обычном режиме (без редактирования).
+  const viewModal = $("#viewModal");
+  function openViewModal(iid) {
+    const found = findItem(iid);
+    if (!found) return;
+    const it = found.item;
+    $("#vIcon").src = it.icon || DEFAULT_ICON;
+    $("#vName").textContent = (it.name || "").trim() || "Без названия";
+    $("#vValue").textContent = it.value || "—";
+    const badge = $("#vBadge");
+    if (it.type) {
+      badge.src = "assets/badge-" + it.type + ".png";
+      badge.alt = it.type.toUpperCase();
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+    const ds = (it.desc || "").trim();
+    const descEl = $("#vDesc");
+    descEl.textContent = ds || "Описание не добавлено.";
+    descEl.classList.toggle("empty", !ds);
+    viewModal.hidden = false;
+  }
+  function closeViewModal() { viewModal.hidden = true; }
+  $("#viewClose").addEventListener("click", closeViewModal);
+  viewModal.addEventListener("click", e => { if (e.target === viewModal) closeViewModal(); });
+
   function setSeg(sel, value) {
     $(sel).querySelectorAll("button").forEach(b => {
       b.classList.toggle("active", (b.dataset.v || "") === value);
@@ -1047,7 +1072,9 @@
   $("#modalClose").addEventListener("click", closeModal);
   modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && !modal.hidden) closeModal();
+    if (e.key !== "Escape") return;
+    if (!modal.hidden) closeModal();
+    if (!viewModal.hidden) closeViewModal();
   });
 
   // ============================================================

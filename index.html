@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/favicon.ico?v=1" sizes="any" />
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1" />
-<link rel="stylesheet" href="css/styles.css?v=17" />
+<link rel="stylesheet" href="css/styles.css?v=18" />
 </head>
 <body>
   <!-- ============ Floating auth control (top-right corner) ============ -->
@@ -215,12 +215,28 @@
     </div>
   </div>
 
+  <!-- ============ Item VIEW modal (для всех — клик по предмету) ============ -->
+  <div class="modal-backdrop" id="viewModal" hidden>
+    <div class="modal vmodal">
+      <button class="icon-btn vmodal-close" id="viewClose" title="Закрыть">✕</button>
+      <div class="vmodal-body">
+        <div class="vmodal-icon"><img id="vIcon" alt="" /></div>
+        <div class="vmodal-name" id="vName"></div>
+        <div class="vmodal-price">
+          <span class="vmodal-price-val" id="vValue"></span>
+          <img class="tbadge" id="vBadge" alt="" hidden />
+        </div>
+        <div class="vmodal-desc" id="vDesc"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=5"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=18"></script>
+  <script src="js/app.js?v=19"></script>
 </body>
 </html>
