@@ -6,6 +6,7 @@
   "use strict";
 
   const STORAGE_KEY = "nexus-tierlist-v1";
+  const DIRTY_KEY = "nexus-tierlist-dirty-v1"; // помним факт НЕопубликованных правок между перезагрузками
   const DEFAULT_ICON = "assets/icon-sample.png";
   const TIER_LOGOS = { MK: "assets/logo-mk.png", GLH: "assets/logo-glh.png", "💧": "assets/logo-flame.png" };
 
@@ -79,7 +80,12 @@
   let saving = false;  // идёт публикация в Firebase
   // Восстановление после перезагрузки: не затирать локальные правки данными из базы
   let bootedFromLocal = localStorage.getItem(STORAGE_KEY) != null;
+  // Были ли при прошлой сессии РЕАЛЬНЫЕ неопубликованные правки (нажимали Save?).
+  // Только в этом случае при старте защищаем локальные данные от базы — иначе
+  // админ молча застревал «грязным» и переставал получать чужие обновления.
+  let bootedDirty = (() => { try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch (e) { return false; } })();
   let deferredServer = null;       // снимок из базы, отложенный до выяснения роли входа
+  let pendingServer = null;        // свежая база, пришедшая пока есть свои неопубликованные правки
   let roleResolved = false;        // onAuthStateChanged уже отработал
   let firstSnapshotHandled = false;
 
@@ -113,7 +119,13 @@
     saveTimer = setTimeout(() => {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
     }, 400);
-    if (isAdmin) { dirty = true; renderSaveBtn(); }
+    if (isAdmin) { dirty = true; try { localStorage.setItem(DIRTY_KEY, "1"); } catch (e) {} renderSaveBtn(); }
+  }
+  // Снять отметку «есть неопубликованные правки» после успешной публикации
+  function clearDirty() {
+    dirty = false;
+    try { localStorage.removeItem(DIRTY_KEY); } catch (e) {}
+    renderSaveBtn();
   }
 
   // ---------- Сжатие картинок ----------
@@ -175,7 +187,7 @@
   // Публикация текущего состояния в Firebase — вызывается кнопкой «Сохранить»
   async function publish() {
     if (!isAdmin || !dirty || saving) return;
-    if (!fbRef) { dirty = false; renderSaveBtn(); flashSaved(); return; } // локальный режим
+    if (!fbRef) { clearDirty(); flashSaved(); return; } // локальный режим
     saving = true; renderSaveBtn();
     try {
       await compactState();
@@ -187,7 +199,7 @@
         new Promise((_, rej) => { to = setTimeout(() => rej(new Error("timeout")), 30000); }),
       ]);
       clearTimeout(to);
-      saving = false; dirty = false; renderSaveBtn(); flashSaved();
+      saving = false; clearDirty(); flashSaved();
     } catch (err) {
       saving = false; renderSaveBtn();
       savedHint.textContent = (err && err.message === "timeout")
@@ -1344,11 +1356,38 @@
     if (deferredServer === null) return;
     const srv = deferredServer; deferredServer = null;
     if (isAdmin) {
-      dirty = true; renderSaveBtn();
+      dirty = true; try { localStorage.setItem(DIRTY_KEY, "1"); } catch (e) {} renderSaveBtn();
       savedHint.textContent = "♻ Восстановлены несохранённые правки — нажмите «Сохранить»";
+      // Дать возможность одним кликом взять версию из базы вместо своих правок
+      pendingServer = srv; showUpdateBanner();
     } else {
       applyServer(srv);
     }
+  }
+
+  // Баннер «есть свежие изменения» — когда другой админ опубликовал правки,
+  // а у тебя есть свои неопубликованные. Один клик «Обновить» вместо Ctrl+F5.
+  function showUpdateBanner() {
+    if (!pendingServer || document.getElementById("syncBanner")) return;
+    const box = document.createElement("div");
+    box.id = "syncBanner";
+    box.className = "uid-banner sync-banner";
+    box.innerHTML =
+      '<button class="uid-banner-close" title="Закрыть">✕</button>' +
+      '<div class="uid-banner-title">Есть свежие изменения</div>' +
+      '<div class="uid-banner-sub">Другой администратор обновил тирлист. Обновить сейчас? Ваши несохранённые правки будут заменены версией из базы.</div>' +
+      '<div class="uid-banner-row">' +
+        '<button class="btn small primary" id="syncApply">Обновить</button>' +
+        '<button class="btn small ghost" id="syncDismiss">Оставить мои правки</button>' +
+      '</div>';
+    document.body.appendChild(box);
+    const close = () => box.remove();
+    box.querySelector(".uid-banner-close").addEventListener("click", close);
+    box.querySelector("#syncDismiss").addEventListener("click", close);
+    box.querySelector("#syncApply").addEventListener("click", () => {
+      if (pendingServer) { clearDirty(); applyServer(pendingServer); pendingServer = null; }
+      close();
+    });
   }
 
   function initFirebase() {
@@ -1380,23 +1419,26 @@
       fbRef.on("value", snapshot => {
         const data = snapshot.val();
         if (!data) return;
-        if (dirty) return; // у админа есть неопубликованные правки — не затираем их
         const merged = mergeServer(data);
 
-        // Первый снимок после перезагрузки: если в localStorage остались
-        // правки, которых ещё нет в общей базе (например, прошлое сохранение
-        // оборвалось), не теряем их. Что делать — зависит от роли (админ
-        // оставляет правки, зритель видит базу), а вход подтверждается
-        // асинхронно, поэтому откладываем решение до выяснения роли.
+        // Первый снимок после перезагрузки: защищаем локальные данные ТОЛЬКО
+        // если при прошлой сессии остались реально неопубликованные правки
+        // (bootedDirty). Иначе админ молча застревал «грязным» и переставал
+        // получать чужие обновления. Решение зависит от роли (вход
+        // подтверждается асинхронно), поэтому откладываем до выяснения роли.
         if (!firstSnapshotHandled) {
           firstSnapshotHandled = true;
-          if (bootedFromLocal && !sameState(merged, state)) {
+          if (bootedDirty && !sameState(merged, state)) {
             deferredServer = merged;
             if (roleResolved) resolvePending();
             return;
           }
         }
         if (deferredServer !== null) { deferredServer = merged; return; }
+
+        // Есть свои НЕопубликованные правки → не затираем молча. Запоминаем
+        // свежую базу и показываем баннер «Обновить» (один клик вместо Ctrl+F5).
+        if (dirty) { pendingServer = merged; showUpdateBanner(); return; }
 
         applyServer(merged);
       });

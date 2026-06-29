@@ -175,6 +175,9 @@ html, body {
   color: #9fc2ee; font-size: 16px; line-height: 1; cursor: pointer;
 }
 .uid-banner-close:hover { color: #fff; }
+/* баннер живой синхронизации (свежие правки другого админа) */
+.sync-banner { top: 72px; border-color: rgba(120,190,255,.6); box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(42,166,224,.35); }
+.sync-banner .uid-banner-row { margin-top: 4px; }
 
 .btn {
   font-family: var(--ui);
