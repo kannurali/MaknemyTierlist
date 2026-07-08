@@ -1501,11 +1501,36 @@
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initFirebase();
-  // при смене ширины пересчитываем разбивку на ряды (itemsPerRow) и подгон цифр
+  // render() полностью перестраивает #tiers (innerHTML=""). На телефоне это
+  // опасно: браузер шлёт 'resize' при сворачивании адресной строки во время
+  // прокрутки (меняется только ВЫСОТА) — перерисовка сбрасывала прокрутку
+  // вверх. Поэтому разметку пересобираем ТОЛЬКО при смене ШИРИНЫ; на смену
+  // высоты просто подгоняем цифры без перестройки DOM.
+  function safeRender() {
+    try { render(); }
+    catch (e) {
+      // Транзитный сбой (например, поворот экрана на неустаканенном вьюпорте)
+      // не должен оставлять пустую страницу — повторяем на следующем кадре.
+      console.error("render failed", e);
+      requestAnimationFrame(() => { try { render(); } catch (_) {} });
+    }
+  }
   let resizeT = null;
+  let lastW = window.innerWidth;
   window.addEventListener("resize", () => {
     clearTimeout(resizeT);
-    resizeT = setTimeout(render, 150);
+    resizeT = setTimeout(() => {
+      const w = window.innerWidth;
+      if (Math.abs(w - lastW) < 2) { fitValues(); return; } // только высота (адресная строка)
+      lastW = w;
+      safeRender();
+    }, 150);
+  });
+  // Поворот экрана меняет ширину и высоту местами. Некоторые мобильные
+  // браузеры шлют 'resize' раньше, чем вьюпорт устаканится — раскладка
+  // ломалась и тирлист пропадал. Форсируем пересчёт с задержкой.
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => { lastW = window.innerWidth; safeRender(); }, 250);
   });
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(fitValues).catch(() => {});
