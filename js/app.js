@@ -1459,8 +1459,11 @@
 
   async function fetchSnapshot() {
     // 1) Свой edge-эндпоинт (Vercel) — {tierlist, likes} из кэша, с нашего домена.
+    //    cache:"no-cache" = браузер всегда перепроверяет по ETag: если данные не
+    //    менялись, сервер отдаёт 304 (пара байт) вместо полных ~2 МБ. Полный
+    //    ответ качается только когда тирлист реально изменили. Экономит трафик.
     try {
-      const r = await fetch(API_TIERLIST, { cache: "no-store" });
+      const r = await fetch(API_TIERLIST, { cache: "no-cache" });
       if (r.ok) {
         const d = await r.json();
         if (d && d.tierlist) handleSnapshot(d.tierlist);
