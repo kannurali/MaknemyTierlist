@@ -141,6 +141,38 @@ html, body {
 }
 .like-fab.pop .like-heart { animation: likePop .35s ease; }
 
+/* Кнопка доната — над кнопкой лайка, тот же стиль в фиолетовых тонах */
+.donate-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 74px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: #f0e2ff;
+  text-decoration: none;
+  background: rgba(88, 48, 132, 0.62);
+  border: 1px solid rgba(196, 140, 255, 0.45);
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  transition: transform .12s ease, background .15s, border-color .15s, box-shadow .2s;
+}
+.donate-fab:hover {
+  background: rgba(120, 72, 176, 0.75);
+  border-color: #c48cff;
+  box-shadow: 0 10px 32px rgba(196, 140, 255, 0.30);
+}
+.donate-fab:active { transform: scale(0.94); }
+.donate-heart { font-size: 18px; line-height: 1; display: inline-block; }
+
 /* Баннер с UID для не-админов (показывается на странице, а не через alert) */
 .uid-banner {
   position: fixed;
@@ -908,6 +940,7 @@ html, body {
 
   /* кнопка лайка — компактнее и ближе к углу на телефоне */
   .like-fab { right: 12px; bottom: 12px; padding: 9px 14px; font-size: 14px; }
+  .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
 
   /* --- тирлист во всю ширину экрана (крупнее) --- */
   .stage-wrap { padding: 10px 0 34px; }

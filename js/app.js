@@ -89,6 +89,14 @@
   let roleResolved = false;        // onAuthStateChanged уже отработал
   let firstSnapshotHandled = false;
 
+  // ============================================================
+  //  ⬇⬇⬇  ССЫЛКА НА ДОНАТ  ⬇⬇⬇
+  //  Вставь сюда адрес своей страницы доната (DonationAlerts / Boosty / ЮMoney)
+  //  и сохрани файл. Пока пусто — кнопка «Поддержать» скрыта.
+  //  Пример:  const DONATE_URL = "https://www.donationalerts.com/r/maknemy";
+  // ============================================================
+  const DONATE_URL = "";
+
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -1271,27 +1279,61 @@
     likeBtn.classList.add("pop");
   }
 
+  // Отправка лайка: сначала свой edge-эндпоинт, затем фолбэк на Firebase REST
+  // (атомарный server-value increment). Постоянное подключение больше не нужно.
+  async function sendLike(dir) {
+    try {
+      const r = await fetch("/api/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dir }),
+      });
+      if (r.ok) return true;
+    } catch (e) { /* нет эндпоинта — фолбэк ниже */ }
+
+    const db = (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG.databaseURL) || "";
+    if (!db) return null; // нет бэкенда (демо-режим) — считаем локальным успехом
+    try {
+      const r = await fetch(db + "/likes.json", {
+        method: "PUT",
+        body: JSON.stringify({ ".sv": { increment: dir } }),
+      });
+      return r.ok;
+    } catch (e) { return false; }
+  }
+
   function toggleLike() {
     const willLike = !hasLiked;
+    const dir = willLike ? 1 : -1;
+    // Оптимистично обновляем UI; следующий опрос сверит счётчик с сервером.
     setLiked(willLike);
     popLike();
-    if (likesRef) {
-      // атомарный инкремент/декремент — корректно при одновременных лайках
-      likesRef.transaction(cur => {
-        cur = (typeof cur === "number" && cur >= 0) ? cur : 0;
-        return Math.max(0, cur + (willLike ? 1 : -1));
-      }, (err, committed) => {
-        if (err || !committed) setLiked(!willLike); // запись не прошла — откат
-      });
-    } else {
-      // Firebase не настроен — лайк живёт только в этом браузере
-      likeCount = Math.max(0, likeCount + (willLike ? 1 : -1));
-      renderLike();
-    }
+    likeCount = Math.max(0, likeCount + dir);
+    renderLike();
+
+    sendLike(dir).then(ok => {
+      if (ok === false) { // запись не прошла — откат
+        setLiked(!willLike);
+        likeCount = Math.max(0, likeCount - dir);
+        renderLike();
+      }
+    });
   }
 
   if (likeBtn) likeBtn.addEventListener("click", toggleLike);
   renderLike();
+
+  // Кнопка доната: показываем только если задан DONATE_URL (см. верх файла).
+  (function initDonate() {
+    const donateBtn = document.getElementById("donateBtn");
+    if (!donateBtn) return;
+    if (typeof DONATE_URL === "string" && DONATE_URL.trim()) {
+      donateBtn.href = DONATE_URL.trim();
+      donateBtn.hidden = false;
+    } else {
+      donateBtn.hidden = true;
+    }
+  })();
 
   // ============================================================
   //  FIREBASE — авторизация и синхронизация
@@ -1365,6 +1407,81 @@
     }
   }
 
+  // ============================================================
+  //  ЧТЕНИЕ ДАННЫХ — опрос (polling) вместо постоянного websocket
+  // ------------------------------------------------------------
+  //  Раньше каждый посетитель держал постоянное подключение к Firebase
+  //  (fbRef.on / likesRef.on). На бесплатном плане это упирается в лимит
+  //  100 одновременных подключений — на пике часть людей не получала данные.
+  //  Теперь читаем короткими запросами:
+  //    1) сначала со своего домена  /api/tierlist  (edge-кэш на Vercel;
+  //       обходит блокировщики, режущие *.firebasedatabase.app);
+  //    2) если эндпоинта нет (напр. хостинг GitHub Pages) — напрямую через
+  //       Firebase REST. В обоих случаях постоянного websocket больше нет.
+  //  Записи админа идут отдельно через publish() → fbRef.set().
+  // ============================================================
+  const API_TIERLIST = "/api/tierlist";
+  const POLL_MS = 30000;
+  let pollTimer = null;
+
+  // Обработка снимка данных тирлиста (логика та же, что была в fbRef.on).
+  function handleSnapshot(data) {
+    if (!data) return;
+    const merged = mergeServer(data);
+
+    // Первый снимок после перезагрузки: защищаем локальные правки ТОЛЬКО если
+    // при прошлой сессии остались реально неопубликованные изменения.
+    if (!firstSnapshotHandled) {
+      firstSnapshotHandled = true;
+      if (bootedDirty && !sameState(merged, state)) {
+        deferredServer = merged;
+        if (roleResolved) resolvePending();
+        return;
+      }
+    }
+    if (deferredServer !== null) { deferredServer = merged; return; }
+
+    // Есть свои НЕопубликованные правки → не затираем молча, показываем баннер.
+    if (dirty) { pendingServer = merged; showUpdateBanner(); return; }
+
+    applyServer(merged);
+  }
+
+  async function fetchSnapshot() {
+    // 1) Свой edge-эндпоинт (Vercel) — {tierlist, likes} из кэша, с нашего домена.
+    try {
+      const r = await fetch(API_TIERLIST, { cache: "no-store" });
+      if (r.ok) {
+        const d = await r.json();
+        if (d && d.tierlist) handleSnapshot(d.tierlist);
+        if (d && typeof d.likes === "number") { likeCount = Math.max(0, d.likes); renderLike(); }
+        return;
+      }
+    } catch (e) { /* нет эндпоинта — уходим в фолбэк */ }
+
+    // 2) Фолбэк: напрямую через Firebase REST (работает с любого хостинга).
+    const db = (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG.databaseURL) || "";
+    if (!db) return;
+    try {
+      const [t, l] = await Promise.all([
+        fetch(db + "/tierlist.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null),
+        fetch(db + "/likes.json",    { cache: "no-store" }).then(r => r.ok ? r.json() : null),
+      ]);
+      if (t) handleSnapshot(t);
+      if (typeof l === "number") { likeCount = Math.max(0, l); renderLike(); }
+    } catch (e) { /* сеть недоступна — покажем то, что уже есть */ }
+  }
+
+  function startPolling() {
+    fetchSnapshot();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(fetchSnapshot, POLL_MS);
+    // Свежие цены сразу при возврате на вкладку, без ожидания интервала.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") fetchSnapshot();
+    });
+  }
+
   // Баннер «есть свежие изменения» — когда другой админ опубликовал правки,
   // а у тебя есть свои неопубликованные. Один клик «Обновить» вместо Ctrl+F5.
   function showUpdateBanner() {
@@ -1407,41 +1524,10 @@
       const auth = firebase.auth();
       fbRef = firebase.database().ref("tierlist");
 
-      // Глобальные лайки — общий счётчик для всех посетителей (реальное время)
-      likesRef = firebase.database().ref("likes");
-      likesRef.on("value", snap => {
-        const v = snap.val();
-        likeCount = (typeof v === "number" && v >= 0) ? v : 0;
-        renderLike();
-      });
-
-      // Слушаем обновления — все клиенты получают новые данные в реальном времени
-      fbRef.on("value", snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
-        const merged = mergeServer(data);
-
-        // Первый снимок после перезагрузки: защищаем локальные данные ТОЛЬКО
-        // если при прошлой сессии остались реально неопубликованные правки
-        // (bootedDirty). Иначе админ молча застревал «грязным» и переставал
-        // получать чужие обновления. Решение зависит от роли (вход
-        // подтверждается асинхронно), поэтому откладываем до выяснения роли.
-        if (!firstSnapshotHandled) {
-          firstSnapshotHandled = true;
-          if (bootedDirty && !sameState(merged, state)) {
-            deferredServer = merged;
-            if (roleResolved) resolvePending();
-            return;
-          }
-        }
-        if (deferredServer !== null) { deferredServer = merged; return; }
-
-        // Есть свои НЕопубликованные правки → не затираем молча. Запоминаем
-        // свежую базу и показываем баннер «Обновить» (один клик вместо Ctrl+F5).
-        if (dirty) { pendingServer = merged; showUpdateBanner(); return; }
-
-        applyServer(merged);
-      });
+      // Чтение данных (тирлист + лайки) идёт опросом /api/tierlist с фолбэком на
+      // Firebase REST — БЕЗ постоянного websocket у каждого посетителя. Это и
+      // снимает лимит 100 подключений, и обходит блокировщики. См. startPolling().
+      startPolling();
 
       // Сообщение «вход только для администратора» прямо на странице
       // (надёжнее alert, который браузер может молча блокировать).
