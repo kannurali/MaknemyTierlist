@@ -90,12 +90,13 @@
   let firstSnapshotHandled = false;
 
   // ============================================================
-  //  ⬇⬇⬇  ССЫЛКА НА ДОНАТ  ⬇⬇⬇
-  //  Вставь сюда адрес своей страницы доната (DonationAlerts / Boosty / ЮMoney)
-  //  и сохрани файл. Пока пусто — кнопка «Поддержать» скрыта.
-  //  Пример:  const DONATE_URL = "https://www.donationalerts.com/r/maknemy";
+  //  ⬇⬇⬇  ССЫЛКИ НА ДОНАТ  ⬇⬇⬇
+  //  Кнопка «Поддержать» открывает окно с этими ссылками и QR-кодом.
+  //  Меняешь ссылки здесь. QR лежит в assets/qr-donate.png (ведёт на DONATE_HUB);
+  //  если поменяешь DONATE_HUB — перегенерь QR (скажи мне) либо оставь как есть.
   // ============================================================
-  const DONATE_URL = "";
+  const DONATE_DA  = "https://www.donationalerts.com/r/maknemy"; // прямой донат
+  const DONATE_HUB = "https://dalink.to/maknemy";                // хаб со всеми способами
 
   function load() {
     try {
@@ -1323,16 +1324,25 @@
   if (likeBtn) likeBtn.addEventListener("click", toggleLike);
   renderLike();
 
-  // Кнопка доната: показываем только если задан DONATE_URL (см. верх файла).
+  // Кнопка доната открывает окно со ссылками и QR.
   (function initDonate() {
-    const donateBtn = document.getElementById("donateBtn");
-    if (!donateBtn) return;
-    if (typeof DONATE_URL === "string" && DONATE_URL.trim()) {
-      donateBtn.href = DONATE_URL.trim();
-      donateBtn.hidden = false;
-    } else {
-      donateBtn.hidden = true;
-    }
+    const donateBtn   = document.getElementById("donateBtn");
+    const donateModal = document.getElementById("donateModal");
+    if (!donateBtn || !donateModal) return;
+
+    const linkDA  = document.getElementById("donateLinkDA");
+    const linkHub = document.getElementById("donateLinkHub");
+    if (linkDA)  linkDA.href  = DONATE_DA;
+    if (linkHub) linkHub.href = DONATE_HUB;
+
+    const open  = () => { donateModal.hidden = false; };
+    const close = () => { donateModal.hidden = true; };
+
+    donateBtn.hidden = false;
+    donateBtn.addEventListener("click", open);
+    document.getElementById("donateClose").addEventListener("click", close);
+    donateModal.addEventListener("click", e => { if (e.target === donateModal) close(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !donateModal.hidden) close(); });
   })();
 
   // ============================================================

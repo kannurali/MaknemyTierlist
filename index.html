@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/favicon.ico?v=1" sizes="any" />
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1" />
-<link rel="stylesheet" href="css/styles.css?v=20" />
+<link rel="stylesheet" href="css/styles.css?v=21" />
 </head>
 <body>
   <!-- ============ Floating auth control (top-right corner) ============ -->
@@ -25,11 +25,11 @@
     <span class="like-count" id="likeCount">0</span>
   </button>
 
-  <!-- ====== Кнопка доната (ссылку задаёт DONATE_URL в js/app.js) ====== -->
-  <a class="donate-fab" id="donateBtn" href="#" target="_blank" rel="noopener" title="Поддержать проект" hidden>
+  <!-- ====== Кнопка доната — открывает окно со ссылками и QR ====== -->
+  <button class="donate-fab" id="donateBtn" type="button" title="Поддержать проект" hidden>
     <span class="donate-heart" aria-hidden="true">💜</span>
     <span class="donate-label">Поддержать</span>
-  </a>
+  </button>
 
   <!-- ================= Toolbar ================= -->
   <div class="toolbar" id="toolbar">
@@ -237,12 +237,31 @@
     </div>
   </div>
 
+  <!-- ============ Донат-модалка (ссылки + QR) ============ -->
+  <div class="modal-backdrop" id="donateModal" hidden>
+    <div class="modal dmodal">
+      <button class="icon-btn dmodal-close" id="donateClose" title="Закрыть">✕</button>
+      <div class="dmodal-body">
+        <div class="dmodal-title">💜 Поддержать проект</div>
+        <div class="dmodal-sub">Спасибо, что помогаешь держать тирлист живым!</div>
+        <div class="dmodal-links">
+          <a class="btn primary dmodal-link" id="donateLinkDA" href="#" target="_blank" rel="noopener">DonationAlerts</a>
+          <a class="btn dmodal-link" id="donateLinkHub" href="#" target="_blank" rel="noopener">Все способы (dalink)</a>
+        </div>
+        <div class="dmodal-qr">
+          <img id="donateQr" src="assets/qr-donate.png?v=1" alt="QR для доната" />
+          <div class="dmodal-qr-cap">Наведи камеру телефона</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js?v=5"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=22"></script>
+  <script src="js/app.js?v=23"></script>
 </body>
 </html>
