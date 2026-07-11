@@ -200,6 +200,9 @@
     saving = true; renderSaveBtn();
     try {
       await compactState();
+      // Метка версии: по ней зрители понимают, что данные изменились, и только
+      // тогда качают полный тирлист (см. fetchSnapshot). Экономит трафик.
+      state._rev = Date.now();
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       render();
       let to;
@@ -1430,9 +1433,16 @@
   //       Firebase REST. В обоих случаях постоянного websocket больше нет.
   //  Записи админа идут отдельно через publish() → fbRef.set().
   // ============================================================
+  //  Экономия трафика: опрашиваем крошечный /api/state ({rev, likes} ~ десятки
+  //  байт), а тяжёлый /api/tierlist (~2 МБ — в данных зашита реклама) качаем
+  //  ТОЛЬКО когда rev изменился, т.е. когда админ реально обновил тирлист.
+  //  rev пишется в publish() как state._rev = Date.now().
   const API_TIERLIST = "/api/tierlist";
+  const API_STATE    = "/api/state";
   const POLL_MS = 30000;
   let pollTimer = null;
+  let lastRev = null;          // последний известный rev тирлиста
+  let haveFullData = false;    // хотя бы раз загрузили полные данные
 
   // Обработка снимка данных тирлиста (логика та же, что была в fbRef.on).
   function handleSnapshot(data) {
@@ -1457,32 +1467,63 @@
     applyServer(merged);
   }
 
-  async function fetchSnapshot() {
-    // 1) Свой edge-эндпоинт (Vercel) — {tierlist, likes} из кэша, с нашего домена.
-    //    cache:"no-cache" = браузер всегда перепроверяет по ETag: если данные не
-    //    менялись, сервер отдаёт 304 (пара байт) вместо полных ~2 МБ. Полный
-    //    ответ качается только когда тирлист реально изменили. Экономит трафик.
+  function fbUrl(path) {
+    const db = (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG.databaseURL) || "";
+    return db ? db + path : "";
+  }
+
+  // Лёгкий опрос: {rev, likes}. Сначала свой /api/state, затем фолбэк на Firebase
+  // REST (крошечные чтения /tierlist/_rev и /likes — работает с любого хостинга).
+  async function fetchState() {
+    try {
+      const r = await fetch(API_STATE, { cache: "no-store" });
+      if (r.ok) return await r.json();
+    } catch (e) { /* нет эндпоинта — фолбэк ниже */ }
+
+    const revUrl = fbUrl("/tierlist/_rev.json");
+    const likUrl = fbUrl("/likes.json");
+    if (!revUrl) return null;
+    try {
+      const [rev, likes] = await Promise.all([
+        fetch(revUrl, { cache: "no-store" }).then(r => r.ok ? r.json() : null),
+        fetch(likUrl, { cache: "no-store" }).then(r => r.ok ? r.json() : null),
+      ]);
+      return { rev, likes };
+    } catch (e) { return null; }
+  }
+
+  // Тяжёлая загрузка полного тирлиста — вызывается только при первой загрузке и
+  // когда rev изменился. Сначала /api/tierlist (edge-кэш), затем Firebase REST.
+  async function fetchFull() {
     try {
       const r = await fetch(API_TIERLIST, { cache: "no-cache" });
       if (r.ok) {
         const d = await r.json();
-        if (d && d.tierlist) handleSnapshot(d.tierlist);
-        if (d && typeof d.likes === "number") { likeCount = Math.max(0, d.likes); renderLike(); }
-        return;
+        if (d && d.tierlist) { handleSnapshot(d.tierlist); return true; }
       }
-    } catch (e) { /* нет эндпоинта — уходим в фолбэк */ }
+    } catch (e) { /* фолбэк ниже */ }
 
-    // 2) Фолбэк: напрямую через Firebase REST (работает с любого хостинга).
-    const db = (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG.databaseURL) || "";
-    if (!db) return;
+    const url = fbUrl("/tierlist.json");
+    if (!url) return false;
     try {
-      const [t, l] = await Promise.all([
-        fetch(db + "/tierlist.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null),
-        fetch(db + "/likes.json",    { cache: "no-store" }).then(r => r.ok ? r.json() : null),
-      ]);
-      if (t) handleSnapshot(t);
-      if (typeof l === "number") { likeCount = Math.max(0, l); renderLike(); }
-    } catch (e) { /* сеть недоступна — покажем то, что уже есть */ }
+      const t = await fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null);
+      if (t) { handleSnapshot(t); return true; }
+    } catch (e) {}
+    return false;
+  }
+
+  async function fetchSnapshot() {
+    const st = await fetchState();
+    if (st && typeof st.likes === "number") { likeCount = Math.max(0, st.likes); renderLike(); }
+
+    // Полные данные тянем только если ещё ни разу не грузили ИЛИ rev поменялся.
+    const need = !haveFullData || (st && st.rev !== lastRev);
+    if (need) {
+      const ok = await fetchFull();
+      if (ok) { haveFullData = true; if (st) lastRev = st.rev; }
+    } else if (st) {
+      lastRev = st.rev;
+    }
   }
 
   function startPolling() {
