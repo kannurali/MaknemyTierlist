@@ -1494,9 +1494,16 @@
 
   // Тяжёлая загрузка полного тирлиста — вызывается только при первой загрузке и
   // когда rev изменился. Сначала /api/tierlist (edge-кэш), затем Firebase REST.
-  async function fetchFull() {
+  //
+  // В URL добавляем ?rev=<n>: данные конкретной версии неизменны, поэтому сервер
+  // отдаёт их с immutable-кэшем. Одинаковый rev → браузер и edge-кэш Vercel
+  // отвечают без обращения к Firebase (cache:"default" даёт браузеру право взять
+  // ответ из своего кэша). Firebase дёргается один раз на версию, а не каждые
+  // 30 сек — это и снимает перерасход трафика.
+  async function fetchFull(rev) {
+    const q = (rev !== null && rev !== undefined && rev !== "") ? ("?rev=" + encodeURIComponent(rev)) : "";
     try {
-      const r = await fetch(API_TIERLIST, { cache: "no-cache" });
+      const r = await fetch(API_TIERLIST + q, { cache: "default" });
       if (r.ok) {
         const d = await r.json();
         if (d && d.tierlist) { handleSnapshot(d.tierlist); return true; }
@@ -1519,7 +1526,7 @@
     // Полные данные тянем только если ещё ни разу не грузили ИЛИ rev поменялся.
     const need = !haveFullData || (st && st.rev !== lastRev);
     if (need) {
-      const ok = await fetchFull();
+      const ok = await fetchFull(st ? st.rev : null);
       if (ok) { haveFullData = true; if (st) lastRev = st.rev; }
     } else if (st) {
       lastRev = st.rev;

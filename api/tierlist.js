@@ -17,9 +17,23 @@
 const FB_DB = "https://nexus-117f0-default-rtdb.europe-west1.firebasedatabase.app";
 
 export default async function handler(req, res) {
-  // Кэш на стороне Vercel (edge): 30 сек «свежести» + отдача устаревшего во время
-  // фонового обновления. Пользователи опрашивают часто, к Firebase уходит ~1 запрос.
-  res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
+  // Кэширование зависит от того, пришёл ли ?rev=<n> (версия тирлиста).
+  //
+  //  • С rev — клиент запрашивает КОНКРЕТНУЮ версию (URL /api/tierlist?rev=123).
+  //    Данные этой версии неизменны, поэтому кэшируем «навсегда» (immutable).
+  //    Каждый rev тянется из Firebase РОВНО ОДИН раз (первый посетитель в
+  //    регионе), дальше всё отдаётся из edge- и браузерного кэша. Именно это
+  //    убирает перекачку одного и того же 2.7 МБ-блоба каждые 30 сек, из-за
+  //    которой сгорал лимит трафика Firebase (142 ГБ/мес → единицы ГБ).
+  //    При публикации админ меняет rev → у клиентов новый URL → одна свежая
+  //    загрузка, старый rev больше никто не запрашивает.
+  //  • Без rev (фолбэк/прямой заход) — прежнее поведение: короткий edge-кэш.
+  const rev = req.query && req.query.rev;
+  if (rev) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable");
+  } else {
+    res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
+  }
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   try {
