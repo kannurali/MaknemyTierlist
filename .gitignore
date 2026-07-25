@@ -2,3 +2,8 @@
 *.tif
 *.jpg
 5379910781715029061.jpg
+/config.php
+/public_html/images/*
+!/public_html/images/.gitkeep
+/tools/scratch_*
+/scratch_*
