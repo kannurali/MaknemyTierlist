@@ -7,4 +7,5 @@
 !/public_html/images/.gitkeep
 !/public_html/images/.htaccess
 /tools/scratch_*
+/tools/out/
 /scratch_*
