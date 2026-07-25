@@ -127,15 +127,24 @@ authenticated. Same-origin only — no `Access-Control-Allow-Origin` header
 ### `POST /api/save.php` (admin)
 - Requires `$_SESSION['admin']`.
 - Body: full tierlist state as JSON (`Content-Type: application/json`).
-- Validation: `json_decode` succeeds; has `tiers` array; serialized size under
-  512 KB (images are external now); **reject** if any `icon`/`logo`/`ad.image`
-  is a `data:` URL larger than 2 KB — this enforces the "images are uploaded,
-  not embedded" invariant with a clear error message.
+- Validation: `json_decode` succeeds; has `tiers` array.
+- **Server-side image extraction (silent):** before storing, walk
+  `tiers[].logo`, `tiers[].items[].icon`, `ad.image`. Any value that is a
+  `data:` URL is decoded, written to `images/<sha1>.<ext>` (same content-hash
+  dedup as `upload.php`), and replaced with its `/images/...` URL in the JSON.
+  This keeps the "images live in files, not in the blob" invariant without ever
+  failing a save — the admin's edit always goes through, and a client that
+  skipped the upload step (or an old client) still ends up clean. Enforce the
+  per-image size cap (500 KB) here too; oversized images are rejected with a
+  clear error rather than stored.
+- After extraction the serialized blob must be under 512 KB (it will be, once
+  images are external).
 - `rev` is generated **server-side**: `round(microtime(true) * 1000)` (client
   value is ignored — never trust the client for versioning).
 - `UPDATE tierlist SET data = :json, rev = :rev`.
 - `200 -> {ok: true, rev: <int>}`
-- Errors: `401` (not admin), `400` (bad/oversized/embedded-image payload).
+- Errors: `401` (not admin), `400` (unparseable JSON / missing `tiers` / an
+  embedded image over the 500 KB cap).
 
 ### `POST /api/upload.php` (admin)
 - Requires `$_SESSION['admin']`.
@@ -200,9 +209,14 @@ authenticated. Same-origin only — no `Access-Control-Allow-Origin` header
   (`shrinkDataURL` / `fileToSmallDataURL`), then instead of embedding base64,
   `POST` the blob to `upload.php` and store the returned URL in
   `item.icon` / `tier.logo` / `ad.image`.
-- `compactState` / `isBigDataURL`: repurpose as a safety net — on save, any
-  lingering large data URL is uploaded and swapped for a URL before `save.php`.
+- `compactState` / `isBigDataURL`: repurpose to proactively upload on pick so
+  the wire payload stays small. This is now an optimization, not a correctness
+  requirement — `save.php` extracts any leftover `data:` URLs server-side, so a
+  missed client upload still results in a clean stored blob.
 - Render path already uses the value as an `<img src>`, so URLs work directly.
+- The base64→file extraction is shared logic used by both `upload.php` and
+  `save.php` (a helper in `_bootstrap.php`): decode, size-check, `sha1`, write
+  if absent, return URL.
 
 ## One-time data migration
 
