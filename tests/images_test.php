@@ -66,4 +66,33 @@ test('extract_embedded_images rewrites data urls, keeps plain urls', function ()
     assert_eq($expected, $out['ad']['image'], 'ad rewritten');
 });
 
+test('image_ext_for detects jpeg', function () {
+    assert_eq('jpg', image_ext_for("\xFF\xD8\xFF\xE0" . str_repeat("\x00", 8)), 'jpeg magic');
+});
+
+test('image_ext_for detects webp', function () {
+    $webp = 'RIFF' . "\x00\x00\x00\x00" . 'WEBP' . str_repeat("\x00", 8);
+    assert_eq('webp', image_ext_for($webp), 'webp magic');
+});
+
+test('data_url_to_bytes decodes non-base64 percent-encoded', function () {
+    assert_eq('hello world', data_url_to_bytes('data:text/plain,hello%20world'), 'percent-encoded');
+});
+
+test('save_image_bytes rejects unsupported type', function () {
+    $dir = tmp_dir();
+    assert_throws(function () use ($dir) {
+        save_image_bytes('this is not an image at all', $dir);
+    }, 'non-image throws');
+});
+
+test('extract_embedded_images tolerates missing keys without notices', function () {
+    $state = ['tiers' => [
+        ['items' => [['name' => 'no-icon-here']]],
+        ['logo' => '/images/plain.webp', 'items' => []],
+    ]];
+    $out = extract_embedded_images($state, tmp_dir());
+    assert_eq($state, $out, 'unchanged when nothing to rewrite');
+});
+
 run_tests();
