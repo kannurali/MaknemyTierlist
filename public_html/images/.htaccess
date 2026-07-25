@@ -1,0 +1,6 @@
+# Uploaded files are data only — never execute anything here.
+php_flag engine off
+<FilesMatch "\.(php|phtml|phar|cgi|pl)$">
+  Require all denied
+</FilesMatch>
+Options -ExecCGI

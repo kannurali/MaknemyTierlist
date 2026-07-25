@@ -1,0 +1,16 @@
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Deny access to sensitive files
+<FilesMatch "\.(sql|md|mjs)$">
+  Require all denied
+</FilesMatch>
+
+# Long-cache hashed images
+<IfModule mod_headers.c>
+  <FilesMatch "\.(webp|png|jpg|jpeg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
