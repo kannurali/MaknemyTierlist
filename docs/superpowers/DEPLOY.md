@@ -1,6 +1,14 @@
 # Deploy to shared hosting (cPanel)
 
-Target: Apache + PHP + MySQL shared host (e.g. HostIQ), replacing Firebase + Vercel.
+Target: Apache + PHP + MySQL shared host, replacing Firebase + Vercel.
+
+**Domain (registered 2026-07-27, expires 2027-07-27): `maknemytierlist.site`.**
+Hosting for it was not yet confirmed as of that date — a domain alone cannot
+serve PHP/MySQL, so verify a hosting plan exists before following these steps.
+
+A ready-to-upload bundle (site + migrated images + schema.sql + import.sql +
+a step-by-step Russian guide) is produced by staging `public_html/` together
+with `tools/out/` — see step 5 below for regenerating the data.
 
 ## One-time setup
 
