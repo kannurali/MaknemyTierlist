@@ -21,6 +21,7 @@ function handle_upload(string $imagesDir, ?string $dataUrl, ?array $file): array
 }
 
 if (!defined('TESTING')) {
+    require_post();
     require_admin();
     $cfg = app_config();
     $body = read_json_body();

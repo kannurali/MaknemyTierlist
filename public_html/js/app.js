@@ -84,7 +84,7 @@
   let bootedDirty = (() => { try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch (e) { return false; } })();
   let deferredServer = null;       // снимок из базы, отложенный до выяснения роли входа
   let pendingServer = null;        // свежая база, пришедшая пока есть свои неопубликованные правки
-  let roleResolved = false;        // onAuthStateChanged уже отработал
+  let roleResolved = false;        // роль выяснена (checkSession/вход/выход отработали)
   let firstSnapshotHandled = false;
 
   // ============================================================
@@ -136,10 +136,9 @@
   }
 
   // ---------- Сжатие картинок ----------
-  // Firebase Realtime Database хранит JSON, а не файлы. Раньше загруженные
-  // картинки клались в состояние как полный base64 (data URL) в несколько МБ —
-  // из-за этого один общий set(state) мог грузиться минутами или висеть.
-  // Поэтому любую картинку уменьшаем и пережимаем в WebP (обычно единицы КБ).
+  // Картинки уходят на сервер отдельными файлами (upload.php), но сначала их
+  // уменьшаем и пережимаем в WebP (обычно единицы КБ): так и загрузка быстрее,
+  // и на диске хостинга не копятся мегабайтные исходники.
   function shrinkDataURL(src, maxSize, quality) {
     return new Promise(resolve => {
       const img = new Image();
@@ -174,13 +173,26 @@
       reader.readAsDataURL(file);
     });
   }
+  // fetch с ограничением по времени. Без него зависший сервер оставляет кнопку
+  // «Сохранить» в состоянии «⏳ Сохранение…» навсегда, без выхода.
+  const REQUEST_TIMEOUT_MS = 30000;
+  async function fetchWithTimeout(url, opts, ms) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), ms || REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+    } finally {
+      clearTimeout(to);
+    }
+  }
+
   // Загрузить (сжатый) data-URL на сервер, вернуть URL сохранённого файла.
   // При ошибке возвращаем исходный data-URL — правка не ломается оффлайн
   // (сервер при сохранении всё равно извлечёт встроенные картинки).
   async function uploadDataUrl(dataUrl) {
     if (typeof dataUrl !== "string" || dataUrl.indexOf("data:") !== 0) return dataUrl;
     try {
-      const r = await fetch(API_UPLOAD, {
+      const r = await fetchWithTimeout(API_UPLOAD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ data: dataUrl }),
@@ -217,7 +229,7 @@
       await compactState(); // выгружает встроенные картинки в файлы (бэкстоп: сервер тоже извлечёт)
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       render();
-      const r = await fetch(API_SAVE, {
+      const r = await fetchWithTimeout(API_SAVE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state),
@@ -230,7 +242,9 @@
       saving = false; clearDirty(); flashSaved();
     } catch (err) {
       saving = false; renderSaveBtn();
-      savedHint.textContent = "⚠ " + (err.message || "Ошибка сохранения");
+      savedHint.textContent = (err && err.name === "AbortError")
+        ? "⚠ Долго нет ответа — проверьте интернет и размер картинок"
+        : "⚠ " + ((err && err.message) || "Ошибка сохранения");
     }
   }
 
@@ -1262,7 +1276,8 @@
   // ============================================================
   //  LIKE BUTTON (глобальный счётчик лайков для всех посетителей)
   // ============================================================
-  // Счётчик общий — лежит в Firebase по пути "likes". Любой посетитель может
+  // Счётчик общий — лежит в БД (таблица likes), меняется через /api/like.php.
+  // Любой посетитель может
   // поставить лайк (без входа). Чтобы один браузер не накручивал, запоминаем
   // факт лайка в localStorage и разрешаем переключение лайк/не-лайк (±1).
   const LIKED_KEY = "nexus-liked";
@@ -1389,7 +1404,7 @@
     resolvePending();
   }
 
-  // ---------- Слияние и применение данных из Firebase ----------
+  // ---------- Слияние и применение данных с сервера ----------
   function mergeServer(data) {
     const d = defaultState();
     const merged = Object.assign({}, d, data);
@@ -1452,7 +1467,7 @@
   let lastRev = null;          // последний известный rev тирлиста
   let haveFullData = false;    // хотя бы раз загрузили полные данные
 
-  // Обработка снимка данных тирлиста (логика та же, что была в fbRef.on).
+  // Обработка снимка данных тирлиста, пришедшего с сервера.
   function handleSnapshot(data) {
     if (!data) return;
     const merged = mergeServer(data);
@@ -1486,13 +1501,12 @@
   }
 
   // Тяжёлая загрузка полного тирлиста — вызывается только при первой загрузке и
-  // когда rev изменился. Сначала /api/tierlist (edge-кэш), затем Firebase REST.
+  // когда rev изменился.
   //
   // В URL добавляем ?rev=<n>: данные конкретной версии неизменны, поэтому сервер
-  // отдаёт их с immutable-кэшем. Одинаковый rev → браузер и edge-кэш Vercel
-  // отвечают без обращения к Firebase (cache:"default" даёт браузеру право взять
-  // ответ из своего кэша). Firebase дёргается один раз на версию, а не каждые
-  // 30 сек — это и снимает перерасход трафика.
+  // отдаёт их с immutable-кэшем. Одинаковый rev → браузер отвечает из своего
+  // кэша (cache:"default" даёт ему на это право), запрос до сервера не доходит.
+  // Значит полные данные качаются раз на версию, а не каждые 30 сек.
   async function fetchFull(rev) {
     const q = (rev !== null && rev !== undefined && rev !== "") ? ("?rev=" + encodeURIComponent(rev)) : "";
     try {

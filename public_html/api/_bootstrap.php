@@ -56,3 +56,56 @@ function require_admin(): void {
     start_admin_session();
     if (!is_admin()) { json_out(['error' => 'unauthorized'], 401); exit; }
 }
+
+// State-changing endpoints must be POST. Without this a bare GET — an <img>
+// tag on someone else's page, a link-preview crawler, a scanner walking the
+// URLs visible in app.js — would mutate data.
+function require_post(): void {
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        json_out(['error' => 'method_not_allowed'], 405);
+        exit;
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Login throttle — brute-force guard keyed by client IP.
+//  State is a small JSON file in the system temp dir: no DB table, works on
+//  any shared host. A flat per-request sleep alone is near-useless against a
+//  parallel attack, so failures also escalate into a timed lockout.
+// ---------------------------------------------------------------------------
+function throttle_file(string $key): string {
+    return rtrim(sys_get_temp_dir(), "/\\") . '/nexus_login_' . sha1($key) . '.json';
+}
+
+function throttle_read(string $key): array {
+    $f = throttle_file($key);
+    if (!is_file($f)) { return ['fails' => 0, 'until' => 0]; }
+    $d = json_decode((string)file_get_contents($f), true);
+    return [
+        'fails' => (int)($d['fails'] ?? 0),
+        'until' => (int)($d['until'] ?? 0),
+    ];
+}
+
+// Seconds the caller must wait before another attempt is accepted (0 = now).
+function throttle_retry_after(string $key, int $now): int {
+    $s = throttle_read($key);
+    return max(0, $s['until'] - $now);
+}
+
+// Record a failed attempt; locks out once $maxFails is reached. Returns the
+// new failure count. A lock that has already expired resets the counter, so a
+// later typo costs one attempt rather than an instant re-lock.
+function throttle_register_failure(string $key, int $now, int $maxFails = 5, int $lockSeconds = 300): int {
+    $s = throttle_read($key);
+    $expired = $s['until'] > 0 && $s['until'] <= $now;
+    $fails = $expired ? 1 : $s['fails'] + 1;
+    $until = $fails >= $maxFails ? $now + $lockSeconds : 0;
+    @file_put_contents(throttle_file($key), json_encode(['fails' => $fails, 'until' => $until]));
+    return $fails;
+}
+
+function throttle_clear(string $key): void {
+    $f = throttle_file($key);
+    if (is_file($f)) { @unlink($f); }
+}

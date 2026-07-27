@@ -14,6 +14,7 @@ function handle_like(PDO $pdo, array $body): array {
 }
 
 if (!defined('TESTING')) {
+    require_post();
     [$status, $payload] = handle_like(db(), read_json_body());
     json_out($payload, $status);
 }

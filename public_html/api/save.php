@@ -4,7 +4,10 @@ require_once __DIR__ . '/lib/images.php';
 require_once __DIR__ . '/lib/validate.php';
 
 function handle_save(PDO $pdo, array $state, string $imagesDir, int $revMs): array {
-    $v = validate_state($state);
+    // Structure only at this point. The size cap must NOT run yet: a client
+    // that skipped the upload step sends images inline, and base64 inflates
+    // them ~33% — capping here would 400 a save that extraction fixes.
+    $v = validate_structure($state);
     if (!$v['ok']) { return [400, ['ok' => false, 'error' => $v['error']]]; }
 
     try {
@@ -13,7 +16,7 @@ function handle_save(PDO $pdo, array $state, string $imagesDir, int $revMs): arr
         return [400, ['ok' => false, 'error' => $e->getMessage()]];
     }
 
-    // Re-validate size AFTER extraction (blob should now be tiny).
+    // Size enforced AFTER extraction, when the blob carries URLs only.
     $v2 = validate_state($state);
     if (!$v2['ok']) { return [400, ['ok' => false, 'error' => $v2['error']]]; }
 
@@ -25,6 +28,7 @@ function handle_save(PDO $pdo, array $state, string $imagesDir, int $revMs): arr
 }
 
 if (!defined('TESTING')) {
+    require_post();
     require_admin();
     $cfg = app_config();
     $revMs = (int)round(microtime(true) * 1000);
