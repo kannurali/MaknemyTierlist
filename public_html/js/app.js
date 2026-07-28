@@ -74,10 +74,8 @@
   // ---------- State ----------
   let state = load() || defaultState();
   let isAdmin = false;
-  let fbRef = null;
-  let likesRef = null;             // отдельная ветка Firebase для глобальных лайков
   let dirty = false;   // есть несохранённые правки админа
-  let saving = false;  // идёт публикация в Firebase
+  let saving = false;  // идёт публикация на сервер
   // Восстановление после перезагрузки: не затирать локальные правки данными из базы
   let bootedFromLocal = localStorage.getItem(STORAGE_KEY) != null;
   // Были ли при прошлой сессии РЕАЛЬНЫЕ неопубликованные правки (нажимали Save?).
@@ -86,7 +84,7 @@
   let bootedDirty = (() => { try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch (e) { return false; } })();
   let deferredServer = null;       // снимок из базы, отложенный до выяснения роли входа
   let pendingServer = null;        // свежая база, пришедшая пока есть свои неопубликованные правки
-  let roleResolved = false;        // onAuthStateChanged уже отработал
+  let roleResolved = false;        // роль выяснена (checkSession/вход/выход отработали)
   let firstSnapshotHandled = false;
 
   // ============================================================
@@ -138,10 +136,9 @@
   }
 
   // ---------- Сжатие картинок ----------
-  // Firebase Realtime Database хранит JSON, а не файлы. Раньше загруженные
-  // картинки клались в состояние как полный base64 (data URL) в несколько МБ —
-  // из-за этого один общий set(state) мог грузиться минутами или висеть.
-  // Поэтому любую картинку уменьшаем и пережимаем в WebP (обычно единицы КБ).
+  // Картинки уходят на сервер отдельными файлами (upload.php), но сначала их
+  // уменьшаем и пережимаем в WebP (обычно единицы КБ): так и загрузка быстрее,
+  // и на диске хостинга не копятся мегабайтные исходники.
   function shrinkDataURL(src, maxSize, quality) {
     return new Promise(resolve => {
       const img = new Image();
@@ -176,47 +173,78 @@
       reader.readAsDataURL(file);
     });
   }
-  const isBigDataURL = s =>
-    typeof s === "string" && s.indexOf("data:") === 0 && s.length > 40000; // ~30 КБ+
-
-  // Пережать крупные картинки, уже лежащие в состоянии (старые загрузки в
-  // полном размере), чтобы публикация в Firebase не висела.
-  async function compactState() {
-    for (const t of state.tiers) {
-      if (isBigDataURL(t.logo)) t.logo = await shrinkDataURL(t.logo, 160, 0.85);
-      for (const it of t.items) {
-        if (isBigDataURL(it.icon)) it.icon = await shrinkDataURL(it.icon, 160, 0.85);
-      }
-    }
-    if (state.ad && isBigDataURL(state.ad.image)) {
-      state.ad.image = await shrinkDataURL(state.ad.image, 720, 0.85);
+  // fetch с ограничением по времени. Без него зависший сервер оставляет кнопку
+  // «Сохранить» в состоянии «⏳ Сохранение…» навсегда, без выхода.
+  const REQUEST_TIMEOUT_MS = 30000;
+  async function fetchWithTimeout(url, opts, ms) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), ms || REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+    } finally {
+      clearTimeout(to);
     }
   }
 
-  // Публикация текущего состояния в Firebase — вызывается кнопкой «Сохранить»
+  // Загрузить (сжатый) data-URL на сервер, вернуть URL сохранённого файла.
+  // При ошибке возвращаем исходный data-URL — правка не ломается оффлайн
+  // (сервер при сохранении всё равно извлечёт встроенные картинки).
+  async function uploadDataUrl(dataUrl) {
+    if (typeof dataUrl !== "string" || dataUrl.indexOf("data:") !== 0) return dataUrl;
+    try {
+      const r = await fetchWithTimeout(API_UPLOAD, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: dataUrl }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.url) return d.url;
+    } catch (e) { /* оффлайн */ }
+    return dataUrl;
+  }
+
+  // Перед публикацией выгрузить все ещё встроенные (data:) картинки в файлы,
+  // чтобы сохранённый JSON нёс только URL. Сервер извлекает как бэкстоп.
+  async function compactState() {
+    for (const t of state.tiers) {
+      if (typeof t.logo === "string" && t.logo.indexOf("data:") === 0) {
+        t.logo = await uploadDataUrl(t.logo);
+      }
+      for (const it of t.items) {
+        if (typeof it.icon === "string" && it.icon.indexOf("data:") === 0) {
+          it.icon = await uploadDataUrl(it.icon);
+        }
+      }
+    }
+    if (state.ad && typeof state.ad.image === "string" && state.ad.image.indexOf("data:") === 0) {
+      state.ad.image = await uploadDataUrl(state.ad.image);
+    }
+  }
+
+  // Публикация текущего состояния на сервер (PHP) — по кнопке «Сохранить».
   async function publish() {
     if (!isAdmin || !dirty || saving) return;
-    if (!fbRef) { clearDirty(); flashSaved(); return; } // локальный режим
     saving = true; renderSaveBtn();
     try {
-      await compactState();
-      // Метка версии: по ней зрители понимают, что данные изменились, и только
-      // тогда качают полный тирлист (см. fetchSnapshot). Экономит трафик.
-      state._rev = Date.now();
+      await compactState(); // выгружает встроенные картинки в файлы (бэкстоп: сервер тоже извлечёт)
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       render();
-      let to;
-      await Promise.race([
-        fbRef.set(state),
-        new Promise((_, rej) => { to = setTimeout(() => rej(new Error("timeout")), 30000); }),
-      ]);
-      clearTimeout(to);
+      const r = await fetchWithTimeout(API_SAVE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) { throw new Error(d.error || ("save failed: " + r.status)); }
+      // rev генерит сервер; берём его из ответа.
+      state._rev = d.rev; lastRev = d.rev;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       saving = false; clearDirty(); flashSaved();
     } catch (err) {
       saving = false; renderSaveBtn();
-      savedHint.textContent = (err && err.message === "timeout")
+      savedHint.textContent = (err && err.name === "AbortError")
         ? "⚠ Долго нет ответа — проверьте интернет и размер картинок"
-        : "⚠ Ошибка сохранения Firebase";
+        : "⚠ " + ((err && err.message) || "Ошибка сохранения");
     }
   }
 
@@ -899,7 +927,7 @@
     if (!file || !tierLogoTarget) return;
     const tid = tierLogoTarget;
     tierLogoTarget = null;
-    fileToSmallDataURL(file, 160, 0.85).then(url => {
+    fileToSmallDataURL(file, 160, 0.85).then(du => uploadDataUrl(du)).then(url => {
       const t = findTier(tid);
       if (t && url) { t.logo = url; save(); render(); }
     });
@@ -910,7 +938,7 @@
   $("#adImgFile").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
-    fileToSmallDataURL(file, 720, 0.85).then(url => {
+    fileToSmallDataURL(file, 720, 0.85).then(du => uploadDataUrl(du)).then(url => {
       if (url) { state.ad.image = url; save(); render(); }
     });
     e.target.value = "";
@@ -1065,7 +1093,7 @@
   $("#mIconFile").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
-    fileToSmallDataURL(file, 160, 0.85).then(url => {
+    fileToSmallDataURL(file, 160, 0.85).then(du => uploadDataUrl(du)).then(url => {
       if (url) $("#mIconPreview").src = url;
     });
     e.target.value = "";
@@ -1248,7 +1276,8 @@
   // ============================================================
   //  LIKE BUTTON (глобальный счётчик лайков для всех посетителей)
   // ============================================================
-  // Счётчик общий — лежит в Firebase по пути "likes". Любой посетитель может
+  // Счётчик общий — лежит в БД (таблица likes), меняется через /api/like.php.
+  // Любой посетитель может
   // поставить лайк (без входа). Чтобы один браузер не накручивал, запоминаем
   // факт лайка в localStorage и разрешаем переключение лайк/не-лайк (±1).
   const LIKED_KEY = "nexus-liked";
@@ -1283,27 +1312,20 @@
     likeBtn.classList.add("pop");
   }
 
-  // Отправка лайка: сначала свой edge-эндпоинт, затем фолбэк на Firebase REST
-  // (атомарный server-value increment). Постоянное подключение больше не нужно.
+  // Отправка лайка на свой PHP-эндпоинт (атомарный инкремент в БД).
+  //   true  — записано;
+  //   false — сервер отклонил (нужен откат UI);
+  //   null  — сеть недоступна (оффлайн, оставляем оптимистичный счётчик).
   async function sendLike(dir) {
     try {
-      const r = await fetch("/api/like", {
+      const r = await fetch(API_LIKE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dir }),
       });
-      if (r.ok) return true;
-    } catch (e) { /* нет эндпоинта — фолбэк ниже */ }
-
-    const db = (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG.databaseURL) || "";
-    if (!db) return null; // нет бэкенда (демо-режим) — считаем локальным успехом
-    try {
-      const r = await fetch(db + "/likes.json", {
-        method: "PUT",
-        body: JSON.stringify({ ".sv": { increment: dir } }),
-      });
-      return r.ok;
-    } catch (e) { return false; }
+      return r.ok ? true : false;
+    } catch (e) { /* оффлайн — считаем локальным успехом */ }
+    return null;
   }
 
   function toggleLike() {
@@ -1349,7 +1371,7 @@
   })();
 
   // ============================================================
-  //  FIREBASE — авторизация и синхронизация
+  //  АВТОРИЗАЦИЯ (пароль + cookie-сессия) и синхронизация
   // ============================================================
   function setAdminMode(admin) {
     isAdmin = admin;
@@ -1368,8 +1390,6 @@
       if (tbActions) tbActions.hidden = false;
       if (tbPublish) tbPublish.hidden = false;
       renderSaveBtn();
-      // Если в Firebase ещё нет данных — публикуем текущее состояние
-      if (fbRef) fbRef.once("value", snap => { if (!snap.val()) fbRef.set(state); });
     } else {
       if (loginBtn)  loginBtn.hidden  = false;
       if (badge)     badge.hidden     = true;
@@ -1384,7 +1404,7 @@
     resolvePending();
   }
 
-  // ---------- Слияние и применение данных из Firebase ----------
+  // ---------- Слияние и применение данных с сервера ----------
   function mergeServer(data) {
     const d = defaultState();
     const merged = Object.assign({}, d, data);
@@ -1421,30 +1441,33 @@
   }
 
   // ============================================================
-  //  ЧТЕНИЕ ДАННЫХ — опрос (polling) вместо постоянного websocket
+  //  ЧТЕНИЕ ДАННЫХ — опрос (polling) своих PHP-эндпоинтов
   // ------------------------------------------------------------
-  //  Раньше каждый посетитель держал постоянное подключение к Firebase
-  //  (fbRef.on / likesRef.on). На бесплатном плане это упирается в лимит
-  //  100 одновременных подключений — на пике часть людей не получала данные.
-  //  Теперь читаем короткими запросами:
-  //    1) сначала со своего домена  /api/tierlist  (edge-кэш на Vercel;
-  //       обходит блокировщики, режущие *.firebasedatabase.app);
-  //    2) если эндпоинта нет (напр. хостинг GitHub Pages) — напрямую через
-  //       Firebase REST. В обоих случаях постоянного websocket больше нет.
-  //  Записи админа идут отдельно через publish() → fbRef.set().
+  //  Каждый посетитель периодически читает короткими запросами:
+  //    1) /api/state.php  — крошечный {rev, likes} (десятки байт);
+  //    2) /api/tierlist.php?rev=<n> — полный тирлист, но ТОЛЬКО когда rev
+  //       изменился; ответ помечен immutable-кэшем, поэтому один и тот же rev
+  //       берётся из кэша браузера без обращения к серверу.
+  //  Картинки вынесены в файлы /images/<hash>, их раздаёт веб-сервер напрямую.
+  //  Записи админа идут отдельно через publish() → POST /api/save.php.
+  //  rev генерит сервер (save.php) и возвращает в ответе; клиент кладёт его в
+  //  state._rev / lastRev. По изменению rev зрители понимают, что пора качать
+  //  полные данные. Экономит трафик.
   // ============================================================
-  //  Экономия трафика: опрашиваем крошечный /api/state ({rev, likes} ~ десятки
-  //  байт), а тяжёлый /api/tierlist (~2 МБ — в данных зашита реклама) качаем
-  //  ТОЛЬКО когда rev изменился, т.е. когда админ реально обновил тирлист.
-  //  rev пишется в publish() как state._rev = Date.now().
-  const API_TIERLIST = "/api/tierlist";
-  const API_STATE    = "/api/state";
+  const API_TIERLIST = "/api/tierlist.php";
+  const API_STATE    = "/api/state.php";
+  const API_LIKE     = "/api/like.php";
+  const API_SAVE     = "/api/save.php";
+  const API_SESSION  = "/api/session.php";
+  const API_LOGIN    = "/api/login.php";
+  const API_LOGOUT   = "/api/logout.php";
+  const API_UPLOAD   = "/api/upload.php";
   const POLL_MS = 30000;
   let pollTimer = null;
   let lastRev = null;          // последний известный rev тирлиста
   let haveFullData = false;    // хотя бы раз загрузили полные данные
 
-  // Обработка снимка данных тирлиста (логика та же, что была в fbRef.on).
+  // Обработка снимка данных тирлиста, пришедшего с сервера.
   function handleSnapshot(data) {
     if (!data) return;
     const merged = mergeServer(data);
@@ -1467,39 +1490,23 @@
     applyServer(merged);
   }
 
-  function fbUrl(path) {
-    const db = (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG.databaseURL) || "";
-    return db ? db + path : "";
-  }
 
-  // Лёгкий опрос: {rev, likes}. Сначала свой /api/state, затем фолбэк на Firebase
-  // REST (крошечные чтения /tierlist/_rev и /likes — работает с любого хостинга).
+  // Лёгкий опрос {rev, likes} со своего PHP-эндпоинта.
   async function fetchState() {
     try {
       const r = await fetch(API_STATE, { cache: "no-store" });
       if (r.ok) return await r.json();
-    } catch (e) { /* нет эндпоинта — фолбэк ниже */ }
-
-    const revUrl = fbUrl("/tierlist/_rev.json");
-    const likUrl = fbUrl("/likes.json");
-    if (!revUrl) return null;
-    try {
-      const [rev, likes] = await Promise.all([
-        fetch(revUrl, { cache: "no-store" }).then(r => r.ok ? r.json() : null),
-        fetch(likUrl, { cache: "no-store" }).then(r => r.ok ? r.json() : null),
-      ]);
-      return { rev, likes };
-    } catch (e) { return null; }
+    } catch (e) { /* оффлайн */ }
+    return null;
   }
 
   // Тяжёлая загрузка полного тирлиста — вызывается только при первой загрузке и
-  // когда rev изменился. Сначала /api/tierlist (edge-кэш), затем Firebase REST.
+  // когда rev изменился.
   //
   // В URL добавляем ?rev=<n>: данные конкретной версии неизменны, поэтому сервер
-  // отдаёт их с immutable-кэшем. Одинаковый rev → браузер и edge-кэш Vercel
-  // отвечают без обращения к Firebase (cache:"default" даёт браузеру право взять
-  // ответ из своего кэша). Firebase дёргается один раз на версию, а не каждые
-  // 30 сек — это и снимает перерасход трафика.
+  // отдаёт их с immutable-кэшем. Одинаковый rev → браузер отвечает из своего
+  // кэша (cache:"default" даёт ему на это право), запрос до сервера не доходит.
+  // Значит полные данные качаются раз на версию, а не каждые 30 сек.
   async function fetchFull(rev) {
     const q = (rev !== null && rev !== undefined && rev !== "") ? ("?rev=" + encodeURIComponent(rev)) : "";
     try {
@@ -1508,14 +1515,7 @@
         const d = await r.json();
         if (d && d.tierlist) { handleSnapshot(d.tierlist); return true; }
       }
-    } catch (e) { /* фолбэк ниже */ }
-
-    const url = fbUrl("/tierlist.json");
-    if (!url) return false;
-    try {
-      const t = await fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null);
-      if (t) { handleSnapshot(t); return true; }
-    } catch (e) {}
+    } catch (e) { /* оффлайн */ }
     return false;
   }
 
@@ -1568,78 +1568,43 @@
     });
   }
 
-  function initFirebase() {
-    const configured =
-      typeof FIREBASE_CONFIG !== "undefined" &&
-      FIREBASE_CONFIG.apiKey &&
-      FIREBASE_CONFIG.apiKey !== "ВСТАВЬ_СЮДА";
+  // Инициализация бэкенда: опрос данных + определение роли (админ по сессии) +
+  // кнопки входа/выхода по паролю.
+  function initBackend() {
+    startPolling();
+    checkSession();
 
-    if (!configured) {
-      // Firebase не настроен — работаем локально, редактирование открыто
-      setAdminMode(true);
-      return;
-    }
+    const btnLogin  = $("#btnLogin");
+    const btnLogout = $("#btnLogout");
 
+    if (btnLogin) btnLogin.addEventListener("click", async () => {
+      const pw = window.prompt("Пароль администратора:");
+      if (!pw) return;
+      try {
+        const r = await fetch(API_LOGIN, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pw }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) { setAdminMode(true); fetchSnapshot(); }
+        else { alert("Неверный пароль"); }
+      } catch (e) { alert("Ошибка входа"); }
+    });
+
+    if (btnLogout) btnLogout.addEventListener("click", async () => {
+      try { await fetch(API_LOGOUT, { method: "POST" }); } catch (e) {}
+      setAdminMode(false);
+    });
+  }
+
+  // Кто я: спрашиваем сервер (по cookie-сессии), включаем админ-режим если да.
+  async function checkSession() {
     try {
-      firebase.initializeApp(FIREBASE_CONFIG);
-      const auth = firebase.auth();
-      fbRef = firebase.database().ref("tierlist");
-
-      // Чтение данных (тирлист + лайки) идёт опросом /api/tierlist с фолбэком на
-      // Firebase REST — БЕЗ постоянного websocket у каждого посетителя. Это и
-      // снимает лимит 100 подключений, и обходит блокировщики. См. startPolling().
-      startPolling();
-
-      // Сообщение «вход только для администратора» прямо на странице
-      // (надёжнее alert, который браузер может молча блокировать).
-      function showAdminOnly() {
-        const old = document.getElementById("uidBanner");
-        if (old) old.remove();
-
-        const box = document.createElement("div");
-        box.id = "uidBanner";
-        box.className = "uid-banner";
-        box.innerHTML =
-          '<button class="uid-banner-close" title="Закрыть">✕</button>' +
-          '<div class="uid-banner-title">Вход только для администратора</div>' +
-          '<div class="uid-banner-sub">Редактирование тирлиста доступно только администратору сайта.</div>';
-        document.body.appendChild(box);
-
-        box.querySelector(".uid-banner-close").addEventListener("click", () => box.remove());
-        // авто-скрытие через несколько секунд
-        setTimeout(() => { if (box.parentNode) box.remove(); }, 6000);
-      }
-
-      // Следим за состоянием авторизации
-      auth.onAuthStateChanged(user => {
-        if (!user) { setAdminMode(false); return; }
-
-        const uids = typeof ADMIN_UIDS !== "undefined" ? ADMIN_UIDS : [];
-        if (!uids.length || !uids.includes(user.uid)) {
-          // Не в списке админов — сообщаем и выходим (новых админов не добавляем)
-          showAdminOnly();
-          auth.signOut();
-          return;
-        }
-
-        setAdminMode(true);
-      });
-
-      $("#btnLogin").addEventListener("click", () => {
-        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-          .catch(err => {
-            if (err.code !== "auth/popup-closed-by-user") {
-              alert("Ошибка входа: " + err.message);
-            }
-          });
-      });
-
-      $("#btnLogout").addEventListener("click", () => auth.signOut());
-
-    } catch(e) {
-      console.error("Firebase init error:", e);
-      setAdminMode(true); // fallback: открываем локальный режим
-    }
+      const r = await fetch(API_SESSION, { cache: "no-store" });
+      const d = await r.json();
+      setAdminMode(!!d.admin);
+    } catch (e) { setAdminMode(false); }
   }
 
   // ============================================================
@@ -1647,7 +1612,7 @@
   // ============================================================
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
-  initFirebase();
+  initBackend();
   // render() полностью перестраивает #tiers (innerHTML=""). На телефоне это
   // опасно: браузер шлёт 'resize' при сворачивании адресной строки во время
   // прокрутки (меняется только ВЫСОТА) — перерисовка сбрасывала прокрутку

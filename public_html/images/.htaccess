@@ -1,0 +1,23 @@
+# Uploaded files are data only — never execute anything here.
+# php_flag exists only under mod_php; on a host running PHP-FPM/CGI/suPHP an
+# unguarded php_flag makes Apache reject this .htaccess and return 500 for
+# every image. The FilesMatch deny + Options -ExecCGI below carry the same
+# intent on those hosts.
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag engine off
+</IfModule>
+<FilesMatch "\.(php|phtml|phar|cgi|pl)$">
+  Require all denied
+</FilesMatch>
+Options -ExecCGI
+
+# Filenames here are content hashes (sha1), so a given URL's bytes never
+# change — safe to cache forever.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(webp|png|jpg|jpeg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
