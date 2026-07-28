@@ -1,6 +1,16 @@
 # Force HTTPS
 RewriteEngine On
+
+# Let ACME/AutoSSL validation through over plain HTTP. Without this the
+# redirect below blocks .well-known, and the Let's Encrypt certificate fails
+# to renew — the site would break roughly 90 days after issue.
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+
+# %{HTTPS} is not set when TLS is terminated by a proxy in front of Apache
+# (common on shared hosting); checking X-Forwarded-Proto as well avoids an
+# endless redirect loop in that setup.
 RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Deny access to sensitive files
