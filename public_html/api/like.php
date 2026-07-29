@@ -15,6 +15,15 @@ function handle_like(PDO $pdo, array $body): array {
 
 if (!defined('TESTING')) {
     require_post();
+    // Rate limit: the endpoint is unauthenticated by design, so without a cap
+    // one script could pump the counter to any value. 20 toggles/hour per IP —
+    // far above real use (a visitor flips like/unlike a couple of times).
+    // 429 → the client's sendLike() sees !r.ok and rolls the UI back.
+    $key = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    if (!rate_limit_allow('like', $key, 20, 3600, time())) {
+        json_out(['ok' => false, 'error' => 'rate_limited'], 429);
+        exit;
+    }
     [$status, $payload] = handle_like(db(), read_json_body());
     json_out($payload, $status);
 }

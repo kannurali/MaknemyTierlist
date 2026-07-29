@@ -109,3 +109,31 @@ function throttle_clear(string $key): void {
     $f = throttle_file($key);
     if (is_file($f)) { @unlink($f); }
 }
+
+// ---------------------------------------------------------------------------
+//  Sliding-window rate limit — caps how often one client may hit an endpoint
+//  (the login throttle above punishes FAILURES; this caps raw frequency).
+//  Same storage approach: a JSON file per bucket+key in the temp dir, so it
+//  needs no DB table and works on any shared host. Failing open on file I/O
+//  errors is deliberate — a broken temp dir should not take the feature down.
+// ---------------------------------------------------------------------------
+function rate_file(string $bucket, string $key): string {
+    return rtrim(sys_get_temp_dir(), "/\\") . '/nexus_rate_' . sha1($bucket . '|' . $key) . '.json';
+}
+
+// True → allowed (and the hit is recorded); false → over the limit.
+function rate_limit_allow(string $bucket, string $key, int $max, int $windowSeconds, int $now): bool {
+    $f = rate_file($bucket, $key);
+    $hits = [];
+    if (is_file($f)) {
+        $d = json_decode((string)file_get_contents($f), true);
+        if (is_array($d)) { $hits = $d; }
+    }
+    // keep only hits still inside the window
+    $cutoff = $now - $windowSeconds;
+    $hits = array_values(array_filter($hits, fn($t) => is_int($t) && $t > $cutoff));
+    if (count($hits) >= $max) { return false; }
+    $hits[] = $now;
+    @file_put_contents($f, json_encode($hits));
+    return true;
+}
