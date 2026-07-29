@@ -12,6 +12,17 @@
 
   const uid = () => "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+  // ============================================================
+  //  ССЫЛКИ НА ДОНАТ — значения ПО УМОЛЧАНИЮ
+  //  Кнопка «Поддержать» открывает окно с этими ссылками и QR-кодом.
+  //  Менять их код больше не нужно: админ правит прямо на сайте
+  //  (режим «Редактирование» → кнопка «Поддержать» → 🔗 / 🖼 QR).
+  //  Значения хранятся в state.donate и публикуются вместе с тирлистом.
+  // ============================================================
+  const DONATE_DA  = "https://www.donationalerts.com/r/maknemy"; // прямой донат
+  const DONATE_HUB = "https://dalink.to/maknemy";                // хаб со всеми способами
+  const DONATE_QR  = "assets/qr-donate.png?v=1";                 // QR ведёт на DONATE_HUB
+
   // ---------- Default template ----------
   function defaultState() {
     const mk = (name, value, type, demand, trend) => ({
@@ -24,6 +35,7 @@
       autoSort: true,
       filters: { fruits: true, mutations: true, perms: false, passes: true, skins: true },
       ad: { text: "МЕСТО ДЛЯ ВАШЕЙ РЕКЛАМЫ — t.me/mksvtnc", image: "", link: "" },
+      donate: { da: DONATE_DA, hub: DONATE_HUB, qr: DONATE_QR },
       credits: [
         { role: "Автор", name: "Maknemy" },
         { role: "Дизайнер", name: "Maknemy" },
@@ -87,15 +99,6 @@
   let roleResolved = false;        // роль выяснена (checkSession/вход/выход отработали)
   let firstSnapshotHandled = false;
 
-  // ============================================================
-  //  ⬇⬇⬇  ССЫЛКИ НА ДОНАТ  ⬇⬇⬇
-  //  Кнопка «Поддержать» открывает окно с этими ссылками и QR-кодом.
-  //  Меняешь ссылки здесь. QR лежит в assets/qr-donate.png (ведёт на DONATE_HUB);
-  //  если поменяешь DONATE_HUB — перегенерь QR (скажи мне) либо оставь как есть.
-  // ============================================================
-  const DONATE_DA  = "https://www.donationalerts.com/r/maknemy"; // прямой донат
-  const DONATE_HUB = "https://dalink.to/maknemy";                // хаб со всеми способами
-
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -106,6 +109,7 @@
       const d = defaultState();
       const merged = Object.assign({}, d, data);
       merged.ad = Object.assign({}, d.ad, data.ad || {});
+      merged.donate = Object.assign({}, d.donate, data.donate || {});
       merged.filters = Object.assign({}, d.filters, data.filters || {});
       merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
       if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
@@ -218,6 +222,9 @@
     }
     if (state.ad && typeof state.ad.image === "string" && state.ad.image.indexOf("data:") === 0) {
       state.ad.image = await uploadDataUrl(state.ad.image);
+    }
+    if (state.donate && typeof state.donate.qr === "string" && state.donate.qr.indexOf("data:") === 0) {
+      state.donate.qr = await uploadDataUrl(state.donate.qr);
     }
   }
 
@@ -394,6 +401,7 @@
     if (!blocks.length) tiersEl.appendChild(renderAd());
     renderFooter();
     renderCredits();
+    renderDonate();
     applyFilters();
     applyEditMode();
     fitValues();
@@ -1204,6 +1212,7 @@
         const d = defaultState();
         state = Object.assign({}, d, data);
         state.ad = Object.assign({}, d.ad, data.ad || {});
+        state.donate = Object.assign({}, d.donate, data.donate || {});
         state.filters = Object.assign({}, d.filters, data.filters || {});
         if (!Array.isArray(state.credits) || !state.credits.length) state.credits = d.credits;
         if (!Array.isArray(state.footer) || !state.footer.length) state.footer = d.footer;
@@ -1349,25 +1358,118 @@
   if (likeBtn) likeBtn.addEventListener("click", toggleLike);
   renderLike();
 
-  // Кнопка доната открывает окно со ссылками и QR.
-  (function initDonate() {
-    const donateBtn   = document.getElementById("donateBtn");
-    const donateModal = document.getElementById("donateModal");
-    if (!donateBtn || !donateModal) return;
+  // ============================================================
+  //  ДОНАТ (ссылки + QR) — редактируются прямо на сайте
+  // ------------------------------------------------------------
+  //  Ссылки лежат в state.donate и публикуются вместе с тирлистом,
+  //  поэтому правка видна всем без правки кода. Кнопки редактирования
+  //  внутри окна помечены .edit-only — видны админу в режиме
+  //  «Редактирование» (как 🔗 у ссылок в подвале).
+  // ============================================================
+  const donateModal = $("#donateModal");
 
-    const linkDA  = document.getElementById("donateLinkDA");
-    const linkHub = document.getElementById("donateLinkHub");
-    if (linkDA)  linkDA.href  = DONATE_DA;
-    if (linkHub) linkHub.href = DONATE_HUB;
+  // Подставить актуальные ссылки/QR в окно доната. Вызывается из render().
+  function renderDonate() {
+    const dn = state.donate || {};
+    const linkDA  = $("#donateLinkDA");
+    const linkHub = $("#donateLinkHub");
+    const qr      = $("#donateQr");
+    if (linkDA)  linkDA.href  = dn.da  || DONATE_DA;
+    if (linkHub) linkHub.href = dn.hub || DONATE_HUB;
+    if (qr)      qr.src       = dn.qr  || DONATE_QR;
+  }
+
+  (function initDonate() {
+    const donateBtn = $("#donateBtn");
+    if (!donateBtn || !donateModal) return;
 
     const open  = () => { donateModal.hidden = false; };
     const close = () => { donateModal.hidden = true; };
 
     donateBtn.hidden = false;
     donateBtn.addEventListener("click", open);
-    document.getElementById("donateClose").addEventListener("click", close);
+    $("#donateClose").addEventListener("click", close);
     donateModal.addEventListener("click", e => { if (e.target === donateModal) close(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !donateModal.hidden) close(); });
+
+    // В режиме редактирования ссылки не открываются — иначе клик по кнопке
+    // «DonationAlerts» уводил бы админа со страницы вместо правки.
+    donateModal.addEventListener("click", e => {
+      const a = e.target.closest(".dmodal-link");
+      if (a && stage.classList.contains("editing")) e.preventDefault();
+    });
+
+    const editLink = (key, label) => {
+      const dn = state.donate || (state.donate = {});
+      const v = prompt(label, dn[key] || "");
+      if (v === null) return;
+      dn[key] = v.trim();
+      save(); render();
+    };
+    const btnDA  = $("#donateEditDA");
+    const btnHub = $("#donateEditHub");
+    if (btnDA)  btnDA.addEventListener("click", () => editLink("da", "Ссылка на прямой донат (DonationAlerts):"));
+    if (btnHub) btnHub.addEventListener("click", () => editLink("hub", "Ссылка на хаб со всеми способами (dalink):"));
+
+    // Новый QR — картинка уходит в файл через upload.php, как иконки предметов.
+    const qrFile = $("#donateQrFile");
+    if (qrFile) qrFile.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      fileToSmallDataURL(file, 640, 0.92).then(du => uploadDataUrl(du)).then(url => {
+        if (!url) return;
+        (state.donate || (state.donate = {})).qr = url;
+        save(); render();
+      });
+      e.target.value = "";
+    });
+    const qrReset = $("#donateQrReset");
+    if (qrReset) qrReset.addEventListener("click", () => {
+      (state.donate || (state.donate = {})).qr = DONATE_QR;
+      save(); render();
+    });
+  })();
+
+  // ============================================================
+  //  АВТОСКРЫТИЕ ПЛАВАЮЩИХ КНОПОК (лайк + донат)
+  // ------------------------------------------------------------
+  //  На телефоне кнопки перекрывают нижние ряды тирлиста. Прячем их за
+  //  правый край при прокрутке ВНИЗ и возвращаем при прокрутке ВВЕРХ.
+  //  Класс вешаем на <body>, само смещение — в CSS внутри медиазапроса
+  //  (max-width: 640px), поэтому на десктопе кнопки не двигаются.
+  // ============================================================
+  (function initFabAutoHide() {
+    const THRESHOLD = 8;     // мелкое дрожание пальца не переключает состояние
+    const TOP_ZONE = 90;     // у самого верха кнопки всегда видны
+    const BOTTOM_ZONE = 60;  // и внизу страницы тоже (там подвал со ссылками)
+    let lastY = window.pageYOffset || 0;
+    let hidden = false;
+    let ticking = false;
+
+    function setHidden(v) {
+      if (v === hidden) return;
+      hidden = v;
+      document.body.classList.toggle("fabs-hidden", v);
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const y = Math.max(0, window.pageYOffset || document.documentElement.scrollTop || 0);
+        const dy = y - lastY;
+        if (Math.abs(dy) < THRESHOLD) return;
+        lastY = y;
+        const doc = document.documentElement;
+        const atBottom = y + window.innerHeight >= doc.scrollHeight - BOTTOM_ZONE;
+        if (y < TOP_ZONE || atBottom) { setHidden(false); return; }
+        setHidden(dy > 0);
+      });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    // Открытое окно (донат / предмет) — кнопки не должны «выезжать» из-под него
+    // при прокрутке содержимого модалки.
+    window.addEventListener("orientationchange", () => { lastY = window.pageYOffset || 0; setHidden(false); });
   })();
 
   // ============================================================
@@ -1409,6 +1511,7 @@
     const d = defaultState();
     const merged = Object.assign({}, d, data);
     merged.ad      = Object.assign({}, d.ad,      data.ad      || {});
+    merged.donate  = Object.assign({}, d.donate,  data.donate  || {});
     merged.filters = Object.assign({}, d.filters, data.filters || {});
     merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
     if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
@@ -1628,22 +1731,50 @@
     }
   }
   let resizeT = null;
-  let lastW = window.innerWidth;
+  let lastW = window.innerWidth;   // ширина, под которую собрана текущая разметка
+  let lastPer = itemsPerRow();     // и сколько ячеек в ряду при этой ширине
+
+  // Один проход пересчёта. Перерисовываем, только если реально изменилась
+  // ширина ИЛИ вместимость ряда: на iOS размеры вьюпорта и container-query
+  // единицы (cqw) обновляются НЕ одновременно, поэтому одной проверки
+  // innerWidth мало — ширина уже новая, а .cell ещё старого размера.
+  function reflowPass() {
+    const w = window.innerWidth;
+    const per = itemsPerRow();
+    if (Math.abs(w - lastW) < 2 && per === lastPer) { fitValues(); return; }
+    lastW = w; lastPer = per;
+    safeRender();
+  }
+  // Поворот экрана меняет ширину и высоту местами. Safari на iPhone шлёт
+  // orientationchange/resize РАНЬШЕ, чем вьюпорт устаканится: раскладка
+  // считалась по старой ширине — ряды выходили с неверным числом ячеек,
+  // а иногда тирлист вовсе пропадал. Поэтому после поворота гоняем серию
+  // проходов; каждый следующий перерисовывает только если размеры ещё
+  // менялись, так что лишней работы нет.
+  let reflowTimers = [];
+  function reflowUntilStable() {
+    reflowTimers.forEach(clearTimeout);
+    reflowTimers = [0, 120, 320, 700, 1200].map(ms => setTimeout(reflowPass, ms));
+  }
+
   window.addEventListener("resize", () => {
     clearTimeout(resizeT);
-    resizeT = setTimeout(() => {
-      const w = window.innerWidth;
-      if (Math.abs(w - lastW) < 2) { fitValues(); return; } // только высота (адресная строка)
-      lastW = w;
-      safeRender();
-    }, 150);
+    resizeT = setTimeout(reflowPass, 150); // только высота (адресная строка) → fitValues
   });
-  // Поворот экрана меняет ширину и высоту местами. Некоторые мобильные
-  // браузеры шлют 'resize' раньше, чем вьюпорт устаканится — раскладка
-  // ломалась и тирлист пропадал. Форсируем пересчёт с задержкой.
-  window.addEventListener("orientationchange", () => {
-    setTimeout(() => { lastW = window.innerWidth; safeRender(); }, 250);
-  });
+  window.addEventListener("orientationchange", reflowUntilStable);
+  // Screen Orientation API — в новых iOS/Safari событие приходит надёжнее
+  // устаревшего orientationchange (и после него), поэтому слушаем оба.
+  if (window.screen && screen.orientation && screen.orientation.addEventListener) {
+    screen.orientation.addEventListener("change", reflowUntilStable);
+  }
+  // visualViewport ловит случаи, когда window.resize на iOS не приходит вовсе
+  // (смена размера при повороте с открытой панелью Safari).
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(reflowPass, 150);
+    });
+  }
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(fitValues).catch(() => {});
   }

@@ -51,6 +51,11 @@ html, body {
   color: #eaf4ff;
   font-family: var(--ui);
   -webkit-font-smoothing: antialiased;
+  /* iPhone в ландшафте сам «подкручивает» размер шрифта под ширину экрана.
+     Вся вёрстка тирлиста считается в cqw, поэтому после поворота текст
+     вылезал из ячеек и ломал ряды. Отключаем автоподгонку. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ===================== Toolbar ===================== */
@@ -939,6 +944,13 @@ html, body {
   background: #fff; box-shadow: 0 8px 26px rgba(0,0,0,.45);
 }
 .dmodal-qr img { width: 168px; height: 168px; display: block; image-rendering: pixelated; }
+/* Кнопки правки ссылок доната (только админ в режиме редактирования) */
+.dmodal-tools {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  padding-top: 4px; margin-top: 2px;
+  border-top: 1px dashed rgba(196, 140, 255, .35);
+}
+.dmodal-tools .btn { cursor: pointer; }
 .dmodal-qr-cap { font-family: var(--ui); font-size: 12px; color: #2a1840; font-weight: 700; }
 
 /* ===================== View (non-edit) mode ===================== */
@@ -960,6 +972,20 @@ html, body {
   /* кнопка лайка — компактнее и ближе к углу на телефоне */
   .like-fab { right: 12px; bottom: 12px; padding: 9px 14px; font-size: 14px; }
   .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
+
+  /* Прокрутка вниз — кнопки уезжают за правый край и не закрывают тирлист;
+     прокрутка вверх — возвращаются. Класс вешает JS (initFabAutoHide).
+     Правило только внутри медиазапроса, поэтому на десктопе не работает. */
+  .like-fab, .donate-fab {
+    transition: transform .22s ease, opacity .22s ease,
+                background .15s, border-color .15s, box-shadow .2s;
+  }
+  .fabs-hidden .like-fab,
+  .fabs-hidden .donate-fab {
+    transform: translateX(calc(100% + 16px));
+    opacity: 0;
+    pointer-events: none;
+  }
 
   /* --- тирлист во всю ширину экрана (крупнее) --- */
   .stage-wrap { padding: 10px 0 34px; }

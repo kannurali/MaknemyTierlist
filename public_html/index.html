@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/favicon.ico?v=1" sizes="any" />
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1" />
-<link rel="stylesheet" href="css/styles.css?v=21" />
+<link rel="stylesheet" href="css/styles.css?v=22" />
 </head>
 <body>
   <!-- ============ Floating auth control (top-right corner) ============ -->
@@ -248,6 +248,13 @@
           <a class="btn primary dmodal-link" id="donateLinkDA" href="#" target="_blank" rel="noopener">DonationAlerts</a>
           <a class="btn dmodal-link" id="donateLinkHub" href="#" target="_blank" rel="noopener">Все способы (dalink)</a>
         </div>
+        <!-- Правка ссылок прямо на сайте — видно админу в режиме «Редактирование» -->
+        <div class="dmodal-tools edit-only">
+          <button class="btn small" id="donateEditDA" title="Изменить ссылку DonationAlerts">🔗 DonationAlerts</button>
+          <button class="btn small" id="donateEditHub" title="Изменить ссылку на хаб (dalink)">🔗 Все способы</button>
+          <label class="btn small" title="Загрузить новый QR-код">🖼 QR<input type="file" id="donateQrFile" accept="image/*" hidden /></label>
+          <button class="btn small ghost" id="donateQrReset" title="Вернуть стандартный QR">Стандартный QR</button>
+        </div>
         <div class="dmodal-qr">
           <img id="donateQr" src="assets/qr-donate.png?v=1" alt="QR для доната" />
           <div class="dmodal-qr-cap">Наведи камеру телефона</div>
@@ -257,6 +264,6 @@
   </div>
 
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=28"></script>
+  <script src="js/app.js?v=29"></script>
 </body>
 </html>
