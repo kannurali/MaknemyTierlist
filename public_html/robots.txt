@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Служебные эндпоинты и загруженные картинки индексировать незачем.
+Disallow: /api/
+Disallow: /images/
+
+Sitemap: https://maknemytierlist.site/sitemap.xml

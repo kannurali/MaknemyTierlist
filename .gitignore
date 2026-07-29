@@ -2,6 +2,8 @@
 *.tif
 *.jpg
 5379910781715029061.jpg
+# Site assets are shipped, unlike the stray source images the rule above targets.
+!/public_html/assets/*.jpg
 /config.php
 /public_html/images/*
 !/public_html/images/.gitkeep
