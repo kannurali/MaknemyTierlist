@@ -53,6 +53,43 @@ with `tools/out/` — see step 5 below for regenerating the data.
   URL, and the icon renders.
 - Logged out, `POST /api/save.php` returns 401.
 
+## Auto-deploy on push (optional)
+
+cPanel's Git Version Control does not deploy by itself — without this, every
+push needs "Update from Remote" + "Deploy HEAD Commit" clicked by hand.
+`public_html/api/deploy.php` closes that loop.
+
+1. **Generate a secret** and put it in `config.php` (above the web root,
+   git-ignored — the repository is public, so the secret must never live in it):
+
+   ```
+   php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
+   ```
+
+   Add `deploy_secret`, `deploy_repo`, `deploy_path` and `deploy_branch` as
+   shown in `config.sample.php`. An empty `deploy_secret` keeps the endpoint
+   disabled: it answers 503 and runs nothing.
+
+2. **GitHub → repo → Settings → Webhooks → Add webhook**
+   - Payload URL: `https://maknemytierlist.site/api/deploy.php`
+   - Content type: `application/json`
+   - Secret: the value from step 1
+   - Events: "Just the push event"
+
+3. GitHub immediately sends a `ping`; the endpoint answers `pong` without
+   deploying. A green tick in "Recent Deliveries" means the signature matched.
+
+What it does on a push to the deploy branch: `git fetch` + `git merge --ff-only`,
+then the same additive `cp -R public_html/. <web root>/` as `.cpanel.yml`. It
+never delete-syncs, so admin-uploaded images survive. Every delivery — accepted,
+skipped or rejected — is appended to `deploy.log` next to `config.php`.
+
+Requests without a valid `X-Hub-Signature-256` HMAC are rejected with 401
+before anything runs, and pushes to other branches are logged and ignored.
+
+If deploys fail with `exec_disabled` or `git_not_found`, the host has locked
+down `exec()` or hidden git; fall back to clicking Deploy in cPanel.
+
 ## Notes
 
 - No Composer / external PHP packages required.
