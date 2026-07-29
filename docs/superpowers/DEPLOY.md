@@ -10,6 +10,12 @@ A ready-to-upload bundle (site + migrated images + schema.sql + import.sql +
 a step-by-step Russian guide) is produced by staging `public_html/` together
 with `tools/out/` — see step 5 below for regenerating the data.
 
+**Source of truth: `kannurali/MaknemyTierlist`, branch `master`** (moved there
+2026-07-29; it used to be `kannurali/NexusTierlist`). cPanel clones it into
+`/home/maknemyt/repositories/MaknemyTierlist`. Branch `vercel-backup` on the
+same repo pins `852cd55`, the last Firebase + Vercel state, purely as a rollback
+reference — Vercel itself is retired and its build now fails, which is expected.
+
 ## One-time setup
 
 1. **Database.** In cPanel create a MySQL database + user, grant all privileges.
@@ -70,7 +76,7 @@ push needs "Update from Remote" + "Deploy HEAD Commit" clicked by hand.
    shown in `config.sample.php`. An empty `deploy_secret` keeps the endpoint
    disabled: it answers 503 and runs nothing.
 
-2. **GitHub → repo → Settings → Webhooks → Add webhook**
+2. **GitHub → `kannurali/MaknemyTierlist` → Settings → Webhooks → Add webhook**
    - Payload URL: `https://maknemytierlist.site/api/deploy.php`
    - Content type: `application/json`
    - Secret: the value from step 1
