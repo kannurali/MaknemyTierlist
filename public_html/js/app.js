@@ -301,6 +301,38 @@
     const n = parseFloat(s);
     return isNaN(n) ? NaN : n * mult;
   }
+  // ---------- Ссылки ----------
+  // Адрес, введённый руками, обычно идёт без схемы: «t.me/mksvtnc». Браузер
+  // считает такую строку ОТНОСИТЕЛЬНЫМ путём и уводит на
+  // maknemytierlist.site/t.me/mksvtnc — ссылка «перестаёт работать».
+  // Поэтому схему подставляем сами.
+  //
+  // Заодно отсекаем всё, кроме http(s)/mailto/tel: «javascript:…» в поле
+  // ссылки — это исполняемый код на странице у каждого посетителя.
+  //
+  // fallback — подпись ссылки (.sub): в ней уже написан адрес, поэтому если
+  // href пустой или остался заглушкой «https://», берём адрес оттуда.
+  const SAFE_SCHEME = /^(https?:|mailto:|tel:)/i;
+  // Подпись — свободный текст: «t.me/bfsnews» подойдёт как адрес, а
+  // «наш чат» нет. Берём её в дело, только если это похоже на домен:
+  // без пробелов и с точкой в доменной части.
+  function looksLikeUrl(s) { return /^[^\s]+\.[a-z]{2,}([\/?#].*)?$/i.test(s); }
+  function normalizeHref(href, fallback) {
+    let s = String(href == null ? "" : href).trim();
+    if (s === "" || /^https?:\/*$/i.test(s)) {
+      const fb = String(fallback == null ? "" : fallback).trim();
+      s = looksLikeUrl(fb) ? fb : "";
+    }
+    if (!s) return "";
+    // уже со схемой — пропускаем только безопасные
+    if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return SAFE_SCHEME.test(s) ? s : "";
+    // «//host» — протокол-относительный адрес, а не путь внутри сайта
+    if (s.indexOf("//") === 0) return "https:" + s;
+    // свой же путь или якорь — оставляем как есть
+    if (s.charAt(0) === "/" || s.charAt(0) === "#") return s;
+    return "https://" + s.replace(/^\/+/, "");
+  }
+
   // Фрукты (f/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s/cr — хроматики идут со скинами)
   function groupOf(type) {
     if (type === "p") return "perms";
@@ -656,7 +688,8 @@
   function renderAd() {
     const ad = document.createElement("section");
     ad.className = "ad-block";
-    const hasLink = !!(state.ad.link && state.ad.link.trim());
+    const adUrl = normalizeHref(state.ad.link, "");
+    const hasLink = !!adUrl;
     if (hasLink) ad.classList.add("has-link");
 
     // Скрытая ссылка: клик по картинке/тексту/значку открывает URL (в обычном
@@ -664,7 +697,7 @@
     const openLink = (e) => {
       if (!hasLink || stage.classList.contains("editing")) return;
       if (e) e.preventDefault();
-      window.open(state.ad.link, "_blank", "noopener");
+      window.open(adUrl, "_blank", "noopener");
     };
     // Вся карточка рекламы — одна кликабельная зона: клик в ЛЮБОЙ части
     // (любая точка картинки, поля вокруг неё, текст) открывает ссылку в
@@ -716,7 +749,7 @@
       "Скрытая ссылка: клик по рекламе откроет её, URL в тексте не виден. Пусто — убрать.",
       () => {
         const v = prompt("Скрытая ссылка (URL) для рекламы. Оставьте пустым, чтобы убрать:", state.ad.link || "");
-        if (v !== null) { state.ad.link = v.trim(); save(); render(); }
+        if (v !== null) { state.ad.link = normalizeHref(v, ""); save(); render(); }
       }));
     ad.appendChild(tools);
     return ad;
@@ -771,7 +804,10 @@
     state.footer.forEach((lnk, idx) => {
       const a = document.createElement("a");
       a.className = "flink";
-      a.href = lnk.href || "#";
+      // Без адреса ссылку НЕ делаем кликабельной: анкер без href ведёт себя
+      // как текст, а не швыряет посетителя на несуществующую страницу.
+      const url = normalizeHref(lnk.href, lnk.sub);
+      if (url) a.href = url; else a.classList.add("flink-nourl");
       a.target = "_blank";
       a.rel = "noopener";
       // в режиме редактирования ссылка не открывается — можно править текст
@@ -798,8 +834,9 @@
       urlBtn.title = "Изменить ссылку (URL)";
       urlBtn.addEventListener("click", e => {
         e.preventDefault(); e.stopPropagation();
-        const v = prompt("Ссылка (URL):", lnk.href || "");
-        if (v !== null) { lnk.href = v.trim(); save(); render(); }
+        const v = prompt("Ссылка (URL). Можно без https:// — подставится сам:", lnk.href || "");
+        // Сохраняем уже нормализованным, чтобы в базе копились рабочие адреса.
+        if (v !== null) { lnk.href = normalizeHref(v, ""); save(); render(); }
       });
       const del = document.createElement("button");
       del.className = "danger";
@@ -1374,8 +1411,8 @@
     const linkDA  = $("#donateLinkDA");
     const linkHub = $("#donateLinkHub");
     const qr      = $("#donateQr");
-    if (linkDA)  linkDA.href  = dn.da  || DONATE_DA;
-    if (linkHub) linkHub.href = dn.hub || DONATE_HUB;
+    if (linkDA)  linkDA.href  = normalizeHref(dn.da,  DONATE_DA)  || DONATE_DA;
+    if (linkHub) linkHub.href = normalizeHref(dn.hub, DONATE_HUB) || DONATE_HUB;
     if (qr)      qr.src       = dn.qr  || DONATE_QR;
   }
 
@@ -1403,7 +1440,7 @@
       const dn = state.donate || (state.donate = {});
       const v = prompt(label, dn[key] || "");
       if (v === null) return;
-      dn[key] = v.trim();
+      dn[key] = normalizeHref(v, "");
       save(); render();
     };
     const btnDA  = $("#donateEditDA");

@@ -953,6 +953,10 @@ html, body {
 .dmodal-tools .btn { cursor: pointer; }
 .dmodal-qr-cap { font-family: var(--ui); font-size: 12px; color: #2a1840; font-weight: 700; }
 
+/* Ссылка, у которой не задан адрес: анкер без href. Не подсвечиваем её как
+   кликабельную — иначе посетитель жмёт и ничего не происходит. */
+.flink-nourl { cursor: default; }
+
 /* ===================== View (non-edit) mode ===================== */
 .stage:not(.editing) .cell { cursor: default; }
 
