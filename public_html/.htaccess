@@ -18,6 +18,21 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
   Require all denied
 </FilesMatch>
 
+# No directory listings: /api/ and /images/ were serving autoindex pages,
+# handing visitors a free inventory of every file.
+Options -Indexes
+
+# Baseline security headers. `always` so they ride on error responses too.
+# No CSP on purpose: html2canvas (PNG export) and inline-style tweaks would
+# need auditing first — a hasty policy would break the export button.
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # Site is HTTPS-only (redirect above); 180 days, no preload — reversible.
+  Header always set Strict-Transport-Security "max-age=15552000"
+</IfModule>
+
 # Site assets (assets/*) are hand-named and mostly carry no ?v= cache-buster,
 # so they must NOT be immutable — replacing one in place has to take effect.
 # Cache briefly and always revalidate. The content-hashed uploads under
