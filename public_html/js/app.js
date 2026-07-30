@@ -613,6 +613,11 @@
     const iconWrap = document.createElement("div");
     iconWrap.className = "cell-icon";
     const img = document.createElement("img");
+    // Предметов больше сотни, а на экране телефона видно два-три ряда.
+    // Ленивая загрузка и асинхронное декодирование не дают браузеру держать
+    // в памяти сразу все распакованные иконки.
+    img.loading = "lazy";
+    img.decoding = "async";
     img.src = item.icon || DEFAULT_ICON;
     img.alt = item.name || "";
     img.onerror = () => { img.src = DEFAULT_ICON; };
@@ -1265,6 +1270,24 @@
   });
 
   // ----- Download PNG -----
+  // html2canvas весит ~200 КБ и нужен только админу при экспорте картинки.
+  // Раньше он подключался тегом <script> на каждой загрузке — телефон тратил
+  // на его разбор время и память впустую. Теперь грузим по требованию.
+  let h2cPromise = null;
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (!h2cPromise) {
+      h2cPromise = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "js/html2canvas.min.js";
+        s.onload = () => resolve(window.html2canvas);
+        s.onerror = () => { h2cPromise = null; reject(new Error("Не удалось загрузить html2canvas")); };
+        document.head.appendChild(s);
+      });
+    }
+    return h2cPromise;
+  }
+
   $("#btnPng").addEventListener("click", async () => {
     const wasEditing = editToggle.checked;
     editToggle.checked = false;
@@ -1275,8 +1298,18 @@
     btn.disabled = true;
     // wait a frame for layout/fonts
     await document.fonts.ready.catch(() => {});
+    // Иконки ниже сгиба помечены loading="lazy" и ещё не загружены — для
+    // экспорта нужны все сразу, иначе часть предметов выйдет пустой.
+    await Promise.all(
+      Array.from(stage.querySelectorAll('img[loading="lazy"]')).map(i => {
+        i.loading = "eager";
+        if (i.complete && i.naturalWidth) return Promise.resolve();
+        return new Promise(res => { i.addEventListener("load", res, { once: true }); i.addEventListener("error", res, { once: true }); });
+      })
+    );
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
+      const html2canvas = await loadHtml2Canvas();
       const canvas = await html2canvas(stage, {
         backgroundColor: null,
         scale: 2,

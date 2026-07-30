@@ -324,9 +324,16 @@ html, body {
   min-height: 540px;
   border-radius: 14px;
   overflow: hidden;
-  background-image: url("../assets/bg.png");
+  /* Фон уже перемножен с #091640 на этапе сборки (bg-export.png), поэтому
+     background-blend-mode: multiply здесь НЕ нужен. Это принципиально: каждый
+     blend-mode заставляет WebKit заводить offscreen-слой размером со сцену
+     (на iPhone это ~17 МБ), а при нехватке памяти Safari молча отключает
+     смешивание — картинка «теряет цвет», мерцает и вкладка вылетает.
+     WebP-варианты весят на два порядка меньше PNG (3.3 МБ → 12 КБ). */
   background-color: #091640;
-  background-blend-mode: multiply;
+  background-image: url("../assets/bg-export.png");
+  background-image: -webkit-image-set(url("../assets/bg-stage.webp") 1x);
+  background-image: image-set(url("../assets/bg-stage.webp") type("image/webp"));
   background-size: 100% auto;
   background-repeat: no-repeat;
   background-position: center top;
@@ -346,10 +353,16 @@ html, body {
 .petals {
   position: absolute; inset: 0;
   background-image: url("../assets/petals.png");
+  background-image: -webkit-image-set(url("../assets/petals.webp") 1x);
+  background-image: image-set(url("../assets/petals.webp") type("image/webp"));
   background-size: cover;
   background-position: center;
   opacity: 0.7;
-  mix-blend-mode: screen;
+  /* mix-blend-mode: screen убран намеренно. Лепестки уже с альфа-каналом и
+     почти белые, а подложка тёмно-синяя, поэтому screen и обычное наложение
+     дают разницу максимум 4.9/255 (проверено попиксельно) — глазом не видно.
+     Зато исчезает второй offscreen-слой WebKit: именно он на iPhone съедал
+     память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов. */
   pointer-events: none;
   z-index: 1;
 }
@@ -473,7 +486,11 @@ html, body {
   transition: transform .14s ease;
 }
 .cell.dragging { opacity: .4; }
-/* наведение на предмет — подсвечиваем всю ячейку со всеми элементами */
+/* Наведение на предмет — подсвечиваем всю ячейку со всеми элементами.
+   Только для устройств с настоящим курсором: на тач-экране :hover «залипает»
+   после тапа, и ячейка остаётся увеличенной с двойной drop-shadow — лишняя
+   перерисовка на каждом касании. */
+@media (hover: hover) and (pointer: fine) {
 .cell:hover { transform: translateY(-.35cqw) scale(1.06); z-index: 8; }
 .cell:hover .cell-value { color: #fff; text-shadow: 0 0 .5cqw rgba(79,214,255,.9), 0 1px 2px rgba(0,0,0,.95); }
 .cell-icon {
@@ -487,6 +504,7 @@ html, body {
 }
 .cell:hover .cell-icon img {
   filter: drop-shadow(0 0 .6cqw rgba(79,214,255,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55));
+}
 }
 .cell-icon img {
   max-width: 92%; max-height: 100%;
@@ -973,9 +991,35 @@ html, body {
   .chip { padding: 7px 12px; }                 /* чуть крупнее под палец */
   .btn { padding: 9px 12px; }
 
-  /* кнопка лайка — компактнее и ближе к углу на телефоне */
+  /* кнопка лайка — компактнее и ближе к углу на телефоне.
+     backdrop-filter снимаем: кнопки position:fixed висят над сценой, и на
+     каждом кадре прокрутки Safari пересобирает размытую копию фона под ними —
+     главный источник рывков и мерцания при скролле. Вместо размытия — плотная
+     заливка, визуально почти то же самое. */
+  .like-fab, .donate-fab {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(14, 26, 56, 0.92);
+  }
   .like-fab { right: 12px; bottom: 12px; padding: 9px 14px; font-size: 14px; }
   .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
+
+  /* Телефону хватает уменьшенных фонов: меньше трафика и, что важнее, вчетверо
+     меньше памяти под распакованный битмап. */
+  .stage {
+    background-image: url("../assets/bg-export.png");
+    background-image: -webkit-image-set(url("../assets/bg-stage-m.webp") 1x);
+    background-image: image-set(url("../assets/bg-stage-m.webp") type("image/webp"));
+  }
+  .petals {
+    background-image: url("../assets/petals.png");
+    background-image: -webkit-image-set(url("../assets/petals-m.webp") 1x);
+    background-image: image-set(url("../assets/petals-m.webp") type("image/webp"));
+  }
+
+  /* Тени у мелких иконок (2.5cqw ≈ 9 px) не видны, но каждая такая тень —
+     отдельная render-поверхность в WebKit. На 110 предметах их сотни. */
+  .dot, .trend, .tbadge { filter: none; }
 
   /* Прокрутка вниз — кнопки уезжают за правый край и не закрывают тирлист;
      прокрутка вверх — возвращаются. Класс вешает JS (initFabAutoHide).
