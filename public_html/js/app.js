@@ -647,14 +647,14 @@
       nb.textContent = "NEW";
       cell.appendChild(nb);
     }
-    // значок «?» — цена в редактировании. Независим от NEW: у предмета могут
+    // значок «?» — цена под вопросом. Независим от NEW: у предмета могут
     // гореть оба сразу, NEW слева, «?» справа. Старые сохранения поля не
     // имеют — undefined тоже ложь, поэтому миграция не нужна.
     if (item.wip) {
       const wb = document.createElement("span");
       wb.className = "cell-new cell-wip";
       wb.textContent = "?";
-      wb.title = "Цена в редактировании";
+      wb.title = "Цена под вопросом";
       cell.appendChild(wb);
     }
 
