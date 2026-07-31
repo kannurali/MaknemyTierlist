@@ -27,7 +27,7 @@
   function defaultState() {
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
-      desc: "", flag: false,
+      desc: "", flag: false, wip: false,
     });
     return {
       title: "MAKNEMY\nTIER LIST",
@@ -647,6 +647,16 @@
       nb.textContent = "NEW";
       cell.appendChild(nb);
     }
+    // значок «?» — цена в редактировании. Независим от NEW: у предмета могут
+    // гореть оба сразу, NEW слева, «?» справа. Старые сохранения поля не
+    // имеют — undefined тоже ложь, поэтому миграция не нужна.
+    if (item.wip) {
+      const wb = document.createElement("span");
+      wb.className = "cell-new cell-wip";
+      wb.textContent = "?";
+      wb.title = "Цена в редактировании";
+      cell.appendChild(wb);
+    }
 
     // всплывающая подсказка при наведении: ТОЛЬКО название.
     // Описание показывается в отдельном окне по клику (openViewModal).
@@ -954,7 +964,7 @@
   function addItem(tid) {
     const t = findTier(tid);
     if (!t) return;
-    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "", desc: "", flag: true };
+    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "", desc: "", flag: true, wip: false };
     t.items.push(item);
     save(); render();
     openModal(item.id);
@@ -1044,6 +1054,7 @@
     $("#mValue").value = it.value || "";
     $("#mDesc").value = it.desc || "";
     $("#mNew").checked = !!it.flag;
+    $("#mWip").checked = !!it.wip;
     $("#mIconPreview").src = it.icon || DEFAULT_ICON;
     setType(it.type || "f");
     setSeg("#mDemand", it.demand || "");
@@ -1159,6 +1170,7 @@
     it.value = $("#mValue").value.trim();
     it.desc = $("#mDesc").value.trim();
     it.flag = $("#mNew").checked;
+    it.wip = $("#mWip").checked;
     it.icon = $("#mIconPreview").src;
     it.type = getType();
     it.demand = getSeg("#mDemand");

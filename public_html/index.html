@@ -49,7 +49,7 @@
 <link rel="icon" href="assets/favicon.ico?v=1" sizes="any" />
 <link rel="icon" type="image/png" href="assets/favicon.png?v=1" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1" />
-<link rel="stylesheet" href="css/styles.css?v=24" />
+<link rel="stylesheet" href="css/styles.css?v=25" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -187,6 +187,7 @@
             <div class="lg"><img class="trend" src="assets/trend-up.png" alt="" />Рост</div>
             <div class="lg"><img class="trend tr-swap" src="assets/trend-swap.png" alt="" />Пересмотр</div>
             <div class="lg"><img class="trend" src="assets/trend-down.png" alt="" />Упадок</div>
+            <div class="lg"><span class="lg-wip" aria-hidden="true">?</span>В редактировании</div>
           </div>
         </div>
       </section>
@@ -231,6 +232,13 @@
             <input type="checkbox" id="mNew" />
             <span class="track"><span class="thumb"></span></span>
             <span class="switch-label">Значок «NEW» (новый / изменён)</span>
+          </label>
+        </div>
+        <div class="field">
+          <label class="switch new-switch" title="Показать значок «?» на предмете (цена в редактировании). Работает вместе с NEW">
+            <input type="checkbox" id="mWip" />
+            <span class="track"><span class="thumb"></span></span>
+            <span class="switch-label">Значок «?» (в редактировании)</span>
           </label>
         </div>
         <div class="field">
@@ -320,6 +328,6 @@
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/app.js?v=32"></script>
+  <script src="js/app.js?v=33"></script>
 </body>
 </html>

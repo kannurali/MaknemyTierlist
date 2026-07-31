@@ -575,6 +575,15 @@ html, body {
   pointer-events: none;
 }
 
+/* значок «?» — цена в редактировании. Та же плашка, что и NEW, но в правом
+   углу и с зеркальным наклоном, чтобы оба значка «расходились» от центра.
+   Включаются независимо: у предмета может быть и NEW, и «?» одновременно. */
+.cell-wip {
+  left: auto; right: -.5cqw;
+  transform: rotate(12deg);
+  padding: .28cqw .5cqw .22cqw; /* «?» уже «NEW» — добавляем воздуха по бокам */
+}
+
 /* всплывающая подсказка предмета (название + описание) при наведении */
 .cell-tip {
   position: absolute;
@@ -723,6 +732,19 @@ html, body {
   font-size: 1.7cqw; color: #dbeaff; white-space: nowrap;
 }
 .lg .tbadge, .lg .dot, .lg .trend { flex: none; }
+/* «?» в легенде — та же розовая плашка, что на предмете, только без наклона:
+   в строке текста наклонённый значок читается хуже. */
+.lg-wip {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.9cqw;
+  font-family: var(--ui); font-weight: 800; font-size: 1.4cqw; line-height: 1;
+  color: #fff;
+  background: linear-gradient(180deg, #ff5a5a, #e0218a);
+  border: .12cqw solid rgba(255,255,255,.9);
+  border-radius: .55cqw; padding: .3cqw .45cqw .24cqw;
+  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
+}
 
 /* ===================== Footer ===================== */
 .tl-footer {
@@ -1076,6 +1098,8 @@ html, body {
 
   /* подсказка и значок NEW крупнее под палец/экран */
   .cell-new { font-size: 2cqw; border-radius: 1cqw; padding: .45cqw .65cqw .35cqw; }
+  .cell-wip { padding: .45cqw .8cqw .35cqw; }
+  .lg-wip { font-size: 2.2cqw; min-width: 3cqw; border-radius: .9cqw; padding: .45cqw .6cqw .35cqw; }
   .cell-tip { max-width: 40cqw; border-radius: 1.4cqw; padding: 1cqw 1.2cqw; }
   .tip-name { font-size: 3cqw; }
   .tip-desc { font-size: 2.3cqw; }
