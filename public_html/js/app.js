@@ -1480,6 +1480,8 @@
     btnPng.textContent = PNG_LABEL;
     btnPng.title = PNG_TITLE;
     btnPng.disabled = false;
+    btnPng.classList.remove("png-ready");
+    if (savedHint.textContent.indexOf("Картинка готова") === 0) savedHint.textContent = "";
   }
 
   btnPng.addEventListener("click", async () => {
@@ -1547,10 +1549,15 @@
         alert("Не загрузилось иконок: " + broken + ". В картинке они будут пустыми.\nПроверьте интернет и попробуйте ещё раз.");
       }
       if (isIOS()) {
+        // Скачивание должно уйти в НОВОМ жесте, иначе WebKit его проглотит.
+        // Шаг нужно объяснить: молчаливая смена подписи читается как «ничего
+        // не произошло», и человек просто уходит с готовой картинкой в руках.
         readyBlob = blob;
-        btnPng.textContent = "💾 Сохранить";
+        btnPng.textContent = "💾 Сохранить PNG";
         btnPng.title = "Картинка готова — нажми, чтобы сохранить";
         btnPng.disabled = false;
+        btnPng.classList.add("png-ready");
+        savedHint.textContent = "Картинка готова — нажми «💾 Сохранить PNG»";
         readyTimer = setTimeout(resetPngButton, 120000);
         return; // finally ниже всё равно отработает
       }

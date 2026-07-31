@@ -33,6 +33,18 @@ Options -Indexes
   Header always set Strict-Transport-Security "max-age=15552000"
 </IfModule>
 
+# index.html carries the ?v= numbers for app.js and styles.css, so a stale
+# copy of it pins visitors to stale code no matter how the versions are
+# bumped. Apache sends no Cache-Control for .html, which leaves browsers to
+# invent their own freshness from Last-Modified — Safari in particular then
+# served an old page for hours after a deploy. Always revalidate; the file is
+# 18 KB and the request is a 304 whenever nothing changed.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 # Site assets (assets/*) are hand-named and mostly carry no ?v= cache-buster,
 # so they must NOT be immutable — replacing one in place has to take effect.
 # Cache briefly and always revalidate. The content-hashed uploads under
