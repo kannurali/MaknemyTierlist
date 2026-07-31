@@ -1333,6 +1333,10 @@
   // форсировать все 70 разом = пик декодирования на телефоне, поэтому
   // догружаем партиями.
   async function eagerLoadStageImages() {
+    // decode() дожидается не только загрузки, но и раскодирования: у иконок
+    // стоит decoding="async", и событие load приходит раньше, чем картинку
+    // реально можно рисовать на холсте.
+    const decoded = img => (img.decode ? img.decode().catch(() => {}) : Promise.resolve());
     const imgs = Array.from(stage.querySelectorAll('img[loading="lazy"]'));
     for (let i = 0; i < imgs.length; i += 12) {
       await Promise.all(imgs.slice(i, i + 12).map(img => {
@@ -1341,15 +1345,58 @@
         // Ждать её событий бессмысленно: они уже прошли, и экспорт зависал
         // навсегда на «Рендер…». Плюс таймаут на случай гонки, когда
         // загрузка успела закончиться между сменой loading и подпиской.
-        if (img.complete) return null;
+        if (img.complete) return decoded(img);
         return new Promise(res => {
-          const done = () => { clearTimeout(t); res(); };
+          const done = () => { clearTimeout(t); decoded(img).then(res); };
           const t = setTimeout(done, 8000);
           img.addEventListener("load", done, { once: true });
           img.addEventListener("error", done, { once: true });
         });
       }));
     }
+  }
+
+  // html2canvas не берёт пиксели из уже отрисованных <img>. На каждый URL он
+  // заводит НОВЫЙ Image(), вешает crossOrigin="anonymous" (мы просим useCORS)
+  // и ждёт его load не дольше imageTimeout — не успел, промис отклоняется, и
+  // предмет попадает в PNG пустым. Именно так на айфоне терялась часть иконок;
+  // на десктопе повторить не удалось, там всё берётся из кэша мгновенно.
+  //
+  // Поэтому перед снимком перерисовываем уже показанные картинки в data:-URL и
+  // подменяем ссылки в клоне: html2canvas получает их мгновенно, без сети,
+  // кэша, CORS и таймаутов. Заодно ужимаем до того размера, в котором картинка
+  // реально попадёт в PNG — html2canvas тогда декодирует маленькие копии, а не
+  // исходники (среди иконок попадаются 720×405 на ячейку в 79 px).
+  // Что не удалось (чужой домен без CORS — холст «протухает»), оставляем как
+  // есть: хуже, чем было, не станет.
+  function inlineStageImages(scale) {
+    const map = new Map();
+    let canvas = document.createElement("canvas");
+    let ctx = canvas.getContext("2d");
+    stage.querySelectorAll("img").forEach(img => {
+      const src = img.currentSrc || img.src;
+      if (!src || src.startsWith("data:") || map.has(src) || !img.naturalWidth) return;
+      const box = img.getBoundingClientRect();
+      const w = Math.max(1, Math.min(img.naturalWidth, Math.ceil(box.width * scale)));
+      const h = Math.max(1, Math.min(img.naturalHeight, Math.ceil(box.height * scale)));
+      try {
+        canvas.width = w; canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let url = "";
+        try { url = canvas.toDataURL("image/webp", 0.92); } catch (e) {}
+        // WebP не поддержан (старый Safari) → toDataURL вернёт PNG
+        if (url.indexOf("data:image/webp") !== 0) url = canvas.toDataURL("image/png");
+        map.set(src, url);
+        if (img.src && img.src !== src) map.set(img.src, url);
+      } catch (e) {
+        // Холст протух от чужой картинки и уже не отдаст toDataURL — берём новый.
+        canvas = document.createElement("canvas");
+        ctx = canvas.getContext("2d");
+      }
+    });
+    canvas.width = canvas.height = 0;
+    return map;
   }
 
   // Даём браузеру доложить раскладку перед снимком. requestAnimationFrame на
@@ -1454,11 +1501,16 @@
     try {
       await document.fonts.ready.catch(() => {});
       await eagerLoadStageImages();
+      // Иконки, которые так и не приехали, выйдут пустыми — лучше сказать об
+      // этом сразу, чем отдать человеку PNG с дырками и промолчать.
+      const broken = Array.from(stage.querySelectorAll(".cell-icon img")).filter(i => !i.naturalWidth).length;
+      const scale = exportScale(stage);
+      const inlined = inlineStageImages(scale);
       await nextFrames();
       const html2canvas = await loadHtml2Canvas();
       canvas = await html2canvas(stage, {
         backgroundColor: null,
-        scale: exportScale(stage),
+        scale: scale,
         useCORS: true,
         allowTaint: false,
         logging: false,
@@ -1476,12 +1528,24 @@
           }
           const p = doc.querySelector(".petals");
           if (p) p.style.mixBlendMode = "normal";
+          // Подменяем ссылки на data:-URL, чтобы html2canvas не качал иконки
+          // заново по сети (см. комментарий у inlineStageImages).
+          doc.querySelectorAll("img").forEach(im => {
+            const d = inlined.get(im.currentSrc || im.src) || inlined.get(im.src);
+            if (d) im.src = d;
+            im.loading = "eager";
+            im.decoding = "sync";
+          });
         },
       });
+      inlined.clear();
       const blob = await canvasToBlob(canvas);
       // Освобождаем холст сразу — на телефоне это десятки мегабайт.
       canvas.width = canvas.height = 0;
       canvas = null;
+      if (broken) {
+        alert("Не загрузилось иконок: " + broken + ". В картинке они будут пустыми.\nПроверьте интернет и попробуйте ещё раз.");
+      }
       if (isIOS()) {
         readyBlob = blob;
         btnPng.textContent = "💾 Сохранить";
