@@ -1373,22 +1373,33 @@
     const map = new Map();
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
+    let tried = 0, ok = 0;
     stage.querySelectorAll("img").forEach(img => {
       const src = img.currentSrc || img.src;
       if (!src || src.startsWith("data:") || map.has(src) || !img.naturalWidth) return;
       const box = img.getBoundingClientRect();
-      const w = Math.max(1, Math.min(img.naturalWidth, Math.ceil(box.width * scale)));
-      const h = Math.max(1, Math.min(img.naturalHeight, Math.ceil(box.height * scale)));
+      const w = Math.min(img.naturalWidth, Math.max(1, Math.round(box.width * scale))) || img.naturalWidth;
+      const h = Math.min(img.naturalHeight, Math.max(1, Math.round(box.height * scale))) || img.naturalHeight;
+      tried++;
       try {
         canvas.width = w; canvas.height = h;
+        if (!canvas.width || !canvas.height) return;
         ctx.clearRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
-        let url = "";
-        try { url = canvas.toDataURL("image/webp", 0.92); } catch (e) {}
-        // WebP не поддержан (старый Safari) → toDataURL вернёт PNG
-        if (url.indexOf("data:image/webp") !== 0) url = canvas.toDataURL("image/png");
+        // Только PNG. toDataURL("image/webp") экономит память, но на части
+        // версий Safari он не поддержан и возвращает мусор вместо картинки —
+        // лишняя развилка на устройстве, которое здесь не проверить.
+        const url = canvas.toDataURL("image/png");
+        // Когда кодирование не удалось (нулевой холст, нехватка памяти,
+        // неподдержанный формат), Safari отдаёт строку "data:,". Она не
+        // подходит под /^data:image\//, поэтому html2canvas принимает её за
+        // чужой домен, вешает crossOrigin="anonymous" — и картинка не
+        // грузится совсем. Без этой проверки в экспорте пропали ВСЕ картинки
+        // разом, а не только те, что не успели загрузиться.
+        if (url.indexOf("data:image/") !== 0 || url.length < 64) return;
         map.set(src, url);
         if (img.src && img.src !== src) map.set(img.src, url);
+        ok++;
       } catch (e) {
         // Холст протух от чужой картинки и уже не отдаст toDataURL — берём новый.
         canvas = document.createElement("canvas");
@@ -1396,6 +1407,10 @@
       }
     });
     canvas.width = canvas.height = 0;
+    // Подмена оправдана, только если удалась почти для всех. Если холст на
+    // этом устройстве не отдаёт картинки, честнее не подменять ничего и дать
+    // html2canvas грузить по обычным ссылкам, как он делал раньше.
+    if (tried && ok < tried * 0.9) map.clear();
     return map;
   }
 
