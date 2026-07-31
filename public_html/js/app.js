@@ -1288,34 +1288,169 @@
     return h2cPromise;
   }
 
-  $("#btnPng").addEventListener("click", async () => {
+  // iOS (Safari и любой браузер на iPhone/iPad — все на WebKit) ведёт себя
+  // иначе, и именно из-за этого экспорт «не скачивался»:
+  //   1) «жест пользователя» живёт ~5 секунд. Рендер на телефоне занимает
+  //      7–12 с (шрифты + догрузка 70 иконок + 200 КБ html2canvas + сам
+  //      рендер), поэтому клик по <a download> происходил уже вне жеста и
+  //      WebKit молча его отбрасывал: ничего не скачивалось, ошибки не было.
+  //   2) data:-URL с атрибутом download на iOS не скачивается вообще —
+  //      менеджер загрузок Safari понимает только blob:.
+  //   3) <a>, не вставленный в документ, кликается ненадёжно.
+  // Поэтому на iOS сохранение вынесено во ВТОРОЕ (короткое) нажатие: к нему
+  // картинка уже готова, жест свежий, и работает либо системное «Поделиться»
+  // (сохранить в Фото/Файлы), либо обычная загрузка blob:.
+  const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
+
+  // Пиксельный бюджет холста. Пик памяти при экспорте — это холст
+  // (4 байта/пиксель) + буфер PNG + клон DOM, который делает html2canvas.
+  // В альбомной ориентации сцена крупнее (797×1456 CSS против 390×1347):
+  // при жёстком scale:2 холст выходил 1594×2912 = 4.6 Мп ≈ 17.7 МБ, и вкладка
+  // на iPhone падала по памяти. Теперь масштаб подбирается под бюджет.
+  function exportScale(el) {
+    const r = el.getBoundingClientRect();
+    const area = Math.max(1, r.width * r.height);
+    const mobile = isIOS() || (window.matchMedia && matchMedia("(pointer: coarse)").matches);
+    const budget = mobile ? 3.5e6 : 12e6;
+    return Math.max(1, Math.min(2, Math.sqrt(budget / area)));
+  }
+
+  // Иконки ниже сгиба помечены loading="lazy" и ещё не загружены — для
+  // экспорта нужны все сразу, иначе часть предметов выйдет пустой. Но
+  // форсировать все 70 разом = пик декодирования на телефоне, поэтому
+  // догружаем партиями.
+  async function eagerLoadStageImages() {
+    const imgs = Array.from(stage.querySelectorAll('img[loading="lazy"]'));
+    for (let i = 0; i < imgs.length; i += 12) {
+      await Promise.all(imgs.slice(i, i + 12).map(img => {
+        img.loading = "eager";
+        // complete=true при naturalWidth=0 — картинка уже отвалилась (404).
+        // Ждать её событий бессмысленно: они уже прошли, и экспорт зависал
+        // навсегда на «Рендер…». Плюс таймаут на случай гонки, когда
+        // загрузка успела закончиться между сменой loading и подпиской.
+        if (img.complete) return null;
+        return new Promise(res => {
+          const done = () => { clearTimeout(t); res(); };
+          const t = setTimeout(done, 8000);
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+        });
+      }));
+    }
+  }
+
+  // Даём браузеру доложить раскладку перед снимком. requestAnimationFrame на
+  // скрытой вкладке не вызывается вообще: если во время экспорта свернуть
+  // браузер или заблокировать экран, кнопка навсегда залипала на «Рендер…».
+  // Поэтому ждём кадр, но не дольше секунды.
+  function nextFrames() {
+    return new Promise(res => {
+      const t = setTimeout(res, 1000);
+      requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(t); res(); }));
+    });
+  }
+
+  // toBlob вместо toDataURL: base64-строка портретного экспорта весит 3 млн
+  // символов = 6 МБ в памяти (JS-строки UTF-16), альбомного — вдвое больше,
+  // и присваивание в a.href копирует её ещё раз. Blob этого не требует.
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      if (!canvas.toBlob) { // очень старый Safari
+        try {
+          const bin = atob(canvas.toDataURL("image/png").split(",")[1]);
+          const buf = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+          resolve(new Blob([buf], { type: "image/png" }));
+        } catch (e) { reject(e); }
+        return;
+      }
+      canvas.toBlob(
+        b => (b ? resolve(b) : reject(new Error("не хватило памяти на картинку — попробуйте в вертикальной ориентации"))),
+        "image/png"
+      );
+    });
+  }
+
+  const PNG_NAME = "nexus-tier-list.png";
+  let pendingBlobUrl = null;
+
+  function anchorDownload(blob) {
+    if (pendingBlobUrl) URL.revokeObjectURL(pendingBlobUrl);
+    pendingBlobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = pendingBlobUrl;
+    a.download = PNG_NAME;
+    a.rel = "noopener";
+    document.body.appendChild(a); // WebKit не кликает по узлу вне документа
+    a.click();
+    a.remove();
+    // Отзывать URL сразу нельзя: iOS начинает скачивание асинхронно.
+    setTimeout(() => {
+      if (pendingBlobUrl) { URL.revokeObjectURL(pendingBlobUrl); pendingBlobUrl = null; }
+    }, 60000);
+  }
+
+  // Вызывать ТОЛЬКО синхронно из обработчика клика — Web Share требует
+  // непросроченный жест пользователя.
+  function saveBlob(blob) {
+    if (isIOS() && navigator.canShare && typeof File === "function") {
+      try {
+        const file = new File([blob], PNG_NAME, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: "Maknemy Tier List" })
+            .catch(err => { if (!err || err.name !== "AbortError") anchorDownload(blob); });
+          return;
+        }
+      } catch (e) { /* File/share недоступны — уходим на <a download> */ }
+    }
+    anchorDownload(blob);
+  }
+
+  const btnPng = $("#btnPng");
+  const PNG_LABEL = btnPng.textContent;
+  const PNG_TITLE = btnPng.title;
+  let readyBlob = null;    // готовая картинка, ждущая второго нажатия (iOS)
+  let readyTimer = null;
+  let exporting = false;   // на время экспорта запрещаем пересборку сцены
+  let pendingReflow = false;
+
+  function resetPngButton() {
+    clearTimeout(readyTimer);
+    readyBlob = null;
+    btnPng.textContent = PNG_LABEL;
+    btnPng.title = PNG_TITLE;
+    btnPng.disabled = false;
+  }
+
+  btnPng.addEventListener("click", async () => {
+    // Второе нажатие на iOS: картинка уже готова — сохраняем в свежем жесте.
+    if (readyBlob) {
+      const blob = readyBlob;
+      resetPngButton();
+      saveBlob(blob);
+      return;
+    }
+
     const wasEditing = editToggle.checked;
     editToggle.checked = false;
     applyEditMode();
-    const btn = $("#btnPng");
-    const prev = btn.textContent;
-    btn.textContent = "Рендер…";
-    btn.disabled = true;
-    // wait a frame for layout/fonts
-    await document.fonts.ready.catch(() => {});
-    // Иконки ниже сгиба помечены loading="lazy" и ещё не загружены — для
-    // экспорта нужны все сразу, иначе часть предметов выйдет пустой.
-    await Promise.all(
-      Array.from(stage.querySelectorAll('img[loading="lazy"]')).map(i => {
-        i.loading = "eager";
-        if (i.complete && i.naturalWidth) return Promise.resolve();
-        return new Promise(res => { i.addEventListener("load", res, { once: true }); i.addEventListener("error", res, { once: true }); });
-      })
-    );
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    btnPng.textContent = "Рендер…";
+    btnPng.disabled = true;
+    exporting = true;
+    let canvas = null;
     try {
+      await document.fonts.ready.catch(() => {});
+      await eagerLoadStageImages();
+      await nextFrames();
       const html2canvas = await loadHtml2Canvas();
-      const canvas = await html2canvas(stage, {
+      canvas = await html2canvas(stage, {
         backgroundColor: null,
-        scale: 2,
+        scale: exportScale(stage),
         useCORS: true,
         allowTaint: false,
         logging: false,
+        imageTimeout: 20000,
         // html2canvas не умеет CSS blend-mode, поэтому фон выходил «цветным».
         // В клоне для экспорта подменяем фон на заранее посчитанную синюю
         // версию (bg.png × #091640) и убираем blend-mode у лепестков.
@@ -1331,11 +1466,19 @@
           if (p) p.style.mixBlendMode = "normal";
         },
       });
-      const url = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "nexus-tier-list.png";
-      a.click();
+      const blob = await canvasToBlob(canvas);
+      // Освобождаем холст сразу — на телефоне это десятки мегабайт.
+      canvas.width = canvas.height = 0;
+      canvas = null;
+      if (isIOS()) {
+        readyBlob = blob;
+        btnPng.textContent = "💾 Сохранить";
+        btnPng.title = "Картинка готова — нажми, чтобы сохранить";
+        btnPng.disabled = false;
+        readyTimer = setTimeout(resetPngButton, 120000);
+        return; // finally ниже всё равно отработает
+      }
+      saveBlob(blob);
     } catch (err) {
       alert(
         "Не удалось сохранить PNG.\n" +
@@ -1345,10 +1488,12 @@
       );
       console.error(err);
     } finally {
-      btn.textContent = prev;
-      btn.disabled = false;
+      if (canvas) canvas.width = canvas.height = 0;
+      exporting = false;
       editToggle.checked = wasEditing;
       applyEditMode();
+      if (!readyBlob) { btnPng.textContent = PNG_LABEL; btnPng.disabled = false; }
+      if (pendingReflow) { pendingReflow = false; reflowUntilStable(); }
     }
   });
 
@@ -1809,6 +1954,10 @@
   // единицы (cqw) обновляются НЕ одновременно, поэтому одной проверки
   // innerWidth мало — ширина уже новая, а .cell ещё старого размера.
   function reflowPass() {
+    // Во время экспорта пересобирать DOM нельзя: html2canvas клонирует сцену,
+    // и render() (innerHTML = "") на середине даёт битую картинку, а на
+    // iPhone ещё и удваивает пик памяти. Поворот отработаем после экспорта.
+    if (exporting) { pendingReflow = true; return; }
     const w = window.innerWidth;
     const per = itemsPerRow();
     if (Math.abs(w - lastW) < 2 && per === lastPer) { fitValues(); return; }
