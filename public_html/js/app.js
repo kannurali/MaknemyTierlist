@@ -736,7 +736,8 @@
     // (любая точка картинки, поля вокруг неё, текст) открывает ссылку в
     // обычном режиме. Один обработчик на блок — без двойного срабатывания.
     ad.addEventListener("click", openLink);
-    // значок-индикатор «это ссылка» (🔗) — на картинке, либо в углу блока
+    // значок-индикатор «это ссылка» — всегда в углу самой карточки рекламы,
+    // а не поверх картинки: на краю баннера он не залезает на макет рекламы
     const makeBadge = () => {
       const b = document.createElement("span");
       b.className = "ad-link-badge";
@@ -760,7 +761,6 @@
       img.alt = "Реклама";
       img.draggable = false;
       wrap.appendChild(img);
-      if (hasLink) wrap.appendChild(makeBadge()); // 🔗 поверх картинки
       ad.appendChild(wrap);
     }
 
@@ -772,8 +772,9 @@
     txt.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); txt.blur(); } });
     ad.appendChild(txt);
 
-    // если картинки нет — значок-ссылку ставим в угол блока
-    if (hasLink && !state.ad.image) ad.appendChild(makeBadge());
+    // значок-ссылка крепится к самой карточке — её угол одинаков и с картинкой,
+    // и без неё (позиционируется от .ad-block, у которого position: relative)
+    if (hasLink) ad.appendChild(makeBadge());
 
     const tools = document.createElement("div");
     tools.className = "ad-tools edit-only";
