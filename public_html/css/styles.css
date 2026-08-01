@@ -698,8 +698,20 @@ html, body {
 }
 .editing .ad-text { cursor: text; }
 .ad-text:focus { background: rgba(79,214,255,.12); border-radius: 4px; }
-.ad-img-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
-.ad-img { max-width: 100%; max-height: 12cqw; border-radius: .6cqw; display: block; }
+.ad-img-wrap { position: relative; display: block; max-width: 100%; margin: 0 auto; line-height: 0; }
+/* Баннер тянется на всю ширину блока (max-width: 100%), а высота ограничена
+   долей ширины сцены — так пропорции одинаковы на десктопе и телефоне.
+   Раньше здесь стояло max-height: 12cqw (~117px на десктопе): любая картинка
+   выше этого сжималась пропорционально, и баннер 3:2 показывался шириной
+   175px внутри блока в 973px. */
+.ad-img {
+  max-width: 100%;
+  max-height: 45cqw;
+  height: auto;
+  border-radius: .6cqw;
+  display: block;
+  margin: 0 auto;
+}
 .ad-tools { display: flex; gap: .5cqw; flex-wrap: wrap; justify-content: center; }
 
 /* скрытая ссылка рекламы: вся карточка кликабельна (курсор-рука) + значок 🔗 */

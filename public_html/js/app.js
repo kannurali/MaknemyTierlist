@@ -177,6 +177,24 @@
       reader.readAsDataURL(file);
     });
   }
+  // Сервер принимает картинку не больше 500 КБ (api/lib/images.php), а отказ
+  // ломает сохранение целиком: неудавшаяся выгрузка оставляет data-URL прямо в
+  // состоянии, и сохранение падает на извлечении картинок. Поэтому для крупных
+  // баннеров перебираем пресеты, пока не влезем в бюджет.
+  function dataUrlBytes(du) {
+    const comma = du.indexOf(",");
+    if (comma < 0) return du.length;
+    return Math.round((du.length - comma - 1) * 3 / 4);
+  }
+  async function fileToBudgetedDataURL(file, presets, budget) {
+    let out = "";
+    for (const p of presets) {
+      out = await fileToSmallDataURL(file, p[0], p[1]);
+      if (!out) return "";
+      if (dataUrlBytes(out) <= budget) return out;
+    }
+    return out;
+  }
   // fetch с ограничением по времени. Без него зависший сервер оставляет кнопку
   // «Сохранить» в состоянии «⏳ Сохранение…» навсегда, без выхода.
   const REQUEST_TIMEOUT_MS = 30000;
@@ -998,9 +1016,14 @@
   $("#adImgFile").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
-    fileToSmallDataURL(file, 720, 0.85).then(du => uploadDataUrl(du)).then(url => {
-      if (url) { state.ad.image = url; save(); render(); }
-    });
+    // 1280px по большей стороне: ширина сцены ограничена 1040px, блок рекламы —
+    // ~986px, поэтому баннер остаётся чётким на всю ширину блока. Прежние 720px
+    // физически не давали баннеру заполнить блок, как бы его ни растягивал CSS.
+    fileToBudgetedDataURL(file, [[1280, 0.85], [1280, 0.7], [1024, 0.7], [800, 0.65]], 460000)
+      .then(du => uploadDataUrl(du))
+      .then(url => {
+        if (url) { state.ad.image = url; save(); render(); }
+      });
     e.target.value = "";
   });
 
