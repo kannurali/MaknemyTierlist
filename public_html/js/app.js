@@ -740,7 +740,8 @@
     const makeBadge = () => {
       const b = document.createElement("span");
       b.className = "ad-link-badge";
-      b.textContent = "🔗";
+      // сам глиф цепочки рисует CSS (фоновая SVG-картинка) — эмодзи здесь нет
+      b.setAttribute("aria-label", "Ссылка");
       b.title = "Это ссылка — нажмите по рекламе, чтобы открыть";
       return b;
     };

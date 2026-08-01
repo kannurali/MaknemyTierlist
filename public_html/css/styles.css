@@ -719,13 +719,33 @@ html, body {
 /* скрытая ссылка рекламы: вся карточка кликабельна (курсор-рука) + значок 🔗 */
 .stage:not(.editing) .ad-block.has-link,
 .stage:not(.editing) .ad-block.has-link * { cursor: pointer; }
+/* Значок «это ссылка». Глиф — фоновая SVG-картинка, а не эмодзи: эмодзи
+   рисуется системным шрифтом (на каждой платформе свой) и по-разному попадает
+   в PNG-экспорт, а data-URL фон рендерится одинаково везде. */
 .ad-link-badge {
-  position: absolute; top: .6cqw; right: .6cqw; z-index: 4;
-  width: 2.7cqw; height: 2.7cqw; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.5cqw; line-height: 1;
-  background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.55), 0 0 0 .2cqw rgba(255,255,255,.25);
+  position: absolute; top: .8cqw; right: .8cqw; z-index: 4;
+  width: 4cqw; height: 4cqw; border-radius: 50%;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a1226' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.6 14.4a4.6 4.6 0 0 0 6.9.5l2.6-2.6a4.6 4.6 0 0 0-6.5-6.5l-1.5 1.5'/%3E%3Cpath d='M14.4 9.6a4.6 4.6 0 0 0-6.9-.5l-2.6 2.6a4.6 4.6 0 0 0 6.5 6.5l1.5-1.5'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(180deg, #8fe4ff 0%, #35b4ea 55%, #1c86c6 100%);
+  background-size: 54% 54%, 100% 100%, 100% 100%;
+  background-position: center, center, center;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 .22cqw rgba(255,255,255,.4),
+    0 .25cqw .8cqw rgba(0,0,0,.55),
+    0 0 1.6cqw rgba(79,214,255,.5);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .stage:not(.editing) .ad-block.has-link:hover .ad-link-badge {
+    transform: scale(1.1);
+    box-shadow:
+      0 0 0 .22cqw rgba(255,255,255,.55),
+      0 .3cqw 1cqw rgba(0,0,0,.6),
+      0 0 2.6cqw rgba(79,214,255,.85);
+  }
 }
 
 /* ===================== Legend ===================== */
