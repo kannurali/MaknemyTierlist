@@ -570,9 +570,12 @@ html, body {
 }
 .cell-edit button:hover { background: var(--cyan-deep); }
 
-/* значок NEW — новый / изменённый предмет */
+/* значок NEW — новый / изменённый предмет.
+   По горизонтали значки держим ВНУТРИ ячейки: колонки стоят вплотную (зазор
+   ~5px на десктопе), а раньше плашки свисали наружу на 6-7px, и «?» одного
+   предмета налезал на NEW соседнего. */
 .cell-new {
-  position: absolute; top: -.4cqw; left: -.5cqw; z-index: 7;
+  position: absolute; top: -.4cqw; left: .2cqw; z-index: 7;
   font-family: var(--ui); font-weight: 800; font-size: 1.15cqw; line-height: 1;
   color: #fff; letter-spacing: .04cqw;
   background: linear-gradient(180deg, #ff5a5a, #e0218a);
@@ -587,7 +590,7 @@ html, body {
    углу и с зеркальным наклоном, чтобы оба значка «расходились» от центра.
    Включаются независимо: у предмета может быть и NEW, и «?» одновременно. */
 .cell-wip {
-  left: auto; right: -.5cqw;
+  left: auto; right: .2cqw;
   transform: rotate(12deg);
   padding: .28cqw .5cqw .22cqw; /* «?» уже «NEW» — добавляем воздуха по бокам */
 }
