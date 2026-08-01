@@ -1306,6 +1306,95 @@
     e.target.value = "";
   });
 
+  // ============================================================
+  //  ДИАГНОСТИКА ЭКСПОРТА (?debug=1)
+  // ------------------------------------------------------------
+  //  Экспорт ломается только на iPhone, а устройства под рукой нет и консоль
+  //  Safari оттуда не достать. По ?debug=1 сайт показывает панель, в которую
+  //  экспорт пишет каждый шаг: тестеру достаточно прислать скрин или нажать
+  //  «Копировать». Без параметра ничего не создаётся и не считается.
+  // ============================================================
+  const DEBUG = /(?:^|[?&])debug=1(?:&|$)/.test(location.search);
+  const dbgLines = [];
+  let dbgBody = null;
+
+  function dbgInit() {
+    if (dbgBody) return;
+    const box = document.createElement("div");
+    box.style.cssText =
+      "position:fixed;left:6px;right:6px;top:6px;z-index:99999;max-height:48vh;overflow:auto;" +
+      "background:rgba(4,8,20,.95);border:1px solid #2aa6e0;border-radius:8px;padding:8px;" +
+      "color:#bfe6ff;font:11px/1.35 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;" +
+      "word-break:break-word;-webkit-user-select:text;user-select:text";
+    dbgBody = document.createElement("div");
+    const bar = document.createElement("div");
+    bar.style.cssText = "display:flex;gap:6px;justify-content:flex-end;margin-top:6px";
+    const mkBtn = (label, fn) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.style.cssText = "font:600 11px system-ui;padding:5px 10px;border-radius:6px;" +
+        "border:1px solid #2aa6e0;background:#0d2138;color:#cfe9ff";
+      b.addEventListener("click", fn);
+      return b;
+    };
+    bar.appendChild(mkBtn("Копировать", () => {
+      const text = dbgLines.join("\n");
+      if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(dbgBody);
+      sel.removeAllRanges(); sel.addRange(range);
+    }));
+    bar.appendChild(mkBtn("✕", () => box.remove()));
+    box.appendChild(dbgBody);
+    box.appendChild(bar);
+    document.body.appendChild(box);
+  }
+
+  function dbg(msg) {
+    if (!DEBUG) return;
+    dbgInit();
+    dbgLines.push(msg);
+    dbgBody.textContent = dbgLines.join("\n");
+    dbgBody.parentElement.scrollTop = dbgBody.parentElement.scrollHeight;
+  }
+
+  // Проба готового холста: берём центральную четверть каждой иконки и смотрим
+  // разброс яркости. У настоящей иконки он большой; если иконка не нарисовалась,
+  // там ровный фон ячейки — разброс около нуля. Это и отличает «иконок нет»
+  // от «иконки есть, но тусклые».
+  function dbgProbeIcons(canvas, scale) {
+    if (!DEBUG) return;
+    const sr = stage.getBoundingClientRect();
+    const ctx = canvas.getContext("2d");
+    const imgs = Array.from(stage.querySelectorAll(".cell-icon img")).slice(0, 5);
+    imgs.forEach((im, i) => {
+      const r = im.getBoundingClientRect();
+      const x = Math.round((r.left - sr.left + r.width * .25) * scale);
+      const y = Math.round((r.top - sr.top + r.height * .25) * scale);
+      const w = Math.max(1, Math.round(r.width * .5 * scale));
+      const h = Math.max(1, Math.round(r.height * .5 * scale));
+      try {
+        const d = ctx.getImageData(x, y, w, h).data;
+        let min = 255, max = 0, sum = 0, clear = 0, n = 0;
+        for (let p = 0; p < d.length; p += 4) {
+          const lum = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000;
+          if (d[p + 3] < 16) clear++;
+          if (lum < min) min = lum;
+          if (lum > max) max = lum;
+          sum += lum; n++;
+        }
+        dbg("  икон" + i + ": разброс " + Math.round(max - min) +
+            " сред " + Math.round(sum / n) + " прозр " + Math.round(clear / n * 100) + "%" +
+            (max - min < 12 ? "  <- ПУСТО" : ""));
+      } catch (e) {
+        dbg("  икон" + i + ": getImageData → " + e.name + " (холст протух)");
+      }
+    });
+  }
+
+  if (DEBUG) dbg("диагностика включена — нажми «⬇ Скачать PNG»");
+
   // ----- Download PNG -----
   // html2canvas весит ~200 КБ и нужен только админу при экспорте картинки.
   // Раньше он подключался тегом <script> на каждой загрузке — телефон тратил
@@ -1398,10 +1487,16 @@
     const map = new Map();
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
-    let tried = 0, ok = 0;
+    let tried = 0, ok = 0, notLoaded = 0, badUrl = 0, tainted = 0;
+    const samples = [];
     stage.querySelectorAll("img").forEach(img => {
       const src = img.currentSrc || img.src;
-      if (!src || src.startsWith("data:") || map.has(src) || !img.naturalWidth) return;
+      if (!src || src.startsWith("data:") || map.has(src)) return;
+      if (!img.naturalWidth) {
+        notLoaded++;
+        if (samples.length < 3) samples.push("не загружена: " + src.slice(-38));
+        return;
+      }
       const box = img.getBoundingClientRect();
       const w = Math.min(img.naturalWidth, Math.max(1, Math.round(box.width * scale))) || img.naturalWidth;
       const h = Math.min(img.naturalHeight, Math.max(1, Math.round(box.height * scale))) || img.naturalHeight;
@@ -1421,17 +1516,30 @@
         // чужой домен, вешает crossOrigin="anonymous" — и картинка не
         // грузится совсем. Без этой проверки в экспорте пропали ВСЕ картинки
         // разом, а не только те, что не успели загрузиться.
-        if (url.indexOf("data:image/") !== 0 || url.length < 64) return;
+        if (url.indexOf("data:image/") !== 0 || url.length < 64) {
+          badUrl++;
+          if (samples.length < 3) {
+            samples.push("toDataURL=" + JSON.stringify(url.slice(0, 24)) + " len " + url.length +
+                         " " + w + "x" + h + " " + src.slice(-30));
+          }
+          return;
+        }
         map.set(src, url);
         if (img.src && img.src !== src) map.set(img.src, url);
         ok++;
       } catch (e) {
         // Холст протух от чужой картинки и уже не отдаст toDataURL — берём новый.
+        tainted++;
+        if (samples.length < 3) samples.push("исключение " + e.name + ": " + src.slice(-30));
         canvas = document.createElement("canvas");
         ctx = canvas.getContext("2d");
       }
     });
     canvas.width = canvas.height = 0;
+    dbg("врезка: всего " + tried + ", удалось " + ok + ", не загружено " + notLoaded +
+        ", плохой data-URL " + badUrl + ", исключений " + tainted +
+        (tried && ok < tried * 0.9 ? "  <- КАРТА СБРОШЕНА (<90%)" : ""));
+    samples.forEach(s => dbg("  " + s));
     // Подмена оправдана, только если удалась почти для всех. Если холст на
     // этом устройстве не отдаёт картинки, честнее не подменять ничего и дать
     // html2canvas грузить по обычным ссылкам, как он делал раньше.
@@ -1497,12 +1605,18 @@
       try {
         const file = new File([blob], PNG_NAME, { type: "image/png" });
         if (navigator.canShare({ files: [file] })) {
+          dbg("сохранение: navigator.share");
           navigator.share({ files: [file], title: "Maknemy Tier List" })
-            .catch(err => { if (!err || err.name !== "AbortError") anchorDownload(blob); });
+            .catch(err => {
+              dbg("share отклонён: " + (err && err.name));
+              if (!err || err.name !== "AbortError") anchorDownload(blob);
+            });
           return;
         }
-      } catch (e) { /* File/share недоступны — уходим на <a download> */ }
+        dbg("canShare(files) = false");
+      } catch (e) { dbg("share недоступен: " + e.name); }
     }
+    dbg("сохранение: <a download>");
     anchorDownload(blob);
   }
 
@@ -1540,9 +1654,25 @@
     btnPng.disabled = true;
     exporting = true;
     let canvas = null;
+    const t0 = Date.now();
     try {
+      if (DEBUG) {
+        const r = stage.getBoundingClientRect();
+        dbg("— экспорт —");
+        dbg("iOS " + isIOS() + ", dpr " + (window.devicePixelRatio || 1) +
+            ", окно " + window.innerWidth + "x" + window.innerHeight);
+        dbg("UA " + navigator.userAgent.slice(0, 90));
+        dbg("сцена " + Math.round(r.width) + "x" + Math.round(r.height) +
+            ", масштаб " + exportScale(stage).toFixed(2) +
+            ", картинок " + stage.querySelectorAll("img").length);
+      }
       await document.fonts.ready.catch(() => {});
       await eagerLoadStageImages();
+      if (DEBUG) {
+        const all = Array.from(stage.querySelectorAll("img"));
+        dbg("после догрузки: " + all.filter(i => i.naturalWidth).length + "/" + all.length +
+            " с пикселями, " + (Date.now() - t0) + " мс");
+      }
       // Иконки, которые так и не приехали, выйдут пустыми — лучше сказать об
       // этом сразу, чем отдать человеку PNG с дырками и промолчать.
       const broken = Array.from(stage.querySelectorAll(".cell-icon img")).filter(i => !i.naturalWidth).length;
@@ -1572,16 +1702,26 @@
           if (p) p.style.mixBlendMode = "normal";
           // Подменяем ссылки на data:-URL, чтобы html2canvas не качал иконки
           // заново по сети (см. комментарий у inlineStageImages).
+          let swapped = 0, kept = 0;
           doc.querySelectorAll("img").forEach(im => {
             const d = inlined.get(im.currentSrc || im.src) || inlined.get(im.src);
-            if (d) im.src = d;
+            if (d) { im.src = d; swapped++; } else { kept++; }
             im.loading = "eager";
             im.decoding = "sync";
           });
+          dbg("в клоне подменено " + swapped + ", осталось по ссылке " + kept);
         },
       });
       inlined.clear();
+      if (DEBUG) {
+        dbg("холст " + canvas.width + "x" + canvas.height +
+            " (" + (canvas.width * canvas.height / 1e6).toFixed(1) + " Мп), " +
+            (Date.now() - t0) + " мс");
+        dbgProbeIcons(canvas, exportScale(stage));
+      }
       const blob = await canvasToBlob(canvas);
+      dbg("blob " + (blob.size / 1048576).toFixed(2) + " МБ, " + blob.type +
+          ", итого " + (Date.now() - t0) + " мс");
       // Освобождаем холст сразу — на телефоне это десятки мегабайт.
       canvas.width = canvas.height = 0;
       canvas = null;
@@ -1603,6 +1743,7 @@
       }
       saveBlob(blob);
     } catch (err) {
+      dbg("ОШИБКА " + (err && err.name) + ": " + (err && err.message));
       alert(
         "Не удалось сохранить PNG.\n" +
         (location.protocol === "file:"
