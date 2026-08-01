@@ -1779,7 +1779,7 @@
   (function initFabAutoHide() {
     const THRESHOLD = 8;     // мелкое дрожание пальца не переключает состояние
     const TOP_ZONE = 90;     // у самого верха кнопки всегда видны
-    const BOTTOM_ZONE = 60;  // и внизу страницы тоже (там подвал со ссылками)
+    const BOTTOM_ZONE = 60;  // у самого низа — всегда спрятаны
     let lastY = window.pageYOffset || 0;
     let hidden = false;
     let ticking = false;
@@ -1800,7 +1800,13 @@
         lastY = y;
         const doc = document.documentElement;
         const atBottom = y + window.innerHeight >= doc.scrollHeight - BOTTOM_ZONE;
-        if (y < TOP_ZONE || atBottom) { setHidden(false); return; }
+        if (y < TOP_ZONE) { setHidden(false); return; }
+        // В самом низу держим кнопки спрятанными. Раньше здесь они наоборот
+        // показывались, и на телефоне это выглядело так: прокрутил вниз —
+        // спрятались, докрутил до конца — вернулись. Плюс «резинка» iOS в конце
+        // страницы даёт короткий рывок вверх, который читался как прокрутка
+        // вверх и тоже выдёргивал кнопки обратно.
+        if (atBottom) { setHidden(true); return; }
         setHidden(dy > 0);
       });
     }
