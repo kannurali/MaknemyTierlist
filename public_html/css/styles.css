@@ -14,6 +14,12 @@
 
 /* ===================== Theme tokens ===================== */
 :root {
+  /* Явно объявляем тёмную схему: движки на Chromium (в первую очередь
+     Яндекс.Браузер с «Тёмной темой для сайтов») трогают только страницы,
+     у которых своей тёмной темы нет. Без объявления браузер сам инвертирует
+     светлые монохромные картинки — белые логотипы тиров становились чёрными. */
+  color-scheme: dark;
+
   --display: "Bootshaus", "Proto Sans", "Arial Narrow", Impact, sans-serif;
   --proto: "Proto Sans", "Arial Narrow", Impact, sans-serif;
   --ui: "Segoe UI", Roboto, system-ui, sans-serif;
@@ -36,6 +42,13 @@
   --t-p: #f2b01e;
   --t-gp: #c0392b;
   --t-cr: #2e86ff;
+}
+
+/* Второй сигнал для тех же движков: сайт отвечает на prefers-color-scheme,
+   значит «своя тёмная тема» у него есть и подкрашивать её не надо.
+   Правило не меняет вид — палитра и так тёмная при любой схеме. */
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; }
 }
 
 * { box-sizing: border-box; }
