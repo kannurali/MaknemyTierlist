@@ -132,16 +132,6 @@ function extract_embedded_images(array $state, string $dir): array {
     });
 }
 
-// One-off migration of icons uploaded before ICON_MAX_SIDE existed. Oversized
-// files are rewritten under a fresh content-hash name and the state is pointed
-// at it; the original is left on disk because /images/ is served with an
-// immutable cache header, so overwriting a name in place would leave browsers
-// on the old bytes forever.
-//
-// Returns [$state, $stats] where $stats has: scanned, resized, savedBytes and
-// the list of now-unreferenced files, so the caller can report before deleting.
-// With $write = false nothing is written and the state comes back unchanged —
-// the same counting pass, so a dry run reports exactly what a real run would do.
 // Part of the stored data holds icons as absolute URLs
 // (https://maknemytierlist.site/images/<name>) rather than /images/<name>.
 // Those are still our own files, so they must be migrated too — and made
@@ -162,6 +152,18 @@ function local_image_path(string $val, string $dir): ?string {
     return is_file(rtrim($dir, '/\\') . '/' . $name) ? '/images/' . $name : null;
 }
 
+// One-off migration of icons uploaded before ICON_MAX_SIDE existed. Oversized
+// files are rewritten under a fresh content-hash name and the state is pointed
+// at it; the original is left on disk because /images/ is served with an
+// immutable cache header, so overwriting a name in place would leave browsers
+// on the old bytes forever.
+//
+// Returns [$state, $stats]. $stats holds: scanned, resized, relativised,
+// savedBytes, orphans (files no longer referenced, for the caller to report
+// before deleting) and skipped.
+//
+// With $write = false nothing is written and the state comes back unchanged —
+// the same counting pass, so a dry run reports exactly what a real run would do.
 function downscale_stored_images(array $state, string $dir, int $maxSide = ICON_MAX_SIDE, bool $write = true): array {
     $stats = ['scanned' => 0, 'resized' => 0, 'relativised' => 0, 'savedBytes' => 0,
               'orphans' => [], 'skipped' => []];

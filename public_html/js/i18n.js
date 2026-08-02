@@ -130,6 +130,7 @@
 
       "tier.rename":            "Кликните, чтобы переименовать тир",
       "tier.logo":              "Свой логотип тира",
+      "tier.logoOff":           "Убрать логотип (показывать текст)",
       "tier.up":                "Поднять тир",
       "tier.down":              "Опустить тир",
       "tier.remove":            "Удалить тир",
@@ -137,15 +138,58 @@
       "ad.chip":                "РЕКЛАМА",
       "ad.banner":              "🖼 Баннер",
       "ad.bannerTitle":         "Поставить картинку-баннер",
+      "ad.imageOff":            "Убрать картинку",
+      "ad.isLink":              "Это ссылка — нажмите по рекламе, чтобы открыть",
 
-      "msg.confirmDeleteItem":  "Удалить предмет?",
-      "msg.confirmDeleteTier":  "Удалить тир вместе с предметами?",
-      "msg.confirmReset":       "Сбросить тирлист к стандартному шаблону?",
-      "msg.saveFailed":         "Не удалось сохранить. Проверьте интернет и попробуйте ещё раз.",
-      "msg.updated":            "Тирлист обновили. Показать новую версию?",
-      "msg.show":               "Показать",
-      "msg.uploadFailed":       "Не удалось загрузить картинку",
-      "msg.imageTooLarge":      "Картинка слишком большая (максимум 500 КБ)"
+      "cell.wipTitle":          "Цена под вопросом",
+
+      "credits.remove":         "Убрать из списка",
+      "credits.add":            "Добавить участника",
+      "footer.editUrl":         "Изменить ссылку (URL)",
+      "footer.removeLink":      "Удалить ссылку",
+      "footer.addLink":         "Добавить ссылку",
+
+      "png.readyTitle":         "Картинка готова — нажми, чтобы сохранить",
+      "png.rendering":          "Рендер…",
+      "png.save":               "💾 Сохранить PNG",
+      "png.readyHint":          "Картинка готова — нажми «💾 Сохранить PNG»",
+
+      "item.edit":              "Изменить",
+      "view.noName":            "Без названия",
+      "view.noDesc":            "Описание не добавлено.",
+      "like.remove":            "Убрать лайк",
+
+      "ad.linkLabel":           "Ссылка",
+      "ad.imageAlt":            "Реклама",
+      "ad.textMode":            "Т Текст",
+      "ad.link":                "🔗 Ссылка",
+      "ad.linkSet":             "🔗 Ссылка ✓",
+      "ad.linkTitle":           "Скрытая ссылка: клик по рекламе откроет её, URL в тексте не виден. Пусто — убрать.",
+      "ad.linkPrompt":          "Скрытая ссылка (URL) для рекламы. Оставьте пустым, чтобы убрать:",
+
+      "footer.addLinkBtn":      "＋ ссылка",
+
+      "donate.promptDA":        "Ссылка на прямой донат (DonationAlerts):",
+      "donate.promptHub":       "Ссылка на хаб со всеми способами:",
+
+      "sync.title":             "Есть свежие изменения",
+      "sync.sub":               "Другой администратор обновил тирлист. Обновить сейчас? Ваши несохранённые правки будут заменены версией из базы.",
+      "sync.apply":             "Обновить",
+      "sync.dismiss":           "Оставить мои правки",
+
+      "msg.copy":               "Копировать",
+      "msg.saveTimeout":        "⚠ Долго нет ответа — проверьте интернет и размер картинок",
+      "msg.saveError":          "Ошибка сохранения",
+      "msg.noTiersField":       "нет поля tiers",
+      "msg.h2cFailed":          "Не удалось загрузить html2canvas",
+      "msg.pngMemory":          "не хватило памяти на картинку — попробуйте в вертикальной ориентации",
+      "msg.restored":           "♻ Восстановлены несохранённые правки — нажмите «Сохранить»",
+      "msg.confirmDeleteTier":  "Удалить тир «{tier}» вместе с {count} предметами?",
+      "msg.confirmReset":       "Сбросить тирлист к стандартному шаблону? Текущие данные будут потеряны.",
+      "msg.readFailed":         "Не удалось прочитать файл: ",
+      "msg.iconsMissing":       "Не загрузилось иконок: ",
+      "msg.iconsMissingTail":   ". В картинке они будут пустыми.\nПроверьте интернет и попробуйте ещё раз.",
+      "msg.loginFailed":        "Ошибка входа"
     },
 
     en: {
@@ -265,6 +309,7 @@
 
       "tier.rename":            "Click to rename the tier",
       "tier.logo":              "Custom tier logo",
+      "tier.logoOff":           "Remove the logo (show text instead)",
       "tier.up":                "Move tier up",
       "tier.down":              "Move tier down",
       "tier.remove":            "Delete tier",
@@ -272,15 +317,58 @@
       "ad.chip":                "AD",
       "ad.banner":              "🖼 Banner",
       "ad.bannerTitle":         "Set a banner image",
+      "ad.imageOff":            "Remove the image",
+      "ad.isLink":              "This is a link — tap the ad to open it",
 
-      "msg.confirmDeleteItem":  "Delete this item?",
-      "msg.confirmDeleteTier":  "Delete the tier and everything in it?",
-      "msg.confirmReset":       "Reset the tier list to the default template?",
-      "msg.saveFailed":         "Could not save. Check your connection and try again.",
-      "msg.updated":            "The tier list was updated. Show the new version?",
-      "msg.show":               "Show",
-      "msg.uploadFailed":       "Could not upload the image",
-      "msg.imageTooLarge":      "Image is too large (500 KB maximum)"
+      "cell.wipTitle":          "Value uncertain",
+
+      "credits.remove":         "Remove from the list",
+      "credits.add":            "Add a member",
+      "footer.editUrl":         "Change the link (URL)",
+      "footer.removeLink":      "Delete the link",
+      "footer.addLink":         "Add a link",
+
+      "png.readyTitle":         "The image is ready — tap to save it",
+      "png.rendering":          "Rendering…",
+      "png.save":               "💾 Save PNG",
+      "png.readyHint":          "The image is ready — tap “💾 Save PNG”",
+
+      "item.edit":              "Edit",
+      "view.noName":            "Untitled",
+      "view.noDesc":            "No description yet.",
+      "like.remove":            "Remove the like",
+
+      "ad.linkLabel":           "Link",
+      "ad.imageAlt":            "Advertisement",
+      "ad.textMode":            "T Text",
+      "ad.link":                "🔗 Link",
+      "ad.linkSet":             "🔗 Link ✓",
+      "ad.linkTitle":           "Hidden link: tapping the ad opens it, the URL stays out of the text. Empty removes it.",
+      "ad.linkPrompt":          "Hidden link (URL) for the ad. Leave empty to remove it:",
+
+      "footer.addLinkBtn":      "＋ link",
+
+      "donate.promptDA":        "Direct donation link (DonationAlerts):",
+      "donate.promptHub":       "Link to the hub with every method:",
+
+      "sync.title":             "There are newer changes",
+      "sync.sub":               "Another administrator updated the tier list. Update now? Your unsaved edits will be replaced with the version from the database.",
+      "sync.apply":             "Update",
+      "sync.dismiss":           "Keep my edits",
+
+      "msg.copy":               "Copy",
+      "msg.saveTimeout":        "⚠ No response for a while — check your connection and the image sizes",
+      "msg.saveError":          "Save failed",
+      "msg.noTiersField":       "no tiers field",
+      "msg.h2cFailed":          "Could not load html2canvas",
+      "msg.pngMemory":          "not enough memory for the image — try portrait orientation",
+      "msg.restored":           "♻ Unsaved edits restored — press “Save”",
+      "msg.confirmDeleteTier":  "Delete tier “{tier}” and its {count} items?",
+      "msg.confirmReset":       "Reset the tier list to the default template? Current data will be lost.",
+      "msg.readFailed":         "Could not read the file: ",
+      "msg.iconsMissing":       "Icons that failed to load: ",
+      "msg.iconsMissingTail":   ". They will be blank in the image.\nCheck your connection and try again.",
+      "msg.loginFailed":        "Login error"
     }
   };
 
@@ -291,11 +379,23 @@
   // Неизвестный язык откатывается на русский, неизвестный ключ — на русскую
   // строку, а если и её нет — возвращается сам ключ. Пустой экран из-за
   // забытого перевода хуже, чем текст не на том языке.
-  function t(key, lang) {
+  //
+  // vars подставляются по имени: t("msg.confirmDeleteTier", "ru", {tier: "S",
+  // count: 3}). Порядок слов в языках разный, поэтому именно по имени, а не по
+  // позиции. Неизвестное имя оставляется как есть — так пропущенную
+  // подстановку видно в интерфейсе, а не молча теряется.
+  function t(key, lang, vars) {
     var table = STRINGS[lang] || STRINGS[DEFAULT_LANG];
-    if (Object.prototype.hasOwnProperty.call(table, key)) { return table[key]; }
     var fallback = STRINGS[DEFAULT_LANG];
-    return Object.prototype.hasOwnProperty.call(fallback, key) ? fallback[key] : key;
+    var s;
+    if (Object.prototype.hasOwnProperty.call(table, key)) { s = table[key]; }
+    else if (Object.prototype.hasOwnProperty.call(fallback, key)) { s = fallback[key]; }
+    else { return key; }
+
+    if (!vars) { return s; }
+    return s.replace(/\{(\w+)\}/g, function (whole, name) {
+      return Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : whole;
+    });
   }
 
   // Язык из явного выбора, иначе из настроек браузера, иначе русский.

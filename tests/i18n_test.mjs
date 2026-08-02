@@ -57,6 +57,36 @@ test('t is not fooled by inherited Object properties', () => {
     assert.equal(t('toString', 'ru'), 'toString');
 });
 
+test('t substitutes named variables', () => {
+    const ru = t('msg.confirmDeleteTier', 'ru', { tier: 'S', count: 3 });
+    assert.ok(ru.includes('S') && ru.includes('3'), `no substitution: ${ru}`);
+    assert.ok(!ru.includes('{'), `placeholder left behind: ${ru}`);
+
+    const en = t('msg.confirmDeleteTier', 'en', { tier: 'S', count: 3 });
+    assert.ok(en.includes('S') && en.includes('3'), `no substitution: ${en}`);
+    assert.ok(!en.includes('{'), `placeholder left behind: ${en}`);
+});
+
+test('t leaves an unknown placeholder visible instead of dropping it', () => {
+    // Молча потерянная подстановка даёт «Удалить тир «» вместе с  предметами?»
+    // — лучше показать имя и заметить пропажу.
+    assert.equal(t('msg.confirmDeleteTier', 'ru', {}).includes('{tier}'), true);
+});
+
+test('t ignores vars for strings without placeholders', () => {
+    assert.equal(t('filters.all', 'en', { tier: 'X' }), 'All');
+});
+
+test('both languages declare the same placeholders for a key', () => {
+    // Ключ с {count} в одном языке и без него в другом — тихая потеря данных
+    // при переключении языка.
+    const names = s => (String(s).match(/\{(\w+)\}/g) || []).sort().join(',');
+    for (const key of Object.keys(STRINGS.ru)) {
+        assert.equal(names(STRINGS.en[key]), names(STRINGS.ru[key]),
+            `placeholders differ for ${key}`);
+    }
+});
+
 test('pickLang honours an explicit stored choice', () => {
     assert.equal(pickLang('en', 'ru-RU'), 'en');
     assert.equal(pickLang('ru', 'en-US'), 'ru');
