@@ -51,12 +51,20 @@ reference — Vercel itself is retired and its build now fails, which is expecte
 ## After deploying the icon size cap (one-time)
 
 Icons uploaded before `ICON_MAX_SIDE` existed are still stored at up to 800x800.
-On the server, from the repository clone (NOT the web root):
+The push webhook does not do this — it only ships code, so new uploads get
+capped while the already-stored icons stay full size. Run it once by hand.
+
+On the server, from the repository clone (NOT the web root). `config.php` lives
+above the web root, outside the clone, so point the script at it:
 
 ```
-php tools/downscale-images.php --dry-run   # report only
-php tools/downscale-images.php             # resize, repoint the state, bump rev
+cd /home/maknemyt/repositories/MaknemyTierlist
+php tools/downscale-images.php --config=/home/maknemyt/config.php --dry-run
+php tools/downscale-images.php --config=/home/maknemyt/config.php
 ```
+
+Without `--config` the script looks next to the repo and then in `$HOME`, and
+prints exactly which paths it tried if it finds nothing.
 
 It writes each resized icon under a new content-hash name and updates the
 tierlist row. The originals stay on disk — `/images/` is served `immutable`, so

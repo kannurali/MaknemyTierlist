@@ -87,6 +87,13 @@ php tools/downscale-images.php --dry-run   # только отчёт
 php tools/downscale-images.php             # сжать и перепривязать
 ```
 
+На боевом хостинге `config.php` лежит над веб-рутом, вне клона репозитория,
+поэтому туда нужно указать путь явно:
+
+```
+php tools/downscale-images.php --config=/home/maknemyt/config.php --dry-run
+```
+
 ## Тесты
 
 ```
