@@ -399,11 +399,16 @@
   }
 
   // Язык из явного выбора, иначе из настроек браузера, иначе русский.
+  //
+  // Английский — только по явному en*. Обратное правило («не ru — значит en»)
+  // отправляло бы на английский всех, у кого в браузере kk-KZ, tr-TR или
+  // en-US при русском интерфейсе в голове: аудитория сайта русскоязычная, и
+  // казахская локаль здесь обычная, а не признак иностранца. Незнакомая
+  // локаль остаётся на русском — это язык, на котором сайт написан.
   function pickLang(stored, navigatorLang) {
     if (stored && STRINGS[stored]) { return stored; }
     var nav = String(navigatorLang || "").toLowerCase();
-    if (nav.indexOf("ru") === 0) { return "ru"; }
-    return nav ? "en" : DEFAULT_LANG;
+    return nav.indexOf("en") === 0 ? "en" : DEFAULT_LANG;
   }
 
   var api = { STRINGS: STRINGS, DEFAULT_LANG: DEFAULT_LANG, supported: supported, t: t, pickLang: pickLang };

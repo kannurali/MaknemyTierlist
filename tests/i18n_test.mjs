@@ -100,7 +100,15 @@ test('pickLang falls back to the browser language', () => {
     assert.equal(pickLang(null, 'ru-RU'), 'ru');
     assert.equal(pickLang(null, 'RU'), 'ru');
     assert.equal(pickLang(null, 'en-GB'), 'en');
-    assert.equal(pickLang(null, 'fr-FR'), 'en');
+});
+
+test('pickLang keeps an unfamiliar locale on Russian', () => {
+    // The audience is Russian-speaking; a Kazakh or Turkish locale is a normal
+    // visitor here, not a foreigner. Only an explicit en* asks for English —
+    // "anything but ru means en" would have handed them an English site.
+    assert.equal(pickLang(null, 'kk-KZ'), 'ru');
+    assert.equal(pickLang(null, 'tr-TR'), 'ru');
+    assert.equal(pickLang(null, 'fr-FR'), 'ru');
 });
 
 test('pickLang defaults to Russian with no signal at all', () => {

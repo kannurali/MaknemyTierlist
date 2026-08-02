@@ -73,11 +73,35 @@ test('downscale_image_bytes keeps the source format', function () {
     assert_eq('png', image_ext_for(downscale_image_bytes(make_image(800, 800), 256)), 'png in, png out');
 });
 
+// A PNG header that declares $w x $h honestly but carries no image data at all.
+// getimagesizefromstring() reads the size straight out of IHDR without checking
+// the CRC, so this reaches the decoder — which is the point: it lets a test aim
+// at imagecreatefromstring() rather than tripping an earlier size guard.
+function fake_png_header(int $w, int $h): string {
+    return "\x89PNG\r\n\x1a\n" . pack('N', 13) . 'IHDR' . pack('NN', $w, $h)
+         . "\x08\x06\x00\x00\x00" . "\x00\x00\x00\x00" . str_repeat('garbage', 40);
+}
+
 test('downscale_image_bytes rejects bytes it cannot decode', function () {
-    // Valid PNG magic, garbage payload: storing it unresized would defeat the cap.
+    // Sane dimensions, garbage payload: this has to fail in the decoder, not in
+    // the pixel-count guard, otherwise the test stops covering that branch.
     assert_throws(function () {
-        downscale_image_bytes("\x89PNG\r\n\x1a\n" . str_repeat('garbage', 40), 256);
+        downscale_image_bytes(fake_png_header(300, 300), 256);
     }, 'undecodable throws');
+});
+
+test('downscale_image_bytes refuses dimensions that would exhaust memory', function () {
+    // A uniform 9000x9000 PNG compresses to ~250 KB, so the byte-size cap in
+    // save_image_bytes lets it through — but decoding it costs 4 bytes a pixel,
+    // ~324 MB. That overruns memory_limit, and the resulting fatal cannot be
+    // caught: upload.php would answer a bare 500 instead of a clean error.
+    assert_throws(function () {
+        downscale_image_bytes(fake_png_header(9000, 9000), 256);
+    }, 'oversized dimensions throw');
+
+    // The cap must not clip real icons: 4000x4000 is 16 Mpx exactly, still fine.
+    $ok = make_image(400, 400);
+    assert_eq(256, image_size_of(downscale_image_bytes($ok, 256))[0], 'ordinary icon still resized');
 });
 
 test('save_image_bytes stores the downscaled image', function () {

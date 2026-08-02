@@ -13,6 +13,10 @@
 // 256 keeps roughly a 2x reserve over the largest real paint size.
 const ICON_MAX_SIDE = 256;
 
+// Потолок на число пикселей ИСХОДНИКА, который мы соглашаемся декодировать.
+// 16 Мпикс — это 64 МБ битмапа, что переживает даже memory_limit = 128M.
+const MAX_SOURCE_PIXELS = 16000000;
+
 function image_ext_for(string $bytes): ?string {
     if (strncmp($bytes, "\x89PNG\r\n\x1a\n", 8) === 0) { return 'png'; }
     if (strncmp($bytes, "\xFF\xD8\xFF", 3) === 0) { return 'jpg'; }
@@ -48,6 +52,17 @@ function downscale_image_bytes(string $bytes, int $maxSide = ICON_MAX_SIDE): str
     }
     [$w, $h] = $size;
     if ($w <= $maxSide && $h <= $maxSide) { return $bytes; }
+
+    // Вес файла ничего не говорит о размере распакованного битмапа: однотонный
+    // PNG на 252 КБ спокойно объявляет 9000x9000 и требует 324 МБ при декоде.
+    // Раньше байты просто клались на диск, теперь их декодирует сервер, и
+    // upload.php упирается в memory_limit. Это фатал, а не исключение — catch
+    // в upload.php:17 его не видит, и админ получает голый 500 без причины.
+    // Проверяем до imagecreatefromstring: иконка рисуется в ~130 px, так что
+    // 16 Мпикс (4000x4000) — уже заведомо не иконка.
+    if ($w * $h > MAX_SOURCE_PIXELS) {
+        throw new RuntimeException('image dimensions too large');
+    }
 
     $ext = image_ext_for($bytes);
     $encoder = ['png' => 'imagepng', 'jpg' => 'imagejpeg', 'webp' => 'imagewebp'][$ext] ?? null;
