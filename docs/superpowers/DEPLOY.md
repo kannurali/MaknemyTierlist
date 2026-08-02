@@ -48,6 +48,24 @@ reference — Vercel itself is retired and its build now fails, which is expecte
 6. **Domain + SSL.** Point the free domain at the host; enable SSL (cPanel →
    SSL/TLS / AutoSSL). The site forces HTTPS via `.htaccess`.
 
+## After deploying the icon size cap (one-time)
+
+Icons uploaded before `ICON_MAX_SIDE` existed are still stored at up to 800x800.
+On the server, from the repository clone (NOT the web root):
+
+```
+php tools/downscale-images.php --dry-run   # report only
+php tools/downscale-images.php             # resize, repoint the state, bump rev
+```
+
+It writes each resized icon under a new content-hash name and updates the
+tierlist row. The originals stay on disk — `/images/` is served `immutable`, so
+reusing a filename would leave browsers on the old bytes. The script prints the
+`rm` lines for the orphans; run them only after checking the site.
+
+Requires the GD extension with WebP support. Without a matching encoder the
+script leaves that image untouched and says so, rather than failing.
+
 ## Smoke test after deploy
 
 - Load the site: the tier list renders, images load from `/images/...`

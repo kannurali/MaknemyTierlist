@@ -277,12 +277,12 @@
   function renderSaveBtn() {
     if (!btnSave) return;
     btnSave.classList.remove("clean", "dirty", "saving");
-    if (saving)     { btnSave.textContent = "⏳ Сохранение…"; btnSave.classList.add("saving"); }
-    else if (dirty) { btnSave.textContent = "💾 Сохранить";  btnSave.classList.add("dirty"); }
-    else            { btnSave.textContent = "✓ Сохранено";   btnSave.classList.add("clean"); }
+    if (saving)     { btnSave.textContent = tx("admin.saving"); btnSave.classList.add("saving"); }
+    else if (dirty) { btnSave.textContent = tx("admin.save");  btnSave.classList.add("dirty"); }
+    else            { btnSave.textContent = tx("admin.saved");   btnSave.classList.add("clean"); }
   }
   function flashSaved() {
-    savedHint.textContent = "✓ Сохранено";
+    savedHint.textContent = tx("admin.saved");
     clearTimeout(flashSaved._t);
     flashSaved._t = setTimeout(() => (savedHint.textContent = ""), 1200);
   }
@@ -297,6 +297,59 @@
   const autoSortToggle = $("#autoSortToggle");
   const creditsEl = $("#credits");
   const footerEl = $("#tlFooter");
+
+  // ============================================================
+  //  ЯЗЫК ИНТЕРФЕЙСА (RU / EN)
+  // ------------------------------------------------------------
+  //  Переводится ТОЛЬКО интерфейс. Названия тиров и предметов, реклама, титры
+  //  и ссылки в подвале приходят из БД и показываются как есть.
+  //  Легенда лежит внутри #stage, поэтому выбранный язык попадает и в PNG.
+  //  Строки живут в js/i18n.js, узлы помечены data-i18n* в разметке.
+  // ============================================================
+  const LANG_KEY = "nexus-lang-v1";
+  let lang = I18N.pickLang(
+    (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
+    navigator.language
+  );
+
+  // Не `t`: это имя в файле уже занято под тир/таймер в девяти местах, и внутри
+  // таких блоков вызов t("ключ") молча ушёл бы не туда.
+  const tx = key => I18N.t(key, lang);
+
+  function applyLang(next) {
+    if (next) {
+      lang = next;
+      try { localStorage.setItem(LANG_KEY, lang); } catch (_) { /* приватный режим */ }
+    }
+    document.documentElement.lang = lang;
+
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = tx(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = tx(el.dataset.i18nTitle); });
+    document.querySelectorAll("[data-i18n-alt]").forEach(el => { el.alt = tx(el.dataset.i18nAlt); });
+    document.querySelectorAll("[data-i18n-label]").forEach(el => {
+      el.setAttribute("aria-label", tx(el.dataset.i18nLabel));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+      el.placeholder = tx(el.dataset.i18nPlaceholder);
+    });
+
+    document.querySelectorAll("#langSwitch [data-lang]").forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+  }
+
+  (function initLangSwitch() {
+    const box = $("#langSwitch");
+    if (!box) return;
+    box.addEventListener("click", e => {
+      const btn = e.target.closest("[data-lang]");
+      // Перерисовываем: подписи, которые ставит JS (кнопка сохранения,
+      // тултипы тиров, «＋ Предмет» внутри тира), живут не в разметке.
+      if (btn && btn.dataset.lang !== lang) { applyLang(btn.dataset.lang); render(); }
+    });
+  })();
 
   // ---------- Helpers ----------
   function findTier(tid) { return state.tiers.find(t => t.id === tid); }
@@ -411,8 +464,16 @@
   // предметами снизу — чтобы не было пустых мест.
   const ITEMS_PER_BLOCK = 11;
 
+  // Сколько иконок грузить обычным (не ленивым) способом. loading="lazy" на
+  // ВСЕХ иконках означало, что даже верхний ряд браузер начинает качать только
+  // после первой раскладки — предметы на первом экране появлялись с заметной
+  // задержкой, «текстуры подгружались». Два верхних ряда всегда видны сразу,
+  // поэтому их грузим приоритетно, а всё остальное остаётся ленивым.
+  let eagerIconBudget = 0;
+
   function render() {
     tiersEl.innerHTML = "";
+    eagerIconBudget = Math.max(6, (itemsPerRow() || ITEMS_PER_BLOCK) * 2);
     const editing = editToggle.checked;
 
     // blocks: [{ tier, ti, items }] — что и под какой плашкой рисуем
@@ -539,11 +600,11 @@
     if (isFirst) {
       const tools = document.createElement("div");
       tools.className = "tier-tools edit-only";
-      tools.appendChild(toolBtn("🖼", "Загрузить логотип тира", () => pickTierLogo(tier.id)));
+      tools.appendChild(toolBtn("🖼", tx("tier.logo"), () => pickTierLogo(tier.id)));
       if (tier.logo) tools.appendChild(toolBtn("Т", "Убрать логотип (показывать текст)", () => { tier.logo = ""; save(); render(); }));
-      tools.appendChild(toolBtn("▲", "Выше", () => moveTier(ti, -1)));
-      tools.appendChild(toolBtn("▼", "Ниже", () => moveTier(ti, +1)));
-      tools.appendChild(toolBtn("✕", "Удалить тир", () => deleteTier(tier.id)));
+      tools.appendChild(toolBtn("▲", tx("tier.up"), () => moveTier(ti, -1)));
+      tools.appendChild(toolBtn("▼", tx("tier.down"), () => moveTier(ti, +1)));
+      tools.appendChild(toolBtn("✕", tx("tier.remove"), () => deleteTier(tier.id)));
       band.appendChild(tools);
     }
     return band;
@@ -582,7 +643,7 @@
       if (isLast) {
         const add = document.createElement("div");
         add.className = "cell-add edit-only";
-        add.title = "Добавить предмет";
+        add.title = tx("admin.addItemToTier");
         add.textContent = "＋";
         add.addEventListener("click", () => addItem(tier.id));
         list.appendChild(add);
@@ -633,8 +694,15 @@
     const img = document.createElement("img");
     // Предметов больше сотни, а на экране телефона видно два-три ряда.
     // Ленивая загрузка и асинхронное декодирование не дают браузеру держать
-    // в памяти сразу все распакованные иконки.
-    img.loading = "lazy";
+    // в памяти сразу все распакованные иконки. Верхние ряды — исключение:
+    // они видны сразу, и ленивая загрузка только оттягивала их появление.
+    if (eagerIconBudget > 0) {
+      eagerIconBudget--;
+      img.loading = "eager";
+      img.fetchPriority = "high";
+    } else {
+      img.loading = "lazy";
+    }
     img.decoding = "async";
     img.src = item.icon || DEFAULT_ICON;
     img.alt = item.name || "";
@@ -749,7 +817,7 @@
 
     const chip = document.createElement("span");
     chip.className = "ad-chip";
-    chip.textContent = "РЕКЛАМА";
+    chip.textContent = tx("ad.chip");
     ad.appendChild(chip);
 
     if (state.ad.image) {
@@ -778,7 +846,7 @@
 
     const tools = document.createElement("div");
     tools.className = "ad-tools edit-only";
-    tools.appendChild(toolBtn("🖼 Баннер", "Загрузить картинку рекламы", () => $("#adImgFile").click()));
+    tools.appendChild(toolBtn(tx("ad.banner"), tx("ad.bannerTitle"), () => $("#adImgFile").click()));
     if (state.ad.image) tools.appendChild(toolBtn("Т Текст", "Убрать картинку", () => { state.ad.image = ""; save(); render(); }));
     tools.appendChild(toolBtn(hasLink ? "🔗 Ссылка ✓" : "🔗 Ссылка",
       "Скрытая ссылка: клик по рекламе откроет её, URL в тексте не виден. Пусто — убрать.",
@@ -1451,7 +1519,11 @@
     // стоит decoding="async", и событие load приходит раньше, чем картинку
     // реально можно рисовать на холсте.
     const decoded = img => (img.decode ? img.decode().catch(() => {}) : Promise.resolve());
-    const imgs = Array.from(stage.querySelectorAll('img[loading="lazy"]'));
+    // Берём ВСЕ картинки сцены, а не только помеченные lazy: верхние ряды
+    // теперь грузятся eager, и по фильтру [loading="lazy"] они бы выпали из
+    // ожидания — экспорт мог начаться до того, как они раскодированы.
+    // Для уже загруженных это быстрый путь через img.complete.
+    const imgs = Array.from(stage.querySelectorAll("img"));
     for (let i = 0; i < imgs.length; i += 12) {
       await Promise.all(imgs.slice(i, i + 12).map(img => {
         img.loading = "eager";
@@ -2169,7 +2241,7 @@
     const btnLogout = $("#btnLogout");
 
     if (btnLogin) btnLogin.addEventListener("click", async () => {
-      const pw = window.prompt("Пароль администратора:");
+      const pw = window.prompt(tx("auth.prompt"));
       if (!pw) return;
       try {
         const r = await fetch(API_LOGIN, {
@@ -2179,7 +2251,7 @@
         });
         const d = await r.json().catch(() => ({}));
         if (r.ok && d.ok) { setAdminMode(true); fetchSnapshot(); }
-        else { alert("Неверный пароль"); }
+        else { alert(tx("auth.wrong")); }
       } catch (e) { alert("Ошибка входа"); }
     });
 
@@ -2201,6 +2273,10 @@
   // ============================================================
   //  INIT
   // ============================================================
+  // Язык применяем ДО первого render(): иначе интерфейс успевает мигнуть
+  // русским, а подписи, которые ставит render (кнопка сохранения, тултипы
+  // тиров), пришлось бы обновлять вторым проходом.
+  applyLang();
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initBackend();
