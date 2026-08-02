@@ -1968,6 +1968,7 @@
     const tbToggles = $("#tbToggles");
     const tbActions = $("#tbAdminActions");
     const tbPublish = $("#tbPublish");
+    const tbPng     = $("#tbPng");
 
     if (admin) {
       if (loginBtn)  loginBtn.hidden  = true;
@@ -1976,6 +1977,7 @@
       if (tbToggles) tbToggles.hidden = false;
       if (tbActions) tbActions.hidden = false;
       if (tbPublish) tbPublish.hidden = false;
+      if (tbPng)     tbPng.hidden     = false;
       renderSaveBtn();
     } else {
       if (loginBtn)  loginBtn.hidden  = false;
@@ -1984,6 +1986,7 @@
       if (tbToggles) tbToggles.hidden = true;
       if (tbActions) tbActions.hidden = true;
       if (tbPublish) tbPublish.hidden = true;
+      if (tbPng)     tbPng.hidden     = true;
       editToggle.checked = false;
       applyEditMode();
     }

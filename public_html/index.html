@@ -138,8 +138,8 @@
       <button class="btn save-btn clean" id="btnSave" title="Опубликовать изменения для всех">✓ Сохранено</button>
     </div>
 
-    <!-- PNG доступен всем; остальное — только админу -->
-    <div class="tb-group">
+    <!-- Скачивание PNG — только для админа, как и всё ниже -->
+    <div class="tb-group" id="tbPng" hidden>
       <button class="btn primary" id="btnPng" title="Скачать тирлист как PNG">⬇ Скачать PNG</button>
     </div>
     <div class="tb-group" id="tbAdminActions" hidden>
@@ -339,6 +339,6 @@
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/app.js?v=42"></script>
+  <script src="js/app.js?v=43"></script>
 </body>
 </html>
