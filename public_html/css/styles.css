@@ -315,6 +315,30 @@ html, body {
 }
 .chip.all { border-style: dashed; }
 
+/* Переключатель языка — сегментированная пара RU|EN на тех же токенах, что и
+   чипы фильтров. Слитная пара, а не два отдельных чипа: это один выбор из
+   двух, и вид должен это показывать. */
+.lang-switch { gap: 0; }
+.lang-switch .chip {
+  padding: 6px 10px;
+  border-radius: 0;
+  min-width: 38px;
+  text-align: center;
+}
+.lang-switch .chip:first-child {
+  border-radius: 999px 0 0 999px;
+  border-right-width: 0;
+}
+.lang-switch .chip:last-child { border-radius: 0 999px 999px 0; }
+/* Активная половина должна перекрывать границу соседа, иначе на стыке
+   остаётся тусклая полоска. */
+.lang-switch .chip.active { border-right-width: 1px; margin-right: -1px; }
+.lang-switch .chip:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
 /* toggle switch */
 .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .switch input { display: none; }
@@ -378,12 +402,17 @@ html, body {
   background-image: image-set(url("../assets/petals.webp") type("image/webp"));
   background-size: cover;
   background-position: center;
-  opacity: 0.7;
   /* mix-blend-mode: screen убран намеренно. Лепестки уже с альфа-каналом и
      почти белые, а подложка тёмно-синяя, поэтому screen и обычное наложение
      дают разницу максимум 4.9/255 (проверено попиксельно) — глазом не видно.
      Зато исчезает второй offscreen-слой WebKit: именно он на iPhone съедал
-     память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов. */
+     память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов.
+
+     opacity: .7 убран по той же причине и запечён в альфа-канал самих файлов
+     (petals.png / petals.webp / petals-m.webp). Любая opacity < 1 заставляет
+     WebKit рисовать элемент в отдельный transparency-слой РАЗМЕРОМ СО СЦЕНУ —
+     это 30 МБ на iPhone и 43 МБ на десктопе поверх всего остального. Картинка
+     на экране та же, слоя больше нет. */
   pointer-events: none;
   z-index: 1;
 }
@@ -652,21 +681,26 @@ html, body {
 
 /* ===================== Badges / dots / trends (shared) =====================
    Оригинальные пиксельные иконки из макета (assets/badge-*.png, dot-*.png,
-   trend-*.png) — извлечены из nav-legend.png 1-в-1. */
+   trend-*.png) — извлечены из nav-legend.png 1-в-1.
+
+   Теней здесь нет намеренно. Каждый filter: drop-shadow заставляет WebKit
+   рисовать элемент в отдельную поверхность и размывать её альфу. На полном
+   тирлисте это 79 точек, 78 бейджей и 14 трендов — 171 поверхность ради тени
+   на элементах 14x14 и 42x19 px, которую на таком размере не видно (проверено
+   попиксельно: разница не превышает 3/255). Раньше правило filter: none стояло
+   только в мобильном медиазапросе; на десктопе цена та же, поэтому оно
+   переехало в базовые стили. */
 .tbadge {
   height: 2cqw; width: auto;
   display: inline-block;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
 }
 .dot {
   display: inline-block;
   width: 1.5cqw; height: 1.5cqw;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
 }
 .trend {
   display: inline-block;
   width: 1.5cqw; height: auto;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
 }
 .trend.tr-swap { width: 2.2cqw; }
 
@@ -1066,8 +1100,12 @@ html, body {
   .toolbar { gap: 10px 10px; padding: 10px 12px; }
   .tb-brand { width: 100%; padding-right: 92px; font-size: 20px; } /* место под «Войти» */
   .tb-saved { display: none; }
-  .tb-group.filters { flex-wrap: wrap; width: 100%; gap: 6px; }
+  /* Без width:100% чипы и переключатель языка попадают в один поток переноса:
+     RU|EN встаёт в хвост последней строки чипов, а не забирает третью строку
+     панели целиком. */
+  .tb-group.filters { flex-wrap: wrap; flex: 1 1 100%; gap: 6px; }
   .filters .tb-label { width: 100%; margin-bottom: 2px; }
+  .lang-switch { margin-left: auto; }
   .chip { padding: 7px 12px; }                 /* чуть крупнее под палец */
   .btn { padding: 9px 12px; }
 
@@ -1097,9 +1135,11 @@ html, body {
     background-image: image-set(url("../assets/petals-m.webp") type("image/webp"));
   }
 
-  /* Тени у мелких иконок (2.5cqw ≈ 9 px) не видны, но каждая такая тень —
-     отдельная render-поверхность в WebKit. На 110 предметах их сотни. */
-  .dot, .trend, .tbadge { filter: none; }
+  /* Тень иконки предмета: на телефоне ячейка ~39 px, тень 2/4 px почти не
+     читается, а поверхностей — по одной на каждый из 113 предметов. Именно
+     телефон упирается в лимит памяти вкладки, поэтому здесь тень снимаем;
+     на десктопе ячейка 62 px и тень остаётся. */
+  .cell-icon img { filter: none; }
 
   /* Прокрутка вниз — кнопки уезжают за правый край и не закрывают тирлист;
      прокрутка вверх — возвращаются. Класс вешает JS (initFabAutoHide).

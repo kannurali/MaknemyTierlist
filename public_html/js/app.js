@@ -268,8 +268,8 @@
     } catch (err) {
       saving = false; renderSaveBtn();
       savedHint.textContent = (err && err.name === "AbortError")
-        ? "⚠ Долго нет ответа — проверьте интернет и размер картинок"
-        : "⚠ " + ((err && err.message) || "Ошибка сохранения");
+        ? tx("msg.saveTimeout")
+        : "⚠ " + ((err && err.message) || tx("msg.saveError"));
     }
   }
 
@@ -277,12 +277,12 @@
   function renderSaveBtn() {
     if (!btnSave) return;
     btnSave.classList.remove("clean", "dirty", "saving");
-    if (saving)     { btnSave.textContent = "⏳ Сохранение…"; btnSave.classList.add("saving"); }
-    else if (dirty) { btnSave.textContent = "💾 Сохранить";  btnSave.classList.add("dirty"); }
-    else            { btnSave.textContent = "✓ Сохранено";   btnSave.classList.add("clean"); }
+    if (saving)     { btnSave.textContent = tx("admin.saving"); btnSave.classList.add("saving"); }
+    else if (dirty) { btnSave.textContent = tx("admin.save");  btnSave.classList.add("dirty"); }
+    else            { btnSave.textContent = tx("admin.saved");   btnSave.classList.add("clean"); }
   }
   function flashSaved() {
-    savedHint.textContent = "✓ Сохранено";
+    savedHint.textContent = tx("admin.saved");
     clearTimeout(flashSaved._t);
     flashSaved._t = setTimeout(() => (savedHint.textContent = ""), 1200);
   }
@@ -297,6 +297,74 @@
   const autoSortToggle = $("#autoSortToggle");
   const creditsEl = $("#credits");
   const footerEl = $("#tlFooter");
+
+  // ============================================================
+  //  ЯЗЫК ИНТЕРФЕЙСА (RU / EN)
+  // ------------------------------------------------------------
+  //  Переводится ТОЛЬКО интерфейс. Названия тиров и предметов, реклама, титры
+  //  и ссылки в подвале приходят из БД и показываются как есть.
+  //  Легенда лежит внутри #stage, поэтому выбранный язык попадает и в PNG.
+  //  Строки живут в js/i18n.js, узлы помечены data-i18n* в разметке.
+  // ============================================================
+  const LANG_KEY = "nexus-lang-v1";
+
+  // Словарь подключается отдельным <script>. Если он почему-то не доехал
+  // (частичная выкладка, блокировщик, битый кеш), обращение к I18N уронило бы
+  // весь этот IIFE — то есть весь сайт, у всех.
+  //
+  // Без словаря: разметку не трогаем, поэтому посетитель видит русский текст из
+  // index.html и сайт работает. Подписи, которые ставит JS, покажут сам ключ
+  // («admin.saved» вместо «✓ Сохранено») — это заметно и чинится выкладкой
+  // файла. Прятать такую поломку хуже, чем показать: молчаливый фолбэк на
+  // вторую копию строк разошёлся бы со словарём при первой же правке.
+  const i18n = (typeof I18N !== "undefined") ? I18N : null;
+  if (!i18n) console.warn("i18n.js не загружен — интерфейс останется на русском");
+
+  let lang = i18n
+    ? i18n.pickLang(
+        (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
+        navigator.language)
+    : "ru";
+
+  // Не `t`: это имя в файле уже занято под тир/таймер в девяти местах, и внутри
+  // таких блоков вызов t("ключ") молча ушёл бы не туда.
+  const tx = (key, vars) => (i18n ? i18n.t(key, lang, vars) : key);
+
+  function applyLang(next) {
+    if (!i18n) return;      // оставляем разметку как есть
+    if (next) {
+      lang = next;
+      try { localStorage.setItem(LANG_KEY, lang); } catch (_) { /* приватный режим */ }
+    }
+    document.documentElement.lang = lang;
+
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = tx(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = tx(el.dataset.i18nTitle); });
+    document.querySelectorAll("[data-i18n-alt]").forEach(el => { el.alt = tx(el.dataset.i18nAlt); });
+    document.querySelectorAll("[data-i18n-label]").forEach(el => {
+      el.setAttribute("aria-label", tx(el.dataset.i18nLabel));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+      el.placeholder = tx(el.dataset.i18nPlaceholder);
+    });
+
+    document.querySelectorAll("#langSwitch [data-lang]").forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+  }
+
+  (function initLangSwitch() {
+    const box = $("#langSwitch");
+    if (!box) return;
+    box.addEventListener("click", e => {
+      const btn = e.target.closest("[data-lang]");
+      // Перерисовываем: подписи, которые ставит JS (кнопка сохранения,
+      // тултипы тиров, «＋ Предмет» внутри тира), живут не в разметке.
+      if (btn && btn.dataset.lang !== lang) { applyLang(btn.dataset.lang); render(); }
+    });
+  })();
 
   // ---------- Helpers ----------
   function findTier(tid) { return state.tiers.find(t => t.id === tid); }
@@ -411,8 +479,16 @@
   // предметами снизу — чтобы не было пустых мест.
   const ITEMS_PER_BLOCK = 11;
 
+  // Сколько иконок грузить обычным (не ленивым) способом. loading="lazy" на
+  // ВСЕХ иконках означало, что даже верхний ряд браузер начинает качать только
+  // после первой раскладки — предметы на первом экране появлялись с заметной
+  // задержкой, «текстуры подгружались». Два верхних ряда всегда видны сразу,
+  // поэтому их грузим приоритетно, а всё остальное остаётся ленивым.
+  let eagerIconBudget = 0;
+
   function render() {
     tiersEl.innerHTML = "";
+    eagerIconBudget = Math.max(6, (itemsPerRow() || ITEMS_PER_BLOCK) * 2);
     const editing = editToggle.checked;
 
     // blocks: [{ tier, ti, items }] — что и под какой плашкой рисуем
@@ -530,6 +606,9 @@
       label.textContent = tier.label || "";
       label.spellcheck = false;
       if (isFirst) {
+        // В режиме редактирования плашка становится contenteditable, но без
+        // подсказки это ниоткуда не следует.
+        label.title = tx("tier.rename");
         label.addEventListener("blur", () => { tier.label = label.textContent.trim(); save(); });
         label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
       }
@@ -539,11 +618,11 @@
     if (isFirst) {
       const tools = document.createElement("div");
       tools.className = "tier-tools edit-only";
-      tools.appendChild(toolBtn("🖼", "Загрузить логотип тира", () => pickTierLogo(tier.id)));
-      if (tier.logo) tools.appendChild(toolBtn("Т", "Убрать логотип (показывать текст)", () => { tier.logo = ""; save(); render(); }));
-      tools.appendChild(toolBtn("▲", "Выше", () => moveTier(ti, -1)));
-      tools.appendChild(toolBtn("▼", "Ниже", () => moveTier(ti, +1)));
-      tools.appendChild(toolBtn("✕", "Удалить тир", () => deleteTier(tier.id)));
+      tools.appendChild(toolBtn("🖼", tx("tier.logo"), () => pickTierLogo(tier.id)));
+      if (tier.logo) tools.appendChild(toolBtn("Т", tx("tier.logoOff"), () => { tier.logo = ""; save(); render(); }));
+      tools.appendChild(toolBtn("▲", tx("tier.up"), () => moveTier(ti, -1)));
+      tools.appendChild(toolBtn("▼", tx("tier.down"), () => moveTier(ti, +1)));
+      tools.appendChild(toolBtn("✕", tx("tier.remove"), () => deleteTier(tier.id)));
       band.appendChild(tools);
     }
     return band;
@@ -582,7 +661,7 @@
       if (isLast) {
         const add = document.createElement("div");
         add.className = "cell-add edit-only";
-        add.title = "Добавить предмет";
+        add.title = tx("admin.addItemToTier");
         add.textContent = "＋";
         add.addEventListener("click", () => addItem(tier.id));
         list.appendChild(add);
@@ -633,8 +712,18 @@
     const img = document.createElement("img");
     // Предметов больше сотни, а на экране телефона видно два-три ряда.
     // Ленивая загрузка и асинхронное декодирование не дают браузеру держать
-    // в памяти сразу все распакованные иконки.
-    img.loading = "lazy";
+    // в памяти сразу все распакованные иконки. Верхние ряды — исключение:
+    // они видны сразу, и ленивая загрузка только оттягивала их появление.
+    if (eagerIconBudget > 0) {
+      eagerIconBudget--;
+      img.loading = "eager";
+      // Через атрибут, а не через свойство: Safari понимает fetchpriority
+      // только с 17.2, и на более старых присваивание img.fetchPriority
+      // создало бы бесполезное свойство объекта вместо атрибута.
+      img.setAttribute("fetchpriority", "high");
+    } else {
+      img.loading = "lazy";
+    }
     img.decoding = "async";
     img.src = item.icon || DEFAULT_ICON;
     img.alt = item.name || "";
@@ -672,7 +761,7 @@
       const wb = document.createElement("span");
       wb.className = "cell-new cell-wip";
       wb.textContent = "?";
-      wb.title = "Цена под вопросом";
+      wb.title = tx("cell.wipTitle");
       cell.appendChild(wb);
     }
 
@@ -692,8 +781,8 @@
     // edit controls
     const edit = document.createElement("div");
     edit.className = "cell-edit";
-    edit.appendChild(miniBtn("✎", "Изменить", e => { e.stopPropagation(); openModal(item.id); }));
-    edit.appendChild(miniBtn("✕", "Удалить", e => { e.stopPropagation(); deleteItem(item.id); }));
+    edit.appendChild(miniBtn("✎", tx("item.edit"), e => { e.stopPropagation(); openModal(item.id); }));
+    edit.appendChild(miniBtn("✕", tx("modal.delete"), e => { e.stopPropagation(); deleteItem(item.id); }));
     cell.appendChild(edit);
 
     // Клик в режиме редактирования → окно редактирования (админ).
@@ -742,14 +831,14 @@
       const b = document.createElement("span");
       b.className = "ad-link-badge";
       // сам глиф цепочки рисует CSS (фоновая SVG-картинка) — эмодзи здесь нет
-      b.setAttribute("aria-label", "Ссылка");
-      b.title = "Это ссылка — нажмите по рекламе, чтобы открыть";
+      b.setAttribute("aria-label", tx("ad.linkLabel"));
+      b.title = tx("ad.isLink");
       return b;
     };
 
     const chip = document.createElement("span");
     chip.className = "ad-chip";
-    chip.textContent = "РЕКЛАМА";
+    chip.textContent = tx("ad.chip");
     ad.appendChild(chip);
 
     if (state.ad.image) {
@@ -758,7 +847,7 @@
       const img = document.createElement("img");
       img.className = "ad-img";
       img.src = state.ad.image;
-      img.alt = "Реклама";
+      img.alt = tx("ad.imageAlt");
       img.draggable = false;
       wrap.appendChild(img);
       ad.appendChild(wrap);
@@ -778,12 +867,12 @@
 
     const tools = document.createElement("div");
     tools.className = "ad-tools edit-only";
-    tools.appendChild(toolBtn("🖼 Баннер", "Загрузить картинку рекламы", () => $("#adImgFile").click()));
-    if (state.ad.image) tools.appendChild(toolBtn("Т Текст", "Убрать картинку", () => { state.ad.image = ""; save(); render(); }));
-    tools.appendChild(toolBtn(hasLink ? "🔗 Ссылка ✓" : "🔗 Ссылка",
-      "Скрытая ссылка: клик по рекламе откроет её, URL в тексте не виден. Пусто — убрать.",
+    tools.appendChild(toolBtn(tx("ad.banner"), tx("ad.bannerTitle"), () => $("#adImgFile").click()));
+    if (state.ad.image) tools.appendChild(toolBtn(tx("ad.textMode"), tx("ad.imageOff"), () => { state.ad.image = ""; save(); render(); }));
+    tools.appendChild(toolBtn(hasLink ? tx("ad.linkSet") : tx("ad.link"),
+      tx("ad.linkTitle"),
       () => {
-        const v = prompt("Скрытая ссылка (URL) для рекламы. Оставьте пустым, чтобы убрать:", state.ad.link || "");
+        const v = prompt(tx("ad.linkPrompt"), state.ad.link || "");
         if (v !== null) { state.ad.link = normalizeHref(v, ""); save(); render(); }
       }));
     ad.appendChild(tools);
@@ -816,7 +905,7 @@
       const del = document.createElement("button");
       del.className = "credit-del edit-only";
       del.textContent = "✕";
-      del.title = "Убрать из списка";
+      del.title = tx("credits.remove");
       del.addEventListener("click", () => { state.credits.splice(idx, 1); save(); render(); });
 
       el.appendChild(role); el.appendChild(name); el.appendChild(del);
@@ -826,7 +915,7 @@
     const add = document.createElement("button");
     add.className = "credit-add edit-only";
     add.textContent = "＋";
-    add.title = "Добавить участника";
+    add.title = tx("credits.add");
     add.addEventListener("click", () => { state.credits.push({ role: "Роль", name: "Имя" }); save(); render(); });
     creditsEl.appendChild(add);
   }
@@ -866,7 +955,7 @@
       tools.className = "flink-tools edit-only";
       const urlBtn = document.createElement("button");
       urlBtn.textContent = "🔗";
-      urlBtn.title = "Изменить ссылку (URL)";
+      urlBtn.title = tx("footer.editUrl");
       urlBtn.addEventListener("click", e => {
         e.preventDefault(); e.stopPropagation();
         const v = prompt("Ссылка (URL). Можно без https:// — подставится сам:", lnk.href || "");
@@ -876,7 +965,7 @@
       const del = document.createElement("button");
       del.className = "danger";
       del.textContent = "✕";
-      del.title = "Удалить ссылку";
+      del.title = tx("footer.removeLink");
       del.addEventListener("click", e => {
         e.preventDefault(); e.stopPropagation();
         state.footer.splice(idx, 1); save(); render();
@@ -891,8 +980,8 @@
 
     const add = document.createElement("button");
     add.className = "flink-add edit-only";
-    add.textContent = "＋ ссылка";
-    add.title = "Добавить ссылку";
+    add.textContent = tx("footer.addLinkBtn");
+    add.title = tx("footer.addLink");
     add.addEventListener("click", () => {
       state.footer.push({ title: "НАЗВАНИЕ", sub: "ссылка", href: "https://" });
       save(); render();
@@ -970,7 +1059,7 @@
   function deleteTier(tid) {
     const t = findTier(tid);
     if (!t) return;
-    if (t.items.length && !confirm(`Удалить тир «${t.label}» вместе с ${t.items.length} предметами?`)) return;
+    if (t.items.length && !confirm(tx("msg.confirmDeleteTier", { tier: t.label, count: t.items.length }))) return;
     state.tiers = state.tiers.filter(x => x.id !== tid);
     save(); render();
   }
@@ -1098,7 +1187,7 @@
     if (!found) return;
     const it = found.item;
     $("#vIcon").src = it.icon || DEFAULT_ICON;
-    $("#vName").textContent = (it.name || "").trim() || "Без названия";
+    $("#vName").textContent = (it.name || "").trim() || tx("view.noName");
     $("#vValue").textContent = it.value || "—";
     const badge = $("#vBadge");
     if (it.type) {
@@ -1110,7 +1199,7 @@
     }
     const ds = (it.desc || "").trim();
     const descEl = $("#vDesc");
-    descEl.textContent = ds || "Описание не добавлено.";
+    descEl.textContent = ds || tx("view.noDesc");
     descEl.classList.toggle("empty", !ds);
     viewModal.hidden = false;
   }
@@ -1261,7 +1350,7 @@
     if (isAdmin && dirty) { e.preventDefault(); e.returnValue = ""; }
   });
   $("#btnReset").addEventListener("click", () => {
-    if (confirm("Сбросить тирлист к стандартному шаблону? Текущие данные будут потеряны.")) {
+    if (confirm(tx("msg.confirmReset"))) {
       state = defaultState();
       dateEl.textContent = state.date;
       autoSortToggle.checked = state.autoSort;
@@ -1287,7 +1376,7 @@
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (!data.tiers) throw new Error("нет поля tiers");
+        if (!data.tiers) throw new Error(tx("msg.noTiersField"));
         const d = defaultState();
         state = Object.assign({}, d, data);
         state.ad = Object.assign({}, d.ad, data.ad || {});
@@ -1299,7 +1388,7 @@
         autoSortToggle.checked = state.autoSort;
         save(); render();
       } catch (err) {
-        alert("Не удалось прочитать файл: " + err.message);
+        alert(tx("msg.readFailed") + err.message);
       }
     };
     reader.readAsText(file);
@@ -1337,7 +1426,7 @@
       b.addEventListener("click", fn);
       return b;
     };
-    bar.appendChild(mkBtn("Копировать", () => {
+    bar.appendChild(mkBtn(tx("msg.copy"), () => {
       const text = dbgLines.join("\n");
       if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
       const sel = window.getSelection();
@@ -1407,7 +1496,7 @@
         const s = document.createElement("script");
         s.src = "js/html2canvas.min.js";
         s.onload = () => resolve(window.html2canvas);
-        s.onerror = () => { h2cPromise = null; reject(new Error("Не удалось загрузить html2canvas")); };
+        s.onerror = () => { h2cPromise = null; reject(new Error(tx("msg.h2cFailed"))); };
         document.head.appendChild(s);
       });
     }
@@ -1451,7 +1540,11 @@
     // стоит decoding="async", и событие load приходит раньше, чем картинку
     // реально можно рисовать на холсте.
     const decoded = img => (img.decode ? img.decode().catch(() => {}) : Promise.resolve());
-    const imgs = Array.from(stage.querySelectorAll('img[loading="lazy"]'));
+    // Берём ВСЕ картинки сцены, а не только помеченные lazy: верхние ряды
+    // теперь грузятся eager, и по фильтру [loading="lazy"] они бы выпали из
+    // ожидания — экспорт мог начаться до того, как они раскодированы.
+    // Для уже загруженных это быстрый путь через img.complete.
+    const imgs = Array.from(stage.querySelectorAll("img"));
     for (let i = 0; i < imgs.length; i += 12) {
       await Promise.all(imgs.slice(i, i + 12).map(img => {
         img.loading = "eager";
@@ -1573,7 +1666,7 @@
         return;
       }
       canvas.toBlob(
-        b => (b ? resolve(b) : reject(new Error("не хватило памяти на картинку — попробуйте в вертикальной ориентации"))),
+        b => (b ? resolve(b) : reject(new Error(tx("msg.pngMemory")))),
         "image/png"
       );
     });
@@ -1635,7 +1728,9 @@
     btnPng.title = PNG_TITLE;
     btnPng.disabled = false;
     btnPng.classList.remove("png-ready");
-    if (savedHint.textContent.indexOf("Картинка готова") === 0) savedHint.textContent = "";
+    // Раньше подсказку искали по подстроке текста — при смене языка проверка
+    // молча переставала срабатывать. Помечаем её флагом.
+    if (savedHint.dataset.pngHint) { savedHint.textContent = ""; delete savedHint.dataset.pngHint; }
   }
 
   btnPng.addEventListener("click", async () => {
@@ -1650,7 +1745,7 @@
     const wasEditing = editToggle.checked;
     editToggle.checked = false;
     applyEditMode();
-    btnPng.textContent = "Рендер…";
+    btnPng.textContent = tx("png.rendering");
     btnPng.disabled = true;
     exporting = true;
     let canvas = null;
@@ -1726,18 +1821,19 @@
       canvas.width = canvas.height = 0;
       canvas = null;
       if (broken) {
-        alert("Не загрузилось иконок: " + broken + ". В картинке они будут пустыми.\nПроверьте интернет и попробуйте ещё раз.");
+        alert(tx("msg.iconsMissing") + broken + tx("msg.iconsMissingTail"));
       }
       if (isIOS()) {
         // Скачивание должно уйти в НОВОМ жесте, иначе WebKit его проглотит.
         // Шаг нужно объяснить: молчаливая смена подписи читается как «ничего
         // не произошло», и человек просто уходит с готовой картинкой в руках.
         readyBlob = blob;
-        btnPng.textContent = "💾 Сохранить PNG";
-        btnPng.title = "Картинка готова — нажми, чтобы сохранить";
+        btnPng.textContent = tx("png.save");
+        btnPng.title = tx("png.readyTitle");
         btnPng.disabled = false;
         btnPng.classList.add("png-ready");
-        savedHint.textContent = "Картинка готова — нажми «💾 Сохранить PNG»";
+        savedHint.textContent = tx("png.readyHint");
+        savedHint.dataset.pngHint = "1";
         readyTimer = setTimeout(resetPngButton, 120000);
         return; // finally ниже всё равно отработает
       }
@@ -1780,7 +1876,7 @@
     if (!likeBtn) return;
     likeBtn.classList.toggle("liked", hasLiked);
     likeBtn.setAttribute("aria-pressed", hasLiked ? "true" : "false");
-    likeBtn.title = hasLiked ? "Убрать лайк" : "Поставить лайк";
+    likeBtn.title = hasLiked ? tx("like.remove") : tx("like.title");
     const heart = likeBtn.querySelector(".like-heart");
     if (heart) heart.textContent = hasLiked ? "💙" : "🤍";
     if (likeCountEl) likeCountEl.textContent = likeCount.toLocaleString("ru-RU");
@@ -1887,8 +1983,8 @@
     };
     const btnDA  = $("#donateEditDA");
     const btnHub = $("#donateEditHub");
-    if (btnDA)  btnDA.addEventListener("click", () => editLink("da", "Ссылка на прямой донат (DonationAlerts):"));
-    if (btnHub) btnHub.addEventListener("click", () => editLink("hub", "Ссылка на хаб со всеми способами (dalink):"));
+    if (btnDA)  btnDA.addEventListener("click", () => editLink("da", tx("donate.promptDA")));
+    if (btnHub) btnHub.addEventListener("click", () => editLink("hub", tx("donate.promptHub")));
 
     // Новый QR — картинка уходит в файл через upload.php, как иконки предметов.
     const qrFile = $("#donateQrFile");
@@ -2023,7 +2119,7 @@
     const srv = deferredServer; deferredServer = null;
     if (isAdmin) {
       dirty = true; try { localStorage.setItem(DIRTY_KEY, "1"); } catch (e) {} renderSaveBtn();
-      savedHint.textContent = "♻ Восстановлены несохранённые правки — нажмите «Сохранить»";
+      savedHint.textContent = tx("msg.restored");
       // Дать возможность одним кликом взять версию из базы вместо своих правок
       pendingServer = srv; showUpdateBanner();
     } else {
@@ -2142,12 +2238,12 @@
     box.id = "syncBanner";
     box.className = "uid-banner sync-banner";
     box.innerHTML =
-      '<button class="uid-banner-close" title="Закрыть">✕</button>' +
-      '<div class="uid-banner-title">Есть свежие изменения</div>' +
-      '<div class="uid-banner-sub">Другой администратор обновил тирлист. Обновить сейчас? Ваши несохранённые правки будут заменены версией из базы.</div>' +
+      '<button class="uid-banner-close" title="' + tx("modal.close") + '">✕</button>' +
+      '<div class="uid-banner-title">' + tx("sync.title") + '</div>' +
+      '<div class="uid-banner-sub">' + tx("sync.sub") + '</div>' +
       '<div class="uid-banner-row">' +
-        '<button class="btn small primary" id="syncApply">Обновить</button>' +
-        '<button class="btn small ghost" id="syncDismiss">Оставить мои правки</button>' +
+        '<button class="btn small primary" id="syncApply">' + tx("sync.apply") + '</button>' +
+        '<button class="btn small ghost" id="syncDismiss">' + tx("sync.dismiss") + '</button>' +
       '</div>';
     document.body.appendChild(box);
     const close = () => box.remove();
@@ -2169,7 +2265,7 @@
     const btnLogout = $("#btnLogout");
 
     if (btnLogin) btnLogin.addEventListener("click", async () => {
-      const pw = window.prompt("Пароль администратора:");
+      const pw = window.prompt(tx("auth.prompt"));
       if (!pw) return;
       try {
         const r = await fetch(API_LOGIN, {
@@ -2179,8 +2275,12 @@
         });
         const d = await r.json().catch(() => ({}));
         if (r.ok && d.ok) { setAdminMode(true); fetchSnapshot(); }
-        else { alert("Неверный пароль"); }
-      } catch (e) { alert("Ошибка входа"); }
+        // Бэкенд блокирует IP после пяти промахов и отвечает 429 с retry_after.
+        // Показывать при этом «Неверный пароль» — обман: пароль может быть
+        // верным, просто попытку сейчас не примут.
+        else if (r.status === 429) { alert(tx("auth.locked") + " " + (d.retry_after || 0) + " " + tx("auth.seconds")); }
+        else { alert(tx("auth.wrong")); }
+      } catch (e) { alert(tx("msg.loginFailed")); }
     });
 
     if (btnLogout) btnLogout.addEventListener("click", async () => {
@@ -2201,6 +2301,10 @@
   // ============================================================
   //  INIT
   // ============================================================
+  // Язык применяем ДО первого render(): иначе интерфейс успевает мигнуть
+  // русским, а подписи, которые ставит render (кнопка сохранения, тултипы
+  // тиров), пришлось бы обновлять вторым проходом.
+  applyLang();
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initBackend();
