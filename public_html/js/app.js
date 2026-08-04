@@ -27,7 +27,7 @@
   function defaultState() {
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
-      desc: "", flag: false, wip: false,
+      desc: "", descEn: "", flag: false, wip: false,
     });
     return {
       title: "MAKNEMY\nTIER LIST",
@@ -329,6 +329,13 @@
   // Не `t`: это имя в файле уже занято под тир/таймер в девяти местах, и внутри
   // таких блоков вызов t("ключ") молча ушёл бы не туда.
   const tx = (key, vars) => (i18n ? i18n.t(key, lang, vars) : key);
+
+  // Описание предмета — контент, а не интерфейс: язык выбирается из самого
+  // предмета (desc — русский, descEn — английский) с откатом на второй язык.
+  // Читает текущий lang в момент вызова, поэтому описания обновляются при
+  // переключении языка (initLangSwitch дёргает render).
+  const content = (typeof CONTENT !== "undefined") ? CONTENT : null;
+  const descFor = it => content ? content.descFor(it, lang) : String((it && it.desc) || "").trim();
 
   function applyLang(next) {
     if (!i18n) return;      // оставляем разметку как есть
@@ -1073,7 +1080,7 @@
   function addItem(tid) {
     const t = findTier(tid);
     if (!t) return;
-    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "", desc: "", flag: true, wip: false };
+    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "", desc: "", descEn: "", flag: true, wip: false };
     t.items.push(item);
     save(); render();
     openModal(item.id);
@@ -1167,6 +1174,7 @@
     $("#mName").value = it.name || "";
     $("#mValue").value = it.value || "";
     $("#mDesc").value = it.desc || "";
+    $("#mDescEn").value = it.descEn || "";
     $("#mNew").checked = !!it.flag;
     $("#mWip").checked = !!it.wip;
     $("#mIconPreview").src = it.icon || DEFAULT_ICON;
@@ -1197,7 +1205,7 @@
     } else {
       badge.hidden = true;
     }
-    const ds = (it.desc || "").trim();
+    const ds = descFor(it);
     const descEl = $("#vDesc");
     descEl.textContent = ds || tx("view.noDesc");
     descEl.classList.toggle("empty", !ds);
@@ -1283,6 +1291,7 @@
     it.name = $("#mName").value.trim();
     it.value = $("#mValue").value.trim();
     it.desc = $("#mDesc").value.trim();
+    it.descEn = $("#mDescEn").value.trim();
     it.flag = $("#mNew").checked;
     it.wip = $("#mWip").checked;
     it.icon = $("#mIconPreview").src;

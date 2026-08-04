@@ -243,8 +243,12 @@
           <input type="text" id="mValue" inputmode="numeric" data-i18n-placeholder="modal.valuePlaceholder" placeholder="Напр. 60000" />
         </div>
         <div class="field">
-          <label data-i18n="modal.desc">Описание (необязательно)</label>
-          <textarea id="mDesc" rows="3" data-i18n-placeholder="modal.descPlaceholder" placeholder="Кратко о фрукте — показывается при наведении"></textarea>
+          <label data-i18n="modal.desc">Описание · RU</label>
+          <textarea id="mDesc" rows="3" data-i18n-placeholder="modal.descPlaceholder" placeholder="Кратко о фрукте — показывается при просмотре"></textarea>
+        </div>
+        <div class="field">
+          <label data-i18n="modal.descEn">Описание · EN (необязательно)</label>
+          <textarea id="mDescEn" rows="3" data-i18n-placeholder="modal.descEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
         </div>
         <div class="field">
           <label class="switch new-switch" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)">
@@ -347,7 +351,8 @@
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=1"></script>
-  <script src="js/app.js?v=44"></script>
+  <script src="js/i18n.js?v=2"></script>
+  <script src="js/content.js?v=1"></script>
+  <script src="js/app.js?v=45"></script>
 </body>
 </html>
