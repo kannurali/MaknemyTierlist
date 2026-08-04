@@ -87,6 +87,21 @@ test('both languages declare the same placeholders for a key', () => {
     }
 });
 
+test('UI strings that used to be hardcoded now live in the dictionary', () => {
+    // Regression guard: the footer URL prompt and the PNG-export failure alert
+    // were once literal Russian strings in app.js and stayed Russian under EN.
+    // Key parity is covered above; here we pin the exact keys so nobody drops
+    // them or re-hardcodes the text.
+    const uiKeys = ['footer.urlPrompt', 'msg.pngSaveFailed', 'msg.pngFileHint'];
+    for (const key of uiKeys) {
+        for (const lang of supported()) {
+            const value = t(key, lang);
+            assert.notEqual(value, key, `${lang}.${key} is missing (falls back to the key)`);
+            assert.ok(value.trim().length > 0, `${lang}.${key} is empty`);
+        }
+    }
+});
+
 test('pickLang honours an explicit stored choice', () => {
     assert.equal(pickLang('en', 'ru-RU'), 'en');
     assert.equal(pickLang('ru', 'en-US'), 'ru');

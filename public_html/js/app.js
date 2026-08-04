@@ -958,7 +958,7 @@
       urlBtn.title = tx("footer.editUrl");
       urlBtn.addEventListener("click", e => {
         e.preventDefault(); e.stopPropagation();
-        const v = prompt("Ссылка (URL). Можно без https:// — подставится сам:", lnk.href || "");
+        const v = prompt(tx("footer.urlPrompt"), lnk.href || "");
         // Сохраняем уже нормализованным, чтобы в базе копились рабочие адреса.
         if (v !== null) { lnk.href = normalizeHref(v, ""); save(); render(); }
       });
@@ -1841,10 +1841,8 @@
     } catch (err) {
       dbg("ОШИБКА " + (err && err.name) + ": " + (err && err.message));
       alert(
-        "Не удалось сохранить PNG.\n" +
-        (location.protocol === "file:"
-          ? "Откройте сайт через локальный сервер (например: python -m http.server), а не файлом — браузер блокирует экспорт картинок с file://."
-          : err.message)
+        tx("msg.pngSaveFailed") + "\n" +
+        (location.protocol === "file:" ? tx("msg.pngFileHint") : err.message)
       );
       console.error(err);
     } finally {
