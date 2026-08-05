@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=34" />
+<link rel="stylesheet" href="css/styles.css?v=35" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -158,6 +158,7 @@
 
     <input type="file" id="importFile" accept="application/json" hidden />
     <input type="file" id="tierLogoFile" accept="image/*" hidden />
+    <input type="file" id="footerIconFile" accept="image/*" hidden />
     <input type="file" id="adImgFile" accept="image/*" hidden />
     <span class="tb-saved" id="savedHint"></span>
   </div>
@@ -172,7 +173,9 @@
         <img class="bf-logo" src="assets/bf-logo-trim.png" alt="Blox Fruits" />
         <div class="title-block">
           <div class="date" id="tlDate" spellcheck="false" data-i18n-title="stage.dateTitle" title="Кликните, чтобы изменить дату">17.02.2026</div>
-          <h1 class="tl-title" id="tlTitle">MAKNEMY<br/>TIER LIST</h1>
+          <!-- Вторая строка мельче первой: в макете 83 против 111 пунктов.
+               Отдельный элемент, а не <br>, потому что кегль у строк разный. -->
+          <h1 class="tl-title" id="tlTitle">MAKNEMY<span class="tl-title-sub">TIER LIST</span></h1>
         </div>
         <img class="brand-logo" src="assets/brand-logos.png" data-i18n-alt="stage.brandAlt" alt="Логотип" />
       </header>
@@ -181,9 +184,11 @@
       <main class="tiers" id="tiers"></main>
 
       <!-- Legend -->
+      <!-- Легенда из трёх блоков, как в макете: слева типы, по центру спрос,
+           справа состояния. Заголовок центрируется над средним блоком, а не над
+           всей панелью — в макете он занимает ровно его ширину. -->
       <section class="legend">
-        <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ ДЛЯ НОВЕНЬКИХ</h2>
-        <div class="legend-grid">
+        <div class="legend-block legend-types">
           <div class="legend-col">
             <div class="lg"><img class="tbadge" src="assets/badge-f.png" alt="F" /><span data-i18n="legend.f">Обычный фрукт</span></div>
             <div class="lg"><img class="tbadge" src="assets/badge-s.png" alt="S" /><span data-i18n="legend.s">Скин</span></div>
@@ -194,20 +199,28 @@
             <div class="lg"><img class="tbadge" src="assets/badge-gp.png" alt="GP" /><span data-i18n="legend.gp">Пасс</span></div>
             <div class="lg"><img class="tbadge" src="assets/badge-cr.png" alt="CR" /><span data-i18n="legend.cr">Хроматик</span></div>
           </div>
-          <div class="legend-col">
-            <div class="lg"><img class="dot" src="assets/dot-green.png" alt="" /><span data-i18n="legend.good">Хорошо</span></div>
-            <div class="lg"><img class="dot" src="assets/dot-yellow.png" alt="" /><span data-i18n="legend.mid">Средне</span></div>
+        </div>
+
+        <div class="legend-block legend-demand">
+          <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ ДЛЯ НОВЕНЬКИХ</h2>
+          <div class="legend-dots">
+            <div class="legend-col">
+              <div class="lg"><img class="dot" src="assets/dot-green.png" alt="" /><span data-i18n="legend.good">Хорошо</span></div>
+              <div class="lg"><img class="dot" src="assets/dot-yellow.png" alt="" /><span data-i18n="legend.mid">Средне</span></div>
+            </div>
+            <div class="legend-col">
+              <div class="lg"><img class="dot" src="assets/dot-orange.png" alt="" /><span data-i18n="legend.low">Ниже среднего</span></div>
+              <div class="lg"><img class="dot" src="assets/dot-red.png" alt="" /><span data-i18n="legend.bad">Плохо</span></div>
+            </div>
           </div>
-          <div class="legend-col">
-            <div class="lg"><img class="dot" src="assets/dot-orange.png" alt="" /><span data-i18n="legend.low">Ниже среднего</span></div>
-            <div class="lg"><img class="dot" src="assets/dot-red.png" alt="" /><span data-i18n="legend.bad">Плохо</span></div>
-          </div>
-          <div class="legend-col">
-            <div class="lg"><img class="trend" src="assets/trend-up.png" alt="" /><span data-i18n="legend.up">Рост</span></div>
-            <div class="lg"><img class="trend tr-swap" src="assets/trend-swap.png" alt="" /><span data-i18n="legend.swap">Пересмотр</span></div>
-            <div class="lg"><img class="trend" src="assets/trend-down.png" alt="" /><span data-i18n="legend.down">Упадок</span></div>
-            <div class="lg"><span class="lg-wip" aria-hidden="true">?</span><span data-i18n="legend.wip">Под вопросом</span></div>
-          </div>
+        </div>
+
+        <div class="legend-block legend-states">
+          <div class="lg"><span class="lg-wip" aria-hidden="true">?</span><span data-i18n="legend.wip">Под вопросом</span></div>
+          <div class="lg"><img class="trend" src="assets/trend-up.png" alt="" /><span data-i18n="legend.up">Рост</span></div>
+          <div class="lg"><img class="trend tr-swap" src="assets/trend-swap.png" alt="" /><span data-i18n="legend.swap">Пересмотр</span></div>
+          <div class="lg"><img class="trend" src="assets/trend-down.png" alt="" /><span data-i18n="legend.down">Упадок</span></div>
+          <div class="lg"><span class="lg-new" aria-hidden="true">new</span><span data-i18n="legend.new">Новый</span></div>
         </div>
       </section>
 
@@ -347,7 +360,8 @@
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=2"></script>
-  <script src="js/app.js?v=46"></script>
+  <script src="js/i18n.js?v=3"></script>
+  <script src="js/migrate.js?v=1"></script>
+  <script src="js/app.js?v=47"></script>
 </body>
 </html>

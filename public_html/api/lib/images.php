@@ -131,6 +131,15 @@ function walk_state_images(array $state, callable $rewrite): array {
         }
         unset($tier);
     }
+    // Аватарки ссылок подвала. Их грузит админ со своего устройства, поэтому
+    // без этой ветки картинка с телефона легла бы в состояние в исходном
+    // разрешении: ни даунскейла при загрузке, ни миграции старых записей.
+    if (isset($state['footer']) && is_array($state['footer'])) {
+        foreach ($state['footer'] as &$link) {
+            if (isset($link['icon'])) { $link['icon'] = $rewrite($link['icon']); }
+        }
+        unset($link);
+    }
     if (isset($state['ad']['image'])) {
         $state['ad']['image'] = $rewrite($state['ad']['image']);
     }
