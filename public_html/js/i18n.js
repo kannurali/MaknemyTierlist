@@ -170,6 +170,7 @@
       "ad.linkPrompt":          "Скрытая ссылка (URL) для рекламы. Оставьте пустым, чтобы убрать:",
 
       "footer.addLinkBtn":      "＋ ссылка",
+      "footer.urlPrompt":       "Ссылка (URL). Можно без https:// — подставится сам:",
 
       "donate.promptDA":        "Ссылка на прямой донат (DonationAlerts):",
       "donate.promptHub":       "Ссылка на хаб со всеми способами:",
@@ -185,6 +186,8 @@
       "msg.noTiersField":       "нет поля tiers",
       "msg.h2cFailed":          "Не удалось загрузить html2canvas",
       "msg.pngMemory":          "не хватило памяти на картинку — попробуйте в вертикальной ориентации",
+      "msg.pngSaveFailed":      "Не удалось сохранить PNG.",
+      "msg.pngFileHint":        "Откройте сайт через локальный сервер (например: python -m http.server), а не файлом — браузер блокирует экспорт картинок с file://.",
       "msg.restored":           "♻ Восстановлены несохранённые правки — нажмите «Сохранить»",
       "msg.confirmDeleteTier":  "Удалить тир «{tier}» вместе с {count} предметами?",
       "msg.confirmReset":       "Сбросить тирлист к стандартному шаблону? Текущие данные будут потеряны.",
@@ -351,6 +354,7 @@
       "ad.linkPrompt":          "Hidden link (URL) for the ad. Leave empty to remove it:",
 
       "footer.addLinkBtn":      "＋ link",
+      "footer.urlPrompt":       "Link (URL). You can omit https:// — it is added automatically:",
 
       "donate.promptDA":        "Direct donation link (DonationAlerts):",
       "donate.promptHub":       "Link to the hub with every method:",
@@ -366,6 +370,8 @@
       "msg.noTiersField":       "no tiers field",
       "msg.h2cFailed":          "Could not load html2canvas",
       "msg.pngMemory":          "not enough memory for the image — try portrait orientation",
+      "msg.pngSaveFailed":      "Could not save the PNG.",
+      "msg.pngFileHint":        "Open the site through a local server (e.g. python -m http.server) instead of as a file — browsers block image export from file://.",
       "msg.restored":           "♻ Unsaved edits restored — press “Save”",
       "msg.confirmDeleteTier":  "Delete tier “{tier}” and its {count} items?",
       "msg.confirmReset":       "Reset the tier list to the default template? Current data will be lost.",

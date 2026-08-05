@@ -965,7 +965,7 @@
       urlBtn.title = tx("footer.editUrl");
       urlBtn.addEventListener("click", e => {
         e.preventDefault(); e.stopPropagation();
-        const v = prompt("Ссылка (URL). Можно без https:// — подставится сам:", lnk.href || "");
+        const v = prompt(tx("footer.urlPrompt"), lnk.href || "");
         // Сохраняем уже нормализованным, чтобы в базе копились рабочие адреса.
         if (v !== null) { lnk.href = normalizeHref(v, ""); save(); render(); }
       });
@@ -1850,10 +1850,8 @@
     } catch (err) {
       dbg("ОШИБКА " + (err && err.name) + ": " + (err && err.message));
       alert(
-        "Не удалось сохранить PNG.\n" +
-        (location.protocol === "file:"
-          ? "Откройте сайт через локальный сервер (например: python -m http.server), а не файлом — браузер блокирует экспорт картинок с file://."
-          : err.message)
+        tx("msg.pngSaveFailed") + "\n" +
+        (location.protocol === "file:" ? tx("msg.pngFileHint") : err.message)
       );
       console.error(err);
     } finally {
@@ -2095,6 +2093,7 @@
       editToggle.checked = false;
       applyEditMode();
     }
+    applyProtection(); // админу выделение и перетаскивание нужны, гостю — нет
     roleResolved = true;
     resolvePending();
   }
@@ -2308,12 +2307,56 @@
   }
 
   // ============================================================
+  //  ЗАЩИТА КОНТЕНТА
+  // ------------------------------------------------------------
+  //  Гость не уносит с сайта ни текст, ни картинки: выделение, копирование,
+  //  правая кнопка и перетаскивание отключены. Админу защита снимается сразу
+  //  после входа — иначе он не сможет ни править подписи, ни таскать ячейки
+  //  между тирами (перенос предметов работает на том же dragstart).
+  //  Это заслон от обычного посетителя, а не от исходников: разметка всё равно
+  //  видна через «Просмотр кода», а экран можно сфотографировать.
+  // ============================================================
+  function inEditable(t) {
+    // Поля ввода и редактируемые области должны работать как обычно.
+    return !!(t && t.closest && t.closest('input, textarea, [contenteditable="true"]'));
+  }
+  function applyProtection() {
+    document.body.classList.toggle("protected", !isAdmin);
+  }
+  function setupProtection() {
+    applyProtection();
+    // Правая кнопка — убирает «Сохранить картинку как…» и «Копировать».
+    document.addEventListener("contextmenu", e => {
+      if (isAdmin || inEditable(e.target)) return;
+      e.preventDefault();
+    });
+    // Копирование с клавиатуры и через меню браузера.
+    ["copy", "cut"].forEach(type => {
+      document.addEventListener(type, e => {
+        if (isAdmin || inEditable(e.target)) return;
+        e.preventDefault();
+      });
+    });
+    // Перетаскивание картинки в другую вкладку или на рабочий стол.
+    document.addEventListener("dragstart", e => {
+      if (isAdmin) return;
+      e.preventDefault();
+    });
+    // Движки, которые не понимают user-select: none.
+    document.addEventListener("selectstart", e => {
+      if (isAdmin || inEditable(e.target)) return;
+      e.preventDefault();
+    });
+  }
+
+  // ============================================================
   //  INIT
   // ============================================================
   // Язык применяем ДО первого render(): иначе интерфейс успевает мигнуть
   // русским, а подписи, которые ставит render (кнопка сохранения, тултипы
   // тиров), пришлось бы обновлять вторым проходом.
   applyLang();
+  setupProtection();
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initBackend();
