@@ -51,12 +51,20 @@ as the current `bg.png` — so it drops straight into the existing pipeline. It 
 the same artwork as `bg.png` regraded from warm sunset to blue night; "цк" =
 цветокор, i.e. the colour grade is already baked in.
 
-- Rebuild `bg-export.png`, `bg-stage.webp` (1200 × 1958) and `bg-stage-m.webp`
-  (760 × 1240) from `bg-ck.png`. **Do not** multiply by `#091640` the way the
-  current export does — that step existed to darken the ungraded `bg.png`, and
-  applying it to an already-graded source would crush it.
-- `background-size: 100% auto`, `background-position: center top`,
-  `background-color: #091640` stay as they are.
+Everything cut from the PSD lands under `assets/poster/`, leaving the previous
+design's files untouched. Deployment copies the tree over without deleting, so
+removing them would not clear the server anyway — and keeping them means a
+rollback is a pure revert.
+
+- Rebuild the background from `bg-ck.png`: `bg.webp` (1200 × 1958), `bg-m.webp`
+  (760 × 1240) and `bg-export.jpg` for the export path. **Do not** multiply by
+  `#091640` the way the current export does — that step existed to darken the
+  ungraded `bg.png`, and applying it to an already-graded source would crush it.
+- `background-size: 100% auto`, `background-position: center top`. The flat
+  colour under it drops to `#05091f` to match the new grade.
+- The mobile `@media` block overrides both the stage and the petals with the
+  small variants. It must be repointed too, or phones keep loading the old warm
+  background while desktop shows the new one.
 - No `mix-blend-mode` and no `opacity < 1` anywhere on the stage. This is a hard
   constraint from the Safari memory work — each one costs WebKit an offscreen
   layer the size of the stage (~17 MB per group on iPhone).
@@ -65,9 +73,12 @@ the same artwork as `bg.png` regraded from warm sunset to blue night; "цк" =
   and will read wrong over a blue background. Opacity stays baked into the
   alpha channel of the file, not applied in CSS.
 
-`.petals` uses `background-size: cover`, so it also fills the region below where
-the top-anchored background image runs out on tall pages. That behaviour is
-retained.
+`.petals` moves from `background-size: cover` to the same `100% auto` / `center
+top` as the stage background. Under `cover` the layer stretched to the height of
+the page — ~4400 px on real data — which dragged the bright bokeh from the
+poster's corners into the middle and parked a blue smear over the legend.
+Aligning it to its own background costs the decor below the image's runout,
+where the stage is flat `#05091f`; that region was already flat before.
 
 Bump `?v=` on `styles.css`, `app.js` and `i18n.js` in `index.html` — the site is
 served with immutable per-revision caching and visitors otherwise keep old files.
@@ -194,17 +205,27 @@ that the serialized state fits in 512 KB; unknown keys pass through untouched.
 
 `walk_state_images` in `api/lib/images.php` **does** need one. It currently
 visits exactly three image sites — tier logos, item icons, `ad.image` — and
-`state.footer[].icon` becomes a fourth. Two things break without it:
+`state.footer[].icon` becomes a fourth. `state.donate.qr` is added at the same
+time: the client already uploads it in `compactState`, but the server-side walk
+never knew about it, so it carried the same latent bug. Two things break without
+the entry:
 
 - `extract_embedded_images` never pulls a `data:` URL out of a footer icon, so
   an avatar pasted rather than uploaded stays inline and eats the 512 KB budget;
 - `downscale_stored_images` builds its orphan list from the same walk, so every
   avatar file would be reported as unreferenced and deleted by a cleanup run.
 
-The five PSD avatars ship as defaults in `assets/`. `renderFooter` falls back to
-a default keyed by the link's `href` when `icon` is unset, so the panel looks
-right before anyone uploads anything and a hand-added link still degrades to the
-placeholder circle.
+The five PSD avatars ship as defaults in `assets/poster/`. `renderFooter` falls
+back to a table keyed by the link's address — stripped of scheme, `www.` and any
+trailing slash — when `icon` is unset. The key is the address rather than the
+title because the title is edited in place on the page.
+
+The poster's footer is out of date against production: it lists
+`discord.gg/a4zz6bsxcm` and `t.me/mksvtnc`, while the live panel carries
+`discord.gg/lycoris`, `t.me/themaknemy`, `t.me/bfsnews`, a YouTube channel and a
+trade chat. The table holds both old and current addresses, which covers three
+of the six live links. The other three render an empty circle until someone
+uploads an avatar — the same placeholder any newly added link gets.
 
 ## 7. Unchanged bottom row
 
@@ -229,8 +250,9 @@ its mobile counterpart re-checked, particularly:
 `html2canvas` renders the stage as-is, so the export follows the redesign for
 free. Two things to verify rather than assume:
 
-- `app.js` swaps in `assets/bg-export.png` for export because WebP `image-set`
-  is not resolved by html2canvas. That swap must point at the regenerated file.
+- `app.js` swaps in a plain-URL background for export because `image-set()` is
+  not resolved by html2canvas. That swap now points at
+  `assets/poster/bg-export.jpg`.
 - Avatars are same-origin under `images/`, so they do not taint the canvas.
 
 ## Testing
@@ -261,5 +283,10 @@ free. Two things to verify rather than assume:
 ## Out of scope
 
 - The "антивор" author cards and their comments.
-- Any change to tier/item data, ad block, or the editor's behaviour.
+- Any change to tier/item data or the editor's behaviour.
 - Replacing the credits row.
+
+The ad banner keeps its place in the middle of the tier list and its behaviour;
+only its fill is retuned to the panel tone so it reads as part of the same
+plate. The poster has no ad block to copy, so this is a judgement call, not a
+measurement.

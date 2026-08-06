@@ -181,6 +181,45 @@ test('extract_embedded_images rewrites data urls, keeps plain urls', function ()
     assert_eq($expected, $out['ad']['image'], 'ad rewritten');
 });
 
+// Аватарки ссылок и QR доната — такие же картинки состояния, как логотипы и
+// иконки. Пропусти их в walk_state_images, и встроенный data: URL останется в
+// JSON (а он упирается в лимит 512 КБ), а сам файл на диске окажется «ничей» и
+// его снесёт как сироту.
+test('extract_embedded_images reaches footer avatars and the donate QR', function () {
+    $dir = tmp_dir();
+    $state = [
+        'tiers'  => [],
+        'footer' => [
+            ['title' => 'ДИСКОРД', 'icon' => 'data:image/png;base64,' . PNG_B64],
+            ['title' => 'БЕЗ АВАТАРКИ'],
+            ['title' => 'УЖЕ ФАЙЛОМ', 'icon' => '/images/existing.webp'],
+        ],
+        'donate' => ['qr' => 'data:image/png;base64,' . PNG_B64],
+    ];
+    $out = extract_embedded_images($state, $dir);
+    $expected = '/images/' . sha1(base64_decode(PNG_B64)) . '.png';
+    assert_eq($expected, $out['footer'][0]['icon'], 'footer avatar rewritten');
+    assert_true(!isset($out['footer'][1]['icon']), 'link without an avatar untouched');
+    assert_eq('/images/existing.webp', $out['footer'][2]['icon'], 'plain url kept');
+    assert_eq($expected, $out['donate']['qr'], 'donate QR rewritten');
+});
+
+test('downscale_stored_images does not call a referenced footer avatar an orphan', function () {
+    $dir = tmp_dir();
+    $big = make_image(800, 800);
+    $name = sha1($big) . '.png';
+    file_put_contents($dir . '/' . $name, $big);
+
+    [$out, $stats] = downscale_stored_images(
+        ['tiers' => [], 'footer' => [['icon' => '/images/' . $name]]], $dir, 256);
+
+    assert_eq(1, $stats['scanned'], 'avatar was visited');
+    assert_eq(1, $stats['resized'], 'avatar was capped like any other icon');
+    $newName = basename($out['footer'][0]['icon']);
+    assert_true($newName !== $name, 'state repointed at the resized copy');
+    assert_eq([$name], $stats['orphans'], 'only the superseded original is orphaned');
+});
+
 test('image_ext_for detects jpeg', function () {
     assert_eq('jpg', image_ext_for("\xFF\xD8\xFF\xE0" . str_repeat("\x00", 8)), 'jpeg magic');
 });

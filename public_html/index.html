@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=34" />
+<link rel="stylesheet" href="css/styles.css?v=35" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -159,6 +159,7 @@
     <input type="file" id="importFile" accept="application/json" hidden />
     <input type="file" id="tierLogoFile" accept="image/*" hidden />
     <input type="file" id="adImgFile" accept="image/*" hidden />
+    <input type="file" id="footerIconFile" accept="image/*" hidden />
     <span class="tb-saved" id="savedHint"></span>
   </div>
 
@@ -169,44 +170,57 @@
 
       <!-- Header -->
       <header class="tl-header">
-        <img class="bf-logo" src="assets/bf-logo-trim.png" alt="Blox Fruits" />
+        <img class="bf-logo" src="assets/poster/logo-bf.png" alt="Blox Fruits" />
         <div class="title-block">
           <div class="date" id="tlDate" spellcheck="false" data-i18n-title="stage.dateTitle" title="Кликните, чтобы изменить дату">17.02.2026</div>
           <h1 class="tl-title" id="tlTitle">MAKNEMY<br/>TIER LIST</h1>
         </div>
-        <img class="brand-logo" src="assets/brand-logos.png" data-i18n-alt="stage.brandAlt" alt="Логотип" />
+        <img class="brand-logo" src="assets/poster/marks.png" data-i18n-alt="stage.brandAlt" alt="Логотип" />
       </header>
 
       <!-- Tiers + ad block injected here -->
       <main class="tiers" id="tiers"></main>
 
-      <!-- Legend -->
+      <!-- Legend. Три блока, как в макете: слева значки типов, по центру спрос
+           (под заголовком), справа тренды. Заголовок живёт внутри среднего
+           блока — в макете он центрован по нему, а не по всей панели. -->
       <section class="legend">
-        <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ ДЛЯ НОВЕНЬКИХ</h2>
         <div class="legend-grid">
-          <div class="legend-col">
-            <div class="lg"><img class="tbadge" src="assets/badge-f.png" alt="F" /><span data-i18n="legend.f">Обычный фрукт</span></div>
-            <div class="lg"><img class="tbadge" src="assets/badge-s.png" alt="S" /><span data-i18n="legend.s">Скин</span></div>
-            <div class="lg"><img class="tbadge" src="assets/badge-m.png" alt="M" /><span data-i18n="legend.m">Мутация</span></div>
+          <div class="legend-block lb-types">
+            <div class="legend-col">
+              <div class="lg"><img class="tbadge" src="assets/poster/badge-f.png" alt="F" /><span data-i18n="legend.f">Обычный фрукт</span></div>
+              <div class="lg"><img class="tbadge" src="assets/poster/badge-s.png" alt="S" /><span data-i18n="legend.s">Скин</span></div>
+              <div class="lg"><img class="tbadge" src="assets/poster/badge-m.png" alt="M" /><span data-i18n="legend.m">Мутация</span></div>
+            </div>
+            <div class="legend-col">
+              <div class="lg"><img class="tbadge" src="assets/poster/badge-p.png" alt="P" /><span data-i18n="legend.p">Перманент</span></div>
+              <div class="lg"><img class="tbadge" src="assets/poster/badge-gp.png" alt="GP" /><span data-i18n="legend.gp">Пасс</span></div>
+              <div class="lg"><img class="tbadge" src="assets/poster/badge-cr.png" alt="CR" /><span data-i18n="legend.cr">Хроматик</span></div>
+            </div>
           </div>
-          <div class="legend-col">
-            <div class="lg"><img class="tbadge" src="assets/badge-p.png" alt="P" /><span data-i18n="legend.p">Перманент</span></div>
-            <div class="lg"><img class="tbadge" src="assets/badge-gp.png" alt="GP" /><span data-i18n="legend.gp">Пасс</span></div>
-            <div class="lg"><img class="tbadge" src="assets/badge-cr.png" alt="CR" /><span data-i18n="legend.cr">Хроматик</span></div>
+
+          <div class="legend-block lb-demand">
+            <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ ДЛЯ НОВЕНЬКИХ</h2>
+            <div class="legend-cols">
+              <div class="legend-col">
+                <div class="lg"><img class="dot" src="assets/poster/dot-green.png" alt="" /><span data-i18n="legend.good">Хорошо</span></div>
+                <div class="lg"><img class="dot" src="assets/poster/dot-yellow.png" alt="" /><span data-i18n="legend.mid">Средне</span></div>
+              </div>
+              <div class="legend-col">
+                <div class="lg"><img class="dot" src="assets/poster/dot-orange.png" alt="" /><span data-i18n="legend.low">Ниже среднего</span></div>
+                <div class="lg"><img class="dot" src="assets/poster/dot-red.png" alt="" /><span data-i18n="legend.bad">Плохо</span></div>
+              </div>
+            </div>
           </div>
-          <div class="legend-col">
-            <div class="lg"><img class="dot" src="assets/dot-green.png" alt="" /><span data-i18n="legend.good">Хорошо</span></div>
-            <div class="lg"><img class="dot" src="assets/dot-yellow.png" alt="" /><span data-i18n="legend.mid">Средне</span></div>
-          </div>
-          <div class="legend-col">
-            <div class="lg"><img class="dot" src="assets/dot-orange.png" alt="" /><span data-i18n="legend.low">Ниже среднего</span></div>
-            <div class="lg"><img class="dot" src="assets/dot-red.png" alt="" /><span data-i18n="legend.bad">Плохо</span></div>
-          </div>
-          <div class="legend-col">
-            <div class="lg"><img class="trend" src="assets/trend-up.png" alt="" /><span data-i18n="legend.up">Рост</span></div>
-            <div class="lg"><img class="trend tr-swap" src="assets/trend-swap.png" alt="" /><span data-i18n="legend.swap">Пересмотр</span></div>
-            <div class="lg"><img class="trend" src="assets/trend-down.png" alt="" /><span data-i18n="legend.down">Упадок</span></div>
-            <div class="lg"><span class="lg-wip" aria-hidden="true">?</span><span data-i18n="legend.wip">Под вопросом</span></div>
+
+          <div class="legend-block lb-trends">
+            <div class="legend-col">
+              <div class="lg"><img class="trend tr-wip" src="assets/poster/trend-wip.png" alt="" /><span data-i18n="legend.wip">Под вопросом</span></div>
+              <div class="lg"><img class="trend" src="assets/poster/trend-up.png" alt="" /><span data-i18n="legend.up">Рост</span></div>
+              <div class="lg"><img class="trend tr-swap" src="assets/poster/trend-swap.png" alt="" /><span data-i18n="legend.swap">Пересмотр</span></div>
+              <div class="lg"><img class="trend" src="assets/poster/trend-down.png" alt="" /><span data-i18n="legend.down">Упадок</span></div>
+              <div class="lg"><img class="trend tr-new" src="assets/poster/trend-new.png" alt="" /><span data-i18n="legend.new">Новый</span></div>
+            </div>
           </div>
         </div>
       </section>
@@ -351,8 +365,8 @@
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=3"></script>
+  <script src="js/i18n.js?v=4"></script>
   <script src="js/content.js?v=1"></script>
-  <script src="js/app.js?v=47"></script>
+  <script src="js/app.js?v=48"></script>
 </body>
 </html>

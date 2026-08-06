@@ -100,6 +100,7 @@
       "legend.swap":            "Пересмотр",
       "legend.down":            "Упадок",
       "legend.wip":             "Под вопросом",
+      "legend.new":             "Новый",
 
       "modal.itemTitle":        "Предмет",
       "modal.close":            "Закрыть",
@@ -147,6 +148,7 @@
 
       "credits.remove":         "Убрать из списка",
       "credits.add":            "Добавить участника",
+      "footer.editIcon":        "Изменить аватарку",
       "footer.editUrl":         "Изменить ссылку (URL)",
       "footer.removeLink":      "Удалить ссылку",
       "footer.addLink":         "Добавить ссылку",
@@ -284,6 +286,7 @@
       "legend.swap":            "Under review",
       "legend.down":            "Falling",
       "legend.wip":             "Uncertain",
+      "legend.new":             "New",
 
       "modal.itemTitle":        "Item",
       "modal.close":            "Close",
@@ -331,6 +334,7 @@
 
       "credits.remove":         "Remove from the list",
       "credits.add":            "Add a member",
+      "footer.editIcon":        "Change the avatar",
       "footer.editUrl":         "Change the link (URL)",
       "footer.removeLink":      "Delete the link",
       "footer.addLink":         "Add a link",
