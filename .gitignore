@@ -3,7 +3,11 @@
 *.jpg
 5379910781715029061.jpg
 # Site assets are shipped, unlike the stray source images the rule above targets.
+# Both levels are needed: a pattern without a slash matches one path segment, so
+# the first line alone lets assets/og-image.jpg through but still swallows
+# assets/poster/bg-export.jpg.
 !/public_html/assets/*.jpg
+!/public_html/assets/*/*.jpg
 /config.php
 /public_html/images/*
 !/public_html/images/.gitkeep
