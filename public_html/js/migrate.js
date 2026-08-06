@@ -84,7 +84,38 @@
     return state;
   }
 
-  var api = { migrate: migrate, hasCard: hasCard, ROLE_BY_LOGO: ROLE_BY_LOGO, FOOTER_ICONS: FOOTER_ICONS };
+  // Ключ участника — ПАРА «роль + имя», а не роль или имя по отдельности.
+  // Имя в титрах сплошь и рядом заглушка: «—», «ищем...». Сравнение по одному
+  // имени выносило из полоски всех, у кого стоит та же заглушка: карточка
+  // аналитика с именем «—» уводила за собой помощника аналитика и кодера
+  // сайта, то есть ровно тех, ради кого полоска и оставлена.
+  // Собачку у ника снимаем: в титрах человек записан «mksvtn», в карточке
+  // админ мог дописать «@mksvtn».
+  //
+  // Ключ собирается через JSON, а не склейкой через разделитель: любой символ,
+  // который можно взять разделителем, набирается и в поле титров: тогда
+  // «Автор» + «Мак» совпало бы с «АвторМак» + пустым именем.
+  function creditKey(role, name) {
+    return JSON.stringify([norm(role).replace(/^@/, ""), norm(name).replace(/^@/, "")]);
+  }
+
+  // Титры без тех, кто уже показан карточкой автора. Пара не совпала — строка
+  // остаётся: показать человека дважды не страшно, потерять со страницы —
+  // страшно.
+  function visibleCredits(state) {
+    var s = state || {};
+    var shown = (s.tiers || []).filter(hasCard).map(function (t) {
+      return creditKey(t.card.role, t.card.handle);
+    });
+    return (Array.isArray(s.credits) ? s.credits : []).filter(function (cr) {
+      return shown.indexOf(creditKey(cr.role, cr.name)) === -1;
+    });
+  }
+
+  var api = {
+    migrate: migrate, hasCard: hasCard, visibleCredits: visibleCredits,
+    ROLE_BY_LOGO: ROLE_BY_LOGO, FOOTER_ICONS: FOOTER_ICONS,
+  };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }
   root.MIGRATE = api;

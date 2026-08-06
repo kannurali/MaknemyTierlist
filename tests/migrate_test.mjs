@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { migrate, hasCard } = require('../public_html/js/migrate.js');
+const { migrate, hasCard, visibleCredits } = require('../public_html/js/migrate.js');
 
 const tier = (over = {}) => Object.assign({ id: 't', label: 'MK', items: [] }, over);
 const CREDITS = [
@@ -118,4 +118,66 @@ test('hasCard требует и логотип, и заполненное сод
     assert.equal(hasCard({ logo: 'a.png', card: { role: 'Р', handle: 'и', comment: '' } }), true);
     assert.equal(hasCard({ logo: 'a.png', card: { role: '', handle: '', comment: '' } }), false);
     assert.equal(hasCard({ logo: '', card: { role: 'Р' } }), false);
+});
+
+// ---------- полоска титров ----------
+
+test('участник, показанный карточкой, из полоски убирается', () => {
+    const s = migrate({
+        tiers: [tier({ logo: 'assets/logo-mk.png' })], credits: CREDITS, footer: [],
+    });
+    const rest = visibleCredits(s).map(c => c.role);
+    assert.deepEqual(rest, ['Дизайнер', 'Аналитик', 'Кодер сайта']);
+});
+
+test('заглушка в имени не выносит из полоски чужие роли', () => {
+    // Имя-заглушка в титрах — норма: «—», «ищем...». Пока ключом было одно
+    // имя, карточка аналитика с именем «—» уводила за собой всех остальных с
+    // тем же прочерком, и полоска исчезала целиком.
+    const credits = [
+        { role: 'Автор', name: 'Maknemy' },
+        { role: 'Дизайнер', name: 'Maknemy' },
+        { role: 'Аналитик', name: '—' },
+        { role: 'Помощник аналитика', name: '—' },
+        { role: 'Кодер сайта', name: '—' },
+    ];
+    const s = migrate({
+        tiers: [
+            tier({ id: 'a', logo: 'assets/logo-mk.png' }),
+            tier({ id: 'b', logo: 'assets/logo-glh.png' }),
+            tier({ id: 'c', logo: 'assets/logo-flame.png' }),
+        ],
+        credits, footer: [],
+    });
+    assert.deepEqual(visibleCredits(s).map(c => c.role), ['Помощник аналитика', 'Кодер сайта']);
+});
+
+test('собачка у ника в карточке не создаёт дубль в полоске', () => {
+    const s = migrate({ tiers: [tier({ logo: 'assets/logo-mk.png' })], credits: CREDITS, footer: [] });
+    s.tiers[0].card.handle = ' @MKSVTN ';
+    assert.equal(visibleCredits(s).some(c => c.role === 'Автор'), false);
+});
+
+test('переименованный в карточке участник остаётся в полоске', () => {
+    // Пара не совпала — строку оставляем. Показать человека дважды не страшно,
+    // потерять его со страницы — страшно.
+    const s = migrate({ tiers: [tier({ logo: 'assets/logo-mk.png' })], credits: CREDITS, footer: [] });
+    s.tiers[0].card.handle = 'кто-то другой';
+    assert.equal(visibleCredits(s).some(c => c.role === 'Автор'), true);
+});
+
+test('склейка роли и имени не даёт ложного совпадения', () => {
+    // Ключом служит пара, а не строка через разделитель: «Автор» + «Мак»
+    // и «АвторМак» + пустое имя — разные люди.
+    const s = {
+        tiers: [tier({ logo: 'assets/logo-mk.png', card: { role: 'Автор', handle: 'Мак', comment: '' } })],
+        credits: [{ role: 'АвторМак', name: '' }, { role: 'Автор', name: 'Мак' }],
+    };
+    assert.deepEqual(visibleCredits(s).map(c => c.role), ['АвторМак']);
+});
+
+test('без карточек полоска показывается целиком', () => {
+    assert.equal(visibleCredits({ tiers: [], credits: CREDITS }).length, CREDITS.length);
+    assert.deepEqual(visibleCredits({}), []);
+    assert.deepEqual(visibleCredits(null), []);
 });

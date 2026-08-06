@@ -613,6 +613,12 @@
     (tier => !!(tier && tier.logo && tier.card &&
       (tier.card.role || tier.card.handle || tier.card.comment)));
 
+  // Титры без тех, кто уже показан карточкой. Сравнение живёт там же, где
+  // карточки собираются, — и там же его видят тесты. Без модуля полоска
+  // показывается целиком: лишняя строка лучше пропавшего человека.
+  const visibleCredits = (MIGRATE && MIGRATE.visibleCredits) ||
+    (s => (s && Array.isArray(s.credits) ? s.credits : []));
+
   // Одна половина карточки: подпись сверху, значение снизу. Обе половины
   // устроены одинаково и различаются только классом-модификатором и тем, что
   // в значение можно доложить иконку (телеграм у ника).
@@ -1009,27 +1015,12 @@
   // ============================================================
   //  CREDITS (команда тирлиста)
   // ============================================================
-  // Роли, которые уже показаны карточками автора. Дублировать их внизу незачем:
-  // в макете полоски титров нет вообще, и она остаётся только ради тех, кому
-  // карточки не досталось — карточек три, а в команде людей больше.
-  // Ник и роль нормализуем одинаково: в титрах человек записан именем без
-  // собачки («mksvtn»), а в карточке — ником с ней («@mksvtn»). Без этого
-  // владелец показывался бы дважды: карточкой и строкой титров.
-  const normCredit = s => String(s || "").trim().toLowerCase().replace(/^@/, "");
-
-  function shownInCards() {
-    const shown = new Set();
-    state.tiers.filter(hasCard).forEach(t => {
-      [t.card.role, t.card.handle].map(normCredit).filter(Boolean).forEach(v => shown.add(v));
-    });
-    return shown;
-  }
-
+  // Тех, кто уже показан карточкой автора, дублировать внизу незачем: в макете
+  // полоски титров нет вообще, и она остаётся только ради тех, кому карточки не
+  // досталось — карточек три, а в команде людей больше.
   function renderCredits() {
     creditsEl.innerHTML = "";
-    const shown = shownInCards();
-    const rest = state.credits.filter(cr =>
-      !shown.has(normCredit(cr.role)) && !shown.has(normCredit(cr.name)));
+    const rest = visibleCredits(state);
     // Все роли разъехались по карточкам — страница совпадает с макетом.
     creditsEl.hidden = rest.length === 0 && !stage.classList.contains("editing");
     rest.forEach((cr) => {
