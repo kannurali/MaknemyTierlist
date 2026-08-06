@@ -1,8 +1,9 @@
 // Достройка состояния до нового макета.
 //
-// Карточки авторов и аватарки подвала появились вместе с постерным макетом, а
-// в базе лежат записи, заведённые до него. Здесь они дополняются недостающими
-// полями — по логотипу тира и по заголовку ссылки.
+// Из макета берётся только композиция: у логотипного тира появляется карточка
+// автора, у ссылки подвала — место под аватарку. Тексты остаются сайтовскими.
+// Роль и имя переезжают из state.credits, комментарий создаётся пустым: такого
+// поля на сайте раньше не было, и придумывать за админа его содержимое незачем.
 //
 // Функция заполняет ТОЛЬКО пустые поля, поэтому повторный запуск ничего не
 // меняет, а правки админа не затираются. Это важно: слияние вызывается и при
@@ -13,12 +14,13 @@
 (function (root) {
   "use strict";
 
-  // Логотип → человек. Карточки в макете привязаны к тирам с логотипами, а не
-  // к отдельному списку людей, поэтому старые записи узнаём по имени файла.
-  var CARD_BY_LOGO = {
-    "logo-mk":   { role: "Владелец", handle: "@mksvtn",   comment: "за деньги не продаюсь 🤭\nмаксимум за рокет 🚀" },
-    "logo-glh":  { role: "Аналитик", handle: "@GLHorig",  comment: "Макса тцк не сдам, но за конфетку\nбджілка можно" },
-    "logo-bolt": { role: "Дизайнер", handle: "@DAnikTda", comment: "гони шоколадку...\nи прямо сейчас я спалю обоих! 🦉" },
+  // Логотип → роль. Это структура макета, а не контент: карточки привязаны к
+  // тирам с логотипами, и надо знать, чей тир какой. Сами роли берутся теми
+  // словами, какими они записаны в титрах сайта.
+  var ROLE_BY_LOGO = {
+    "logo-mk":   "Автор",
+    "logo-glh":  "Аналитик",
+    "logo-bolt": "Дизайнер",
   };
 
   // Третий знак в макете — молния, а не пламя.
@@ -35,6 +37,10 @@
     [/charlotte|шарлотт/i,     "assets/avatar-charlotte.png"],
   ];
 
+  function norm(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
   function hasCard(tier) {
     var c = tier && tier.card;
     return !!(tier && tier.logo && c && (c.role || c.handle || c.comment));
@@ -43,21 +49,26 @@
   function migrate(state) {
     if (!state || typeof state !== "object") { return state; }
 
+    var credits = Array.isArray(state.credits) ? state.credits : [];
+
     (state.tiers || []).forEach(function (tier) {
       if (typeof tier.logo === "string" && tier.logo.indexOf(FLAME) !== -1) { tier.logo = BOLT; }
       if (!tier.logo || hasCard(tier)) { return; }
-      var key = Object.keys(CARD_BY_LOGO).filter(function (k) {
+
+      var key = Object.keys(ROLE_BY_LOGO).filter(function (k) {
         return tier.logo.indexOf(k) !== -1;
       })[0];
       // Логотип, которого нет в таблице, — это загруженная админом картинка.
-      // Придумывать ей роль нечего, тир остаётся с обычной плашкой.
-      if (key) {
-        tier.card = {
-          role: CARD_BY_LOGO[key].role,
-          handle: CARD_BY_LOGO[key].handle,
-          comment: CARD_BY_LOGO[key].comment,
-        };
-      }
+      // Кто за ней стоит, неизвестно, поэтому тир остаётся с обычной плашкой.
+      if (!key) { return; }
+
+      var role = ROLE_BY_LOGO[key];
+      var credit = credits.filter(function (c) { return norm(c.role) === norm(role); })[0];
+      // Роли нет в титрах — значит, человека на сайте не заводили. Карточку не
+      // выдумываем: иначе на странице появится роль, которой нигде больше нет.
+      if (!credit) { return; }
+
+      tier.card = { role: credit.role, handle: credit.name || "", comment: "" };
     });
 
     (state.footer || []).forEach(function (link) {
@@ -73,7 +84,7 @@
     return state;
   }
 
-  var api = { migrate: migrate, hasCard: hasCard, CARD_BY_LOGO: CARD_BY_LOGO, FOOTER_ICONS: FOOTER_ICONS };
+  var api = { migrate: migrate, hasCard: hasCard, ROLE_BY_LOGO: ROLE_BY_LOGO, FOOTER_ICONS: FOOTER_ICONS };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }
   root.MIGRATE = api;

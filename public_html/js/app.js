@@ -54,7 +54,6 @@
       tiers: [
         {
           id: uid(), label: "MK", logo: TIER_LOGOS.MK,
-          card: { role: "Владелец", handle: "@mksvtn", comment: "за деньги не продаюсь 🤭\nмаксимум за рокет 🚀" },
           items: [
             mk("Item", 60000, "f", "green", "up"),
             mk("Item", 50000, "f", "green", ""),
@@ -65,7 +64,6 @@
         },
         {
           id: uid(), label: "GLH", logo: TIER_LOGOS.GLH,
-          card: { role: "Аналитик", handle: "@GLHorig", comment: "Макса тцк не сдам, но за конфетку\nбджілка можно" },
           items: [
             mk("Item", 12000, "f", "yellow", ""),
             mk("Item", 9000, "f", "orange", "down"),
@@ -75,7 +73,6 @@
         },
         {
           id: uid(), label: "💧", logo: TIER_LOGOS["💧"],
-          card: { role: "Дизайнер", handle: "@DAnikTda", comment: "гони шоколадку...\nи прямо сейчас я спалю обоих! 🦉" },
           items: [
             mk("Item", 800, "f", "red", "down"),
             mk("Item", 500, "f", "red", ""),
@@ -87,7 +84,19 @@
   }
 
   // ---------- State ----------
-  let state = load() || defaultState();
+  // Достройка состояния до постерного макета вынесена в js/migrate.js: там она
+  // тестируется из node, здесь бы её пришлось проверять только через браузер.
+  // Без файла сайт продолжает работать — просто без карточек и аватарок.
+  //
+  // Объявление стоит ВЫШЕ первого вызова load(): const попадает во временную
+  // мёртвую зону, и load() из строки ниже уронил бы страницу у всех, у кого в
+  // localStorage лежит сохранённое состояние.
+  const MIGRATE = (typeof window !== "undefined" && window.MIGRATE) || null;
+  const migrateToPosterLayout = (MIGRATE && MIGRATE.migrate) || (s => s);
+
+  // Чистый шаблон тоже проходит достройку: карточки авторов собираются из
+  // титров, а не лежат в шаблоне отдельной копией тех же имён.
+  let state = load() || migrateToPosterLayout(defaultState());
   let isAdmin = false;
   let dirty = false;   // есть несохранённые правки админа
   let saving = false;  // идёт публикация на сервер
@@ -101,12 +110,6 @@
   let pendingServer = null;        // свежая база, пришедшая пока есть свои неопубликованные правки
   let roleResolved = false;        // роль выяснена (checkSession/вход/выход отработали)
   let firstSnapshotHandled = false;
-
-  // Достройка состояния до постерного макета вынесена в js/migrate.js: там она
-  // тестируется из node, здесь бы её пришлось проверять только через браузер.
-  // Без файла сайт продолжает работать — просто без карточек и аватарок.
-  const MIGRATE = (typeof window !== "undefined" && window.MIGRATE) || null;
-  const migrateToPosterLayout = (MIGRATE && MIGRATE.migrate) || (s => s);
 
   function load() {
     try {
@@ -671,6 +674,10 @@
       "comment", tx("card.comment"), card.comment || "", "card-comment",
       v => { card.comment = v; },
     );
+    // Комментария нет — прячем подпись, но не саму панель: без правой половины
+    // карточка теряет симметрию и логотип уезжает с центра. В режиме
+    // редактирования подпись возвращается, иначе неясно, куда писать.
+    if (!card.comment) right.side.classList.add("card-side--empty");
     // Комментарий многострочный: Enter внутри него ставит перенос, а правка
     // завершается уходом фокуса. Поэтому обработчика keydown здесь нет.
 

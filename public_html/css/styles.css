@@ -607,8 +607,13 @@ body.protected img { -webkit-user-drag: none; }
   color: #fff;
   outline: none;
 }
-/* Комментарий двухстрочный, перенос хранится в тексте как \n. */
-.card-comment { white-space: pre-line; }
+/* Комментарий двухстрочный, перенос хранится в тексте как \n.
+   flex: 1 — чтобы пустой комментарий занимал строку целиком и по нему можно
+   было попасть курсором в режиме редактирования. */
+.card-comment { white-space: pre-line; flex: 1; }
+/* Пустая правая половина: подпись скрыта, панель на месте. */
+.card-side--empty .card-label { visibility: hidden; }
+.editing .card-side--empty .card-label { visibility: visible; }
 .card-tg { width: 2.94cqw; height: auto; flex: none; }
 
 .editing .card-label,
