@@ -453,8 +453,8 @@ body.protected img { -webkit-user-drag: none; }
 .bf-logo { width: 12cqw; height: auto; justify-self: start; filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
 .title-block { text-align: center; }
 .date {
-  font-family: var(--proto);
-  font-size: 2.89cqw;
+  font-family: var(--display);
+  font-size: 2.7cqw;
   letter-spacing: 2px;
   color: #eaf6ff;
   text-shadow: 0 0 8px rgba(79,214,255,.6);
@@ -466,19 +466,15 @@ body.protected img { -webkit-user-drag: none; }
 .editing .date { cursor: text; box-shadow: inset 0 0 0 1px rgba(79,214,255,.35); }
 .editing .date:hover { background: rgba(79,214,255,.10); }
 .date:focus { background: rgba(79,214,255,.12); }
-/* Заголовок в макете набран Proto Sans, а не Bootshaus: 111 пунктов на первой
-   строке и 83 на второй. Отношение 0.745 держим в em, чтобы вторая строка
-   ехала за первой при любом кегле. */
 .tl-title {
-  font-family: var(--proto);
-  font-size: 8.2cqw;
+  font-family: var(--display);
+  font-size: 8.6cqw;
   line-height: .9;
   margin: .2cqw 0 0;
   color: #fff;
-  letter-spacing: -.02em;
+  letter-spacing: .2cqw;
   text-shadow: 0 0 16px rgba(79,214,255,.55), 0 .3cqw 0 rgba(0,0,0,.35);
 }
-.tl-title-sub { display: block; font-size: .745em; }
 .brand-logo {
   justify-self: end;
   width: 17cqw;
@@ -534,106 +530,7 @@ body.protected img { -webkit-user-drag: none; }
   text-align: center;
 }
 .tier-label:focus { background: rgba(79,214,255,.18); border-radius: 4px; }
-/* Пустую плашку видит только админ. Подсказка — фоновым ::before, а не текстом
-   внутри: иначе она попала бы в contenteditable и уехала бы в состояние. */
-.editing .tier-label:empty::before {
-  content: attr(data-placeholder);
-  opacity: .5;
-  font-style: italic;
-}
 .tier-tools { position: absolute; right: .8cqw; display: flex; gap: .4cqw; }
-
-/* ===================== Карточка автора =====================
-   Плашка логотипного тира, у которой бруски по бокам от логотипа наполнены
-   содержимым: слева роль и ник, справа комментарий. Геометрия пересчитана из
-   макета: контент-колонка 1288px = 94.8cqw, то есть 1px макета = 0.0736cqw.
-
-   Собственного фона у карточки нет — в макете его тоже нет, там видны только
-   две пары брусков, логотип и вертикальные «звенья» по краям разрыва. Поэтому
-   точечная подложка .tier-band::before здесь снимается. */
-.tier-band--card {
-  height: 8.24cqw;
-  display: grid;
-  grid-template-columns: 42.25cqw 11.56cqw 41cqw;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border-top: 0;
-  border-bottom: 0;
-  box-shadow: none;
-  border-radius: 0;
-}
-.tier-band--card::before { display: none; }
-
-.card-side {
-  display: grid;
-  grid-template-rows: 2.8cqw 4.93cqw;
-  row-gap: .44cqw;
-  height: 8.17cqw;
-}
-/* Логотип в карточке крупнее, чем на обычной плашке: в макете он 83px при
-   высоте карточки 112px, тогда как плашка целиком всего 63px.
-   Тень снимаем: каждый filter: drop-shadow заводит WebKit отдельную поверхность
-   и размывает её альфу — по той же причине, что описана у бейджей ниже. */
-.tier-band--card .band-logo {
-  height: 6.11cqw;
-  max-width: 10cqw;
-  object-fit: contain;
-  filter: none;
-  /* Без этого логотип прижимается к левому краю разрыва: по умолчанию у
-     grid-элемента justify-self: stretch, но растянуться ему не даёт max-width,
-     и он выравнивается по началу ячейки. Чем уже знак, тем заметнее перекос —
-     у молнии выходило 24px. */
-  justify-self: center;
-}
-/* «Звенья» — вертикальные полосы по обеим сторонам разрыва под логотипом. */
-.card-side--role    { border-right: .29cqw solid #f5f5ff; }
-.card-side--comment { border-left:  .29cqw solid #f5f5ff; }
-
-.card-row {
-  display: flex;
-  align-items: center;
-  gap: 1.1cqw;
-  padding: 0 .74cqw;
-  /* Та же заливка, что у обычной плашки тира: карточка стоит с ними в одном
-     ряду, и своя палитра здесь развалила бы общий вид. */
-  background: linear-gradient(180deg, rgba(175,212,255,.58), rgba(106,152,222,.48));
-  border: .07cqw solid rgba(236,246,255,.55);
-}
-.card-side--role .card-row    { justify-content: flex-end; }
-.card-side--comment .card-row { justify-content: flex-start; }
-
-.card-label {
-  font-family: var(--proto);
-  font-size: 1.91cqw;
-  line-height: 1;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  outline: none;
-}
-.card-handle, .card-comment {
-  font-family: var(--display);
-  font-size: 2.29cqw;
-  line-height: 1.15;
-  color: #fff;
-  outline: none;
-}
-/* Комментарий двухстрочный, перенос хранится в тексте как \n.
-   flex: 1 — чтобы пустой комментарий занимал строку целиком и по нему можно
-   было попасть курсором в режиме редактирования. */
-.card-comment { white-space: pre-line; flex: 1; }
-/* Пустая правая половина: подпись скрыта, панель на месте. */
-.card-side--empty .card-label { visibility: hidden; }
-.editing .card-side--empty .card-label { visibility: visible; }
-.card-tg { width: 2.94cqw; height: auto; flex: none; }
-
-.editing .card-label,
-.editing .card-handle,
-.editing .card-comment { cursor: text; }
-.card-label:focus,
-.card-handle:focus,
-.card-comment:focus { background: rgba(79,214,255,.14); border-radius: .3cqw; }
 
 /* --- items track: translucent panel with halftone tile --- */
 .tier-items {
@@ -937,28 +834,19 @@ body.protected img { -webkit-user-drag: none; }
 .legend-title {
   font-family: var(--display);
   text-align: center;
-  font-size: 2.82cqw;
+  font-size: 2.4cqw;
   margin: 0 0 .8cqw;
   color: #eaf6ff;
   letter-spacing: .1cqw;
   text-shadow: 0 0 8px rgba(79,214,255,.5);
 }
-/* Три блока вместо пяти равных колонок: типы, спрос, состояния. Заголовок
-   живёт внутри среднего блока и центрируется по нему — в макете он занимает
-   ровно ширину блока со спросом, а не всей панели. */
-.legend { display: flex; justify-content: space-between; align-items: center; gap: 1cqw; }
-.legend-block { display: flex; gap: 1.6cqw; }
-.legend-demand { flex-direction: column; align-items: center; gap: 0; }
-.legend-dots { display: flex; gap: 1.6cqw; }
-/* Состояния занимают всю высоту панели: их на строку больше, чем в остальных
-   блоках, и в макете они растянуты от края до края. */
-.legend-states { flex-direction: column; justify-content: space-between; align-self: stretch; gap: .35cqw; }
+.legend-grid { display: flex; justify-content: space-between; gap: 1cqw; }
 .legend-col { display: flex; flex-direction: column; gap: .5cqw; }
 .lg {
   display: flex; align-items: center; gap: .7cqw;
   font-family: var(--display);
   letter-spacing: .03cqw;
-  font-size: 1.96cqw; color: #dbeaff; white-space: nowrap;
+  font-size: 1.7cqw; color: #dbeaff; white-space: nowrap;
 }
 .lg .tbadge, .lg .dot, .lg .trend { flex: none; }
 /* «?» в легенде — та же розовая плашка, что на предмете, только без наклона:
@@ -974,19 +862,6 @@ body.protected img { -webkit-user-drag: none; }
   border-radius: .55cqw; padding: .3cqw .45cqw .24cqw;
   box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
 }
-/* Плашка «new» в легенде — тот же значок, что висит на новом предмете
-   (.cell-new), только без наклона: в строке текста наклонённая читается хуже.
-   Рисуется на CSS, а не картинкой: лишний файл ради пяти букв не нужен. */
-.lg-new {
-  flex: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--ui); font-weight: 800; font-size: 1.4cqw; line-height: 1;
-  color: #fff; text-transform: lowercase;
-  background: linear-gradient(180deg, #ff5a5a, #e0218a);
-  border: .12cqw solid rgba(255,255,255,.9);
-  border-radius: .55cqw; padding: .3cqw .5cqw .24cqw;
-  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
-}
 
 /* ===================== Footer ===================== */
 .tl-footer {
@@ -996,19 +871,9 @@ body.protected img { -webkit-user-drag: none; }
   gap: .6cqw 1.4cqw;
   padding: .6cqw .4cqw 0;
 }
-/* Аватарка слева, два ряда текста справа. Колонка текста стоит на месте и без
-   картинки: ссылка без аватарки — рабочее состояние. */
-.flink { position: relative; display: flex; align-items: center; gap: .44cqw; text-decoration: none; line-height: 1.15; }
-.fl-icon {
-  width: 3.39cqw; height: 3.39cqw; flex: none;
-  border-radius: 50%;
-  object-fit: cover;
-}
-/* Заглушка на месте отсутствующей аватарки — держит колонку текста. */
-.fl-icon-empty { visibility: hidden; }
-.fl-text { display: flex; flex-direction: column; min-width: 0; }
-.fl-title { font-family: var(--display); font-size: 1.94cqw; color: #00f7ff; letter-spacing: .5px; text-shadow: 0 0 6px rgba(79,214,255,.4); }
-.fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.94cqw; color: #fff; }
+.flink { position: relative; display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
+.fl-title { font-family: var(--display); font-size: 1.7cqw; color: var(--cyan); letter-spacing: .5px; text-shadow: 0 0 6px rgba(79,214,255,.4); }
+.fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.4cqw; color: #aecbff; }
 .flink:hover .fl-title { color: #fff; }
 /* в режиме редактирования у ссылки видны кнопки: 🔗 (URL) и ✕ (удалить) */
 .editing .flink .fl-title, .editing .flink .fl-sub { cursor: text; }
@@ -1348,38 +1213,7 @@ body.protected img { -webkit-user-drag: none; }
   .legend-title { font-size: 3.6cqw; }
   .lg { font-size: 2.7cqw; gap: 1cqw; }
   .fl-title { font-size: 2.7cqw; }
-  .fl-sub { font-size: 2.7cqw; }
-  .fl-icon { width: 5.4cqw; height: 5.4cqw; }
-
-  /* Легенда: состояния уезжают под первые два блока — впятером в строку они на
-     телефоне не помещаются. */
-  .legend { flex-wrap: wrap; justify-content: space-around; row-gap: 1.4cqw; }
-  .legend-states { flex-direction: row; flex-wrap: wrap; align-self: auto; justify-content: center; gap: .8cqw 2cqw; }
-
-  /* Карточка автора в три колонки на 390px нечитаема: на комментарий осталось
-     бы около 170px. Разворачиваем в две строки — сверху логотип с ролью и
-     ником, снизу комментарий во всю ширину. */
-  .tier-band--card {
-    height: auto;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    row-gap: .8cqw;
-    column-gap: 1.6cqw;
-  }
-  /* Логотип слева, справа от него роль и ник, комментарий строкой ниже во всю
-     ширину. Позиции проставлены явно: при неявном размещении логотип уезжал
-     в собственную колонку у правого края. */
-  .tier-band--card .band-logo {
-    grid-column: 1; grid-row: 1;
-    height: 8cqw; max-width: 16cqw;
-  }
-  .card-side { height: auto; grid-template-rows: auto auto; row-gap: .4cqw; }
-  .card-side--role    { grid-column: 2; grid-row: 1; border-right: 0; }
-  .card-side--comment { grid-column: 1 / -1; grid-row: 2; border-left: 0; }
-  .card-side--comment .card-row { justify-content: center; text-align: center; }
-  .card-label { font-size: 3cqw; }
-  .card-handle, .card-comment { font-size: 3.3cqw; }
-  .card-tg { width: 4.4cqw; }
+  .fl-sub { font-size: 2.3cqw; }
   .cr-role { font-size: 2.3cqw; }
   .cr-name { font-size: 2.5cqw; }
   .ad-text { font-size: 3.6cqw; }

@@ -100,7 +100,6 @@
       "legend.swap":            "Пересмотр",
       "legend.down":            "Упадок",
       "legend.wip":             "Под вопросом",
-      "legend.new":             "Новый",
 
       "modal.itemTitle":        "Предмет",
       "modal.close":            "Закрыть",
@@ -132,9 +131,6 @@
       "modal.done":             "Готово",
 
       "tier.rename":            "Кликните, чтобы переименовать тир",
-      "tier.labelEmpty":        "Нажмите, чтобы написать",
-
-      "card.comment":           "Комментарий",
       "tier.logo":              "Свой логотип тира",
       "tier.logoOff":           "Убрать логотип (показывать текст)",
       "tier.up":                "Поднять тир",
@@ -152,7 +148,6 @@
       "credits.remove":         "Убрать из списка",
       "credits.add":            "Добавить участника",
       "footer.editUrl":         "Изменить ссылку (URL)",
-      "footer.editIcon":        "Изменить аватарку",
       "footer.removeLink":      "Удалить ссылку",
       "footer.addLink":         "Добавить ссылку",
 
@@ -289,7 +284,6 @@
       "legend.swap":            "Under review",
       "legend.down":            "Falling",
       "legend.wip":             "Uncertain",
-      "legend.new":             "New",
 
       "modal.itemTitle":        "Item",
       "modal.close":            "Close",
@@ -321,9 +315,6 @@
       "modal.done":             "Done",
 
       "tier.rename":            "Click to rename the tier",
-      "tier.labelEmpty":        "Click to add a caption",
-
-      "card.comment":           "Comment",
       "tier.logo":              "Custom tier logo",
       "tier.logoOff":           "Remove the logo (show text instead)",
       "tier.up":                "Move tier up",
@@ -341,7 +332,6 @@
       "credits.remove":         "Remove from the list",
       "credits.add":            "Add a member",
       "footer.editUrl":         "Change the link (URL)",
-      "footer.editIcon":        "Change the avatar",
       "footer.removeLink":      "Delete the link",
       "footer.addLink":         "Add a link",
 
