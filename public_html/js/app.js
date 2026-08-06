@@ -689,7 +689,18 @@
   // Плашка-заголовок тира. Инструменты/редактирование — только у первой
   // плашки (isFirst); у плашек-продолжений логотип/название повторяются,
   // но без кнопок и без contenteditable.
+  // Плашка, в которой ничего нет, — просто светлая полоса поперёк тирлиста.
+  // Такие тиры в базе есть: без логотипа и с пустой подписью.
+  function bandIsEmpty(tier) {
+    return !tier.logo && !hasCard(tier) && !String(tier.label || "").trim();
+  }
+
   function renderBand(tier, ti, isFirst) {
+    // Гостю пустая полоса не нужна. Админу она остаётся всегда: внутри неё
+    // живут кнопки тира, и без плашки он не смог бы ни вернуть надпись, ни
+    // подвинуть или удалить сам тир.
+    if (bandIsEmpty(tier) && !stage.classList.contains("editing")) return null;
+
     const band = document.createElement("div");
     band.className = "tier-band";
 
@@ -713,6 +724,10 @@
         // В режиме редактирования плашка становится contenteditable, но без
         // подсказки это ниоткуда не следует.
         label.title = tx("tier.rename");
+        // Пустая плашка видна только админу, и по ней не понять, что это поле
+        // ввода. Подсказку рисует CSS через ::before, поэтому в тексте её нет
+        // и она не уедет в сохранённое состояние.
+        label.dataset.placeholder = tx("tier.labelEmpty");
         label.addEventListener("blur", () => { tier.label = label.textContent.trim(); save(); });
         label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
       }
@@ -755,7 +770,8 @@
 
       const group = document.createElement("div");
       group.className = "tier-rowgroup";
-      group.appendChild(renderBand(tier, ti, isFirst));
+      const band = renderBand(tier, ti, isFirst);
+      if (band) group.appendChild(band);
 
       const list = document.createElement("div");
       list.className = "tier-items";

@@ -130,6 +130,7 @@
       "modal.done":             "Готово",
 
       "tier.rename":            "Кликните, чтобы переименовать тир",
+      "tier.labelEmpty":        "Нажмите, чтобы написать",
 
       "card.comment":           "Комментарий",
       "tier.logo":              "Свой логотип тира",
@@ -316,6 +317,7 @@
       "modal.done":             "Done",
 
       "tier.rename":            "Click to rename the tier",
+      "tier.labelEmpty":        "Click to add a caption",
 
       "card.comment":           "Comment",
       "tier.logo":              "Custom tier logo",

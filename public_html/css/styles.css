@@ -534,6 +534,13 @@ body.protected img { -webkit-user-drag: none; }
   text-align: center;
 }
 .tier-label:focus { background: rgba(79,214,255,.18); border-radius: 4px; }
+/* Пустую плашку видит только админ. Подсказка — фоновым ::before, а не текстом
+   внутри: иначе она попала бы в contenteditable и уехала бы в состояние. */
+.editing .tier-label:empty::before {
+  content: attr(data-placeholder);
+  opacity: .5;
+  font-style: italic;
+}
 .tier-tools { position: absolute; right: .8cqw; display: flex; gap: .4cqw; }
 
 /* ===================== Карточка автора =====================
