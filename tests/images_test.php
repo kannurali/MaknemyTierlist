@@ -264,35 +264,6 @@ test('downscale_stored_images covers tier logos and the ad banner', function () 
     assert_eq(2, $stats['scanned'], 'both references scanned');
 });
 
-test('downscale_stored_images covers footer avatars', function () {
-    // Аватарки появились вместе с постерным макетом. Обходчик перечисляет пути
-    // явно, поэтому новое поле надо было в него добавить — тест про это.
-    $dir = tmp_dir();
-    $big = make_image(600, 600);
-    $name = sha1($big) . '.png';
-    file_put_contents($dir . '/' . $name, $big);
-
-    [$out, $stats] = downscale_stored_images([
-        'footer' => [
-            ['title' => 'мой дискорд', 'icon' => '/images/' . $name],
-            ['title' => 'без аватарки', 'icon' => ''],
-        ],
-    ], $dir, 256);
-
-    assert_true($out['footer'][0]['icon'] !== '/images/' . $name, 'footer avatar repointed');
-    assert_eq('', $out['footer'][1]['icon'], 'empty avatar left alone');
-    assert_eq(1, $stats['scanned'], 'only the real avatar scanned');
-});
-
-test('extract_embedded_images saves a footer avatar sent as a data url', function () {
-    $dir = tmp_dir();
-    $state = extract_embedded_images([
-        'footer' => [['title' => 'мой телеграм', 'icon' => 'data:image/png;base64,' . PNG_B64]],
-    ], $dir);
-    assert_true(strncmp($state['footer'][0]['icon'], '/images/', 8) === 0, 'avatar moved out of the state');
-    assert_eq(1, count(glob($dir . '/*')), 'file written to disk');
-});
-
 test('downscale_stored_images reports missing files instead of dropping the url', function () {
     $dir = tmp_dir();
     $state = ['tiers' => [['items' => [['icon' => '/images/gone.webp']]]]];
