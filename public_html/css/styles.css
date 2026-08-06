@@ -573,6 +573,11 @@ body.protected img { -webkit-user-drag: none; }
   max-width: 10cqw;
   object-fit: contain;
   filter: none;
+  /* Без этого логотип прижимается к левому краю разрыва: по умолчанию у
+     grid-элемента justify-self: stretch, но растянуться ему не даёт max-width,
+     и он выравнивается по началу ячейки. Чем уже знак, тем заметнее перекос —
+     у молнии выходило 24px. */
+  justify-self: center;
 }
 /* «Звенья» — вертикальные полосы по обеим сторонам разрыва под логотипом. */
 .card-side--role    { border-right: .29cqw solid #f5f5ff; }
@@ -1349,22 +1354,21 @@ body.protected img { -webkit-user-drag: none; }
      ником, снизу комментарий во всю ширину. */
   .tier-band--card {
     height: auto;
-    grid-template-columns: 1fr;
-    row-gap: .8cqw;
-    padding: 1cqw 0;
-  }
-  .card-side { height: auto; grid-template-rows: auto; row-gap: 0; }
-  .card-side--role,
-  .card-side--comment { border: 0; }
-  .card-side--role {
-    grid-row: 1;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto;
+    grid-template-columns: auto 1fr;
     align-items: center;
+    row-gap: .8cqw;
     column-gap: 1.6cqw;
   }
-  .tier-band--card .band-logo { grid-row: 1; justify-self: center; height: 7cqw; }
-  .card-side--comment { grid-row: 2; }
+  /* Логотип слева, справа от него роль и ник, комментарий строкой ниже во всю
+     ширину. Позиции проставлены явно: при неявном размещении логотип уезжал
+     в собственную колонку у правого края. */
+  .tier-band--card .band-logo {
+    grid-column: 1; grid-row: 1;
+    height: 8cqw; max-width: 16cqw;
+  }
+  .card-side { height: auto; grid-template-rows: auto auto; row-gap: .4cqw; }
+  .card-side--role    { grid-column: 2; grid-row: 1; border-right: 0; }
+  .card-side--comment { grid-column: 1 / -1; grid-row: 2; border-left: 0; }
   .card-side--comment .card-row { justify-content: center; text-align: center; }
   .card-label { font-size: 3cqw; }
   .card-handle, .card-comment { font-size: 3.3cqw; }
