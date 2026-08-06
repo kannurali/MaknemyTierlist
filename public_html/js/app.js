@@ -8,7 +8,7 @@
   const STORAGE_KEY = "nexus-tierlist-v1";
   const DIRTY_KEY = "nexus-tierlist-dirty-v1"; // помним факт НЕопубликованных правок между перезагрузками
   const DEFAULT_ICON = "assets/icon-sample.png";
-  const TIER_LOGOS = { MK: "assets/logo-mk.png", GLH: "assets/logo-glh.png", "💧": "assets/logo-flame.png" };
+  const TIER_LOGOS = { MK: "assets/logo-mk.png", GLH: "assets/logo-glh.png", "💧": "assets/logo-bolt.png" };
 
   const uid = () => "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -44,12 +44,12 @@
         { role: "Кодер сайта", name: "—" },
       ],
       footer: [
-        { title: "МОЙ ДИСКОРД",       sub: "discord.gg/A4ZG8sxCM",   href: "https://discord.gg/A4ZG8sxCM" },
-        { title: "МОЙ ТЕЛЕГРАММ",     sub: "t.me/mksvtnc",           href: "https://t.me/mksvtnc" },
-        { title: "BLOX FRUITS NEWS",  sub: "t.me/bfsnews",           href: "https://t.me/bfsnews" },
-        { title: "ВСЕ РОЗЫГРЫШИ ТУТ", sub: "t.me/mksvtnc",           href: "https://t.me/mksvtnc" },
-        { title: "CHARLOTTE TM",      sub: "discord.gg/Q9PO6UG9Q4",  href: "https://discord.gg/Q9PO6UG9Q4" },
-        { title: "ПОМОЩНИК",          sub: "t.me/typeopozitivegg",   href: "https://t.me/typeopozitivegg" },
+        { title: "МОЙ ДИСКОРД",       sub: "discord.gg/A4ZG8sxCM",   href: "https://discord.gg/A4ZG8sxCM", icon: "assets/avatar-discord.png" },
+        { title: "МОЙ ТЕЛЕГРАММ",     sub: "t.me/mksvtnc",           href: "https://t.me/mksvtnc",         icon: "assets/avatar-tg.png" },
+        { title: "BLOX FRUITS NEWS",  sub: "t.me/bfsnews",           href: "https://t.me/bfsnews",         icon: "assets/avatar-bfnews.png" },
+        { title: "ВСЕ РОЗЫГРЫШИ ТУТ", sub: "t.me/mksvtnc",           href: "https://t.me/mksvtnc",         icon: "assets/avatar-giveaways.png" },
+        { title: "CHARLOTTE TM",      sub: "discord.gg/Q9PO6UG9Q4",  href: "https://discord.gg/Q9PO6UG9Q4", icon: "assets/avatar-charlotte.png" },
+        { title: "ПОМОЩНИК",          sub: "t.me/typeopozitivegg",   href: "https://t.me/typeopozitivegg", icon: "" },
       ],
       tiers: [
         {
@@ -84,7 +84,19 @@
   }
 
   // ---------- State ----------
-  let state = load() || defaultState();
+  // Достройка состояния до постерного макета вынесена в js/migrate.js: там она
+  // тестируется из node, здесь бы её пришлось проверять только через браузер.
+  // Без файла сайт продолжает работать — просто без карточек и аватарок.
+  //
+  // Объявление стоит ВЫШЕ первого вызова load(): const попадает во временную
+  // мёртвую зону, и load() из строки ниже уронил бы страницу у всех, у кого в
+  // localStorage лежит сохранённое состояние.
+  const MIGRATE = (typeof window !== "undefined" && window.MIGRATE) || null;
+  const migrateToPosterLayout = (MIGRATE && MIGRATE.migrate) || (s => s);
+
+  // Чистый шаблон тоже проходит достройку: карточки авторов собираются из
+  // титров, а не лежат в шаблоне отдельной копией тех же имён.
+  let state = load() || migrateToPosterLayout(defaultState());
   let isAdmin = false;
   let dirty = false;   // есть несохранённые правки админа
   let saving = false;  // идёт публикация на сервер
@@ -119,7 +131,7 @@
       merged.tiers.forEach(t => {
         if (t.logo === undefined && TIER_LOGOS[t.label]) t.logo = TIER_LOGOS[t.label];
       });
-      return merged;
+      return migrateToPosterLayout(merged);
     } catch (e) { return null; }
   }
   let saveTimer = null;
@@ -593,14 +605,123 @@
     return Math.max(1, per);
   }
 
+  // Есть ли у тира карточка автора. Карточка рисуется только вместе с
+  // логотипом: без него в макете нет центрального разрыва, вокруг которого
+  // построена вся раскладка карточки. Определение живёт в js/migrate.js —
+  // там же, где карточки проставляются, чтобы условие было одно на оба места.
+  const hasCard = (MIGRATE && MIGRATE.hasCard) ||
+    (tier => !!(tier && tier.logo && tier.card &&
+      (tier.card.role || tier.card.handle || tier.card.comment)));
+
+  // Титры без тех, кто уже показан карточкой. Сравнение живёт там же, где
+  // карточки собираются, — и там же его видят тесты. Без модуля полоска
+  // показывается целиком: лишняя строка лучше пропавшего человека.
+  const visibleCredits = (MIGRATE && MIGRATE.visibleCredits) ||
+    (s => (s && Array.isArray(s.credits) ? s.credits : []));
+
+  // Одна половина карточки: подпись сверху, значение снизу. Обе половины
+  // устроены одинаково и различаются только классом-модификатором и тем, что
+  // в значение можно доложить иконку (телеграм у ника).
+  function cardSide(mod, labelText, valueText, valueClass, onEdit, extra) {
+    const side = document.createElement("div");
+    side.className = "card-side card-side--" + mod;
+
+    const labelRow = document.createElement("div");
+    labelRow.className = "card-row card-row--label";
+    const label = document.createElement("span");
+    label.className = "card-label";
+    label.textContent = labelText;
+    labelRow.appendChild(label);
+
+    const valueRow = document.createElement("div");
+    valueRow.className = "card-row card-row--value";
+    const value = document.createElement("span");
+    value.className = valueClass;
+    value.textContent = valueText;
+    value.spellcheck = false;
+    value.addEventListener("blur", () => { onEdit(value.textContent.trim()); save(); });
+    valueRow.appendChild(value);
+    if (extra) valueRow.appendChild(extra);
+
+    side.appendChild(labelRow);
+    side.appendChild(valueRow);
+    return { side, label, value };
+  }
+
+  // Карточка автора — плашка логотипного тира, у которой бруски по бокам от
+  // логотипа наполнены содержимым: слева роль и ник, справа комментарий.
+  function renderCardBand(tier, band) {
+    band.classList.add("tier-band--card");
+    const card = tier.card;
+
+    const left = cardSide(
+      "role", card.role || "", card.handle || "", "card-handle",
+      v => { card.handle = v; },
+      (() => {
+        const tg = document.createElement("img");
+        tg.className = "card-tg";
+        tg.src = "assets/icon-telegram.png";
+        tg.width = 40; tg.height = 34;
+        tg.alt = "";
+        return tg;
+      })(),
+    );
+    // Роль тоже правится, поэтому подпись слева — не статичный текст.
+    left.label.classList.add("card-role");
+    left.label.spellcheck = false;
+    left.label.addEventListener("blur", () => { card.role = left.label.textContent.trim(); save(); });
+    left.label.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); left.label.blur(); }
+    });
+    left.value.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); left.value.blur(); }
+    });
+
+    const logo = document.createElement("img");
+    logo.className = "band-logo";
+    logo.src = tier.logo;
+    logo.alt = tier.label || "";
+    logo.onerror = () => { tier.logo = ""; save(); render(); };
+
+    const right = cardSide(
+      "comment", tx("card.comment"), card.comment || "", "card-comment",
+      v => { card.comment = v; },
+    );
+    // Комментария нет — прячем подпись, но не саму панель: без правой половины
+    // карточка теряет симметрию и логотип уезжает с центра. В режиме
+    // редактирования подпись возвращается, иначе неясно, куда писать.
+    if (!card.comment) right.side.classList.add("card-side--empty");
+    // Комментарий многострочный: Enter внутри него ставит перенос, а правка
+    // завершается уходом фокуса. Поэтому обработчика keydown здесь нет.
+
+    band.appendChild(left.side);
+    band.appendChild(logo);
+    band.appendChild(right.side);
+  }
+
   // Плашка-заголовок тира. Инструменты/редактирование — только у первой
   // плашки (isFirst); у плашек-продолжений логотип/название повторяются,
   // но без кнопок и без contenteditable.
+  // Плашка, в которой ничего нет, — просто светлая полоса поперёк тирлиста.
+  // Такие тиры в базе есть: без логотипа и с пустой подписью.
+  function bandIsEmpty(tier) {
+    return !tier.logo && !hasCard(tier) && !String(tier.label || "").trim();
+  }
+
   function renderBand(tier, ti, isFirst) {
+    // Гостю пустая полоса не нужна. Админу она остаётся всегда: внутри неё
+    // живут кнопки тира, и без плашки он не смог бы ни вернуть надпись, ни
+    // подвинуть или удалить сам тир.
+    if (bandIsEmpty(tier) && !stage.classList.contains("editing")) return null;
+
     const band = document.createElement("div");
     band.className = "tier-band";
 
-    if (tier.logo) {
+    // Карточку показываем только на первой плашке тира: у плашек-продолжения
+    // она повторяла бы роль и комментарий на каждом ряду переполнения.
+    if (isFirst && hasCard(tier)) {
+      renderCardBand(tier, band);
+    } else if (tier.logo) {
       const img = document.createElement("img");
       img.className = "band-logo";
       img.src = tier.logo;
@@ -616,6 +737,10 @@
         // В режиме редактирования плашка становится contenteditable, но без
         // подсказки это ниоткуда не следует.
         label.title = tx("tier.rename");
+        // Пустая плашка видна только админу, и по ней не понять, что это поле
+        // ввода. Подсказку рисует CSS через ::before, поэтому в тексте её нет
+        // и она не уедет в сохранённое состояние.
+        label.dataset.placeholder = tx("tier.labelEmpty");
         label.addEventListener("blur", () => { tier.label = label.textContent.trim(); save(); });
         label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
       }
@@ -658,7 +783,8 @@
 
       const group = document.createElement("div");
       group.className = "tier-rowgroup";
-      group.appendChild(renderBand(tier, ti, isFirst));
+      const band = renderBand(tier, ti, isFirst);
+      if (band) group.appendChild(band);
 
       const list = document.createElement("div");
       list.className = "tier-items";
@@ -889,9 +1015,16 @@
   // ============================================================
   //  CREDITS (команда тирлиста)
   // ============================================================
+  // Тех, кто уже показан карточкой автора, дублировать внизу незачем: в макете
+  // полоски титров нет вообще, и она остаётся только ради тех, кому карточки не
+  // досталось — карточек три, а в команде людей больше.
   function renderCredits() {
     creditsEl.innerHTML = "";
-    state.credits.forEach((cr, idx) => {
+    const rest = visibleCredits(state);
+    // Все роли разъехались по карточкам — страница совпадает с макетом.
+    creditsEl.hidden = rest.length === 0 && !stage.classList.contains("editing");
+    rest.forEach((cr) => {
+      const idx = state.credits.indexOf(cr);
       const el = document.createElement("div");
       el.className = "credit";
 
@@ -944,6 +1077,27 @@
       // в режиме редактирования ссылка не открывается — можно править текст
       a.addEventListener("click", e => { if (stage.classList.contains("editing")) e.preventDefault(); });
 
+      // Аватарка. Ссылки без неё — рабочее состояние, а не ошибка: сетка
+      // держит колонку текста на месте независимо от наличия картинки.
+      if (lnk.icon) {
+        const icon = document.createElement("img");
+        icon.className = "fl-icon";
+        icon.src = lnk.icon;
+        icon.width = 46; icon.height = 46;
+        icon.alt = "";
+        icon.onerror = () => { lnk.icon = ""; save(); render(); };
+        a.appendChild(icon);
+      } else {
+        // Пустое место вместо аватарки: без него колонки текста у ссылок с
+        // картинкой и без неё разъезжаются по горизонтали.
+        const gap = document.createElement("span");
+        gap.className = "fl-icon fl-icon-empty";
+        a.appendChild(gap);
+      }
+
+      const text = document.createElement("span");
+      text.className = "fl-text";
+
       const title = document.createElement("span");
       title.className = "fl-title";
       title.textContent = lnk.title || "";
@@ -977,10 +1131,18 @@
         e.preventDefault(); e.stopPropagation();
         state.footer.splice(idx, 1); save(); render();
       });
-      tools.appendChild(urlBtn); tools.appendChild(del);
+      const iconBtn = document.createElement("button");
+      iconBtn.textContent = "🖼";
+      iconBtn.title = tx("footer.editIcon");
+      iconBtn.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        pickFooterIcon(idx);
+      });
+      tools.appendChild(iconBtn); tools.appendChild(urlBtn); tools.appendChild(del);
 
-      a.appendChild(title);
-      a.appendChild(sub);
+      text.appendChild(title);
+      text.appendChild(sub);
+      a.appendChild(text);
       a.appendChild(tools);
       footerEl.appendChild(a);
     });
@@ -1106,6 +1268,27 @@
     fileToSmallDataURL(file, 160, 0.85).then(du => uploadDataUrl(du)).then(url => {
       const t = findTier(tid);
       if (t && url) { t.logo = url; save(); render(); }
+    });
+    e.target.value = "";
+  });
+
+  // ---------- footer avatar upload ----------
+  // 96px по большей стороне: аватарка рисуется 3.39cqw — это ~35px при ширине
+  // сцены 1040px, поэтому даже на экране с удвоенной плотностью запаса хватает,
+  // а лишние килобайты в состоянии не копятся.
+  let footerIconTarget = null;
+  function pickFooterIcon(idx) {
+    footerIconTarget = idx;
+    $("#footerIconFile").click();
+  }
+  $("#footerIconFile").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file || footerIconTarget === null) return;
+    const idx = footerIconTarget;
+    footerIconTarget = null;
+    fileToSmallDataURL(file, 96, 0.85).then(du => uploadDataUrl(du)).then(url => {
+      const lnk = state.footer[idx];
+      if (lnk && url) { lnk.icon = url; save(); render(); }
     });
     e.target.value = "";
   });
@@ -1330,7 +1513,7 @@
     stage.classList.toggle("editing", on);
     document.querySelectorAll(".edit-only").forEach(el => { el.style.display = on ? "" : "none"; });
     // contenteditable only in edit mode (плашки-продолжения .cont-label не редактируются)
-    document.querySelectorAll(".tier-label:not(.cont-label), #tlDate, .ad-text, .cr-role, .cr-name, .fl-title, .fl-sub").forEach(el => {
+    document.querySelectorAll(".tier-label:not(.cont-label), #tlDate, .ad-text, .cr-role, .cr-name, .fl-title, .fl-sub, .card-role, .card-handle, .card-comment").forEach(el => {
       el.contentEditable = on ? "true" : "false";
     });
   }
@@ -2109,7 +2292,7 @@
     if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
     if (!Array.isArray(merged.footer)  || !merged.footer.length)  merged.footer  = d.footer;
     merged.tiers.forEach(t => { if (!t.logo && TIER_LOGOS[t.label]) t.logo = TIER_LOGOS[t.label]; });
-    return merged;
+    return migrateToPosterLayout(merged);
   }
   function applyServer(s) {
     state = s;
