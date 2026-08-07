@@ -686,29 +686,26 @@ body.protected img { -webkit-user-drag: none; }
 }
 .cell-edit button:hover { background: var(--cyan-deep); }
 
-/* значок NEW — новый / изменённый предмет.
+/* Значок NEW — новый / изменённый предмет. Картинка из макета (та же, что в
+   легенде), а не нарисованная плашка.
    По горизонтали значки держим ВНУТРИ ячейки: колонки стоят вплотную (зазор
    ~5px на десктопе), а раньше плашки свисали наружу на 6-7px, и «?» одного
    предмета налезал на NEW соседнего. */
 .cell-new {
-  position: absolute; top: -.4cqw; left: .2cqw; z-index: 7;
-  font-family: var(--ui); font-weight: 800; font-size: .98cqw; line-height: 1;
-  color: #fff; letter-spacing: .04cqw;
-  background: linear-gradient(180deg, #ff5a5a, #e0218a);
-  border: .12cqw solid rgba(255,255,255,.9);
-  border-radius: .47cqw; padding: .24cqw .34cqw .19cqw;
-  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
-  transform: rotate(-12deg);
+  position: absolute; top: -.15cqw; left: .1cqw; z-index: 7;
+  width: 3.3cqw; height: auto;
+  filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.75));
   pointer-events: none;
 }
 
-/* значок «?» — цена под вопросом. Та же плашка, что и NEW, но в правом
-   углу и с зеркальным наклоном, чтобы оба значка «расходились» от центра.
+/* Значок «?» — цена под вопросом. Тоже картинка из макета, но в правом углу.
+   Наклона больше нет: значок и так фигурный, а повёрнутый он налезал на соседа.
    Включаются независимо: у предмета может быть и NEW, и «?» одновременно. */
 .cell-wip {
-  left: auto; right: .2cqw;
-  transform: rotate(12deg);
-  padding: .24cqw .42cqw .19cqw; /* «?» уже «NEW» — добавляем воздуха по бокам */
+  position: absolute; top: -.2cqw; right: .1cqw; z-index: 7;
+  width: 1.75cqw; height: auto;
+  filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.75));
+  pointer-events: none;
 }
 
 /* всплывающая подсказка предмета (название + описание) при наведении */
@@ -1268,9 +1265,13 @@ body.protected img { -webkit-user-drag: none; }
      поэтому контент распускаем почти во всю ширину. */
   .tiers, .legend, .tl-footer, .credits { width: 95cqw; }
   .tiers { gap: 2.6cqw; }
+  /* Шапка — грид 1fr auto 1fr, средняя колонка меряется по заголовку. На 375 px
+     сумма 9 + 60 + 238 + 82 + 9 = 398 не влезала, и марки справа выезжали за
+     сцену на 14 px — страница получала горизонтальную прокрутку. Размеры
+     подрезаны так, чтобы строка сходилась с запасом и на 320 px тоже. */
   .tl-header { padding: 2cqw 2.4cqw 0 2.4cqw; }
-  .bf-logo { width: 16cqw; margin-top: .8cqw; }
-  .brand-logo { width: 22cqw; }
+  .bf-logo { width: 15cqw; margin-top: .8cqw; }
+  .brand-logo { width: 20cqw; }
 
   /* --- крупнее предметы и текст: меньше штук в ряд, но читаемо ---
      (itemsPerRow меряет ячейку зондом, поэтому разбивка на ряды подстроится) */
@@ -1302,19 +1303,25 @@ body.protected img { -webkit-user-drag: none; }
 
   /* шапка */
   .date { font-size: 4.2cqw; }
-  .tl-title { font-size: 9.6cqw; }
+  .tl-title { font-size: 8.4cqw; }
 
-  /* Легенда: три блока в ряд на 375 px не помещаются — раскладываем в столбик
-     и центруем. Заголовок вынимаем из среднего блока наверх (order), иначе он
-     оказался бы в середине списка. */
-  .legend { padding: 2cqw 2.4cqw 2.4cqw; }
-  .legend-grid { flex-direction: column; align-items: center; gap: 2.2cqw; }
-  .lb-demand { gap: 1.6cqw; }
-  .legend-title { font-size: 4.4cqw; order: -1; }
-  .lg { font-size: 3.1cqw; gap: 1cqw; }
-  .lg .tbadge { height: 2.8cqw; }
-  .lg .dot { width: 2cqw; height: 2cqw; }
-  .lg .trend { width: 6.4cqw; height: 3.8cqw; }
+  /* Легенда держит ту же раскладку в три блока, что и на десктопе — по просьбе
+     владельца. Размеры не наследуются как есть: панель здесь 95cqw против
+     84.63cqw на десктопе, поэтому все десктопные значения умножены на
+     95/84.63 = 1.1225 — композиция совпадает один в один, только в масштабе
+     экрана. Текст выходит ~8.6 px на 375 px; на телефоне с DPR 2-3 он
+     отрисовывается чётко, но это заметно мельче остального интерфейса. */
+  .legend { padding: 1.12cqw 2.69cqw 1.35cqw 1.46cqw; }
+  .legend-grid { gap: 1.68cqw; }
+  .legend-block { gap: 2.13cqw; }
+  .legend-cols { gap: 2.13cqw; }
+  .lb-demand { gap: .62cqw; }
+  .legend-col { gap: .9cqw; }
+  .legend-title { font-size: 2.81cqw; }
+  .lg { font-size: 2.3cqw; gap: .62cqw; }
+  .lg .tbadge { height: 1.84cqw; }
+  .lg .dot { width: 1.32cqw; height: 1.32cqw; }
+  .lg .trend { width: 4.42cqw; height: 2.58cqw; }
 
   /* Подвал: три колонки в ряд не влезают — две. */
   .tl-footer {
@@ -1333,8 +1340,8 @@ body.protected img { -webkit-user-drag: none; }
   .ad-img { max-height: 45cqw; }
 
   /* подсказка и значок NEW крупнее под палец/экран */
-  .cell-new { font-size: 2cqw; border-radius: 1cqw; padding: .45cqw .65cqw .35cqw; }
-  .cell-wip { padding: .45cqw .8cqw .35cqw; }
+  .cell-new { width: 6.6cqw; }
+  .cell-wip { width: 3.5cqw; }
   .cell-tip { max-width: 40cqw; border-radius: 1.4cqw; padding: 1cqw 1.2cqw; }
   .tip-name { font-size: 3cqw; }
   .tip-desc { font-size: 2.3cqw; }

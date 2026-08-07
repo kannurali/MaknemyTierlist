@@ -759,20 +759,24 @@
     }
     cell.appendChild(strip);
 
-    // значок NEW — новый/изменённый предмет (виден всем, попадает в PNG)
+    // Значок NEW — новый/изменённый предмет (виден всем, попадает в PNG).
+    // Картинка из макета, а не нарисованная градиентами плашка: тот же значок
+    // стоит в легенде, и раньше они не совпадали ни формой, ни цветом.
     if (item.flag) {
-      const nb = document.createElement("span");
+      const nb = document.createElement("img");
       nb.className = "cell-new";
-      nb.textContent = "NEW";
+      nb.src = "assets/poster/trend-new.png";
+      nb.alt = "NEW";
       cell.appendChild(nb);
     }
     // значок «?» — цена под вопросом. Независим от NEW: у предмета могут
     // гореть оба сразу, NEW слева, «?» справа. Старые сохранения поля не
     // имеют — undefined тоже ложь, поэтому миграция не нужна.
     if (item.wip) {
-      const wb = document.createElement("span");
-      wb.className = "cell-new cell-wip";
-      wb.textContent = "?";
+      const wb = document.createElement("img");
+      wb.className = "cell-wip";
+      wb.src = "assets/poster/trend-wip.png";
+      wb.alt = "?";
       wb.title = tx("cell.wipTitle");
       cell.appendChild(wb);
     }
