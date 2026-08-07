@@ -572,9 +572,9 @@ body.protected img { -webkit-user-drag: none; }
    совсем прозрачном фоне тёмные из них теряются на фоне пагоды. */
 .tier-items {
   display: flex; flex-wrap: wrap;
-  column-gap: .55cqw; row-gap: .9cqw;
+  column-gap: .5cqw; row-gap: .9cqw;
   align-content: flex-start;
-  min-height: 10cqw;
+  min-height: 8.5cqw;
   border-radius: 1.4cqw;
   padding: .9cqw .8cqw .7cqw;
   background-image:
@@ -586,10 +586,16 @@ body.protected img { -webkit-user-drag: none; }
 }
 .tier.drag-over .tier-items { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan), inset 0 1px 0 rgba(255,255,255,.22); }
 
-/* ===================== Item cell ===================== */
+/* ===================== Item cell =====================
+   Ряд обязан вмещать 11 предметов на десктопе и 6 на телефоне. Контент по
+   макету сузился со 100 до 84.63cqw, поэтому ячейка ужата в те же 0.85 раза
+   (8.2 → 6.95cqw) вместе со всем содержимым — иначе в ряд влезало 9.
+   Проверка: доступная ширина 84.63 − 1.6 (паддинги дорожки) − 0.19 (рамка) =
+   82.84cqw; (82.84 + 0.5) / (6.95 + 0.5) = 11.19 → 11 штук, до 12 далеко.
+   Разбивку на ряды считает itemsPerRow() зондом, так что JS подстроится сам. */
 .cell {
   position: relative;
-  width: 8.2cqw;
+  width: 6.95cqw;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -606,9 +612,9 @@ body.protected img { -webkit-user-drag: none; }
 .cell:hover { transform: translateY(-.35cqw) scale(1.06); z-index: 8; }
 .cell:hover .cell-value { color: #fff; text-shadow: 0 0 .5cqw rgba(79,214,255,.9), 0 1px 2px rgba(0,0,0,.95); }
 .cell-icon {
-  width: 100%; height: 6.4cqw;
+  width: 100%; height: 5.42cqw;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 1cqw;
+  border-radius: .85cqw;
   transition: background .15s;
 }
 .cell:hover .cell-icon {
@@ -627,15 +633,15 @@ body.protected img { -webkit-user-drag: none; }
 /* value + type badge row (без тёмной подложки — цифры лежат прямо на дорожке) */
 .cell-strip {
   position: relative;
-  margin-top: .15cqw;
+  margin-top: .13cqw;
   width: 100%;
-  height: 2.5cqw;
+  height: 2.12cqw;
   display: flex; align-items: center; justify-content: center;
-  gap: .35cqw;
+  gap: .3cqw;
 }
 .cell-value {
   font-family: var(--display);
-  font-size: 2cqw;
+  font-size: 1.7cqw;
   color: #fff;
   letter-spacing: .04cqw;
   /* без подложки нужна более плотная тень, чтобы белые цифры читались на дорожке */
@@ -644,18 +650,24 @@ body.protected img { -webkit-user-drag: none; }
   white-space: nowrap;
 }
 
+/* Значки в ячейке задаются здесь, а не в общих .tbadge/.dot/.trend: те же
+   классы висят на кнопках модалки, а модалка живёт вне сцены — там cqw меряется
+   от вьюпорта, и общий размер трогать нельзя. */
 /* type badge — coloured chip next to the value (как в макете) */
-.cell .tbadge { flex: none; }
+.cell .tbadge { flex: none; height: 1.7cqw; }
 /* demand dot — right of the icon, near the strip (как в макете) */
 .cell .dot {
-  position: absolute; top: 4.6cqw; right: .1cqw;
+  position: absolute; top: 3.9cqw; right: .1cqw;
+  width: 1.27cqw; height: 1.27cqw;
   z-index: 3;
 }
 /* trend arrow — mirrors the dot on the left */
 .cell .trend {
-  position: absolute; top: 4.7cqw; left: .1cqw;
+  position: absolute; top: 3.98cqw; left: .1cqw;
+  width: 1.27cqw;
   z-index: 3;
 }
+.cell .trend.tr-swap { width: 1.87cqw; }
 
 /* per-cell edit controls */
 .cell-edit {
@@ -664,11 +676,11 @@ body.protected img { -webkit-user-drag: none; }
 }
 .editing .cell:hover .cell-edit { display: flex; }
 .cell-edit button {
-  width: 2.4cqw; height: 2.4cqw;
+  width: 2.05cqw; height: 2.05cqw;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.4);
   background: rgba(15,25,45,.92);
-  color: #fff; font-size: 1.4cqw; line-height: 1;
+  color: #fff; font-size: 1.2cqw; line-height: 1;
   cursor: pointer; padding: 0;
   display: flex; align-items: center; justify-content: center;
 }
@@ -680,11 +692,11 @@ body.protected img { -webkit-user-drag: none; }
    предмета налезал на NEW соседнего. */
 .cell-new {
   position: absolute; top: -.4cqw; left: .2cqw; z-index: 7;
-  font-family: var(--ui); font-weight: 800; font-size: 1.15cqw; line-height: 1;
+  font-family: var(--ui); font-weight: 800; font-size: .98cqw; line-height: 1;
   color: #fff; letter-spacing: .04cqw;
   background: linear-gradient(180deg, #ff5a5a, #e0218a);
   border: .12cqw solid rgba(255,255,255,.9);
-  border-radius: .55cqw; padding: .28cqw .4cqw .22cqw;
+  border-radius: .47cqw; padding: .24cqw .34cqw .19cqw;
   box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
   transform: rotate(-12deg);
   pointer-events: none;
@@ -696,7 +708,7 @@ body.protected img { -webkit-user-drag: none; }
 .cell-wip {
   left: auto; right: .2cqw;
   transform: rotate(12deg);
-  padding: .28cqw .5cqw .22cqw; /* «?» уже «NEW» — добавляем воздуха по бокам */
+  padding: .24cqw .42cqw .19cqw; /* «?» уже «NEW» — добавляем воздуха по бокам */
 }
 
 /* всплывающая подсказка предмета (название + описание) при наведении */
@@ -718,19 +730,19 @@ body.protected img { -webkit-user-drag: none; }
   text-align: center;
 }
 .cell:hover .cell-tip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-.tip-name { font-family: var(--display); font-size: 1.8cqw; color: var(--cyan); letter-spacing: .04cqw; }
-.tip-desc { font-family: var(--ui); font-size: 1.35cqw; color: #dbeaff; margin-top: .25cqw; line-height: 1.25; white-space: normal; }
+.tip-name { font-family: var(--display); font-size: 1.55cqw; color: var(--cyan); letter-spacing: .04cqw; }
+.tip-desc { font-family: var(--ui); font-size: 1.15cqw; color: #dbeaff; margin-top: .25cqw; line-height: 1.25; white-space: normal; }
 /* в режиме редактирования подсказку не показываем — мешает кнопкам/перетаскиванию */
 .editing .cell-tip { display: none; }
 
 /* add-item ghost cell */
 .cell-add {
-  width: 8.2cqw; height: 9cqw;
+  width: 6.95cqw; height: 7.6cqw;
   border: 1px dashed rgba(150,200,255,.45);
-  border-radius: 1cqw;
+  border-radius: .85cqw;
   background: rgba(30,50,90,.25);
   color: #9fc2ee;
-  font-size: 3.5cqw;
+  font-size: 3cqw;
   display: none;
   align-items: center; justify-content: center;
   cursor: pointer;
@@ -1270,11 +1282,17 @@ body.protected img { -webkit-user-drag: none; }
   .cell .trend { top: 7.6cqw; }
   .cell-add { width: 14cqw; height: 15cqw; font-size: 6cqw; }
 
-  /* иконки-бейджи/точки/тренды крупнее (в ячейках и в легенде) */
+  /* Иконки-бейджи/точки/тренды крупнее. Общие правила остаются для модалки, а
+     ячейке нужны свои: селектор `.cell .tbadge` весомее одиночного `.tbadge`,
+     иначе десктопные 1.7cqw остались бы и здесь — а на телефоне это 6 px. */
   .tbadge { height: 3.3cqw; }
   .dot { width: 2.5cqw; height: 2.5cqw; }
   .trend { width: 2.5cqw; }
   .trend.tr-swap { width: 3.7cqw; }
+  .cell .tbadge { height: 3.3cqw; }
+  .cell .dot { width: 2.5cqw; height: 2.5cqw; }
+  .cell .trend { width: 2.5cqw; }
+  .cell .trend.tr-swap { width: 3.7cqw; }
 
   /* плашки тиров */
   .tier-band { height: 8.4cqw; border-radius: 2.5cqw; }
