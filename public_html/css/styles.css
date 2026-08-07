@@ -486,14 +486,20 @@ body.protected img { -webkit-user-drag: none; }
 .date:focus { background: rgba(79,214,255,.12); }
 .tl-title {
   font-family: var(--proto);
-  /* В макете высота прописной — 75 px (4.92cqw), а шаг строк ровно такой же:
-     строки стоят вплотную по капителям. Отсюда и line-height < 1. */
+  /* В макете шаг строк равен высоте прописной (75 px при кегле ~104), то есть
+     заглавные стоят вплотную, зазор в 1 px. Буквальный line-height: .72 в
+     браузере даёт не это, а наложение: глиф-бокс Proto Sans — 80 px при кегле
+     71.8, шаг строки выходил 51.7, и «TIER LIST» налезал на «MAKNEMY» на 28 px.
+     .88 разводит строки до тонкого просвета — макет по духу, но читаемо. */
   font-size: 6.9cqw;
-  line-height: .72;
+  line-height: .88;
   margin: .5cqw 0 0;
   color: #fff;
   letter-spacing: .1cqw;
-  text-shadow: 0 0 16px rgba(79,214,255,.55), 0 .3cqw 0 rgba(0,0,0,.35);
+  /* Свечение было 16px/.55 — на светлых буквах оно расплывалось ореолом и
+     заголовок читался мыльным. В макете подсветка едва заметна, поэтому радиус
+     втрое меньше, а вниз идёт плотная тень для отрыва от фона. */
+  text-shadow: 0 0 .55cqw rgba(120,190,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
 }
 .brand-logo {
   justify-self: end;
@@ -937,17 +943,7 @@ body.protected img { -webkit-user-drag: none; }
      стопки не повторяет, поэтому цвет подобран так, чтобы совпасть с итогом. */
   background: rgba(110,170,255,.40);
 }
-.flink { position: relative; display: flex; align-items: center; gap: .55cqw; text-decoration: none; line-height: 1.15; }
-.fl-avatar {
-  flex: none;
-  width: 3.02cqw; height: 3.02cqw;
-  border-radius: 50%;
-  object-fit: cover;
-  background: rgba(8,18,46,.65);
-  box-shadow: 0 0 0 .1cqw rgba(255,255,255,.25);
-}
-.fl-avatar-empty { display: inline-block; }
-.fl-text { display: flex; flex-direction: column; min-width: 0; }
+.flink { position: relative; display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
 .fl-title { font-family: var(--display); font-size: 1.8cqw; color: #00f7ff; letter-spacing: .5px; text-shadow: 0 0 6px rgba(0,247,255,.4); }
 .fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.55cqw; color: #eaf4ff; }
 .flink:hover .fl-title { color: #fff; }
@@ -1329,7 +1325,6 @@ body.protected img { -webkit-user-drag: none; }
     column-gap: 5cqw; row-gap: 2cqw;
     padding: 3cqw 2.4cqw 3cqw 3cqw;
   }
-  .fl-avatar { width: 5.4cqw; height: 5.4cqw; }
   .fl-title { font-size: 2.9cqw; }
   .fl-sub { font-size: 2.5cqw; }
   .cr-role { font-size: 2.3cqw; }

@@ -238,11 +238,6 @@
         }
       }
     }
-    for (const lnk of (state.footer || [])) {
-      if (typeof lnk.icon === "string" && lnk.icon.indexOf("data:") === 0) {
-        lnk.icon = await uploadDataUrl(lnk.icon);
-      }
-    }
     if (state.ad && typeof state.ad.image === "string" && state.ad.image.indexOf("data:") === 0) {
       state.ad.image = await uploadDataUrl(state.ad.image);
     }
@@ -937,36 +932,8 @@
   }
 
   // ============================================================
-  //  FOOTER (ссылки соцсетей — редактируемые: текст + URL + аватарка)
+  //  FOOTER (ссылки соцсетей — редактируемые: текст + URL)
   // ============================================================
-
-  // Аватарки из макета — дефолт для тех ссылок, что там были. Ключ — адрес, а
-  // не название: название админ правит прямо на странице, а адрес живёт дольше.
-  // В макете часть ссылок уже устарела (t.me/mksvtnc, discord.gg/a4zz6bsxcm),
-  // поэтому здесь и старые адреса, и текущие. Для остальных ссылок рисуется
-  // пустой кружок, пока админ не загрузит картинку кнопкой 🖼 — она ляжет в
-  // lnk.icon и перекроет эту таблицу.
-  const FOOTER_AVATARS = {
-    "discord.gg/a4zz6bsxcm": "assets/poster/av-discord-mk.png",
-    "discord.gg/a4zg8sxcm":  "assets/poster/av-discord-mk.png",
-    "discord.gg/lycoris":    "assets/poster/av-discord-mk.png",
-    "t.me/mksvtnc":          "assets/poster/av-tg-mk.png",
-    "t.me/themaknemy":       "assets/poster/av-tg-mk.png",
-    "t.me/bfsnews":          "assets/poster/av-bfnews.png",
-    "discord.gg/q9pd6ug9q4": "assets/poster/av-charlotte.png",
-  };
-  function footerAvatar(lnk) {
-    if (lnk.icon) return lnk.icon;
-    // Сравниваем по «голому» адресу: без схемы, www и хвостового слэша —
-    // одна и та же ссылка в базе записана то с https://, то без.
-    const key = String(lnk.sub || lnk.href || "")
-      .trim().toLowerCase()
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .replace(/\/+$/, "");
-    return FOOTER_AVATARS[key] || "";
-  }
-
   function renderFooter() {
     footerEl.innerHTML = "";
     state.footer.forEach((lnk, idx) => {
@@ -995,26 +962,8 @@
       sub.addEventListener("blur", () => { lnk.sub = sub.textContent.trim(); save(); });
       sub.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sub.blur(); } });
 
-      // Аватарка. Без картинки ставим пустой кружок, а не <img> без src:
-      // такой <img> браузер рисует значком «битая картинка».
-      const avSrc = footerAvatar(lnk);
-      let av;
-      if (avSrc) { av = document.createElement("img"); av.src = avSrc; av.alt = ""; }
-      else       { av = document.createElement("span"); }
-      av.className = "fl-avatar" + (avSrc ? "" : " fl-avatar-empty");
-
-      const text = document.createElement("span");
-      text.className = "fl-text";
-
       const tools = document.createElement("div");
       tools.className = "flink-tools edit-only";
-      const icoBtn = document.createElement("button");
-      icoBtn.textContent = "🖼";
-      icoBtn.title = tx("footer.editIcon");
-      icoBtn.addEventListener("click", e => {
-        e.preventDefault(); e.stopPropagation();
-        pickFooterIcon(idx);
-      });
       const urlBtn = document.createElement("button");
       urlBtn.textContent = "🔗";
       urlBtn.title = tx("footer.editUrl");
@@ -1032,12 +981,10 @@
         e.preventDefault(); e.stopPropagation();
         state.footer.splice(idx, 1); save(); render();
       });
-      tools.appendChild(icoBtn); tools.appendChild(urlBtn); tools.appendChild(del);
+      tools.appendChild(urlBtn); tools.appendChild(del);
 
-      text.appendChild(title);
-      text.appendChild(sub);
-      a.appendChild(av);
-      a.appendChild(text);
+      a.appendChild(title);
+      a.appendChild(sub);
       a.appendChild(tools);
       footerEl.appendChild(a);
     });
@@ -1047,30 +994,11 @@
     add.textContent = tx("footer.addLinkBtn");
     add.title = tx("footer.addLink");
     add.addEventListener("click", () => {
-      state.footer.push({ title: "НАЗВАНИЕ", sub: "ссылка", href: "https://", icon: "" });
+      state.footer.push({ title: "НАЗВАНИЕ", sub: "ссылка", href: "https://" });
       save(); render();
     });
     footerEl.appendChild(add);
   }
-
-  // ---------- footer avatar upload ----------
-  let footerIconTarget = null;
-  function pickFooterIcon(idx) {
-    footerIconTarget = idx;
-    $("#footerIconFile").click();
-  }
-  $("#footerIconFile").addEventListener("change", e => {
-    const file = e.target.files[0];
-    const idx = footerIconTarget;
-    footerIconTarget = null;
-    if (!file || idx == null) { e.target.value = ""; return; }
-    // Аватарка рисуется в ~31 CSS px, на телефоне с DPR 3 это ~94 px.
-    fileToSmallDataURL(file, 128, 0.85).then(du => uploadDataUrl(du)).then(url => {
-      const lnk = state.footer[idx];
-      if (lnk && url) { lnk.icon = url; save(); render(); }
-    });
-    e.target.value = "";
-  });
 
   // ============================================================
   //  DRAG & DROP

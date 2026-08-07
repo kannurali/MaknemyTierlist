@@ -65,7 +65,7 @@ assets/              картинки макета + шрифты
     logo-bf.png                           логотип Blox Fruits
     marks.png                             марки шапки (молния + GLH + MK)
     badge-*.png / dot-*.png / trend-*.png значки легенды
-    av-*.png                              аватарки ссылок в подвале
+    trend-new.png / trend-wip.png         они же на карточках предметов (NEW и «?»)
   bg.png / petals.png / bg-stage*.webp    фон прошлого макета (не подключён)
   dots-band.png      полутоновые точки плашки тира прошлого макета (не подключён)
   dots-tile.png      полутоновая текстура дорожки

@@ -96,7 +96,9 @@ converted to WebP with a PNG fallback where the existing code expects PNG:
 | legend badges       | `навигация` → `1 блок` icons          | 25 × 25   |
 | legend dots         | `2 блок` icons                        | 18 × 18   |
 | legend trend icons  | `3 блок` icons, incl. `new`           | ~28–33    |
-| footer avatars ×5   | `аватары` group, circular             | 46 × 46   |
+
+The `аватары` group was cut too, but the avatars were dropped after review — see
+"Footer panel" below.
 
 The header marks in the PSD are **bolt + GLH + MK**. The current
 `brand-logos.png` uses a flame instead of the bolt, so it is replaced.
@@ -180,52 +182,31 @@ block 2 (not over the panel).
 The new string needs a `legend.new` key in both `ru` and `en` in `i18n.js`.
 `tests/i18n_test.mjs` enforces RU/EN parity and no orphaned keys.
 
-## 6. Footer panel and avatars
+## 6. Footer panel
 
 Panel: height 10.77cqw, radius 1.25cqw, `rgba(255,255,255,.30)`, 1.12cqw below
 the legend panel.
 
 Three columns × two rows. Column origins at 3.81 / 25.48 / 48.39cqw from the
-panel edge, row pitch 4.14cqw. Each entry is a **circular 3.02cqw avatar** with
-the title in cyan `#00F7FF` and the URL below it in white.
+panel edge, row pitch 4.14cqw. Title in cyan `#00F7FF`, URL below it in white.
 
-Avatars are new. Data model:
-
-- `state.footer[i].icon` — optional string, same shape as `item.icon`: either a
-  path under `images/` returned by `api/upload.php`, or empty.
-- `renderFooter` renders `<img class="fl-avatar">` when `icon` is set and a
-  neutral placeholder circle when it is not, so a link added later is not broken.
-- In edit mode each link gets an upload control next to the existing 🔗 and ✕
-  tools, reusing the item-icon path: shrink to WebP client-side, POST to
-  `api/upload.php` (which caps the long side at 256px and preserves alpha), store
-  the returned `/images/<hash>` path.
+**No avatars.** The poster puts a circular avatar beside each link, and they
+were built — a `state.footer[i].icon` field, an upload control in edit mode, and
+defaults keyed by address — then removed after the owner saw them on real data.
+The poster's link list is half stale (`discord.gg/a4zz6bsxcm`, `t.me/mksvtnc`)
+against a live panel carrying `discord.gg/lycoris`, `t.me/themaknemy`,
+`t.me/bfsnews`, a YouTube channel and a trade chat, so half the row showed empty
+placeholder circles. The links are text only.
 
 `validate.php` needs no change — it only checks that `tiers` is an array and
-that the serialized state fits in 512 KB; unknown keys pass through untouched.
+that the serialized state fits in 512 KB.
 
-`walk_state_images` in `api/lib/images.php` **does** need one. It currently
-visits exactly three image sites — tier logos, item icons, `ad.image` — and
-`state.footer[].icon` becomes a fourth. `state.donate.qr` is added at the same
-time: the client already uploads it in `compactState`, but the server-side walk
-never knew about it, so it carried the same latent bug. Two things break without
-the entry:
-
-- `extract_embedded_images` never pulls a `data:` URL out of a footer icon, so
-  an avatar pasted rather than uploaded stays inline and eats the 512 KB budget;
-- `downscale_stored_images` builds its orphan list from the same walk, so every
-  avatar file would be reported as unreferenced and deleted by a cleanup run.
-
-The five PSD avatars ship as defaults in `assets/poster/`. `renderFooter` falls
-back to a table keyed by the link's address — stripped of scheme, `www.` and any
-trailing slash — when `icon` is unset. The key is the address rather than the
-title because the title is edited in place on the page.
-
-The poster's footer is out of date against production: it lists
-`discord.gg/a4zz6bsxcm` and `t.me/mksvtnc`, while the live panel carries
-`discord.gg/lycoris`, `t.me/themaknemy`, `t.me/bfsnews`, a YouTube channel and a
-trade chat. The table holds both old and current addresses, which covers three
-of the six live links. The other three render an empty circle until someone
-uploads an avatar — the same placeholder any newly added link gets.
+`walk_state_images` in `api/lib/images.php` does get one, unrelated to the
+poster. It visited exactly three image sites — tier logos, item icons,
+`ad.image` — while `compactState` on the client has always uploaded a fourth,
+`state.donate.qr`. That gap is real: `downscale_stored_images` builds its orphan
+list from this walk, so the donate QR was one cleanup run away from being
+deleted as unreferenced.
 
 ## 7. Unchanged bottom row
 
@@ -258,11 +239,9 @@ free. Two things to verify rather than assume:
 ## Testing
 
 - `tests/i18n_test.mjs` — RU/EN parity after adding `legend.new`.
-- `tests/images_test.php` — `walk_state_images` reaches `footer[].icon`; a
-  `data:` URL there is extracted to a file; a referenced avatar is not reported
-  as an orphan. Run PHP with `-d extension=gd`, otherwise this suite fakes
-  failures.
-- `tests/save_test.php` — round-trip of a footer entry carrying an icon.
+- `tests/images_test.php` — `walk_state_images` reaches `donate.qr`; a `data:`
+  URL there is extracted to a file; a referenced QR is not reported as an
+  orphan. Run PHP with `-d extension=gd`, otherwise this suite fakes failures.
 - Visual: local server, compare against the PSD composite render at desktop
   width, then 375×812 and 768×1024.
 - PNG export produces a file with the new background and no missing images.

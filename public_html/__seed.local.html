@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>Засев прод-данных</title>
+<!-- Временная страница только для локального просмотра. Локально нет PHP, так
+     что /api/*.php молчит и сайт показывает дефолтные 3 тира. Эта страница
+     кладёт в localStorage снимок живой базы и уходит на главную.
+     В git не добавлена, удаляется вместе с __seed.local.json. -->
+<style>
+  body { background: #05091f; color: #cfe2ff; font: 16px/1.5 system-ui, sans-serif;
+         display: grid; place-items: center; min-height: 100vh; margin: 0; }
+  code { color: #ff6b6b; }
+</style>
+<p id="msg">Засеваю прод-данные…</p>
+<script>
+  fetch("__seed.local.json", { cache: "no-store" })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+    .then(s => {
+      JSON.parse(s); // не класть в хранилище битый JSON
+      localStorage.setItem("nexus-tierlist-v1", s);
+      localStorage.removeItem("nexus-tierlist-dirty-v1");
+      location.replace("./");
+    })
+    .catch(e => {
+      document.getElementById("msg").innerHTML =
+        "Не вышло: <code>" + e.message + "</code><br>Нет <code>__seed.local.json</code> рядом с index.html?";
+    });
+</script>
