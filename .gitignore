@@ -8,6 +8,10 @@
 # assets/poster/bg-export.jpg.
 !/public_html/assets/*.jpg
 !/public_html/assets/*/*.jpg
+# Локальный засев: снимок живой базы + страничка, которая кладёт его в
+# localStorage. Нужны только чтобы посмотреть сайт без PHP, в репозитории им
+# делать нечего.
+/public_html/__seed.local.*
 /config.php
 /public_html/images/*
 !/public_html/images/.gitkeep
