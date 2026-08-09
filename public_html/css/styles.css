@@ -400,13 +400,22 @@ body.protected img { -webkit-user-drag: none; }
      WebKit заводить offscreen-слой размером со сцену (на iPhone это ~17 МБ), а
      при нехватке памяти Safari молча отключает смешивание — картинка «теряет
      цвет», мерцает и вкладка вылетает.
-     WebP-варианты весят на порядок меньше JPEG-фолбэка (206 КБ → 53 КБ). */
+     WebP-варианты весят на порядок меньше JPEG-фолбэка (332 КБ → 95 КБ).
+
+     Картинка макета кончается на высоте width * 1959/1200, а сцена на боевых
+     данных вдвое выше — ниже оставался плоский #05091f. Поэтому здесь не сама
+     картинка, а «плитка» из tools/make-poster-tiles.py: картинка плюс её
+     вертикальное отражение. Верхняя строка плитки равна нижней, так что
+     repeat-y стыкуется без шва. Простой repeat-y исходника так не умеет: у
+     него тёмный низ (0,2,6) встречался бы со светлым верхом (6,11,23) — это и
+     была видимая тёмная полоса. Зеркало печём в файл, потому что в CSS нет
+     mirror-варианта background-repeat. */
   background-color: #05091f;
-  background-image: url("../assets/poster/bg-export.jpg");
-  background-image: -webkit-image-set(url("../assets/poster/bg.webp") 1x);
-  background-image: image-set(url("../assets/poster/bg.webp") type("image/webp"));
+  background-image: url("../assets/poster/bg-tile-export.jpg");
+  background-image: -webkit-image-set(url("../assets/poster/bg-tile.webp") 1x);
+  background-image: image-set(url("../assets/poster/bg-tile.webp") type("image/webp"));
   background-size: 100% auto;
-  background-repeat: no-repeat;
+  background-repeat: repeat-y;
   background-position: center top;
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(120, 190, 255, 0.15);
   /* internal layout uses container query units for proportional scaling */
@@ -427,16 +436,16 @@ body.protected img { -webkit-user-drag: none; }
 }
 .petals {
   position: absolute; inset: 0;
-  background-image: url("../assets/poster/petals-export.png");
-  background-image: -webkit-image-set(url("../assets/poster/petals.webp") 1x);
-  background-image: image-set(url("../assets/poster/petals.webp") type("image/webp"));
-  /* Ровно те же размеры и привязка, что у фона сцены. Раньше тут стоял cover:
-     он растягивал картинку по высоте страницы (на живых данных сцена ~4400 px),
-     и яркие блики из углов макета уезжали в середину — над легендой висело
-     синее пятно. Теперь лепестки лежат точно поверх своего фона, а ниже, где
-     фоновая картинка кончается, остаётся ровный #05091f. */
+  background-image: url("../assets/poster/petals-tile-export.png");
+  background-image: -webkit-image-set(url("../assets/poster/petals-tile.webp") 1x);
+  background-image: image-set(url("../assets/poster/petals-tile.webp") type("image/webp"));
+  /* Ровно те же размеры, привязка и повтор, что у фона сцены: лепестки обязаны
+     повторяться с ним синхронно, иначе отражённая половина фона осталась бы без
+     своих бликов. Раньше тут стоял cover: он растягивал картинку по высоте
+     страницы (на живых данных сцена ~4400 px), и яркие блики из углов макета
+     уезжали в середину — над легендой висело синее пятно. */
   background-size: 100% auto;
-  background-repeat: no-repeat;
+  background-repeat: repeat-y;
   background-position: center top;
   /* mix-blend-mode: screen убран намеренно. Лепестки уже с альфа-каналом и
      почти белые, а подложка тёмно-синяя, поэтому screen и обычное наложение
@@ -445,10 +454,11 @@ body.protected img { -webkit-user-drag: none; }
      память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов.
 
      opacity: .7 убран по той же причине и запечён в альфа-канал самих файлов
-     (petals.png / petals.webp / petals-m.webp). Любая opacity < 1 заставляет
-     WebKit рисовать элемент в отдельный transparency-слой РАЗМЕРОМ СО СЦЕНУ —
-     это 30 МБ на iPhone и 43 МБ на десктопе поверх всего остального. Картинка
-     на экране та же, слоя больше нет. */
+     (petals-tile.webp / petals-tile-m.webp / petals-tile-export.png). Любая
+     opacity < 1 заставляет WebKit рисовать элемент в отдельный
+     transparency-слой РАЗМЕРОМ СО СЦЕНУ — это 30 МБ на iPhone и 43 МБ на
+     десктопе поверх всего остального. Картинка на экране та же, слоя больше
+     нет. */
   pointer-events: none;
   z-index: 1;
 }
@@ -1220,16 +1230,22 @@ body.protected img { -webkit-user-drag: none; }
   .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
 
   /* Телефону хватает уменьшенных фонов: меньше трафика и, что важнее, вчетверо
-     меньше памяти под распакованный битмап. */
+     меньше памяти под распакованный битмап.
+
+     Зеркальная плитка вдвое выше исходника, поэтому распакованный битмап тоже
+     вдвое тяжелее: 760x2480x4 = 7.5 МБ вместо 3.8 МБ, и столько же у лепестков.
+     Это заметно меньше тех ~17 МБ, которые съедал один offscreen-слой под
+     blend-mode (его убрали выше), но при новых жалобах на вылеты вкладки на
+     iPhone уменьшать надо в первую очередь именно эти два файла. */
   .stage {
-    background-image: url("../assets/poster/bg-export.jpg");
-    background-image: -webkit-image-set(url("../assets/poster/bg-m.webp") 1x);
-    background-image: image-set(url("../assets/poster/bg-m.webp") type("image/webp"));
+    background-image: url("../assets/poster/bg-tile-export.jpg");
+    background-image: -webkit-image-set(url("../assets/poster/bg-tile-m.webp") 1x);
+    background-image: image-set(url("../assets/poster/bg-tile-m.webp") type("image/webp"));
   }
   .petals {
-    background-image: url("../assets/poster/petals-export.png");
-    background-image: -webkit-image-set(url("../assets/poster/petals-m.webp") 1x);
-    background-image: image-set(url("../assets/poster/petals-m.webp") type("image/webp"));
+    background-image: url("../assets/poster/petals-tile-export.png");
+    background-image: -webkit-image-set(url("../assets/poster/petals-tile-m.webp") 1x);
+    background-image: image-set(url("../assets/poster/petals-tile-m.webp") type("image/webp"));
   }
 
   /* Тень иконки предмета: на телефоне ячейка ~39 px, тень 2/4 px почти не

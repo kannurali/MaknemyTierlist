@@ -1799,15 +1799,27 @@
         // фон обычным url(). Фон из макета уже с цветокором, домножать его
         // ни на что не надо — просто плоская JPEG-копия того же изображения.
         onclone: (doc) => {
-          const url = new URL("assets/poster/bg-export.jpg", location.href).href;
+          const url = new URL("assets/poster/bg-tile-export.jpg", location.href).href;
           const s = doc.getElementById("stage");
           if (s) {
             s.style.backgroundImage = 'url("' + url + '")';
             s.style.backgroundColor = "#05091f";
             s.style.backgroundBlendMode = "normal";
+            // Плитка обязана повторяться и в экспорте: сцена на боевых данных
+            // вдвое выше одной плитки, без repeat-y низ PNG остался бы пустым.
+            s.style.backgroundRepeat = "repeat-y";
+            s.style.backgroundSize = "100% auto";
           }
           const p = doc.querySelector(".petals");
-          if (p) p.style.mixBlendMode = "normal";
+          if (p) {
+            // По той же причине, что и у фона: image-set() html2canvas не
+            // разбирает, поэтому подставляем плоский PNG той же плиткой.
+            const pu = new URL("assets/poster/petals-tile-export.png", location.href).href;
+            p.style.backgroundImage = 'url("' + pu + '")';
+            p.style.backgroundRepeat = "repeat-y";
+            p.style.backgroundSize = "100% auto";
+            p.style.mixBlendMode = "normal";
+          }
           // Подменяем ссылки на data:-URL, чтобы html2canvas не качал иконки
           // заново по сети (см. комментарий у inlineStageImages).
           let swapped = 0, kept = 0;
