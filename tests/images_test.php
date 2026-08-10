@@ -181,6 +181,36 @@ test('extract_embedded_images rewrites data urls, keeps plain urls', function ()
     assert_eq($expected, $out['ad']['image'], 'ad rewritten');
 });
 
+// QR доната — такая же картинка состояния, как логотипы и иконки, но в обходе
+// его не было. Пропусти его в walk_state_images — и встроенный data: URL
+// останется в JSON (а тот упирается в лимит 512 КБ), а сам файл на диске
+// окажется «ничей» и его снесёт как сироту.
+test('extract_embedded_images reaches the donate QR', function () {
+    $dir = tmp_dir();
+    $state = [
+        'tiers'  => [],
+        'donate' => ['qr' => 'data:image/png;base64,' . PNG_B64],
+    ];
+    $out = extract_embedded_images($state, $dir);
+    assert_eq('/images/' . sha1(base64_decode(PNG_B64)) . '.png', $out['donate']['qr'], 'donate QR rewritten');
+});
+
+test('downscale_stored_images does not call the referenced donate QR an orphan', function () {
+    $dir = tmp_dir();
+    $big = make_image(800, 800);
+    $name = sha1($big) . '.png';
+    file_put_contents($dir . '/' . $name, $big);
+
+    [$out, $stats] = downscale_stored_images(
+        ['tiers' => [], 'donate' => ['qr' => '/images/' . $name]], $dir, 256);
+
+    assert_eq(1, $stats['scanned'], 'QR was visited');
+    assert_eq(1, $stats['resized'], 'QR was capped like any other image');
+    $newName = basename($out['donate']['qr']);
+    assert_true($newName !== $name, 'state repointed at the resized copy');
+    assert_eq([$name], $stats['orphans'], 'only the superseded original is orphaned');
+});
+
 test('image_ext_for detects jpeg', function () {
     assert_eq('jpg', image_ext_for("\xFF\xD8\xFF\xE0" . str_repeat("\x00", 8)), 'jpeg magic');
 });

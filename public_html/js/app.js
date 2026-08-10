@@ -754,20 +754,24 @@
     }
     cell.appendChild(strip);
 
-    // значок NEW — новый/изменённый предмет (виден всем, попадает в PNG)
+    // Значок NEW — новый/изменённый предмет (виден всем, попадает в PNG).
+    // Картинка из макета, а не нарисованная градиентами плашка: тот же значок
+    // стоит в легенде, и раньше они не совпадали ни формой, ни цветом.
     if (item.flag) {
-      const nb = document.createElement("span");
+      const nb = document.createElement("img");
       nb.className = "cell-new";
-      nb.textContent = "NEW";
+      nb.src = "assets/poster/trend-new.png";
+      nb.alt = "NEW";
       cell.appendChild(nb);
     }
     // значок «?» — цена под вопросом. Независим от NEW: у предмета могут
     // гореть оба сразу, NEW слева, «?» справа. Старые сохранения поля не
     // имеют — undefined тоже ложь, поэтому миграция не нужна.
     if (item.wip) {
-      const wb = document.createElement("span");
-      wb.className = "cell-new cell-wip";
-      wb.textContent = "?";
+      const wb = document.createElement("img");
+      wb.className = "cell-wip";
+      wb.src = "assets/poster/trend-wip.png";
+      wb.alt = "?";
       wb.title = tx("cell.wipTitle");
       cell.appendChild(wb);
     }
@@ -1791,19 +1795,31 @@
         allowTaint: false,
         logging: false,
         imageTimeout: 20000,
-        // html2canvas не умеет CSS blend-mode, поэтому фон выходил «цветным».
-        // В клоне для экспорта подменяем фон на заранее посчитанную синюю
-        // версию (bg.png × #091640) и убираем blend-mode у лепестков.
+        // html2canvas не разбирает image-set(), поэтому в клоне подставляем
+        // фон обычным url(). Фон из макета уже с цветокором, домножать его
+        // ни на что не надо — просто плоская JPEG-копия того же изображения.
         onclone: (doc) => {
-          const url = new URL("assets/bg-export.png", location.href).href;
+          const url = new URL("assets/poster/bg-tile-export.jpg", location.href).href;
           const s = doc.getElementById("stage");
           if (s) {
             s.style.backgroundImage = 'url("' + url + '")';
-            s.style.backgroundColor = "#091640";
+            s.style.backgroundColor = "#05091f";
             s.style.backgroundBlendMode = "normal";
+            // Плитка обязана повторяться и в экспорте: сцена на боевых данных
+            // вдвое выше одной плитки, без repeat-y низ PNG остался бы пустым.
+            s.style.backgroundRepeat = "repeat-y";
+            s.style.backgroundSize = "100% auto";
           }
           const p = doc.querySelector(".petals");
-          if (p) p.style.mixBlendMode = "normal";
+          if (p) {
+            // По той же причине, что и у фона: image-set() html2canvas не
+            // разбирает, поэтому подставляем плоский PNG той же плиткой.
+            const pu = new URL("assets/poster/petals-tile-export.png", location.href).href;
+            p.style.backgroundImage = 'url("' + pu + '")';
+            p.style.backgroundRepeat = "repeat-y";
+            p.style.backgroundSize = "100% auto";
+            p.style.mixBlendMode = "normal";
+          }
           // Подменяем ссылки на data:-URL, чтобы html2canvas не качал иконки
           // заново по сети (см. комментарий у inlineStageImages).
           let swapped = 0, kept = 0;

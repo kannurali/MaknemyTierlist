@@ -115,9 +115,14 @@ function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000): s
     return '/images/' . $name;
 }
 
-// Every place the state stores an image: tier logos, item icons, the ad banner.
-// Passing $rewrite over all of them keeps callers from re-walking the structure
-// (and from forgetting one of the three when a new caller shows up).
+// Every place the state stores an image: tier logos, item icons, the ad banner
+// and the donate QR. Passing $rewrite over all of them keeps callers from
+// re-walking the structure (and from forgetting one when a new caller shows up).
+//
+// Missing an entry here is not cosmetic. extract_embedded_images() would leave
+// that image inline as a data: URL and eat the 512 KB state budget, and
+// downscale_stored_images() builds its orphan list from this same walk — so an
+// unvisited file looks unreferenced and a cleanup run deletes it.
 function walk_state_images(array $state, callable $rewrite): array {
     if (isset($state['tiers']) && is_array($state['tiers'])) {
         foreach ($state['tiers'] as &$tier) {
@@ -133,6 +138,9 @@ function walk_state_images(array $state, callable $rewrite): array {
     }
     if (isset($state['ad']['image'])) {
         $state['ad']['image'] = $rewrite($state['ad']['image']);
+    }
+    if (isset($state['donate']['qr'])) {
+        $state['donate']['qr'] = $rewrite($state['donate']['qr']);
     }
     return $state;
 }

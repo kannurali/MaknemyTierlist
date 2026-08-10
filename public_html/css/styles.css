@@ -394,25 +394,39 @@ body.protected img { -webkit-user-drag: none; }
   min-height: 540px;
   border-radius: 14px;
   overflow: hidden;
-  /* Фон уже перемножен с #091640 на этапе сборки (bg-export.png), поэтому
-     background-blend-mode: multiply здесь НЕ нужен. Это принципиально: каждый
-     blend-mode заставляет WebKit заводить offscreen-слой размером со сцену
-     (на iPhone это ~17 МБ), а при нехватке памяти Safari молча отключает
-     смешивание — картинка «теряет цвет», мерцает и вкладка вылетает.
-     WebP-варианты весят на два порядка меньше PNG (3.3 МБ → 12 КБ). */
-  background-color: #091640;
-  background-image: url("../assets/bg-export.png");
-  background-image: -webkit-image-set(url("../assets/bg-stage.webp") 1x);
-  background-image: image-set(url("../assets/bg-stage.webp") type("image/webp"));
+  /* Фон уже с цветокором (bg-ck.png из макета), поэтому его НЕ домножаем на
+     #091640, как домножали старый: тот был неотгрейженный и без умножения
+     светил. Заодно это принципиально для памяти: каждый blend-mode заставляет
+     WebKit заводить offscreen-слой размером со сцену (на iPhone это ~17 МБ), а
+     при нехватке памяти Safari молча отключает смешивание — картинка «теряет
+     цвет», мерцает и вкладка вылетает.
+     WebP-варианты весят на порядок меньше JPEG-фолбэка (332 КБ → 95 КБ).
+
+     Картинка макета кончается на высоте width * 1959/1200, а сцена на боевых
+     данных вдвое выше — ниже оставался плоский #05091f. Поэтому здесь не сама
+     картинка, а «плитка» из tools/make-poster-tiles.py: картинка плюс её
+     вертикальное отражение. Верхняя строка плитки равна нижней, так что
+     repeat-y стыкуется без шва. Простой repeat-y исходника так не умеет: у
+     него тёмный низ (0,2,6) встречался бы со светлым верхом (6,11,23) — это и
+     была видимая тёмная полоса. Зеркало печём в файл, потому что в CSS нет
+     mirror-варианта background-repeat. */
+  background-color: #05091f;
+  background-image: url("../assets/poster/bg-tile-export.jpg");
+  background-image: -webkit-image-set(url("../assets/poster/bg-tile.webp") 1x);
+  background-image: image-set(url("../assets/poster/bg-tile.webp") type("image/webp"));
   background-size: 100% auto;
-  background-repeat: no-repeat;
+  background-repeat: repeat-y;
   background-position: center top;
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(120, 190, 255, 0.15);
   /* internal layout uses container query units for proportional scaling */
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  padding: 2.4cqw 2.6cqw 1.6cqw;
+  /* По горизонтали паддинга нет намеренно: cqw — это процент от content-box
+     контейнера, и с нулевым боковым паддингом 1cqw ровно равен 1% ширины
+     макета (1523 px). Все отступы из PSD пересчитаны в cqw и разложены по
+     самим блокам, а не по сцене. */
+  padding: 0 0 2.4cqw;
 }
 .stage::before {
   content: "";
@@ -422,11 +436,17 @@ body.protected img { -webkit-user-drag: none; }
 }
 .petals {
   position: absolute; inset: 0;
-  background-image: url("../assets/petals.png");
-  background-image: -webkit-image-set(url("../assets/petals.webp") 1x);
-  background-image: image-set(url("../assets/petals.webp") type("image/webp"));
-  background-size: cover;
-  background-position: center;
+  background-image: url("../assets/poster/petals-tile-export.png");
+  background-image: -webkit-image-set(url("../assets/poster/petals-tile.webp") 1x);
+  background-image: image-set(url("../assets/poster/petals-tile.webp") type("image/webp"));
+  /* Ровно те же размеры, привязка и повтор, что у фона сцены: лепестки обязаны
+     повторяться с ним синхронно, иначе отражённая половина фона осталась бы без
+     своих бликов. Раньше тут стоял cover: он растягивал картинку по высоте
+     страницы (на живых данных сцена ~4400 px), и яркие блики из углов макета
+     уезжали в середину — над легендой висело синее пятно. */
+  background-size: 100% auto;
+  background-repeat: repeat-y;
+  background-position: center top;
   /* mix-blend-mode: screen убран намеренно. Лепестки уже с альфа-каналом и
      почти белые, а подложка тёмно-синяя, поэтому screen и обычное наложение
      дают разницу максимум 4.9/255 (проверено попиксельно) — глазом не видно.
@@ -434,28 +454,36 @@ body.protected img { -webkit-user-drag: none; }
      память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов.
 
      opacity: .7 убран по той же причине и запечён в альфа-канал самих файлов
-     (petals.png / petals.webp / petals-m.webp). Любая opacity < 1 заставляет
-     WebKit рисовать элемент в отдельный transparency-слой РАЗМЕРОМ СО СЦЕНУ —
-     это 30 МБ на iPhone и 43 МБ на десктопе поверх всего остального. Картинка
-     на экране та же, слоя больше нет. */
+     (petals-tile.webp / petals-tile-m.webp / petals-tile-export.png). Любая
+     opacity < 1 заставляет WebKit рисовать элемент в отдельный
+     transparency-слой РАЗМЕРОМ СО СЦЕНУ — это 30 МБ на iPhone и 43 МБ на
+     десктопе поверх всего остального. Картинка на экране та же, слоя больше
+     нет. */
   pointer-events: none;
   z-index: 1;
 }
 .stage > *:not(.petals) { position: relative; z-index: 2; }
 
-/* ===================== Header ===================== */
+/* ===================== Header =====================
+   Геометрия из PSD (канва 1523 px, 1cqw = 15.23 px): лого BF в 23/25 px от
+   угла, марки справа в 21/17 px. Заголовок и дата — Proto Sans, а не Bootshaus:
+   в макете это разные гарнитуры, и подменять одну другой заметно. */
 .tl-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: start;
-  margin-bottom: 1.6cqw;
+  padding: 1.12cqw 1.38cqw 0 1.51cqw;
+  margin-bottom: 3cqw;
 }
-.bf-logo { width: 12cqw; height: auto; justify-self: start; filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
+/* Дата в макете стоит заметно ниже логотипов — на 80 px от верха канвы, тогда
+   как марки справа на 17 px. Отсюда отдельный отступ у титульного блока. */
+.title-block { margin-top: 3.7cqw; }
+.bf-logo { width: 10.37cqw; height: auto; justify-self: start; margin-top: .52cqw; filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
 .title-block { text-align: center; }
 .date {
-  font-family: var(--display);
-  font-size: 2.7cqw;
-  letter-spacing: 2px;
+  font-family: var(--proto);
+  font-size: 2.9cqw;
+  letter-spacing: .28cqw;
   color: #eaf6ff;
   text-shadow: 0 0 8px rgba(79,214,255,.6);
   outline: none;
@@ -467,24 +495,48 @@ body.protected img { -webkit-user-drag: none; }
 .editing .date:hover { background: rgba(79,214,255,.10); }
 .date:focus { background: rgba(79,214,255,.12); }
 .tl-title {
-  font-family: var(--display);
-  font-size: 8.6cqw;
-  line-height: .9;
-  margin: .2cqw 0 0;
+  font-family: var(--proto);
+  /* В макете шаг строк равен высоте прописной (75 px при кегле ~104), то есть
+     заглавные стоят вплотную, зазор в 1 px. Буквальный line-height: .72 в
+     браузере даёт не это, а наложение: глиф-бокс Proto Sans — 80 px при кегле
+     71.8, шаг строки выходил 51.7, и «TIER LIST» налезал на «MAKNEMY» на 28 px.
+     .88 разводит строки до тонкого просвета — макет по духу, но читаемо. */
+  font-size: 6.9cqw;
+  line-height: .88;
+  margin: .5cqw 0 0;
   color: #fff;
-  letter-spacing: .2cqw;
-  text-shadow: 0 0 16px rgba(79,214,255,.55), 0 .3cqw 0 rgba(0,0,0,.35);
+  letter-spacing: .1cqw;
+  /* Свечение было 16px/.55 — на светлых буквах оно расплывалось ореолом и
+     заголовок читался мыльным. В макете подсветка едва заметна, поэтому радиус
+     втрое меньше, а вниз идёт плотная тень для отрыва от фона. */
+  text-shadow: 0 0 .55cqw rgba(120,190,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
 }
 .brand-logo {
   justify-self: end;
-  width: 17cqw;
+  width: 14.77cqw;
   height: auto;
-  margin-top: .8cqw;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.7));
 }
 
-/* ===================== Tiers ===================== */
-.tiers { display: flex; flex-direction: column; gap: 1.2cqw; flex: 1; }
+/* ===================== Tiers =====================
+   В макете содержимое — 1289 px из 1523 (84.63cqw) по центру, а по краям
+   остаётся видимый фон. Одна ширина на тиры, легенду, подвал и титры. */
+.tiers, .legend, .tl-footer, .credits { width: 84.63cqw; margin-inline: auto; }
+
+.tiers {
+  display: flex; flex-direction: column;
+  gap: 3.85cqw;
+  flex: 1;
+  padding: .2cqw 0;
+  border-radius: 1.64cqw;
+  /* «Плашка для фруктов» из макета: белая заливка с вертикальным градиентом
+     прозрачности, слой на 30%. Лежит под всеми тирами сразу, а не под каждым
+     по отдельности — это вуаль, а не карточка. */
+  background: linear-gradient(180deg,
+    rgba(255,255,255,.085) 25%,
+    rgba(255,255,255,.063) 50%,
+    rgba(255,255,255,.030) 75%);
+}
 
 .tier { position: relative; display: flex; flex-direction: column; gap: 1cqw; }
 /* группа «плашка + ряд предметов». При переполнении тир показывает несколько
@@ -492,29 +544,26 @@ body.protected img { -webkit-user-drag: none; }
    (через gap у .tier), а не один «удвоенный» по высоте блок. */
 .tier-rowgroup { display: flex; flex-direction: column; gap: .7cqw; }
 
-/* --- label band: halftone dots fading to clear center, light edge lines --- */
+/* --- label band ---
+   Плашка вырезана из макета целиком (полутоновые точки + подсветка краёв +
+   цветокор). Собрать это градиентами не выходит: цвет даёт стопка
+   корректирующих слоёв поверх, которую CSS не повторяет. Растяжка по 100% 100%
+   — тот же приём, что был у dots-band.png. */
 .tier-band {
   position: relative;
-  height: 4.6cqw;
-  border-radius: 2.3cqw;
-  background: linear-gradient(180deg, rgba(175,212,255,.58), rgba(106,152,222,.48));
-  border-top: .22cqw solid rgba(236,246,255,.90);
-  border-bottom: .22cqw solid rgba(236,246,255,.90);
-  box-shadow: 0 .3cqw 1.4cqw rgba(0,0,0,.32), inset 0 0 2cqw rgba(100,162,240,.42);
-  display: flex; align-items: center; justify-content: center;
-}
-.tier-band::before {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: inherit;
-  background-image: url("../assets/dots-band.png");
+  height: 5.84cqw;
+  border-radius: 1.71cqw;
+  background-image: url("../assets/poster/band.png");
+  background-image: -webkit-image-set(url("../assets/poster/band.webp") 1x);
+  background-image: image-set(url("../assets/poster/band.webp") type("image/webp"));
   background-size: 100% 100%;
-  opacity: .75;
-  pointer-events: none;
+  background-repeat: no-repeat;
+  box-shadow: 0 .3cqw 1.4cqw rgba(0,0,0,.32);
+  display: flex; align-items: center; justify-content: center;
 }
 .tier-band > * { position: relative; }
 .band-logo {
-  height: 3.2cqw;
+  height: 4cqw;
   width: auto;
   filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.6));
   pointer-events: none;
@@ -533,26 +582,36 @@ body.protected img { -webkit-user-drag: none; }
 .tier-tools { position: absolute; right: .8cqw; display: flex; gap: .4cqw; }
 
 /* --- items track: translucent panel with halftone tile --- */
+/* Панель предметов. В макете её нет (он пустой шаблон), поэтому берём от него
+   характер подложки — полупрозрачная вуаль вместо плотного тёмно-синего, — но
+   тон оставляем заметно темнее плашки: иконки предметов рисуются поверх, и на
+   совсем прозрачном фоне тёмные из них теряются на фоне пагоды. */
 .tier-items {
   display: flex; flex-wrap: wrap;
-  column-gap: .55cqw; row-gap: .9cqw;
+  column-gap: .5cqw; row-gap: .9cqw;
   align-content: flex-start;
-  min-height: 10cqw;
+  min-height: 8.5cqw;
   border-radius: 1.4cqw;
   padding: .9cqw .8cqw .7cqw;
   background-image:
     url("../assets/dots-tile.png"),
-    linear-gradient(180deg, rgba(32,68,148,.68), rgba(10,26,80,.80));
+    linear-gradient(180deg, rgba(20,44,104,.62), rgba(7,18,56,.72));
   background-size: 2.4cqw 2.4cqw, 100% 100%;
-  border: 1px solid rgba(88,156,255,.46);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.20), inset 0 -2px 12px rgba(0,0,0,.32);
+  border: 1px solid rgba(140,190,255,.34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -2px 12px rgba(0,0,0,.30);
 }
 .tier.drag-over .tier-items { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan), inset 0 1px 0 rgba(255,255,255,.22); }
 
-/* ===================== Item cell ===================== */
+/* ===================== Item cell =====================
+   Ряд обязан вмещать 11 предметов на десктопе и 6 на телефоне. Контент по
+   макету сузился со 100 до 84.63cqw, поэтому ячейка ужата в те же 0.85 раза
+   (8.2 → 6.95cqw) вместе со всем содержимым — иначе в ряд влезало 9.
+   Проверка: доступная ширина 84.63 − 1.6 (паддинги дорожки) − 0.19 (рамка) =
+   82.84cqw; (82.84 + 0.5) / (6.95 + 0.5) = 11.19 → 11 штук, до 12 далеко.
+   Разбивку на ряды считает itemsPerRow() зондом, так что JS подстроится сам. */
 .cell {
   position: relative;
-  width: 8.2cqw;
+  width: 6.95cqw;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -569,9 +628,9 @@ body.protected img { -webkit-user-drag: none; }
 .cell:hover { transform: translateY(-.35cqw) scale(1.06); z-index: 8; }
 .cell:hover .cell-value { color: #fff; text-shadow: 0 0 .5cqw rgba(79,214,255,.9), 0 1px 2px rgba(0,0,0,.95); }
 .cell-icon {
-  width: 100%; height: 6.4cqw;
+  width: 100%; height: 5.42cqw;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 1cqw;
+  border-radius: .85cqw;
   transition: background .15s;
 }
 .cell:hover .cell-icon {
@@ -590,15 +649,15 @@ body.protected img { -webkit-user-drag: none; }
 /* value + type badge row (без тёмной подложки — цифры лежат прямо на дорожке) */
 .cell-strip {
   position: relative;
-  margin-top: .15cqw;
+  margin-top: .13cqw;
   width: 100%;
-  height: 2.5cqw;
+  height: 2.12cqw;
   display: flex; align-items: center; justify-content: center;
-  gap: .35cqw;
+  gap: .3cqw;
 }
 .cell-value {
   font-family: var(--display);
-  font-size: 2cqw;
+  font-size: 1.7cqw;
   color: #fff;
   letter-spacing: .04cqw;
   /* без подложки нужна более плотная тень, чтобы белые цифры читались на дорожке */
@@ -607,18 +666,24 @@ body.protected img { -webkit-user-drag: none; }
   white-space: nowrap;
 }
 
+/* Значки в ячейке задаются здесь, а не в общих .tbadge/.dot/.trend: те же
+   классы висят на кнопках модалки, а модалка живёт вне сцены — там cqw меряется
+   от вьюпорта, и общий размер трогать нельзя. */
 /* type badge — coloured chip next to the value (как в макете) */
-.cell .tbadge { flex: none; }
+.cell .tbadge { flex: none; height: 1.7cqw; }
 /* demand dot — right of the icon, near the strip (как в макете) */
 .cell .dot {
-  position: absolute; top: 4.6cqw; right: .1cqw;
+  position: absolute; top: 3.9cqw; right: .1cqw;
+  width: 1.27cqw; height: 1.27cqw;
   z-index: 3;
 }
 /* trend arrow — mirrors the dot on the left */
 .cell .trend {
-  position: absolute; top: 4.7cqw; left: .1cqw;
+  position: absolute; top: 3.98cqw; left: .1cqw;
+  width: 1.27cqw;
   z-index: 3;
 }
+.cell .trend.tr-swap { width: 1.87cqw; }
 
 /* per-cell edit controls */
 .cell-edit {
@@ -627,39 +692,36 @@ body.protected img { -webkit-user-drag: none; }
 }
 .editing .cell:hover .cell-edit { display: flex; }
 .cell-edit button {
-  width: 2.4cqw; height: 2.4cqw;
+  width: 2.05cqw; height: 2.05cqw;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.4);
   background: rgba(15,25,45,.92);
-  color: #fff; font-size: 1.4cqw; line-height: 1;
+  color: #fff; font-size: 1.2cqw; line-height: 1;
   cursor: pointer; padding: 0;
   display: flex; align-items: center; justify-content: center;
 }
 .cell-edit button:hover { background: var(--cyan-deep); }
 
-/* значок NEW — новый / изменённый предмет.
+/* Значок NEW — новый / изменённый предмет. Картинка из макета (та же, что в
+   легенде), а не нарисованная плашка.
    По горизонтали значки держим ВНУТРИ ячейки: колонки стоят вплотную (зазор
    ~5px на десктопе), а раньше плашки свисали наружу на 6-7px, и «?» одного
    предмета налезал на NEW соседнего. */
 .cell-new {
-  position: absolute; top: -.4cqw; left: .2cqw; z-index: 7;
-  font-family: var(--ui); font-weight: 800; font-size: 1.15cqw; line-height: 1;
-  color: #fff; letter-spacing: .04cqw;
-  background: linear-gradient(180deg, #ff5a5a, #e0218a);
-  border: .12cqw solid rgba(255,255,255,.9);
-  border-radius: .55cqw; padding: .28cqw .4cqw .22cqw;
-  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
-  transform: rotate(-12deg);
+  position: absolute; top: -.15cqw; left: .1cqw; z-index: 7;
+  width: 3.3cqw; height: auto;
+  filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.75));
   pointer-events: none;
 }
 
-/* значок «?» — цена под вопросом. Та же плашка, что и NEW, но в правом
-   углу и с зеркальным наклоном, чтобы оба значка «расходились» от центра.
+/* Значок «?» — цена под вопросом. Тоже картинка из макета, но в правом углу.
+   Наклона больше нет: значок и так фигурный, а повёрнутый он налезал на соседа.
    Включаются независимо: у предмета может быть и NEW, и «?» одновременно. */
 .cell-wip {
-  left: auto; right: .2cqw;
-  transform: rotate(12deg);
-  padding: .28cqw .5cqw .22cqw; /* «?» уже «NEW» — добавляем воздуха по бокам */
+  position: absolute; top: -.2cqw; right: .1cqw; z-index: 7;
+  width: 1.75cqw; height: auto;
+  filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.75));
+  pointer-events: none;
 }
 
 /* всплывающая подсказка предмета (название + описание) при наведении */
@@ -681,19 +743,19 @@ body.protected img { -webkit-user-drag: none; }
   text-align: center;
 }
 .cell:hover .cell-tip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-.tip-name { font-family: var(--display); font-size: 1.8cqw; color: var(--cyan); letter-spacing: .04cqw; }
-.tip-desc { font-family: var(--ui); font-size: 1.35cqw; color: #dbeaff; margin-top: .25cqw; line-height: 1.25; white-space: normal; }
+.tip-name { font-family: var(--display); font-size: 1.55cqw; color: var(--cyan); letter-spacing: .04cqw; }
+.tip-desc { font-family: var(--ui); font-size: 1.15cqw; color: #dbeaff; margin-top: .25cqw; line-height: 1.25; white-space: normal; }
 /* в режиме редактирования подсказку не показываем — мешает кнопкам/перетаскиванию */
 .editing .cell-tip { display: none; }
 
 /* add-item ghost cell */
 .cell-add {
-  width: 8.2cqw; height: 9cqw;
+  width: 6.95cqw; height: 7.6cqw;
   border: 1px dashed rgba(150,200,255,.45);
-  border-radius: 1cqw;
+  border-radius: .85cqw;
   background: rgba(30,50,90,.25);
   color: #9fc2ee;
-  font-size: 3.5cqw;
+  font-size: 3cqw;
   display: none;
   align-items: center; justify-content: center;
   cursor: pointer;
@@ -738,11 +800,14 @@ body.protected img { -webkit-user-drag: none; }
 .t-cr { --bc: var(--t-cr); }
 
 /* ===================== Ad block ===================== */
+/* Рекламный баннер остаётся посреди тирлиста. В макете его нет, поэтому берём
+   тон панели предметов — чтобы он читался частью той же плашки, а не чужой
+   карточкой. */
 .ad-block {
   position: relative;
   border-radius: 1.2cqw;
-  background: linear-gradient(180deg, rgba(12,22,48,.78), rgba(10,16,36,.7));
-  border: 1px solid rgba(120,190,255,.4);
+  background: linear-gradient(180deg, rgba(20,44,104,.62), rgba(7,18,56,.72));
+  border: 1px solid rgba(140,190,255,.34);
   box-shadow: inset 0 0 2cqw rgba(60,130,220,.18), 0 .3cqw 1.2cqw rgba(0,0,0,.3);
   padding: .9cqw 1cqw .8cqw;
   display: flex;
@@ -823,57 +888,74 @@ body.protected img { -webkit-user-drag: none; }
   }
 }
 
-/* ===================== Legend ===================== */
+/* ===================== Legend =====================
+   Три блока, как в макете: типы слева, спрос по центру под заголовком, тренды
+   справа. Заголовок центрован по среднему блоку, а не по всей панели — поэтому
+   он лежит внутри него, а не отдельной строкой сверху. */
 .legend {
-  margin-top: 1.4cqw;
-  padding: 1cqw 1.2cqw;
-  border-radius: 1.2cqw;
-  background: var(--panel);
-  border: 1px solid rgba(120,190,255,.25);
+  margin-top: .85cqw;
+  padding: 1cqw 2.4cqw 1.2cqw 1.3cqw;
+  border-radius: 1.18cqw;
+  /* Панель в макете — белая заливка на 30%, но поверх неё лежит стопка
+     цветокора, которая уводит её в синий (#36508E на композите). CSS этой
+     стопки не повторяет, поэтому цвет подобран так, чтобы совпасть с итогом. */
+  background: rgba(110,170,255,.40);
 }
+.legend-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5cqw;
+}
+.legend-block { display: flex; gap: 1.9cqw; }
+.lb-demand { flex-direction: column; align-items: center; gap: .55cqw; }
+.legend-cols { display: flex; gap: 1.9cqw; }
+.legend-col { display: flex; flex-direction: column; gap: .8cqw; }
 .legend-title {
   font-family: var(--display);
   text-align: center;
-  font-size: 2.4cqw;
-  margin: 0 0 .8cqw;
+  font-size: 2.5cqw;
+  margin: 0;
   color: #eaf6ff;
   letter-spacing: .1cqw;
   text-shadow: 0 0 8px rgba(79,214,255,.5);
 }
-.legend-grid { display: flex; justify-content: space-between; gap: 1cqw; }
-.legend-col { display: flex; flex-direction: column; gap: .5cqw; }
 .lg {
-  display: flex; align-items: center; gap: .7cqw;
+  display: flex; align-items: center; gap: .55cqw;
   font-family: var(--display);
   letter-spacing: .03cqw;
-  font-size: 1.7cqw; color: #dbeaff; white-space: nowrap;
+  font-size: 2.05cqw; color: #eaf4ff; white-space: nowrap;
 }
+/* Размеры значков в легенде отличаются от значков на карточках предметов,
+   поэтому задаются здесь, а не в общих .tbadge/.dot/.trend. */
 .lg .tbadge, .lg .dot, .lg .trend { flex: none; }
-/* «?» в легенде — та же розовая плашка, что на предмете, только без наклона:
-   в строке текста наклонённый значок читается хуже. */
-.lg-wip {
-  flex: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 1.9cqw;
-  font-family: var(--ui); font-weight: 800; font-size: 1.4cqw; line-height: 1;
-  color: #fff;
-  background: linear-gradient(180deg, #ff5a5a, #e0218a);
-  border: .12cqw solid rgba(255,255,255,.9);
-  border-radius: .55cqw; padding: .3cqw .45cqw .24cqw;
-  box-shadow: 0 .2cqw .6cqw rgba(0,0,0,.5);
-}
+.lg .tbadge { height: 1.64cqw; width: auto; }
+.lg .dot { width: 1.18cqw; height: 1.18cqw; }
+/* Значки трендов в макете разной формы и высоты («new» широкий и низкий,
+   стрелки узкие и высокие). Фиксированная коробка + contain держит колонку
+   ровной, не искажая ни один из них. */
+.lg .trend { width: 3.94cqw; height: 2.3cqw; object-fit: contain; }
 
-/* ===================== Footer ===================== */
+/* ===================== Footer =====================
+   В макете колонки прижаты влево, а не растянуты на всю панель, поэтому
+   grid-template-columns здесь по содержимому, а не repeat(3, 1fr). */
 .tl-footer {
-  margin-top: 1cqw;
+  margin-top: 1.12cqw;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .6cqw 1.4cqw;
-  padding: .6cqw .4cqw 0;
+  grid-template-columns: repeat(3, auto);
+  justify-content: start;
+  column-gap: 4.4cqw;
+  row-gap: 1.12cqw;
+  padding: 2.2cqw 1.3cqw 1.4cqw 3.81cqw;
+  border-radius: 1.25cqw;
+  /* Панель в макете — белая заливка на 30%, но поверх неё лежит стопка
+     цветокора, которая уводит её в синий (#36508E на композите). CSS этой
+     стопки не повторяет, поэтому цвет подобран так, чтобы совпасть с итогом. */
+  background: rgba(110,170,255,.40);
 }
 .flink { position: relative; display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
-.fl-title { font-family: var(--display); font-size: 1.7cqw; color: var(--cyan); letter-spacing: .5px; text-shadow: 0 0 6px rgba(79,214,255,.4); }
-.fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.4cqw; color: #aecbff; }
+.fl-title { font-family: var(--display); font-size: 1.8cqw; color: #00f7ff; letter-spacing: .5px; text-shadow: 0 0 6px rgba(0,247,255,.4); }
+.fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.55cqw; color: #eaf4ff; }
 .flink:hover .fl-title { color: #fff; }
 /* в режиме редактирования у ссылки видны кнопки: 🔗 (URL) и ✕ (удалить) */
 .editing .flink .fl-title, .editing .flink .fl-sub { cursor: text; }
@@ -1148,16 +1230,22 @@ body.protected img { -webkit-user-drag: none; }
   .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
 
   /* Телефону хватает уменьшенных фонов: меньше трафика и, что важнее, вчетверо
-     меньше памяти под распакованный битмап. */
+     меньше памяти под распакованный битмап.
+
+     Зеркальная плитка вдвое выше исходника, поэтому распакованный битмап тоже
+     вдвое тяжелее: 760x2480x4 = 7.5 МБ вместо 3.8 МБ, и столько же у лепестков.
+     Это заметно меньше тех ~17 МБ, которые съедал один offscreen-слой под
+     blend-mode (его убрали выше), но при новых жалобах на вылеты вкладки на
+     iPhone уменьшать надо в первую очередь именно эти два файла. */
   .stage {
-    background-image: url("../assets/bg-export.png");
-    background-image: -webkit-image-set(url("../assets/bg-stage-m.webp") 1x);
-    background-image: image-set(url("../assets/bg-stage-m.webp") type("image/webp"));
+    background-image: url("../assets/poster/bg-tile-export.jpg");
+    background-image: -webkit-image-set(url("../assets/poster/bg-tile-m.webp") 1x);
+    background-image: image-set(url("../assets/poster/bg-tile-m.webp") type("image/webp"));
   }
   .petals {
-    background-image: url("../assets/petals.png");
-    background-image: -webkit-image-set(url("../assets/petals-m.webp") 1x);
-    background-image: image-set(url("../assets/petals-m.webp") type("image/webp"));
+    background-image: url("../assets/poster/petals-tile-export.png");
+    background-image: -webkit-image-set(url("../assets/poster/petals-tile-m.webp") 1x);
+    background-image: image-set(url("../assets/poster/petals-tile-m.webp") type("image/webp"));
   }
 
   /* Тень иконки предмета: на телефоне ячейка ~39 px, тень 2/4 px почти не
@@ -1182,7 +1270,20 @@ body.protected img { -webkit-user-drag: none; }
 
   /* --- тирлист во всю ширину экрана (крупнее) --- */
   .stage-wrap { padding: 10px 0 34px; }
-  .stage { width: 100vw; border-radius: 0; padding: 3cqw 2.6cqw 2cqw; }
+  .stage { width: 100vw; border-radius: 0; padding: 0 0 3cqw; }
+
+  /* На десктопе по бокам от контента остаётся 7.7cqw фона, как в макете. На
+     телефоне сцена и так узкая — эти поля съедали бы ещё один предмет в ряду,
+     поэтому контент распускаем почти во всю ширину. */
+  .tiers, .legend, .tl-footer, .credits { width: 95cqw; }
+  .tiers { gap: 2.6cqw; }
+  /* Шапка — грид 1fr auto 1fr, средняя колонка меряется по заголовку. На 375 px
+     сумма 9 + 60 + 238 + 82 + 9 = 398 не влезала, и марки справа выезжали за
+     сцену на 14 px — страница получала горизонтальную прокрутку. Размеры
+     подрезаны так, чтобы строка сходилась с запасом и на 320 px тоже. */
+  .tl-header { padding: 2cqw 2.4cqw 0 2.4cqw; }
+  .bf-logo { width: 15cqw; margin-top: .8cqw; }
+  .brand-logo { width: 20cqw; }
 
   /* --- крупнее предметы и текст: меньше штук в ряд, но читаемо ---
      (itemsPerRow меряет ячейку зондом, поэтому разбивка на ряды подстроится) */
@@ -1194,26 +1295,54 @@ body.protected img { -webkit-user-drag: none; }
   .cell .trend { top: 7.6cqw; }
   .cell-add { width: 14cqw; height: 15cqw; font-size: 6cqw; }
 
-  /* иконки-бейджи/точки/тренды крупнее (в ячейках и в легенде) */
+  /* Иконки-бейджи/точки/тренды крупнее. Общие правила остаются для модалки, а
+     ячейке нужны свои: селектор `.cell .tbadge` весомее одиночного `.tbadge`,
+     иначе десктопные 1.7cqw остались бы и здесь — а на телефоне это 6 px. */
   .tbadge { height: 3.3cqw; }
   .dot { width: 2.5cqw; height: 2.5cqw; }
   .trend { width: 2.5cqw; }
   .trend.tr-swap { width: 3.7cqw; }
+  .cell .tbadge { height: 3.3cqw; }
+  .cell .dot { width: 2.5cqw; height: 2.5cqw; }
+  .cell .trend { width: 2.5cqw; }
+  .cell .trend.tr-swap { width: 3.7cqw; }
 
   /* плашки тиров */
-  .tier-band { height: 7.2cqw; border-radius: 3.6cqw; }
-  .band-logo { height: 5cqw; }
+  .tier-band { height: 8.4cqw; border-radius: 2.5cqw; }
+  .band-logo { height: 5.6cqw; }
   .tier-label { font-size: 4cqw; }
   .tier-items { min-height: 14cqw; border-radius: 2cqw; }
 
   /* шапка */
-  .date { font-size: 3.4cqw; }
+  .date { font-size: 4.2cqw; }
+  .tl-title { font-size: 8.4cqw; }
 
-  /* легенда / подвал / титры — крупнее, чтобы читались */
-  .legend-title { font-size: 3.6cqw; }
-  .lg { font-size: 2.7cqw; gap: 1cqw; }
-  .fl-title { font-size: 2.7cqw; }
-  .fl-sub { font-size: 2.3cqw; }
+  /* Легенда держит ту же раскладку в три блока, что и на десктопе — по просьбе
+     владельца. Размеры не наследуются как есть: панель здесь 95cqw против
+     84.63cqw на десктопе, поэтому все десктопные значения умножены на
+     95/84.63 = 1.1225 — композиция совпадает один в один, только в масштабе
+     экрана. Текст выходит ~8.6 px на 375 px; на телефоне с DPR 2-3 он
+     отрисовывается чётко, но это заметно мельче остального интерфейса. */
+  .legend { padding: 1.12cqw 2.69cqw 1.35cqw 1.46cqw; }
+  .legend-grid { gap: 1.68cqw; }
+  .legend-block { gap: 2.13cqw; }
+  .legend-cols { gap: 2.13cqw; }
+  .lb-demand { gap: .62cqw; }
+  .legend-col { gap: .9cqw; }
+  .legend-title { font-size: 2.81cqw; }
+  .lg { font-size: 2.3cqw; gap: .62cqw; }
+  .lg .tbadge { height: 1.84cqw; }
+  .lg .dot { width: 1.32cqw; height: 1.32cqw; }
+  .lg .trend { width: 4.42cqw; height: 2.58cqw; }
+
+  /* Подвал: три колонки в ряд не влезают — две. */
+  .tl-footer {
+    grid-template-columns: repeat(2, auto);
+    column-gap: 5cqw; row-gap: 2cqw;
+    padding: 3cqw 2.4cqw 3cqw 3cqw;
+  }
+  .fl-title { font-size: 2.9cqw; }
+  .fl-sub { font-size: 2.5cqw; }
   .cr-role { font-size: 2.3cqw; }
   .cr-name { font-size: 2.5cqw; }
   .ad-text { font-size: 3.6cqw; }
@@ -1222,9 +1351,8 @@ body.protected img { -webkit-user-drag: none; }
   .ad-img { max-height: 45cqw; }
 
   /* подсказка и значок NEW крупнее под палец/экран */
-  .cell-new { font-size: 2cqw; border-radius: 1cqw; padding: .45cqw .65cqw .35cqw; }
-  .cell-wip { padding: .45cqw .8cqw .35cqw; }
-  .lg-wip { font-size: 2.2cqw; min-width: 3cqw; border-radius: .9cqw; padding: .45cqw .6cqw .35cqw; }
+  .cell-new { width: 6.6cqw; }
+  .cell-wip { width: 3.5cqw; }
   .cell-tip { max-width: 40cqw; border-radius: 1.4cqw; padding: 1cqw 1.2cqw; }
   .tip-name { font-size: 3cqw; }
   .tip-desc { font-size: 2.3cqw; }

@@ -58,17 +58,29 @@ js/app.js            вся логика редактора
 js/i18n.js           строки интерфейса RU/EN (без DOM — тестируется в node)
 js/html2canvas.min.js   экспорт в PNG (локально, офлайн)
 assets/              картинки макета + шрифты
-  bg.png             фон (сакура/храм/водопад)
-  petals.png         лепестки
-  dots-band.png      полутоновые точки плашки тира
+  poster/            всё, что вырезано из PSD «макнеми тир под сайт» (актуальный вид)
+    bg.webp / bg-m.webp / bg-export.jpg   фон (сакура/храм/водопад), уже с цветокором
+    petals.webp / petals-m.webp / petals-export.png   лепестки и декор
+    band.webp / band.png                  плашка тира
+    logo-bf.png                           логотип Blox Fruits
+    marks.png                             марки шапки (молния + GLH + MK)
+    badge-*.png / dot-*.png / trend-*.png значки легенды
+    trend-new.png / trend-wip.png         они же на карточках предметов (NEW и «?»)
+  bg.png / petals.png / bg-stage*.webp    фон прошлого макета (не подключён)
+  dots-band.png      полутоновые точки плашки тира прошлого макета (не подключён)
   dots-tile.png      полутоновая текстура дорожки
-  brand-logos.png    логотип шапки (флейм + GLH + MK, из макета)
+  brand-logos.png    логотип шапки прошлого макета (не подключён)
   logo-flame.png / logo-glh.png / logo-mk.png   логотипы тиров
-  bf-logo-trim.png   логотип Blox Fruits (цветной)
+  bf-logo-trim.png   логотип Blox Fruits прошлого макета (не подключён)
+  badge-*.png / dot-*.png / trend-*.png   значки на карточках предметов и в модалке
   icon-sample.png    стандартная иконка предмета
-  fonts/Bootshaus/Bootshaus-Regular.ttf   основной шрифт макета
-  fonts/ProtoSans56.otf                   запасной шрифт
+  fonts/Bootshaus/Bootshaus-Regular.ttf   шрифт легенды и подвала
+  fonts/ProtoSans56.otf                   шрифт заголовка и даты
 ```
+
+Файлы прошлого макета оставлены намеренно: деплой копирует дерево поверх, ничего
+не удаляя, так что удаление из репозитория всё равно не убрало бы их с сервера —
+зато сломало бы откат, если новый вид не зайдёт.
 
 ## Размер иконок
 

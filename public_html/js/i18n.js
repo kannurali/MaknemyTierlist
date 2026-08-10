@@ -100,6 +100,7 @@
       "legend.swap":            "Пересмотр",
       "legend.down":            "Упадок",
       "legend.wip":             "Под вопросом",
+      "legend.new":             "Новый",
 
       "modal.itemTitle":        "Предмет",
       "modal.close":            "Закрыть",
@@ -284,6 +285,7 @@
       "legend.swap":            "Under review",
       "legend.down":            "Falling",
       "legend.wip":             "Uncertain",
+      "legend.new":             "New",
 
       "modal.itemTitle":        "Item",
       "modal.close":            "Close",
