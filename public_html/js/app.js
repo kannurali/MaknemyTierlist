@@ -8,9 +8,16 @@
   const STORAGE_KEY = "nexus-tierlist-v1";
   const DIRTY_KEY = "nexus-tierlist-dirty-v1"; // помним факт НЕопубликованных правок между перезагрузками
   const DEFAULT_ICON = "assets/icon-sample.png";
-  // Марки полос тиров и перевод старых сохранений — js/tiers.js
-  const TIER_LOGOS = TIERS.TIER_LOGOS;
-  const normalizeTierLogos = TIERS.normalizeTierLogos;
+  // Марки полос тиров и перевод старых сохранений — js/tiers.js. Модуль берётся
+  // защищённо, как i18n.js и content.js ниже: строки стоят первыми в IIFE, и без
+  // проверки не догрузившийся tiers.js уронил бы ReferenceError'ом весь редактор,
+  // а не одну картинку. Без модуля тир остаётся с той маркой, что лежит в
+  // сохранении (logo-flame.png с сервера никуда не делся), а новый тир — с
+  // текстовым ярлыком вместо картинки.
+  const tierMarks = (typeof TIERS !== "undefined") ? TIERS : null;
+  if (!tierMarks) console.warn("tiers.js не загружен — марки полос тиров останутся как есть");
+  const TIER_LOGOS = tierMarks ? tierMarks.TIER_LOGOS : {};
+  const normalizeTierLogos = tierMarks ? tierMarks.normalizeTierLogos : (list => list);
 
   const uid = () => "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
