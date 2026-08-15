@@ -4,6 +4,7 @@ require __DIR__ . '/lib.php';
 require __DIR__ . '/../public_html/api/_bootstrap.php';
 require __DIR__ . '/../public_html/api/news.php';
 require __DIR__ . '/../public_html/api/news_save.php';
+require __DIR__ . '/../public_html/api/news_delete.php';
 
 // Кладёт пост напрямую в БД: тесты чтения не должны зависеть от эндпоинта
 // записи, иначе одна ошибка в валидации завалит сразу обе группы.
@@ -161,6 +162,38 @@ test('an explicit date overrides the server clock', function () {
     handle_news_save($pdo, valid_body(['published_at' => 1700000000000]), 1755300000000);
     [, $feed] = handle_news($pdo);
     assert_eq(1700000000000, $feed['posts'][0]['published_at'], 'explicit date kept');
+});
+
+// ---------- удаление ----------
+
+test('deleting a post removes it from the feed', function () {
+    $pdo = test_db();
+    [, $a] = handle_news_save($pdo, valid_body(['title_ru' => 'Первый']), 1000);
+    handle_news_save($pdo, valid_body(['title_ru' => 'Второй']), 2000);
+
+    [$status, $p] = handle_news_delete($pdo, ['id' => $a['id']]);
+    assert_eq(200, $status, 'ok status');
+    assert_true($p['ok'], 'ok flag');
+
+    [, $feed] = handle_news($pdo);
+    assert_eq(['Второй'], array_column($feed['posts'], 'title_ru'), 'only the other one left');
+});
+
+test('deleting a missing post is a 404, not a silent success', function () {
+    $pdo = test_db();
+    [$status, $p] = handle_news_delete($pdo, ['id' => 999]);
+    assert_eq(404, $status, 'not found');
+    assert_eq('not found', $p['error'], 'reason');
+});
+
+test('a missing or junk id is a 400', function () {
+    $pdo = test_db();
+    [$s1, ] = handle_news_delete($pdo, []);
+    assert_eq(400, $s1, 'no id');
+    [$s2, ] = handle_news_delete($pdo, ['id' => 'abc']);
+    assert_eq(400, $s2, 'not a number');
+    [$s3, ] = handle_news_delete($pdo, ['id' => -5]);
+    assert_eq(400, $s3, 'negative');
 });
 
 run_tests();
