@@ -12,3 +12,15 @@ CREATE TABLE IF NOT EXISTS likes (
 
 INSERT IGNORE INTO tierlist (id, data, rev) VALUES (1, '{}', 0);
 INSERT IGNORE INTO likes (id, count) VALUES (1, 0);
+
+CREATE TABLE IF NOT EXISTS news (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  category     VARCHAR(16) NOT NULL,
+  title_ru     VARCHAR(200) NOT NULL,
+  title_en     VARCHAR(200) NOT NULL DEFAULT '',
+  body_ru      TEXT NOT NULL,
+  body_en      TEXT NOT NULL DEFAULT '',
+  image_url    VARCHAR(255) NOT NULL DEFAULT '',
+  published_at BIGINT UNSIGNED NOT NULL,
+  KEY idx_feed (published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

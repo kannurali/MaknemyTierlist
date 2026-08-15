@@ -42,6 +42,16 @@ function test_db(): PDO {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec("CREATE TABLE tierlist (id INTEGER PRIMARY KEY, data TEXT NOT NULL, rev INTEGER NOT NULL)");
     $pdo->exec("CREATE TABLE likes (id INTEGER PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0)");
+    $pdo->exec("CREATE TABLE news (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        title_ru TEXT NOT NULL,
+        title_en TEXT NOT NULL DEFAULT '',
+        body_ru TEXT NOT NULL,
+        body_en TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '',
+        published_at INTEGER NOT NULL
+    )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
     return $pdo;
