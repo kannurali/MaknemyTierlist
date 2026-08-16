@@ -2,7 +2,7 @@
 require_once __DIR__ . '/_bootstrap.php';
 
 function handle_news_delete(PDO $pdo, array $body): array {
-    $id = (int)($body['id'] ?? 0);
+    $id = read_row_id($body);
     if ($id <= 0) { return [400, ['ok' => false, 'error' => 'bad id']]; }
 
     // Отдельная проверка существования — по той же причине, что и в

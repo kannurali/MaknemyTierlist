@@ -196,4 +196,66 @@ test('a missing or junk id is a 400', function () {
     assert_eq(400, $s3, 'negative');
 });
 
+// (int)"1abc" === 1 — PHP's cast silently turns a malformed id into a valid
+// one. That is the actual bug: a junk id must be rejected outright, not
+// coerced into someone else's row id.
+test('a junk id does not delete anything — (int) cast bug', function () {
+    $pdo = test_db();
+    [, $a] = handle_news_save($pdo, valid_body(['title_ru' => 'Первый']), 1000);
+    [, $b] = handle_news_save($pdo, valid_body(['title_ru' => 'Второй']), 2000);
+
+    // Список пар [значение, метка], а не ассоц-массив со значением как
+    // ключом: ключом массива не может быть array (фатальная ошибка), а
+    // true как ключ PHP молча приводит к int 1 — тест тогда проверял бы не
+    // булево true, а «удали пост номер 1».
+    $cases = [
+        ['1abc', 'digits followed by letters'],
+        ['5.7', 'float-looking string'],
+        [true, 'boolean true'],
+        [[1, 2, 3], 'non-empty array'],
+    ];
+    foreach ($cases as [$junk, $label]) {
+        [$status, $p] = handle_news_delete($pdo, ['id' => $junk]);
+        assert_eq(400, $status, "status for $label");
+        assert_eq('bad id', $p['error'] ?? null, "reason for $label");
+
+        // The actual bug: a malformed id must not delete anything at all —
+        // not the first row, not the row (int) happens to cast it to.
+        [, $feed] = handle_news($pdo);
+        assert_eq(2, count($feed['posts']), "neither post deleted for $label");
+    }
+
+    // Sanity: a real id from the same seeded pair still works.
+    [$status, ] = handle_news_delete($pdo, ['id' => $a['id']]);
+    assert_eq(200, $status, 'real id still deletes');
+    [, $feed] = handle_news($pdo);
+    assert_eq(['Второй'], array_column($feed['posts'], 'title_ru'), 'only the other one left');
+});
+
+test('a junk id on save is a 400, not a coerced update', function () {
+    $pdo = test_db();
+    [, $created] = handle_news_save($pdo, valid_body(), 1000);
+
+    // Та же причина, что и выше: список пар, а не ключи массива.
+    $cases = [
+        ['1abc', 'digits followed by letters'],
+        ['5.7', 'float-looking string'],
+        [true, 'boolean true'],
+        [[1, 2, 3], 'non-empty array'],
+        [-5, 'negative int'],
+        ['abc', 'not a number'],
+    ];
+    foreach ($cases as [$junk, $label]) {
+        [$status, $p] = handle_news_save($pdo, valid_body(['id' => $junk]), 2000);
+        assert_eq(400, $status, "status for $label");
+    }
+
+    // The seeded post must be untouched — a junk id must not fall through to
+    // the insert path with the real title silently kept, nor be coerced by
+    // (int) into overwriting an unrelated row.
+    [, $feed] = handle_news($pdo);
+    assert_eq(1, count($feed['posts']), 'still exactly one post');
+    assert_eq('Апдейт 26', $feed['posts'][0]['title_ru'], 'original post unchanged');
+});
+
 run_tests();

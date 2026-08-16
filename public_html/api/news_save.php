@@ -73,7 +73,14 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
         ':pa'  => $publishedAt,
     ];
 
-    $id = (int)($body['id'] ?? 0);
+    // Ключ 'id' в теле есть, но read_row_id вернул 0 — значит это не
+    // отсутствие id (тогда это создание нового поста), а мусор вместо id
+    // ("1abc", true, [1,2,3], -5, дробь...). Такое — 400, а не молчаливая
+    // вставка новой записи вместо ожидаемого апдейта.
+    $id = read_row_id($body);
+    if ($id <= 0 && array_key_exists('id', $body)) {
+        return [400, ['ok' => false, 'error' => 'bad id']];
+    }
     if ($id > 0) {
         // Существование проверяется отдельным SELECT, а не по rowCount()
         // апдейта: MySQL считает изменённые строки, а не найденные, и
