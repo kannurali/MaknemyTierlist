@@ -1,0 +1,42 @@
+/* ===================================================================
+   Лента новостей: только правила с префиксом nw-/ne- и сегмент навигации
+   Тирлист/Новости. Тулбар, кнопки, чипы, переключатель языка, сцена,
+   лепестки и модалка приходят из base.css (задача 6) — здесь их быть
+   не должно.
+   =================================================================== */
+
+/* Навигация Тирлист / Новости — сегментированная пара на токенах чипов. */
+.nav-seg { display: flex; gap: 0; }
+.nav-seg a { font-family: var(--ui); font-size: 12px; font-weight: 700; color: #7e94b8; text-decoration: none; background: rgba(20,34,62,.6); border: 1px solid rgba(120,190,255,.2); padding: 6px 14px; transition: background .15s, color .15s, border-color .15s; }
+.nav-seg a:first-child { border-radius: 999px 0 0 999px; border-right-width: 0; }
+.nav-seg a:last-child { border-radius: 0 999px 999px 0; }
+.nav-seg a:hover { color: #cfe2ff; border-color: var(--cyan); }
+.nav-seg a[aria-current="page"] { color: #fff; background: rgba(42,166,224,.4); border-color: var(--cyan); box-shadow: 0 0 8px rgba(79,214,255,.25); }
+.nav-seg a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.nw-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; padding: 1.12cqw 1.38cqw 0 1.51cqw; margin-bottom: 2.2cqw; }
+
+/* Лента. Заголовок сцены живёт в cqw, как весь постер, а текст поста — в px:
+   это проза, её читают, и она не должна ужиматься вместе с контейнером. */
+.nw-feed { width: 84.63cqw; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 1.6cqw; }
+.nw-filters { width: 84.63cqw; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 1.6cqw; }
+.nw-card { position: relative; background: var(--panel); border: 1px solid rgba(120,190,255,.22); border-radius: 12px; padding: 18px 20px; }
+.nw-card:hover { border-color: rgba(120,190,255,.42); }
+.nw-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.nw-date { font-size: 12px; font-weight: 600; color: #8fb0dc; font-variant-numeric: tabular-nums; }
+.nw-cat { font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid currentColor; }
+.nw-cat.c-tierlist { color: var(--cyan); background: rgba(79,214,255,.12); }
+.nw-cat.c-game     { color: var(--t-p);  background: rgba(242,176,30,.12); }
+.nw-cat.c-project  { color: var(--mk);   background: rgba(214,90,255,.12); }
+.nw-card h2 { font-family: var(--display); font-size: clamp(19px, 2.3cqw, 27px); line-height: 1.15; letter-spacing: .4px; margin: 0 0 10px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.nw-body { font-size: 15px; line-height: 1.6; color: #cfe0f5; }
+.nw-body p { margin: 0 0 10px; }
+.nw-body p:last-child { margin-bottom: 0; }
+.nw-image { display: block; width: 100%; height: auto; margin: 4px 0 12px; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); }
+.nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
+
+@media (max-width: 720px) {
+  .nw-feed, .nw-filters, .nw-state { width: 92cqw; }
+  .nw-card { padding: 14px; border-radius: 10px; }
+  .nw-body { font-size: 14.5px; }
+}

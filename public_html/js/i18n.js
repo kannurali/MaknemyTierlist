@@ -195,7 +195,20 @@
       "msg.readFailed":         "Не удалось прочитать файл: ",
       "msg.iconsMissing":       "Не загрузилось иконок: ",
       "msg.iconsMissingTail":   ". В картинке они будут пустыми.\nПроверьте интернет и попробуйте ещё раз.",
-      "msg.loginFailed":        "Ошибка входа"
+      "msg.loginFailed":        "Ошибка входа",
+
+      "news.pageTitle":         "НОВОСТИ",
+      "news.navTierlist":       "Тирлист",
+      "news.navNews":           "Новости",
+      "news.filterLabel":       "Показать:",
+      "news.catTierlist":       "Тирлист",
+      "news.catGame":           "Игра",
+      "news.catProject":        "Проект",
+      "news.all":               "Все",
+      "news.loading":           "Загружаем новости…",
+      "news.empty":             "В этой категории пока ничего нет.",
+      "news.error":             "Не удалось загрузить новости.",
+      "news.retry":             "Повторить"
     },
 
     en: {
@@ -380,7 +393,20 @@
       "msg.readFailed":         "Could not read the file: ",
       "msg.iconsMissing":       "Icons that failed to load: ",
       "msg.iconsMissingTail":   ". They will be blank in the image.\nCheck your connection and try again.",
-      "msg.loginFailed":        "Login error"
+      "msg.loginFailed":        "Login error",
+
+      "news.pageTitle":         "NEWS",
+      "news.navTierlist":       "Tier list",
+      "news.navNews":           "News",
+      "news.filterLabel":       "Show:",
+      "news.catTierlist":       "Tier list",
+      "news.catGame":           "Game",
+      "news.catProject":        "Project",
+      "news.all":               "All",
+      "news.loading":           "Loading news…",
+      "news.empty":             "Nothing in this category yet.",
+      "news.error":             "Could not load the news.",
+      "news.retry":             "Retry"
     }
   };
 

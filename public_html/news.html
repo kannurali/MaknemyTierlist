@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- Как и на тирлисте: без этой строчки принудительное затемнение в
+     Яндекс.Браузере инвертирует монохромные логотипы в шапке. -->
+<meta name="color-scheme" content="dark" />
+
+<title>Новости Blox Fruits и обновления тирлиста | Maknemy Tier List</title>
+<meta name="description" content="Новости Blox Fruits, изменения трейд-ценностей в тирлисте Maknemy и анонсы проекта: апдейты, ребалансы, розыгрыши." />
+<link rel="canonical" href="https://maknemytierlist.site/news" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Maknemy Tier List" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:url" content="https://maknemytierlist.site/news" />
+<meta property="og:title" content="Новости Blox Fruits и обновления тирлиста" />
+<meta property="og:description" content="Апдейты игры, изменения трейд-ценностей и анонсы проекта." />
+<meta property="og:image" content="https://maknemytierlist.site/assets/og-image.jpg?v=2" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<link rel="stylesheet" href="css/base.css?v=1" />
+<link rel="stylesheet" href="css/news.css?v=1" />
+</head>
+<body>
+  <div class="toolbar" id="toolbar">
+    <div class="tb-brand">MAKNEMY<span>NEWS</span></div>
+
+    <nav class="nav-seg" aria-label="Разделы сайта">
+      <a href="/" data-i18n="news.navTierlist">Тирлист</a>
+      <a href="/news" aria-current="page" data-i18n="news.navNews">Новости</a>
+    </nav>
+
+    <div class="tb-group lang-switch" id="langSwitch" role="group"
+         data-i18n-label="lang.switch" aria-label="Язык интерфейса">
+      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
+      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <div class="petals" aria-hidden="true"></div>
+
+      <header class="nw-header">
+        <img class="bf-logo" src="assets/poster/logo-bf.png" alt="Blox Fruits" />
+        <div class="title-block">
+          <h1 class="nw-title" data-i18n="news.pageTitle">НОВОСТИ</h1>
+        </div>
+        <img class="brand-logo" src="assets/poster/marks.png" alt="" />
+      </header>
+
+      <div class="nw-admin-bar" id="newsAdminBar" hidden></div>
+
+      <div class="nw-filters" id="newsFilters" role="group"
+           data-i18n-label="news.filterLabel" aria-label="Фильтр по категориям"></div>
+
+      <main class="nw-feed" id="feed"></main>
+      <div class="nw-state" id="newsState" hidden></div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js?v=5"></script>
+  <script src="js/news.js?v=1"></script>
+  <script src="js/news-page.js?v=1"></script>
+</body>
+</html>
