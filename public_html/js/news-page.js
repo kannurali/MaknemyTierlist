@@ -140,6 +140,12 @@
     for (const node of document.querySelectorAll("[data-i18n]")) {
       node.textContent = I18N.t(node.dataset.i18n, lang);
     }
+    // aria-label тоже переводимый текст (см. applyLang в app.js) — без этого
+    // переключатель языка и панель фильтров остаются подписаны на языке
+    // загрузки страницы.
+    for (const node of document.querySelectorAll("[data-i18n-label]")) {
+      node.setAttribute("aria-label", I18N.t(node.dataset.i18nLabel, lang));
+    }
     for (const b of document.querySelectorAll("#langSwitch .chip")) {
       const on = b.dataset.lang === lang;
       b.classList.toggle("active", on);

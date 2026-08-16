@@ -16,6 +16,29 @@
 
 .nw-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; padding: 1.12cqw 1.38cqw 0 1.51cqw; margin-bottom: 2.2cqw; }
 
+/* Заголовок ленты стоит один, без даты над ним, поэтому шапка и без того
+   компактнее тирлистовской (margin-bottom 2.2cqw против 3cqw у .tl-header):
+   блоку заголовка хватает небольшого отступа сверху, чтобы лечь между
+   логотипом BF слева и марками справа, а не наверх заодно с ними. */
+.nw-header .nw-title-wrap { text-align: center; margin-top: 1.5cqw; }
+
+/* Постерный вид h1, как у .tl-title в styles.css (тот же Proto Sans, цвет,
+   letter-spacing и двухслойная тень), но своя логика кегля и line-height —
+   заголовок ленты одно слово в одну строку, а не сборка «MAKNEMY»+«TIER LIST»
+   в два ряда, поэтому 6.9cqw тирлиста сюда не подходят один в один. */
+.nw-title {
+  font-family: var(--proto);
+  font-size: 5cqw;
+  /* Одна строка — не нужно ужимать line-height, как в тирлисте (там .88
+     разводит два ряда капители, чтобы они не наезжали друг на друга).
+     Здесь строка одна, наезжать не на что, поэтому обычной 1 достаточно. */
+  line-height: 1;
+  margin: 0;
+  color: #fff;
+  letter-spacing: .1cqw;
+  text-shadow: 0 0 .55cqw rgba(120,190,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
+}
+
 /* Лента. Заголовок сцены живёт в cqw, как весь постер, а текст поста — в px:
    это проза, её читают, и она не должна ужиматься вместе с контейнером. */
 .nw-feed { width: 84.63cqw; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 1.6cqw; }
