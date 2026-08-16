@@ -20,3 +20,4 @@
 /tools/out/
 /scratch_*
 .superpowers/
+/config.php.bak*
