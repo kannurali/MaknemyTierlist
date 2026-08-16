@@ -63,3 +63,29 @@
   .nw-card { padding: 14px; border-radius: 10px; }
   .nw-body { font-size: 14.5px; }
 }
+
+/* ===================== Редактор новости (админ) ===================== */
+
+/* input[type="date"] в styles.css не стилизован — там его нигде не было.
+   Повторяем оформление текстового поля, чтобы редактор не выглядел собранным
+   из двух разных наборов элементов. */
+.ne-date {
+  font-family: var(--ui); font-size: 14px; color: #eaf4ff;
+  background: rgba(10,18,36,.85); border: 1px solid rgba(120,190,255,.28);
+  border-radius: 8px; padding: 9px 11px;
+}
+.ne-date:focus { outline: none; border-color: var(--cyan); }
+.ne-preview { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); margin-bottom: 8px; }
+.ne-error { min-height: 18px; margin: 0 0 12px; font-size: 13px; color: #ff8a7e; }
+
+.nw-admin-bar { width: 84.63cqw; margin-inline: auto; display: flex; gap: 8px; margin-bottom: 14px; }
+.nw-tools { position: absolute; top: 12px; right: 12px; display: none; gap: 6px; }
+/* nw-editing, а не голое .editing: .editing уже занят под режим правки
+   тирлиста в styles.css (несвязанный набор правил), а news.css обязан
+   держать все свои селекторы в неймспейсе nw-/ne-, чтобы не столкнуться. */
+.nw-editing .nw-card .nw-tools { display: flex; }
+.nw-editing .nw-card { box-shadow: inset 0 0 0 1px rgba(79,214,255,.28); }
+.nw-tools button { width: 28px; height: 28px; padding: 0; display: grid; place-items: center; font-size: 13px; line-height: 1; border-radius: 6px; cursor: pointer; color: #dce9ff; background: rgba(12,22,44,.85); border: 1px solid rgba(120,190,255,.35); }
+.nw-tools button:hover { background: var(--cyan-deep); border-color: var(--cyan); }
+.nw-tools button.danger:hover { background: #a02c2c; border-color: #ff6b5e; }
+.nw-tools button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }

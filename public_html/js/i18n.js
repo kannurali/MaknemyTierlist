@@ -208,7 +208,25 @@
       "news.loading":           "Загружаем новости…",
       "news.empty":             "В этой категории пока ничего нет.",
       "news.error":             "Не удалось загрузить новости.",
-      "news.retry":             "Повторить"
+      "news.retry":             "Повторить",
+      "news.add":               "＋ Новость",
+      "news.edit":              "Редактировать",
+      "news.delete":            "Удалить",
+      "news.confirmDelete":     "Удалить новость «{title}»?",
+      "news.modalNew":          "Новая новость",
+      "news.modalEdit":         "Правка новости",
+      "news.fieldTitleRu":      "Заголовок (RU)",
+      "news.fieldTitleEn":      "Заголовок (EN, необязательно)",
+      "news.fieldBodyRu":       "Текст (RU)",
+      "news.fieldBodyEn":       "Текст (EN, необязательно)",
+      "news.fieldCategory":     "Категория",
+      "news.fieldDate":         "Дата",
+      "news.fieldImage":        "Картинка",
+      "news.imageUpload":       "🖼 Загрузить",
+      "news.imageClear":        "Убрать",
+      "news.publish":           "Опубликовать",
+      "news.cancel":            "Отмена",
+      "news.saveFailed":        "Не удалось сохранить:"
     },
 
     en: {
@@ -406,7 +424,25 @@
       "news.loading":           "Loading news…",
       "news.empty":             "Nothing in this category yet.",
       "news.error":             "Could not load the news.",
-      "news.retry":             "Retry"
+      "news.retry":             "Retry",
+      "news.add":               "＋ News post",
+      "news.edit":              "Edit",
+      "news.delete":            "Delete",
+      "news.confirmDelete":     "Delete the post “{title}”?",
+      "news.modalNew":          "New post",
+      "news.modalEdit":         "Edit post",
+      "news.fieldTitleRu":      "Title (RU)",
+      "news.fieldTitleEn":      "Title (EN, optional)",
+      "news.fieldBodyRu":       "Text (RU)",
+      "news.fieldBodyEn":       "Text (EN, optional)",
+      "news.fieldCategory":     "Category",
+      "news.fieldDate":         "Date",
+      "news.fieldImage":        "Image",
+      "news.imageUpload":       "🖼 Upload",
+      "news.imageClear":        "Remove",
+      "news.publish":           "Publish",
+      "news.cancel":            "Cancel",
+      "news.saveFailed":        "Could not save:"
     }
   };
 
