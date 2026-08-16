@@ -17,6 +17,13 @@ const ICON_MAX_SIDE = 256;
 // 16 Мпикс — это 64 МБ битмапа, что переживает даже memory_limit = 128M.
 const MAX_SOURCE_PIXELS = 16000000;
 
+// Потолок для картинки новости. Она идёт во всю ширину карточки (1040 px
+// сцены, DPR 2 — до 2080 device px в теории, но карточка уже сцены и на
+// практике это ~880), поэтому 1280 даёт запас и не тащит в память лишнего.
+// Иконки предметов сюда не относятся: у них свой потолок ICON_MAX_SIDE = 256,
+// выбранный под память Safari, и он не меняется.
+const NEWS_IMAGE_MAX_SIDE = 1280;
+
 function image_ext_for(string $bytes): ?string {
     if (strncmp($bytes, "\x89PNG\r\n\x1a\n", 8) === 0) { return 'png'; }
     if (strncmp($bytes, "\xFF\xD8\xFF", 3) === 0) { return 'jpg'; }
@@ -93,7 +100,7 @@ function downscale_image_bytes(string $bytes, int $maxSide = ICON_MAX_SIDE): str
     return ($out === false || $out === '') ? $bytes : $out;
 }
 
-function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000): string {
+function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000, int $maxSide = ICON_MAX_SIDE): string {
     if (strlen($bytes) > $maxBytes) {
         throw new RuntimeException('image too large');
     }
@@ -103,7 +110,7 @@ function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000): s
     }
     // Downscale BEFORE hashing: the filename must describe the bytes on disk,
     // or the same source would be written again under a new name every upload.
-    $bytes = downscale_image_bytes($bytes);
+    $bytes = downscale_image_bytes($bytes, $maxSide);
     if (!is_dir($dir)) { mkdir($dir, 0755, true); }
     $name = sha1($bytes) . '.' . $ext;
     $path = rtrim($dir, '/\\') . '/' . $name;

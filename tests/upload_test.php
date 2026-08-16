@@ -32,4 +32,21 @@ test('rejects non-image data url', function () {
     assert_eq(400, $status, '400 not image');
 });
 
+test('upload passes the requested max side through', function () {
+    $dir = sys_get_temp_dir() . '/nexus_news_up_' . getmypid();
+    @mkdir($dir, 0777, true);
+
+    $src = imagecreatetruecolor(600, 600);
+    ob_start(); imagepng($src); $bytes = ob_get_clean();
+    $dataUrl = 'data:image/png;base64,' . base64_encode($bytes);
+
+    [$status, $p] = handle_upload($dir, $dataUrl, null, 1280);
+    assert_eq(200, $status, 'ok status');
+    [$w, ] = getimagesizefromstring(file_get_contents($dir . '/' . basename($p['url'])));
+    assert_eq(600, $w, 'kept at source size');
+
+    array_map('unlink', glob($dir . '/*'));
+    @rmdir($dir);
+});
+
 run_tests();

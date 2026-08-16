@@ -358,4 +358,28 @@ test('extract_embedded_images tolerates missing keys without notices', function 
     assert_eq($state, $out, 'unchanged when nothing to rewrite');
 });
 
+test('save_image_bytes honours an explicit max side', function () {
+    // Иконка предмета остаётся на 256 px — её потолок мерился под память
+    // Safari. Картинка новости идёт во всю ширину карточки, и 256 видно.
+    $dir = sys_get_temp_dir() . '/nexus_news_img_' . getmypid();
+    @mkdir($dir, 0777, true);
+
+    $src = imagecreatetruecolor(900, 400);
+    ob_start(); imagepng($src); $bytes = ob_get_clean();
+
+    $url = save_image_bytes($bytes, $dir, 512000, 1280);
+    $saved = file_get_contents($dir . '/' . basename($url));
+    [$w, $h] = getimagesizefromstring($saved);
+    assert_eq(900, $w, 'under the cap, untouched');
+    assert_eq(400, $h, 'height untouched');
+
+    $url2 = save_image_bytes($bytes, $dir, 512000);
+    $saved2 = file_get_contents($dir . '/' . basename($url2));
+    [$w2, ] = getimagesizefromstring($saved2);
+    assert_eq(256, $w2, 'default still caps at ICON_MAX_SIDE');
+
+    array_map('unlink', glob($dir . '/*'));
+    @rmdir($dir);
+});
+
 run_tests();
