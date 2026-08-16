@@ -48,7 +48,10 @@ function test_db(): PDO {
         title_ru TEXT NOT NULL,
         title_en TEXT NOT NULL DEFAULT '',
         body_ru TEXT NOT NULL,
-        body_en TEXT NOT NULL DEFAULT '',
+        -- DEFAULT нет намеренно: в MySQL его у TEXT не бывает, и с ним не
+        -- создаётся вся таблица. Схемы обязаны совпадать, иначе тесты проверяют
+        -- не ту таблицу, которая работает на бою.
+        body_en TEXT NOT NULL,
         image_url TEXT NOT NULL DEFAULT '',
         published_at INTEGER NOT NULL
     )");

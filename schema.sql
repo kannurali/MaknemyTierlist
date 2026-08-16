@@ -19,7 +19,12 @@ CREATE TABLE IF NOT EXISTS news (
   title_ru     VARCHAR(200) NOT NULL,
   title_en     VARCHAR(200) NOT NULL DEFAULT '',
   body_ru      TEXT NOT NULL,
-  body_en      TEXT NOT NULL DEFAULT '',
+  -- Без DEFAULT: MySQL запрещает значение по умолчанию у TEXT (ERROR 1101), и с
+  -- ним не создаётся вся таблица. SQLite такое проглатывает, поэтому тесты на
+  -- нём этого не ловят — проверено только запуском schema.sql на живой MySQL.
+  -- Значение всегда приходит из PHP: validate_news_post() кладёт в body_en
+  -- пустую строку, если английского варианта нет, и INSERT биндит его всегда.
+  body_en      TEXT NOT NULL,
   image_url    VARCHAR(255) NOT NULL DEFAULT '',
   published_at BIGINT UNSIGNED NOT NULL,
   KEY idx_feed (published_at)
