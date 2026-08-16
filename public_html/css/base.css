@@ -84,6 +84,7 @@ html, body {
   text-size-adjust: 100%;
 }
 
+/* ===================== Тулбар и элементы управления ===================== */
 .toolbar {
   position: sticky;
   top: 0;
@@ -285,6 +286,7 @@ html, body {
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.7));
 }
 
+/* ===================== Модальное окно ===================== */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(4, 8, 16, 0.7);
