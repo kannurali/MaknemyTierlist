@@ -226,7 +226,8 @@
       "news.imageClear":        "Убрать",
       "news.publish":           "Опубликовать",
       "news.cancel":            "Отмена",
-      "news.saveFailed":        "Не удалось сохранить:"
+      "news.saveFailed":        "Не удалось сохранить:",
+      "news.deleteFailed":      "Не удалось удалить:"
     },
 
     en: {
@@ -442,7 +443,8 @@
       "news.imageClear":        "Remove",
       "news.publish":           "Publish",
       "news.cancel":            "Cancel",
-      "news.saveFailed":        "Could not save:"
+      "news.saveFailed":        "Could not save:",
+      "news.deleteFailed":      "Could not delete:"
     }
   };
 

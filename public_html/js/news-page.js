@@ -291,12 +291,23 @@
   async function removePost(post) {
     const picked = NEWS.pickLang(post, lang);
     if (!confirm(I18N.t("news.confirmDelete", lang, { title: picked.title }))) { return; }
-    const r = await fetch("api/news_delete.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: post.id }),
-    });
-    if (r.ok) { await load(); }
+    try {
+      const r = await fetch("api/news_delete.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: post.id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) { throw new Error(d.error || "http " + r.status); }
+      await load();
+    } catch (e) {
+      // #neError показывать некуда: удаление запускается с ✕ на карточке
+      // в ленте, редактор при этом закрыт, и текст внутри модалки никто
+      // не увидит. alert() — тот же приём, что и в app.js для ошибок вне
+      // форм (msg.readFailed и т. п.): системное окно видно независимо от
+      // того, что сейчас на экране.
+      alert(tx("news.deleteFailed") + " " + e.message);
+    }
   }
 
   $("#nePublish").addEventListener("click", publish);

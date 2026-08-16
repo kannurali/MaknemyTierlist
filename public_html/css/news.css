@@ -75,6 +75,27 @@
   border-radius: 8px; padding: 9px 11px;
 }
 .ne-date:focus { outline: none; border-color: var(--cyan); }
+
+/* Сегмент категорий (#neCat) — тот же вид, что у .seg в styles.css
+   (сегментированные прямоугольные кнопки с циановой подсветкой активной),
+   но под своим неймспейсом: .seg там завязан на другую разметку (точки,
+   значки трендов), которой здесь нет. */
+.ne-cat-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.ne-cat-seg button {
+  min-width: 38px; height: 38px; padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120,190,255,.25);
+  background: rgba(8,16,32,.6);
+  color: #cfe2ff; cursor: pointer;
+  font-family: var(--ui); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+.ne-cat-seg button:hover { border-color: var(--cyan); }
+.ne-cat-seg button.active { background: rgba(42,166,224,.35); border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+/* Клавиатурный фокус — как у .nw-tools button и .lang-switch .chip. */
+.ne-cat-seg button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
 .ne-preview { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); margin-bottom: 8px; }
 .ne-error { min-height: 18px; margin: 0 0 12px; font-size: 13px; color: #ff8a7e; }
 
