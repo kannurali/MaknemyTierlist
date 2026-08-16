@@ -5,6 +5,9 @@ require_once __DIR__ . '/_bootstrap.php';
 // четвёртая, править надо оба места, иначе редактор предложит то, что сервер
 // не примет.
 const NEWS_CATEGORIES = ['tierlist', 'game', 'project'];
+// Тот же список, что и NEWS.IMAGE_SIZES в js/news.js — по той же причине,
+// что и у NEWS_CATEGORIES выше: одно место правды на фронте и на сервере.
+const NEWS_IMAGE_SIZES = ['small', 'medium', 'full'];
 const NEWS_TITLE_MAX  = 200;
 const NEWS_BODY_MAX   = 20000;
 
@@ -41,13 +44,25 @@ function validate_news_post(array $b): array {
         return ['ok' => false, 'error' => 'bad image_url', 'post' => []];
     }
 
+    // Отсутствующий ключ и пустая строка — это "старый пост" или "админ
+    // ничего не выбрал", а не мусор: обе трактуются как 'full', и только
+    // непустое значение вне трёх допустимых — ошибка. Так пост, сохранённый
+    // до появления этого поля, по-прежнему проходит валидацию.
+    $imageSize = trim((string)($b['image_size'] ?? ''));
+    if ($imageSize === '') {
+        $imageSize = 'full';
+    } elseif (!in_array($imageSize, NEWS_IMAGE_SIZES, true)) {
+        return ['ok' => false, 'error' => 'bad image_size', 'post' => []];
+    }
+
     return ['ok' => true, 'error' => '', 'post' => [
-        'category'  => $cat,
-        'title_ru'  => $titleRu,
-        'title_en'  => $titleEn,
-        'body_ru'   => $bodyRu,
-        'body_en'   => $bodyEn,
-        'image_url' => $image,
+        'category'   => $cat,
+        'title_ru'   => $titleRu,
+        'title_en'   => $titleEn,
+        'body_ru'    => $bodyRu,
+        'body_en'    => $bodyEn,
+        'image_url'  => $image,
+        'image_size' => $imageSize,
     ]];
 }
 
@@ -70,6 +85,7 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
         ':br'  => $p['body_ru'],
         ':be'  => $p['body_en'],
         ':img' => $p['image_url'],
+        ':sz'  => $p['image_size'],
         ':pa'  => $publishedAt,
     ];
 
@@ -94,7 +110,7 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
             "UPDATE news
                 SET category = :c, title_ru = :tr, title_en = :te,
                     body_ru = :br, body_en = :be, image_url = :img,
-                    published_at = :pa
+                    image_size = :sz, published_at = :pa
               WHERE id = :id"
         );
         $stmt->execute($params + [':id' => $id]);
@@ -102,8 +118,8 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
     }
 
     $stmt = $pdo->prepare(
-        "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, image_url, published_at)
-         VALUES (:c, :tr, :te, :br, :be, :img, :pa)"
+        "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, image_url, image_size, published_at)
+         VALUES (:c, :tr, :te, :br, :be, :img, :sz, :pa)"
     );
     $stmt->execute($params);
     return [200, ['ok' => true, 'id' => (int)$pdo->lastInsertId()]];

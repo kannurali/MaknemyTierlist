@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS news (
   -- пустую строку, если английского варианта нет, и INSERT биндит его всегда.
   body_en      TEXT NOT NULL,
   image_url    VARCHAR(255) NOT NULL DEFAULT '',
+  -- VARCHAR, а не TEXT: этой колонке, в отличие от body_en, нужен DEFAULT, а
+  -- TEXT его в MySQL не принимает (см. комментарий у body_en выше — ровно та
+  -- же ошибка ERROR 1101, только для другого столбца).
+  image_size   VARCHAR(8) NOT NULL DEFAULT 'full',
   published_at BIGINT UNSIGNED NOT NULL,
   KEY idx_feed (published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -6,12 +6,38 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const NEWS = require('../public_html/js/news.js');
 
-const { CATEGORIES, isCategory, pickLang, formatDate, toParagraphs } = NEWS;
+const { CATEGORIES, isCategory, IMAGE_SIZES, isImageSize, pickLang, formatDate, toParagraphs } = NEWS;
 
 test('the three categories are the ones the API accepts', () => {
     assert.deepEqual(CATEGORIES.map(c => c.key), ['tierlist', 'game', 'project']);
     assert.equal(isCategory('game'), true);
     assert.equal(isCategory('trade'), false);
+});
+
+test('the three image sizes are the ones the API accepts, in small/medium/full order', () => {
+    assert.deepEqual(IMAGE_SIZES.map(s => s.key), ['small', 'medium', 'full']);
+    assert.equal(isImageSize('medium'), true);
+    assert.equal(isImageSize('huge'), false);
+});
+
+test('every image size entry has an i18n key and a css class', () => {
+    for (const size of IMAGE_SIZES) {
+        assert.equal(typeof size.i18n, 'string');
+        assert.ok(size.i18n.length > 0, 'i18n key is not empty');
+        assert.equal(typeof size.cls, 'string');
+        assert.ok(size.cls.length > 0, 'css class is not empty');
+    }
+});
+
+test('image sizes and categories are independent lists', () => {
+    // Same shape ({key, i18n, cls}), but the two lists must not be the same
+    // array or share keys — a size is not a category and vice versa.
+    assert.notEqual(IMAGE_SIZES, CATEGORIES);
+    const sizeKeys = IMAGE_SIZES.map(s => s.key);
+    const catKeys = CATEGORIES.map(c => c.key);
+    assert.equal(sizeKeys.some(k => catKeys.includes(k)), false, 'no key overlap');
+    assert.equal(isCategory('full'), false, 'isCategory does not accept a size key');
+    assert.equal(isImageSize('game'), false, 'isImageSize does not accept a category key');
 });
 
 test('english falls back to russian when it is empty', () => {

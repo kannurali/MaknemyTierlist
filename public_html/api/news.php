@@ -9,7 +9,7 @@ const NEWS_FEED_LIMIT = 50;
 function handle_news(PDO $pdo): array {
     // LIMIT подставляется из константы, а не из запроса пользователя, поэтому
     // интерполяция здесь безопасна: плейсхолдер в LIMIT переносим не везде.
-    $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, published_at
+    $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, image_size, published_at
               FROM news
              ORDER BY published_at DESC, id DESC
              LIMIT " . NEWS_FEED_LIMIT;
@@ -25,6 +25,7 @@ function handle_news(PDO $pdo): array {
             'body_ru'      => (string)$r['body_ru'],
             'body_en'      => (string)$r['body_en'],
             'image_url'    => (string)$r['image_url'],
+            'image_size'   => (string)$r['image_size'],
             'published_at' => (int)$r['published_at'],
         ];
     }

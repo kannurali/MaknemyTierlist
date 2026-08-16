@@ -46,13 +46,29 @@
 .nw-body { font-size: 15px; line-height: 1.6; color: #cfe0f5; }
 .nw-body p { margin: 0 0 10px; }
 .nw-body p:last-child { margin-bottom: 0; }
-.nw-image { display: block; width: 100%; height: auto; margin: 4px 0 12px; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); }
+.nw-image { display: block; height: auto; margin: 4px 0 12px; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); }
+/* Три размера картинки в карточке. Проценты от ширины карточки, а не px:
+   карточка сама плавает от ~590px (край медиа-запроса ниже) до ~880px на
+   широком экране, и фиксированный px-размер либо тонул бы в большой
+   карточке, либо не влезал в маленькую. small — скромная иллюстрация сбоку
+   от текста, вроде миниатюры скриншота в патчноуте; medium — крупный
+   скриншот примерно вполовину карточки, для апдейтов игры, где картинка
+   важна не меньше текста; full — как раньше, на всю ширину (шапка/баннер
+   поста). */
+.nw-image.sz-small  { width: 30%; }
+.nw-image.sz-medium { width: 55%; }
+.nw-image.sz-full   { width: 100%; }
 .nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
 
 @media (max-width: 720px) {
   .nw-feed, .nw-filters, .nw-state { width: 92cqw; }
   .nw-card { padding: 14px; border-radius: 10px; }
   .nw-body { font-size: 14.5px; }
+  /* На телефоне карточка и без того узкая (92cqw узкого stage), поэтому
+     small/medium — те же 30%/55% — превращались бы в картинку шириной
+     ~110/200px на экране 375px: нечитаемо мелко. Все три размера идут на
+     всю ширину. */
+  .nw-image.sz-small, .nw-image.sz-medium, .nw-image.sz-full { width: 100%; }
 }
 
 /* ===================== Редактор новости (админ) ===================== */
@@ -87,8 +103,14 @@
 /* Клавиатурный фокус — как у .nw-tools button и .lang-switch .chip. */
 .ne-cat-seg button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-.ne-preview { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); margin-bottom: 8px; }
 .ne-error { min-height: 18px; margin: 0 0 12px; font-size: 13px; color: #ff8a7e; }
+
+/* Превью карточки в редакторе — cardFor(post, false) кладёт сюда настоящую
+   .nw-card. Пунктирная рамка отделяет её от полей формы (тот же приём, что
+   у .nw-state), а не «оживляет» карточку самостоятельным оформлением — вид
+   самой карточки должен быть один в один как в ленте, иначе превью врёт. */
+.ne-preview-card { border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; padding: 6px; }
+.ne-preview-card:empty { display: none; }
 
 .nw-admin-bar { width: 84.63cqw; margin-inline: auto; display: flex; gap: 8px; margin-bottom: 14px; }
 .nw-tools { position: absolute; top: 12px; right: 12px; display: none; gap: 6px; }

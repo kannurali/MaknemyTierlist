@@ -20,6 +20,23 @@
     return false;
   }
 
+  // Единый список размеров картинки в карточке. Та же логика единого
+  // источника правды, что и у CATEGORIES: api/news_save.php проверяет ровно
+  // этот же список из трёх ключей, поэтому редактор не может предложить
+  // размер, который сервер не примет.
+  var IMAGE_SIZES = [
+    { key: "small",  i18n: "news.sizeSmall",  cls: "sz-small" },
+    { key: "medium", i18n: "news.sizeMedium", cls: "sz-medium" },
+    { key: "full",   i18n: "news.sizeFull",   cls: "sz-full" }
+  ];
+
+  function isImageSize(key) {
+    for (var i = 0; i < IMAGE_SIZES.length; i++) {
+      if (IMAGE_SIZES[i].key === key) { return true; }
+    }
+    return false;
+  }
+
   // Заголовок и текст на нужном языке, с откатом на второй. Зеркалит descFor
   // из content.js по той же причине: наполовину заполненный пост должен
   // показать хоть что-то, а не пустоту.
@@ -56,6 +73,8 @@
   var api = {
     CATEGORIES: CATEGORIES,
     isCategory: isCategory,
+    IMAGE_SIZES: IMAGE_SIZES,
+    isImageSize: isImageSize,
     pickLang: pickLang,
     formatDate: formatDate,
     toParagraphs: toParagraphs

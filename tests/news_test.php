@@ -127,6 +127,54 @@ test('an empty image url is allowed', function () {
     assert_eq(200, $status, 'image is optional');
 });
 
+// ---------- image_size ----------
+
+test('a valid image size round-trips through save and the feed', function () {
+    $pdo = test_db();
+    [, $created] = handle_news_save($pdo, valid_body(['image_size' => 'small']), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq('small', $feed['posts'][0]['image_size'], 'size stored and returned');
+});
+
+test('each of the three image sizes is accepted', function () {
+    $pdo = test_db();
+    foreach (['small', 'medium', 'full'] as $size) {
+        [$status, $created] = handle_news_save($pdo, valid_body(['image_size' => $size]), 1);
+        assert_eq(200, $status, "accepted: $size");
+        [, $feed] = handle_news($pdo);
+        $row = array_values(array_filter($feed['posts'], fn($p) => $p['id'] === $created['id']))[0];
+        assert_eq($size, $row['image_size'], "stored: $size");
+    }
+});
+
+test('an image size outside the three is rejected', function () {
+    $pdo = test_db();
+    [$status, $p] = handle_news_save($pdo, valid_body(['image_size' => 'huge']), 1);
+    assert_eq(400, $status, 'rejected');
+    assert_eq('bad image_size', $p['error'], 'reason');
+});
+
+test('a missing image_size defaults to full — the legacy-post case', function () {
+    // Посты, сохранённые до появления этого поля, не должны отваливаться по
+    // валидации: отсутствие ключа — не то же самое, что мусорное значение.
+    $pdo = test_db();
+    $body = valid_body();
+    unset($body['image_size']);
+    assert_true(!array_key_exists('image_size', $body), 'key genuinely absent');
+    [$status, ] = handle_news_save($pdo, $body, 1);
+    assert_eq(200, $status, 'accepted without the key');
+    [, $feed] = handle_news($pdo);
+    assert_eq('full', $feed['posts'][0]['image_size'], 'defaulted to full');
+});
+
+test('an empty image_size also defaults to full', function () {
+    $pdo = test_db();
+    [$status, ] = handle_news_save($pdo, valid_body(['image_size' => '']), 1);
+    assert_eq(200, $status, 'accepted');
+    [, $feed] = handle_news($pdo);
+    assert_eq('full', $feed['posts'][0]['image_size'], 'defaulted to full');
+});
+
 test('a body with an id updates instead of inserting', function () {
     $pdo = test_db();
     [, $created] = handle_news_save($pdo, valid_body(), 1000);

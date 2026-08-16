@@ -53,6 +53,7 @@ function test_db(): PDO {
         -- не ту таблицу, которая работает на бою.
         body_en TEXT NOT NULL,
         image_url TEXT NOT NULL DEFAULT '',
+        image_size TEXT NOT NULL DEFAULT 'full',
         published_at INTEGER NOT NULL
     )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
