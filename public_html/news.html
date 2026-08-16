@@ -58,10 +58,10 @@
       <div class="nw-admin-bar" id="newsAdminBar" hidden></div>
 
       <div class="nw-filters" id="newsFilters" role="group"
-           data-i18n-label="news.filterLabel" aria-label="Фильтр по категориям"></div>
+           data-i18n-label="news.filterGroupLabel" aria-label="Фильтр по категориям"></div>
 
       <main class="nw-feed" id="feed"></main>
-      <div class="nw-state" id="newsState" hidden></div>
+      <div class="nw-state" id="newsState" role="status" aria-live="polite" hidden></div>
     </div>
   </div>
 
@@ -98,7 +98,7 @@
 
         <div class="field">
           <label for="neDate" data-i18n="news.fieldDate">Дата</label>
-          <input type="date" id="neDate" class="ne-date" />
+          <input type="date" id="neDate" class="ne-date" required />
         </div>
 
         <div class="field">
@@ -121,8 +121,8 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=7"></script>
+  <script src="js/i18n.js?v=8"></script>
   <script src="js/news.js?v=1"></script>
-  <script src="js/news-page.js?v=4"></script>
+  <script src="js/news-page.js?v=5"></script>
 </body>
 </html>

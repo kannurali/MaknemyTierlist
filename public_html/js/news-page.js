@@ -16,7 +16,18 @@
 
   let posts = [];
   let activeCat = "all";
-  let lang = I18N.pickLang(localStorage.getItem(LANG_KEY), navigator.language);
+  // true только после того, как load() реально получил ленту с сервера —
+  // не во время "Загружаем…" и не после ошибки. checkSession() читает этот
+  // флаг, чтобы не перерисовывать состояние поверх loading/error (см. ниже).
+  let feedLoaded = false;
+  // Как в applyLang в app.js: localStorage бросает в приватном режиме Safari
+  // (и в некоторых встроенных webview с отключённым хранилищем). Без try/catch
+  // это исключение случилось бы прямо в теле IIFE до объявления load() и
+  // checkSession() ниже — они бы не вызвались вообще, и посетитель получил бы
+  // пустую сцену без ленты, без ошибки и без кнопки «Повторить».
+  let lang = I18N.pickLang(
+    (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
+    navigator.language);
 
   const tx = key => I18N.t(key, lang);
 
@@ -108,7 +119,11 @@
       ? posts
       : posts.filter(p => p.category === activeCat);
 
-    if (!visible.length) { showState("news.empty", false); return; }
+    // "В этой категории пока ничего нет" не подходит, когда категория вообще
+    // не выбрана (activeCat === "all") — это день первый ленты, когда постов
+    // нет в принципе, а не "в этом фильтре пусто". Разные строки на разные
+    // причины пустоты.
+    if (!visible.length) { showState(activeCat === "all" ? "news.emptyAll" : "news.empty", false); return; }
 
     stateEl.hidden = true;
     feedEl.innerHTML = "";
@@ -141,6 +156,7 @@
       if (!r.ok) { throw new Error("http " + r.status); }
       const data = await r.json();
       posts = Array.isArray(data.posts) ? data.posts : [];
+      feedLoaded = true;
       renderFilters();
       render();
     } catch (e) {
@@ -153,7 +169,7 @@
   // поэтому выбор переносится между страницами.
   function applyLang(next) {
     lang = next;
-    localStorage.setItem(LANG_KEY, next);
+    try { localStorage.setItem(LANG_KEY, next); } catch (_) { /* приватный режим */ }
     document.documentElement.lang = next;
     for (const node of document.querySelectorAll("[data-i18n]")) {
       node.textContent = I18N.t(node.dataset.i18n, lang);
@@ -197,7 +213,15 @@
       add.addEventListener("click", () => openEditor(null));
       bar.append(add);
     }
-    render();
+    // checkSession() гонится с load(): api/session.php не трогает БД, поэтому
+    // обычно отвечает первым. Безусловный render() здесь перерисовывал бы
+    // #newsState с posts ещё в [] поверх "Загружаем…" (показывая "пусто" на
+    // деле ещё не загруженной ленты), а при ошибке — поверх текста ошибки
+    // вместе с её кнопкой «Повторить», без единого способа её вернуть.
+    // render() из checkSession() имеет смысл только затем, чтобы дорисовать
+    // ✎/✕ у уже показанных карточек после того, как выяснилась роль —
+    // а это возможно только если feed уже реально загружен.
+    if (feedLoaded) { render(); }
   }
 
   const editor = $("#newsEditor");
@@ -260,6 +284,18 @@
   }
 
   async function publish() {
+    const dateVal = $("#neDate").value;
+    // Пустая дата уходит в dayToMs("") как NaN → отрицательный timestamp,
+    // news_save.php видит published_at <= 0 и молча подставляет "сейчас".
+    // На новом посте это безобидно, а вот на правке существующего — тихая
+    // порча реальной даты публикации без единого предупреждения. #neDate
+    // отмечен required, но модалка — не <form>, кнопка «Опубликовать» не
+    // сабмит, так что required без явной проверки браузер не остановил бы
+    // ничего — проверяем здесь же, перед запросом.
+    if (!dateVal) {
+      $("#neError").textContent = tx("news.dateRequired");
+      return;
+    }
     const body = {
       category: getCat(),
       title_ru: $("#neTitleRu").value.trim(),
@@ -267,7 +303,7 @@
       body_ru:  $("#neBodyRu").value.trim(),
       body_en:  $("#neBodyEn").value.trim(),
       image_url: currentImage,
-      published_at: dayToMs($("#neDate").value),
+      published_at: dayToMs(dateVal),
     };
     if (editingPost) { body.id = editingPost.id; }
 
