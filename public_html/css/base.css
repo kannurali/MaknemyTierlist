@@ -109,6 +109,16 @@ html, body {
 .tb-group { display: flex; gap: 8px; align-items: center; }
 .tb-label { font-size: 12px; font-weight: 600; color: #8fb0dc; }
 
+/* Навигация Тирлист / Новости — сегментированная пара на токенах чипов.
+   Обе страницы используют её, поэтому она здесь, а не в news.css. */
+.nav-seg { display: flex; gap: 0; }
+.nav-seg a { font-family: var(--ui); font-size: 12px; font-weight: 700; color: #7e94b8; text-decoration: none; background: rgba(20,34,62,.6); border: 1px solid rgba(120,190,255,.2); padding: 6px 14px; transition: background .15s, color .15s, border-color .15s; }
+.nav-seg a:first-child { border-radius: 999px 0 0 999px; border-right-width: 0; }
+.nav-seg a:last-child { border-radius: 0 999px 999px 0; }
+.nav-seg a:hover { color: #cfe2ff; border-color: var(--cyan); }
+.nav-seg a[aria-current="page"] { color: #fff; background: rgba(42,166,224,.4); border-color: var(--cyan); box-shadow: 0 0 8px rgba(79,214,255,.25); }
+.nav-seg a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
 .btn {
   font-family: var(--ui);
   font-size: 13px;

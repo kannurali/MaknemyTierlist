@@ -13,6 +13,10 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# Чистый адрес для ленты. Отдельного PHP-роутинга у сайта нет, а /news.html в
+# ссылках выглядит как файл, а не раздел.
+RewriteRule ^news/?$ /news.html [L]
+
 # Deny access to sensitive files
 <FilesMatch "\.(sql|md|mjs)$">
   Require all denied
