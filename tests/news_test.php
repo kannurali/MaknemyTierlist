@@ -196,9 +196,9 @@ test('a missing or junk id is a 400', function () {
     assert_eq(400, $s3, 'negative');
 });
 
-// (int)"1abc" === 1 — PHP's cast silently turns a malformed id into a valid
-// one. That is the actual bug: a junk id must be rejected outright, not
-// coerced into someone else's row id.
+// (int)"1abc" === 1 — приведение типов в PHP молча превращает битый id в
+// валидный. В этом и баг: мусорный id должен отклоняться сразу, а не
+// приводиться к id чужой записи.
 test('a junk id does not delete anything — (int) cast bug', function () {
     $pdo = test_db();
     [, $a] = handle_news_save($pdo, valid_body(['title_ru' => 'Первый']), 1000);
@@ -219,13 +219,13 @@ test('a junk id does not delete anything — (int) cast bug', function () {
         assert_eq(400, $status, "status for $label");
         assert_eq('bad id', $p['error'] ?? null, "reason for $label");
 
-        // The actual bug: a malformed id must not delete anything at all —
-        // not the first row, not the row (int) happens to cast it to.
+        // Суть бага: битый id не должен удалять вообще ничего — ни первую
+        // попавшуюся строку, ни ту, в которую его случайно приводит (int).
         [, $feed] = handle_news($pdo);
         assert_eq(2, count($feed['posts']), "neither post deleted for $label");
     }
 
-    // Sanity: a real id from the same seeded pair still works.
+    // Проверка здравого смысла: настоящий id из той же пары по-прежнему работает.
     [$status, ] = handle_news_delete($pdo, ['id' => $a['id']]);
     assert_eq(200, $status, 'real id still deletes');
     [, $feed] = handle_news($pdo);
@@ -250,9 +250,9 @@ test('a junk id on save is a 400, not a coerced update', function () {
         assert_eq(400, $status, "status for $label");
     }
 
-    // The seeded post must be untouched — a junk id must not fall through to
-    // the insert path with the real title silently kept, nor be coerced by
-    // (int) into overwriting an unrelated row.
+    // Изначальный пост не должен измениться — мусорный id не должен
+    // провалиться в ветку вставки с тихим сохранением настоящего заголовка,
+    // и не должен быть приведён через (int) к перезаписи чужой записи.
     [, $feed] = handle_news($pdo);
     assert_eq(1, count($feed['posts']), 'still exactly one post');
     assert_eq('Апдейт 26', $feed['posts'][0]['title_ru'], 'original post unchanged');
