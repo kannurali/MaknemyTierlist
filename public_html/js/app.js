@@ -1085,13 +1085,9 @@
         slide.appendChild(txt);
       }
 
-      if (promo.safeHref(camp.href)) {
-        const badge = document.createElement("span");
-        badge.className = "ptn-link-badge";
-        badge.setAttribute("aria-label", tx("ad.linkLabel"));
-        badge.title = tx("ad.isLink");
-        slide.appendChild(badge);
-      }
+      // Значка-цепочки здесь нет намеренно: он лежал поверх макета, за
+      // который заплачено, и закрывал его угол. Что баннер кликабелен, видно
+      // по курсору и подсветке; в старом одиночном баннере значок остался.
 
       // Маркировка живёт в слайде, а не в карточке: чип «РЕКЛАМА» один на всю
       // карусель, а токен у каждой кампании свой.

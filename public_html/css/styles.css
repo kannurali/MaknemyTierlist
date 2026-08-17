@@ -816,15 +816,23 @@ body.protected img { -webkit-user-drag: none; }
   gap: .4cqw;
   overflow: hidden;
 }
+/* Плашка «РЕКЛАМА» в углу карточки.
+   Раньше стояла вплотную в угол (top/left: 0) и выглядела обрезанной: у
+   Bootshaus прописные выше строчного бокса, буквы вылезали над плашкой, а
+   карточка срезала их своим overflow: hidden. Поэтому плашка отодвинута от
+   угла и получила запас сверху — теперь буква целиком внутри. */
 .ptn-chip {
-  position: absolute; top: 0; left: 0;
+  /* Плашка идёт в разметке раньше кадра с макетом, поэтому без слоя кадр
+     закрывает её собой, как только она перестаёт торчать в поле карточки. */
+  position: absolute; top: .45cqw; left: .45cqw; z-index: 5;
   font-family: var(--display);
   font-size: 1.2cqw;
+  line-height: 1.6;
   letter-spacing: .1cqw;
   color: #0a1226;
   background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-  padding: .2cqw .8cqw .15cqw;
-  border-radius: 0 0 .8cqw 0;
+  padding: .3cqw .8cqw .2cqw;
+  border-radius: .6cqw;
 }
 /* Токен маркировки (erid) от ОРД. Это обязательная подпись к рекламе, а не
    элемент оформления: должен читаться, но не спорить с макетом
@@ -1066,14 +1074,15 @@ body.protected img { -webkit-user-drag: none; }
   object-fit: cover;
 }
 .ptn-rail .ptn-chip {
-  position: absolute; top: 0; left: 0;
+  position: absolute; top: 5px; left: 5px;
   font-family: var(--display);
   font-size: 10px;
+  line-height: 1.6;
   letter-spacing: 1px;
   color: #0a1226;
   background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-  padding: 2px 8px 1px;
-  border-radius: 0 0 8px 0;
+  padding: 3px 8px 1px;
+  border-radius: 6px;
 }
 /* Борт живёт вне .stage, container-query единиц здесь нет — размеры в px. */
 .ptn-rail .ptn-erid {
@@ -1130,15 +1139,15 @@ body.protected img { -webkit-user-drag: none; }
     border-radius: 0 0 0 7px;
   }
   .ptn-dock .ptn-chip {
-    position: absolute; top: 0; left: 0;
+    position: absolute; top: 4px; left: 4px;
     font-family: var(--display);
     font-size: 10px;
-    line-height: 1.4;
+    line-height: 1.6;
     letter-spacing: 1px;
     color: #0a1226;
     background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-    padding: 1px 7px;
-    border-radius: 0 0 7px 0;
+    padding: 3px 7px 1px;
+    border-radius: 6px;
     z-index: 1;
   }
 
@@ -1197,10 +1206,11 @@ body.protected img { -webkit-user-drag: none; }
 }
 @keyframes ptnPopIn { from { transform: translateY(8px); } to { transform: none; } }
 .ptn-pop-card .ptn-chip {
-  position: absolute; top: 0; left: 0;
+  position: absolute; top: 7px; left: 7px;
   font-size: 11px; letter-spacing: 1px;
-  padding: 3px 10px 2px;
-  border-radius: 0 0 8px 0;
+  line-height: 1.6;
+  padding: 3px 10px 1px;
+  border-radius: 7px;
 }
 .ptn-pop-card .ptn-erid {
   font-size: 10px;
