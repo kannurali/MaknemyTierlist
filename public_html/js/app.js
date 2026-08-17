@@ -938,13 +938,13 @@
 
   // Открытие рекламной ссылки. Цель клика — вся карточка, поэтому смахивание
   // не должно считаться кликом: сравниваем позицию прокрутки до и после.
-  function openPromo(camp) {
+  function openPromo(camp, slot) {
     const url = promo ? promo.safeHref(camp.href) : "";
     if (!url || stage.classList.contains("editing")) return;
     // Счётчик уже стоит на странице, поэтому клики можно отдавать клиенту
     // сегодня, не заводя своей таблицы. Это нижняя граница, а не точное
     // число: mc.yandex.ru сам есть в списках блокировщиков.
-    try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: "strip" }); }
+    try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: slot }); }
     catch (e) { /* счётчик не должен ломать переход */ }
     window.open(url, "_blank", "noopener");
   }
@@ -1197,7 +1197,7 @@
       const slide = e.target.closest(".ptn-slide");
       if (!slide) return;
       const camp = ui.list.find(c => c.id === slide.dataset.cid);
-      if (camp) openPromo(camp);
+      if (camp) openPromo(camp, "strip");
     }
 
     function onKey(e) {
@@ -1248,6 +1248,77 @@
         document.removeEventListener("visibilitychange", onVis);
       }
     };
+  }
+
+  // ============================================================
+  //  БОКОВЫЕ БОРТА (только широкий десктоп)
+  // ------------------------------------------------------------
+  //  Живут вне #tiers, поэтому render() их не трогает вовсе: они переживают
+  //  любой рефлоу и смену языка без teardown. Сознательный контраст с
+  //  каруселью, которую перестройка сцены уничтожает каждый раз.
+  // ============================================================
+  const RAIL_ROTATE_MS = 20000;
+  const railMQ = window.matchMedia
+    ? window.matchMedia("(min-width: 1460px) and (min-height: 760px)")
+    : null;
+  let railTimer = null;
+  let railStep = 0;
+
+  function renderPromoRails() {
+    const left = $("#promoRailL"), right = $("#promoRailR");
+    if (!left || !right) return;
+
+    clearInterval(railTimer);
+    railTimer = null;
+
+    // Ниже порога борта не просто прячем стилями — мы их вообще не строим.
+    // Скрытая через display: none картинка всё равно скачивается, а на
+    // телефоне это лишние сотни килобайт ради того, что никто не увидит.
+    const wide = railMQ ? railMQ.matches : false;
+    const list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now()) : [];
+    if (!list.length) {
+      [left, right].forEach(el => { el.hidden = true; el.innerHTML = ""; });
+      return;
+    }
+
+    const paint = () => {
+      // Один рекламодатель занимает оба борта — это и есть пакет «оба
+      // борта». Двое и больше — расходим их по разным сторонам.
+      const a = list[railStep % list.length];
+      const b = list.length > 1 ? list[(railStep + 1) % list.length] : a;
+      fillRail(left, a);
+      fillRail(right, b);
+      railStep++;
+    };
+    paint();
+    if (list.length > 2) railTimer = setInterval(paint, RAIL_ROTATE_MS);
+  }
+
+  function fillRail(el, camp) {
+    const cre = promo.creativeFor(camp, "rail");
+    if (!cre) { el.hidden = true; el.innerHTML = ""; return; }
+    el.innerHTML = "";
+    el.hidden = false;
+
+    const img = document.createElement("img");
+    img.src = cre.src;
+    img.alt = tx("ad.imageAlt");
+    img.draggable = false;
+    img.decoding = "async";
+    img.loading = "lazy";
+    el.appendChild(img);
+
+    const chip = document.createElement("span");
+    chip.className = "ptn-chip";
+    chip.textContent = tx("ad.chip");
+    el.appendChild(chip);
+
+    const url = promo.safeHref(camp.href);
+    el.classList.toggle("has-link", !!url);
+    el.onclick = url ? (() => openPromo(camp, "rail")) : null;
+    // Борт кликабелен мышью — значит должен открываться и с клавиатуры.
+    el.tabIndex = url ? 0 : -1;
+    el.onkeydown = url ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPromo(camp, "rail"); } }) : null;
   }
 
   // ============================================================
@@ -2761,6 +2832,7 @@
     teardownPromoStrip();
     old.replaceWith(renderPromoBlock());
     applyEditMode();                      // вернуть видимость .edit-only
+    renderPromoRails();
     schedulePromoPopup();                 // могла приехать новая popup-кампания
   }
 
@@ -2975,6 +3047,14 @@
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initBackend();
+  renderPromoRails();
+  // Борта строятся и разбираются по медиазапросу, а не по window.resize:
+  // событие приходит один раз на пересечение порога, а не на каждый пиксель.
+  if (railMQ) {
+    const onRailMQ = () => renderPromoRails();
+    if (railMQ.addEventListener) railMQ.addEventListener("change", onRailMQ);
+    else if (railMQ.addListener) railMQ.addListener(onRailMQ);   // Safari < 14
+  }
   initPromoPopup();
   // render() полностью перестраивает #tiers (innerHTML=""). На телефоне это
   // опасно: браузер шлёт 'resize' при сворачивании адресной строки во время

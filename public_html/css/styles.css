@@ -997,6 +997,67 @@ body.protected img { -webkit-user-drag: none; }
   .ptn-dot { transition: none; }
 }
 
+/* ===================== Ad side rails =====================
+   160x600 (IAB Wide Skyscraper) слева и справа от постера, макет сдаётся в
+   320x1200 под экраны с DPR 2.
+
+   Порог 1460px посчитан, а не подобран:
+     сцена min(1040px, 96vw)      1040
+     поля .stage-wrap  2 x 16       32
+     борта             2 x 160      320
+     зазоры            2 x 24        48
+                                  ------
+                                   1440  + запас на классический скроллбар
+
+   Условие по высоте не декоративное: борт начинается на top: 96px, значит
+   его низ на 696px, а .like-fab и .donate-fab висят на bottom: 18px и 62px.
+   На вьюпорте ниже 760px они встречаются — там борта прячем.
+
+   position: fixed, а не sticky: постер на боевых данных около 4400px
+   высотой, и рекламодатель покупает именно присутствие на всём скролле.
+   Заодно не приходится перестраивать .stage-wrap в три колонки — это
+   поломало бы container-type: inline-size, на котором держится весь макет.
+
+   z-index 20 — выше фона, но ниже подсказки предмета (30): всплывающая
+   подсказка у края постера должна выигрывать у рекламы. */
+.ptn-rail { display: none; }
+
+@media (min-width: 1460px) and (min-height: 760px) {
+  .ptn-rail:not([hidden]) {
+    display: block;
+    position: fixed;
+    top: 96px;
+    width: 160px;
+    height: 600px;
+    z-index: 20;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--panel-edge);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, .45);
+  }
+  /* 520 = половина сцены (1040), 24 — зазор до постера. */
+  .ptn-rail-l { left:  calc(50% - 520px - 24px - 160px); }
+  .ptn-rail-r { right: calc(50% - 520px - 24px - 160px); }
+}
+.ptn-rail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ptn-rail .ptn-chip {
+  position: absolute; top: 0; left: 0;
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #0a1226;
+  background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
+  padding: 2px 8px 1px;
+  border-radius: 0 0 8px 0;
+}
+.ptn-rail.has-link { cursor: pointer; }
+.ptn-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
 /* ===================== Ad popup =====================
    Живёт снаружи .stage-wrap: .stage — контейнер с overflow: hidden, из него
    ничто не выбирается.

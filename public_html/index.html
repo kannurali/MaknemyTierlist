@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=38" />
+<link rel="stylesheet" href="css/styles.css?v=39" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -232,6 +232,15 @@
     </div>
   </div>
 
+  <!-- ====== Боковые рекламные борта (только широкий десктоп) ======
+       Снаружи .stage-wrap: .stage — контейнер с overflow: hidden, внутри него
+       fixed-элемент был бы обрезан. Побочный полезный эффект — борта не
+       попадают в PNG-экспорт, в отличие от карусели и попапа. -->
+  <aside class="ptn-rail ptn-rail-l" id="promoRailL" hidden
+         data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+  <aside class="ptn-rail ptn-rail-r" id="promoRailR" hidden
+         data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+
   <!-- ================= Item editor modal ================= -->
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal">
@@ -395,6 +404,6 @@
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
   <script src="js/promo.js?v=1"></script>
-  <script src="js/app.js?v=51"></script>
+  <script src="js/app.js?v=52"></script>
 </body>
 </html>
