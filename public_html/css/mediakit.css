@@ -51,6 +51,17 @@ section { padding: 40px 0; border-top: 1px solid var(--edge); }
 .facts > div { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 12px 14px; }
 .facts dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
 .facts dd { margin: 4px 0 0; font-size: 22px; font-weight: 700; }
+.pdf-btn {
+  display: inline-block;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
+  color: #04101f;
+  font-weight: 700;
+  text-decoration: none;
+  margin-right: 10px;
+}
+.pdf-btn:hover { filter: brightness(1.08); }
 
 /* ---- карточка места ---- */
 .slot-card {
@@ -125,8 +136,39 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 .foot { border-top: 1px solid var(--edge); padding: 26px 0 46px; margin-top: 20px; }
 .foot .wrap { width: 100%; }
 
+/* PDF собирается печатью этой же страницы (Chromium), поэтому печатные
+   правила — это и есть вёрстка PDF.
+
+   Тёмный фон намеренно сохраняем: файл уходит клиенту в мессенджер и
+   смотрится с экрана, а не печатается на бумаге, и в светлой инверсии
+   тёмные карточки выглядели бы сломанными. Для этого печать вызывается с
+   printBackground: true. */
 @media print {
-  body { background: #fff; color: #111; }
+  .no-print { display: none !important; }
   .draft { position: static; }
-  .slot-card, .facts > div, .notes li { break-inside: avoid; }
+  /* Лента «черновик» обязана попасть в PDF: иначе можно молча отправить
+     клиенту файл с прочерками вместо цен. */
+  /* Карточке разрешено переноситься между страницами. С запретом разрыва
+     она уезжала целиком на следующий лист, и половина предыдущего
+     оставалась пустой — при пяти карточках это несколько пустых страниц.
+     Неделимы только те куски, которые бессмысленно резать: сам скриншот,
+     плитка с цифрой, строка таблицы. */
+  .slot-card { break-inside: auto; }
+  .slot-img, .facts > div, .notes li, .phones > div { break-inside: avoid; }
+  table { break-inside: auto; }
+  tr, h2, h3 { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  section { padding: 20px 0; }
+  /* Карточка остаётся в одну колонку — так текст читается во всю ширину
+     листа. Чтобы на страницу помещались две карточки, ужимаем скриншот по
+     высоте. max-width обязателен: с одним лишь max-height браузер считает
+     ширину из пропорций, и широкий скриншот вылезал за поля. */
+  .slot-card { padding: 14px; margin-bottom: 12px; }
+  .slot-txt p, .ticks li { font-size: 13px; }
+  .slot-img img { max-height: 300px; max-width: 100%; width: auto; height: auto; margin: 0 auto; }
+  .phones img { max-height: 200px; }
+  .hero { padding: 20px 0 24px; }
+  a { text-decoration: none; }
+  .scroll-x { overflow: visible; }
+  table { min-width: 0; }
 }
