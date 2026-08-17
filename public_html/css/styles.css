@@ -933,65 +933,55 @@ body.protected img { -webkit-user-drag: none; }
   }
 }
 
-/* Управление не мозолит глаза: панель проявляется при наведении на баннер
-   (и при переходе на неё с клавиатуры). Прячем прозрачностью, а не
-   display: none — иначе карточка меняла бы высоту под курсором и весь
-   тирлист дёргался бы при наведении. Панель маленькая, правило «никакой
-   прозрачности» касается слоёв размером со сцену, а не строки кнопок. */
-.ptn-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .7cqw;
-  margin-top: .5cqw;
+/* Рамка вокруг прокручиваемой области — система координат для стрелок. */
+.ptn-frame { position: relative; width: 100%; }
+
+/* Стрелки лежат ПОВЕРХ баннера по его краям и проявляются при наведении
+   (и при переходе на них с клавиатуры) — как на маркетплейсах.
+   Прячем прозрачностью, а не display: none: так они не влияют на раскладку
+   и карточка не меняет размер под курсором. Правило «никакой прозрачности»
+   в этом проекте про слои размером со сцену, а не про кнопку в 3cqw. */
+.ptn-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.4cqw; height: 3.4cqw;
+  padding: 0;
+  border: 1px solid rgba(190, 225, 255, .55);
+  border-radius: 50%;
+  background: rgba(6, 14, 34, .62);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .15s ease;
+  transition: opacity .15s ease, background .15s ease;
+  z-index: 5;
 }
+.ptn-prev { left: 1cqw; }
+.ptn-next { right: 1cqw; }
 @media (hover: hover) and (pointer: fine) {
-  .ptn-strip:hover .ptn-bar,
-  .ptn-strip:focus-within .ptn-bar { opacity: 1; pointer-events: auto; }
+  .ptn-strip:hover .ptn-nav,
+  .ptn-strip:focus-within .ptn-nav { opacity: 1; pointer-events: auto; }
+  .ptn-nav:hover { background: rgba(12, 30, 66, .85); }
 }
-.ptn-nav {
-  width: 2.4cqw; height: 2.4cqw;
-  padding: 0;
-  border: 1px solid rgba(140,190,255,.42);
-  border-radius: 50%;
-  background: rgba(10,22,52,.62);
-  position: relative;
-  cursor: pointer;
-}
-/* Стрелки и значки нарисованы бордерами, а не эмодзи: эмодзи берёт системный
-   шрифт и на каждой платформе выглядит по-своему. */
+/* Шеврон нарисован бордерами, а не эмодзи: эмодзи берёт системный шрифт и
+   на каждой платформе выглядит по-своему. */
 .ptn-nav::before {
   content: "";
   position: absolute; top: 50%; left: 50%;
-  width: .8cqw; height: .8cqw;
-  border-top: .18cqw solid #cfe9ff;
-  border-right: .18cqw solid #cfe9ff;
+  width: 1.05cqw; height: 1.05cqw;
+  border-top: .2cqw solid #eaf5ff;
+  border-right: .2cqw solid #eaf5ff;
 }
 .ptn-prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
 .ptn-next::before { transform: translate(-70%, -50%) rotate(45deg); }
-.ptn-dots { display: flex; align-items: center; gap: .5cqw; }
-.ptn-dot {
-  width: 1cqw; height: 1cqw;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(180,215,255,.34);
-  cursor: pointer;
-  transition: background .15s ease;
-}
-.ptn-dot.on { background: var(--cyan); box-shadow: 0 0 .8cqw rgba(79,214,255,.7); }
 /* На сайте видимый фокус есть ровно в одном месте (.lang-switch .chip).
-   Управление каруселью доступно с клавиатуры, поэтому здесь он обязателен. */
-.ptn-nav:focus-visible, .ptn-dot:focus-visible {
-  outline: 2px solid var(--cyan);
-  outline-offset: 2px;
-}
+   Стрелки доступны с клавиатуры, поэтому здесь он обязателен. */
+.ptn-nav:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ptn-viewport { scroll-behavior: auto; }
-  .ptn-bar, .ptn-dot { transition: none; }
+  .ptn-nav { transition: none; }
 }
 
 /* ===================== Ad side rails =====================
@@ -1036,15 +1026,19 @@ body.protected img { -webkit-user-drag: none; }
   .ptn-rail-l { left:  calc(50% - 520px - 24px - 160px); }
   .ptn-rail-r { right: calc(50% - 520px - 24px - 160px); }
 
-  /* Плавающие кнопки прижаты к правому краю ОКНА, а правый борт — тоже
-     справа. На высоком экране они расходятся по вертикали, но на 1600x800
-     «Поддержать» (она шире лайка из-за подписи и висит выше) наезжала на
-     низ борта. Пока борта показаны, уводим кнопки внутрь постера: там они
-     заведомо левее борта на любой высоте окна, и лечить это высотой
-     медиазапроса не приходится — иначе борта пришлось бы прятать у всех,
-     у кого экран ниже ~820px, а это заметная доля ноутбуков.
-     Правый край кнопки встаёт на 16px внутрь постера. */
-  .like-fab, .donate-fab { right: calc(50% - 520px + 16px); }
+  /* Обе плавающие кнопки прижаты к правому краю окна, и правый борт — тоже
+     справа: «Поддержать» (она шире лайка из-за подписи и висит выше) на
+     невысоком окне наезжала на низ борта.
+     Пока борта показаны, разводим кнопки по нижним углам — лайк налево,
+     донат направо. Они оказываются НИЖЕ бортов (борт кончается на 696px,
+     кнопка начинается от низа окна), в пустых полях по бокам от постера, и
+     не закрывают ни баннер, ни борта.
+     Только внутри этого медиазапроса: без бортов кнопки стоят стопкой
+     справа, как раньше, и на телефоне так же уезжают вправо при прокрутке
+     (см. .fabs-hidden — он двигает их по X, и левая кнопка уехала бы не
+     в ту сторону). */
+  .like-fab   { right: auto; left: 18px; bottom: 18px; }
+  .donate-fab { right: 18px; bottom: 18px; }
 }
 .ptn-rail img {
   display: block;
@@ -1610,11 +1604,9 @@ body.ptn-locked { overflow: hidden; }
   .ptn-chip { font-size: 2cqw; }
   /* на телефоне сцена узкая, а экран высокий — баннер можно отпустить выше */
   .ptn-img { max-height: 45cqw; }
-  /* На телефоне управления нет вовсе: наведения там не существует, а
-     баннеры листаются свайпом — scroll-snap делает это сам, без единой
-     кнопки. Убираем панель целиком, а не прячем прозрачностью, чтобы она
-     не занимала место под баннером. */
-  .ptn-bar { display: none; }
+  /* На телефоне стрелок нет вовсе: наведения там не существует, а баннеры
+     листаются свайпом — scroll-snap делает это сам, без единой кнопки. */
+  .ptn-nav { display: none; }
 
   /* подсказка и значок NEW крупнее под палец/экран */
   .cell-new { width: 6.6cqw; }

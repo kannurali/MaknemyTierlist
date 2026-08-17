@@ -973,12 +973,18 @@
     chip.textContent = tx("ad.chip");
     root.appendChild(chip);
 
+    // Рамка нужна как система координат для стрелок: они лежат ПОВЕРХ
+    // баннера по его краям, а не в полосе под ним, и не должны уезжать
+    // вместе с прокруткой — значит они соседи вьюпорта, а не его дети.
+    const frame = document.createElement("div");
+    frame.className = "ptn-frame";
     const viewport = document.createElement("div");
     viewport.className = "ptn-viewport";
     const track = document.createElement("div");
     track.className = "ptn-track";
     viewport.appendChild(track);
-    root.appendChild(viewport);
+    frame.appendChild(viewport);
+    root.appendChild(frame);
 
     const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -1030,38 +1036,26 @@
       track.appendChild(slide);
     });
 
-    // Панель управления в экспорт не попадает — её снимает onclone по классу.
-    // Одна кампания — управлять нечем, панель не строим вовсе.
-    const bar = document.createElement("div");
-    bar.className = "ptn-bar ptn-export-hide";
-    const mkBtn = (cls, label) => {
+    // Стрелки по краям баннера, как на маркетплейсах. В экспорт не идут —
+    // их снимает onclone по классу ptn-export-hide. Один баннер листать
+    // нечем, поэтому стрелок тогда просто нет.
+    const mkNav = (cls, label) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = cls;
+      b.className = "ptn-nav ptn-export-hide " + cls;
       b.setAttribute("aria-label", label);
       b.title = label;
       return b;
     };
-    const prev = mkBtn("ptn-nav ptn-prev", tx("promo.prev"));
-    const next = mkBtn("ptn-nav ptn-next", tx("promo.next"));
-    const dots = document.createElement("div");
-    dots.className = "ptn-dots";
-    dots.setAttribute("role", "tablist");
-    list.forEach((camp, i) => {
-      const d = document.createElement("button");
-      d.type = "button";
-      d.className = "ptn-dot";
-      d.setAttribute("role", "tab");
-      d.setAttribute("aria-label", tx("promo.goto", { n: i + 1 }));
-      dots.appendChild(d);
-    });
-    bar.appendChild(prev);
-    bar.appendChild(dots);
-    bar.appendChild(next);
-    if (list.length > 1) root.appendChild(bar);
+    const prev = mkNav("ptn-prev", tx("promo.prev"));
+    const next = mkNav("ptn-next", tx("promo.next"));
+    if (list.length > 1) {
+      frame.appendChild(prev);
+      frame.appendChild(next);
+    }
 
     stripCtl = makeStripController({
-      root: root, viewport: viewport, track: track, dots: dots,
+      root: root, viewport: viewport, track: track,
       prev: prev, next: next, list: list, reduced: reduced
     });
     return root;
@@ -1069,7 +1063,6 @@
 
   function makeStripController(ui) {
     const slides = Array.from(ui.track.children);
-    const dots = Array.from(ui.dots.children);
     const count = slides.length;
 
     // Автолистания нет: баннер стоит, пока человек сам не пролистает. Значит
@@ -1102,13 +1095,6 @@
       });
     }
 
-    function syncDots() {
-      dots.forEach((d, i) => {
-        d.classList.toggle("on", i === index);
-        d.setAttribute("aria-selected", i === index ? "true" : "false");
-      });
-    }
-
     function goTo(i, smooth) {
       if (!count) return;
       index = ((i % count) + count) % count;
@@ -1135,7 +1121,6 @@
         if (Math.abs(ui.viewport.scrollLeft - left) > 4) ui.viewport.scrollLeft = left;
       }, 450);
       syncWindow();
-      syncDots();
     }
 
     // Свайп двигает scrollLeft напрямую — забираем из него активный индекс.
@@ -1151,7 +1136,6 @@
           index = i;
           promoIndex = i;
           syncWindow();
-          syncDots();
         }
       });
     }
@@ -1186,7 +1170,6 @@
     const nav = (e, i) => { goTo(i, true); if (e.detail > 0 && e.currentTarget.blur) e.currentTarget.blur(); };
     ui.prev.addEventListener("click", e => nav(e, index - 1));
     ui.next.addEventListener("click", e => nav(e, index + 1));
-    dots.forEach((d, i) => d.addEventListener("click", e => nav(e, i)));
     document.addEventListener("visibilitychange", onVis);
 
     ui.root.tabIndex = -1;
