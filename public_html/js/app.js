@@ -1239,6 +1239,73 @@
     if (list.length > 2) railTimer = setInterval(paint, RAIL_ROTATE_MS);
   }
 
+  // ---------- нижняя полоса на телефоне ----------
+  //
+  // То же размещение, что борта, только горизонтальное: на телефоне бортов
+  // нет, а место сбоку от контента там — это низ экрана. Полоса приклеена и
+  // видна всегда, поэтому под неё отводится место снизу страницы, иначе она
+  // закрывала бы последний ряд предметов.
+  const dockMQ = window.matchMedia ? window.matchMedia("(max-width: 640px)") : null;
+  let dockRO = null;
+
+  function renderPromoDock() {
+    const dock = $("#promoDock");
+    if (!dock) return;
+    const wide = dockMQ ? dockMQ.matches : false;
+    const list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now()) : [];
+
+    dock.innerHTML = "";
+    if (!list.length) {
+      dock.hidden = true;
+      document.body.classList.remove("has-promo-dock");
+      document.body.style.removeProperty("--ptn-dock-h");
+      if (dockRO) { dockRO.disconnect(); dockRO = null; }
+      return;
+    }
+
+    const camp = promo.pickWeighted(list, Math.random());
+    const cre = promo.creativeFor(camp, "dock");
+    if (!cre) { dock.hidden = true; document.body.classList.remove("has-promo-dock"); return; }
+
+    const chip = document.createElement("span");
+    chip.className = "ptn-chip";
+    chip.textContent = tx("ad.chip");
+    dock.appendChild(chip);
+
+    const img = document.createElement("img");
+    img.className = "ptn-dock-img";
+    img.src = cre.src;
+    img.alt = tx("ad.imageAlt");
+    img.draggable = false;
+    img.decoding = "async";
+    if (cre.w) img.width = cre.w;
+    if (cre.h) img.height = cre.h;
+    dock.appendChild(img);
+
+    const url = promo.safeHref(camp.href);
+    dock.classList.toggle("has-link", !!url);
+    dock.onclick = url ? (() => openPromo(camp, "dock")) : null;
+    dock.tabIndex = url ? 0 : -1;
+    dock.onkeydown = url ? (e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPromo(camp, "dock"); }
+    }) : null;
+
+    dock.hidden = false;
+    document.body.classList.add("has-promo-dock");
+
+    // Высота зависит от пропорций макета, поэтому её меряем, а не хардкодим:
+    // от неё считается и отступ снизу страницы, и позиция кнопок над полосой.
+    const measure = () => {
+      document.body.style.setProperty("--ptn-dock-h", Math.round(dock.offsetHeight) + "px");
+    };
+    measure();
+    if (window.ResizeObserver) {
+      if (dockRO) dockRO.disconnect();
+      dockRO = new ResizeObserver(measure);
+      dockRO.observe(dock);
+    }
+  }
+
   function fillRail(el, camp) {
     const cre = promo.creativeFor(camp, "rail");
     if (!cre) { el.hidden = true; el.innerHTML = ""; return; }
@@ -2778,6 +2845,7 @@
     old.replaceWith(renderPromoBlock());
     applyEditMode();                      // вернуть видимость .edit-only
     renderPromoRails();
+    renderPromoDock();
     schedulePromoPopup();                 // могла приехать новая popup-кампания
   }
 
@@ -2993,12 +3061,18 @@
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initBackend();
   renderPromoRails();
+  renderPromoDock();
   // Борта строятся и разбираются по медиазапросу, а не по window.resize:
   // событие приходит один раз на пересечение порога, а не на каждый пиксель.
   if (railMQ) {
     const onRailMQ = () => renderPromoRails();
     if (railMQ.addEventListener) railMQ.addEventListener("change", onRailMQ);
     else if (railMQ.addListener) railMQ.addListener(onRailMQ);   // Safari < 14
+  }
+  if (dockMQ) {
+    const onDockMQ = () => renderPromoDock();
+    if (dockMQ.addEventListener) dockMQ.addEventListener("change", onDockMQ);
+    else if (dockMQ.addListener) dockMQ.addListener(onDockMQ);
   }
   initPromoPopup();
   // render() полностью перестраивает #tiers (innerHTML=""). На телефоне это

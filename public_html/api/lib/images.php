@@ -140,9 +140,15 @@ function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000,
 
 // One source of truth for the code AND for the spec table an advertiser is
 // handed. Change a number here and the media kit must change with it.
+// 'rail' and 'dock' are the same placement in two orientations: a vertical
+// skyscraper beside the poster on desktop, a horizontal strip stuck to the
+// bottom of the screen on a phone. A 4:15 creative cannot be shown in a 16:5
+// bar, so it is its own slot with its own size rather than the same file
+// reused. 640x200 renders at about 320x100 CSS px, the standard mobile bar.
 const CREATIVE_SPECS = [
     'strip' => ['maxW' => 1200, 'maxH' => 400,  'maxBytes' => 400000, 'maxAnimBytes' => 900000],
     'rail'  => ['maxW' => 320,  'maxH' => 1200, 'maxBytes' => 300000, 'maxAnimBytes' => 700000],
+    'dock'  => ['maxW' => 640,  'maxH' => 200,  'maxBytes' => 200000, 'maxAnimBytes' => 500000],
     'popup' => ['maxW' => 900,  'maxH' => 900,  'maxBytes' => 400000, 'maxAnimBytes' => 900000],
 ];
 const CREATIVE_FORMATS = ['png', 'jpg', 'webp', 'gif'];

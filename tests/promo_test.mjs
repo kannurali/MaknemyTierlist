@@ -430,7 +430,7 @@ test('normalizeDoc survives anything the network or localStorage can hand it', (
 });
 
 test('normalizeDoc exposes the slot list the rest of the code shares', () => {
-    assert.deepEqual(SLOTS, ['strip', 'rail', 'popup']);
+    assert.deepEqual(SLOTS, ['strip', 'rail', 'dock', 'popup']);
 });
 
 // -------------------------------------------------------- migrateLegacyAd

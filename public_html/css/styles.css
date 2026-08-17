@@ -1059,6 +1059,67 @@ body.protected img { -webkit-user-drag: none; }
 .ptn-rail.has-link { cursor: pointer; }
 .ptn-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
+/* ===================== Ad bottom dock (phones) =====================
+   Горизонтальная пара к боковым бортам: на телефоне бортов нет, и место
+   «сбоку от контента» там — низ экрана. Полоса приклеена и видна всегда.
+
+   Живёт снаружи .stage-wrap: у .stage стоит container-type, а контейнер
+   перехватывает position: fixed у потомков — изнутри сцены полоса прилипла
+   бы к сцене, а не к экрану.
+
+   z-index 55 — ниже плавающих кнопок (60), попапа (90) и модалок (100), но
+   выше липкого тулбара (50) не нужно: они на разных краях экрана. */
+.ptn-dock { display: none; }
+
+@media (max-width: 640px) {
+  .ptn-dock:not([hidden]) {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 55;
+    padding: 6px 8px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(5, 9, 26, .94);
+    border-top: 1px solid var(--panel-edge);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, .45);
+    line-height: 0;
+  }
+  .ptn-dock.has-link { cursor: pointer; }
+  .ptn-dock:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+  .ptn-dock-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 22vh;      /* потолок, если рекламодатель прислал макет выше нормы */
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .ptn-dock .ptn-chip {
+    position: absolute; top: 0; left: 0;
+    font-family: var(--display);
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 1px;
+    color: #0a1226;
+    background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
+    padding: 1px 7px;
+    border-radius: 0 0 7px 0;
+    z-index: 1;
+  }
+
+  /* Под полосу отводим место, иначе она навсегда закрывает последний ряд
+     предметов. Высоту меряет JS и кладёт в --ptn-dock-h: она зависит от
+     пропорций присланного макета. */
+  body.has-promo-dock .stage-wrap {
+    padding-bottom: calc(var(--ptn-dock-h, 90px) + 34px);
+  }
+
+  /* Кнопки встают по бокам НАД полосой. */
+  body.has-promo-dock .like-fab   { bottom: calc(var(--ptn-dock-h, 90px) + 12px); }
+  body.has-promo-dock .donate-fab { bottom: calc(var(--ptn-dock-h, 90px) + 12px); left: auto; right: 12px; }
+  body.has-promo-dock .like-fab   { left: 12px; right: auto; }
+}
+
 /* ===================== Ad popup =====================
    Живёт снаружи .stage-wrap: .stage — контейнер с overflow: hidden, из него
    ничто не выбирается.
@@ -1521,6 +1582,12 @@ body.ptn-locked { overflow: hidden; }
     transform: translateX(calc(100% + 16px));
     opacity: 0;
     pointer-events: none;
+  }
+  /* С прилипшей полосой кнопки стоят у РАЗНЫХ краёв, и общий увод вправо
+     потащил бы левую через весь экран. Прячем их вниз, за полосу. */
+  body.has-promo-dock.fabs-hidden .like-fab,
+  body.has-promo-dock.fabs-hidden .donate-fab {
+    transform: translateY(calc(100% + var(--ptn-dock-h, 90px)));
   }
 
   /* --- тирлист во всю ширину экрана (крупнее) --- */

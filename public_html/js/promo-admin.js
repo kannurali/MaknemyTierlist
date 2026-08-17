@@ -23,9 +23,10 @@
   var SPECS = {
     strip: { label: "Карусель в постере", w: 1200, h: 300,  maxW: 1200, maxH: 400,  bytes: 400000, animBytes: 900000 },
     rail:  { label: "Боковой борт",       w: 320,  h: 1200, maxW: 320,  maxH: 1200, bytes: 300000, animBytes: 700000 },
+    dock:  { label: "Полоса внизу (телефон)", w: 640, h: 200, maxW: 640, maxH: 200,  bytes: 200000, animBytes: 500000 },
     popup: { label: "Всплывающее окно",   w: 800,  h: 800,  maxW: 900,  maxH: 900,  bytes: 400000, animBytes: 900000 }
   };
-  var SLOTS = ["strip", "rail", "popup"];
+  var SLOTS = ["strip", "rail", "dock", "popup"];
 
   var $ = function (s) { return document.querySelector(s); };
   var doc = { v: 1, rev: 0, campaigns: [] };

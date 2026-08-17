@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=42" />
+<link rel="stylesheet" href="css/styles.css?v=43" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -241,6 +241,16 @@
   <aside class="ptn-rail ptn-rail-r" id="promoRailR" hidden
          data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
 
+  <!-- ====== Прилипающий баннер внизу экрана (только телефон) ======
+       Тоже снаружи .stage-wrap, и по той же причине, что попап и борта:
+       у .stage стоит container-type, а контейнер перехватывает
+       position: fixed на потомках — изнутри сцены баннер прилип бы к ней,
+       а не к экрану. Плюс собственный container-type здесь обязателен:
+       вся вёрстка баннера в единицах cqw, и без него они бы считались не
+       от той ширины. -->
+  <div class="ptn-dock" id="promoDock" hidden
+       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
+
   <!-- ================= Item editor modal ================= -->
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal">
@@ -403,7 +413,7 @@
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
-  <script src="js/promo.js?v=1"></script>
-  <script src="js/app.js?v=54"></script>
+  <script src="js/promo.js?v=2"></script>
+  <script src="js/app.js?v=55"></script>
 </body>
 </html>
