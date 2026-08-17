@@ -1031,6 +1031,7 @@
     });
 
     // Панель управления в экспорт не попадает — её снимает onclone по классу.
+    // Одна кампания — управлять нечем, панель не строим вовсе.
     const bar = document.createElement("div");
     bar.className = "ptn-bar ptn-export-hide";
     const mkBtn = (cls, label) => {
@@ -1054,38 +1055,31 @@
       d.setAttribute("aria-label", tx("promo.goto", { n: i + 1 }));
       dots.appendChild(d);
     });
-    // Пауза обязательна: WCAG 2.2.2 требует остановки для содержимого,
-    // которое само меняется дольше пяти секунд. Она же служит кнопкой
-    // «остановить анимацию» — нажатие подменяет анимированные креативы
-    // их статичным кадром.
-    const toggle = mkBtn("ptn-toggle", tx("promo.pause"));
     bar.appendChild(prev);
     bar.appendChild(dots);
     bar.appendChild(next);
-    if (list.length > 1 || list.some(c => (promo.creativeFor(c, "strip") || {}).anim)) {
-      bar.appendChild(toggle);
-    }
     if (list.length > 1) root.appendChild(bar);
 
     stripCtl = makeStripController({
       root: root, viewport: viewport, track: track, dots: dots,
-      prev: prev, next: next, toggle: toggle, list: list, reduced: reduced
+      prev: prev, next: next, list: list, reduced: reduced
     });
     return root;
   }
 
   function makeStripController(ui) {
-    const AUTO_MS = 7000;
-    const MANUAL_QUIET_MS = 15000;   // после ручного действия не дёргаем
     const slides = Array.from(ui.track.children);
     const dots = Array.from(ui.dots.children);
     const count = slides.length;
 
-    let timer = null;
+    // Автолистания нет: баннер стоит, пока человек сам не пролистает. Значит
+    // нет и кнопки паузы — останавливать нечего.
+    //
+    // Единственное, что двигается само, — анимация внутри креатива. Её
+    // выключает системная настройка «уменьшить движение»: при ней вместо
+    // анимации показывается статичный кадр (поле poster). Раньше эту роль
+    // играла кнопка паузы, теперь она отрабатывает автоматически.
     let settleT = null;
-    let manualUntil = 0;
-    let hovered = false;
-    let stopped = ui.reduced;        // при reduce автопрокрутка выключена
     let scrollRaf = 0;
     let index = Math.min(promoIndex, count - 1);
     if (index < 0) index = 0;
@@ -1099,7 +1093,7 @@
         const img = slide.querySelector(".ptn-img");
         if (!img) return;
         const near = Math.abs(i - index) <= 1;
-        const want = (stopped && img.dataset.anim) ? img.dataset.poster : img.dataset.src;
+        const want = (ui.reduced && img.dataset.anim) ? img.dataset.poster : img.dataset.src;
         if (near) {
           if (img.getAttribute("src") !== want) img.src = want;
         } else if (img.hasAttribute("src")) {
@@ -1144,23 +1138,8 @@
       syncDots();
     }
 
-    function shouldTick() {
-      if (stopped || hovered || count < 2) return false;
-      if (document.visibilityState !== "visible") return false;
-      if (exporting) return false;
-      if (Date.now() < manualUntil) return false;
-      if (ui.root.contains(document.activeElement)) return false;
-      return true;
-    }
-
-    function tick() { if (shouldTick()) goTo(index + 1, true); }
-
-    function manual(i) {
-      manualUntil = Date.now() + MANUAL_QUIET_MS;
-      goTo(i, true);
-    }
-
     // Свайп двигает scrollLeft напрямую — забираем из него активный индекс.
+    // На телефоне это ЕДИНСТВЕННЫЙ способ листать: кнопок там нет.
     // Дросселируем через rAF, как это уже сделано для авто-скрытия кнопок.
     function onScroll() {
       if (scrollRaf) return;
@@ -1171,21 +1150,10 @@
         if (i !== index && i >= 0 && i < count) {
           index = i;
           promoIndex = i;
-          manualUntil = Date.now() + MANUAL_QUIET_MS;
           syncWindow();
           syncDots();
         }
       });
-    }
-
-    function setStopped(v) {
-      stopped = v;
-      ui.toggle.setAttribute("aria-pressed", v ? "true" : "false");
-      const label = tx(v ? "promo.play" : "promo.pause");
-      ui.toggle.setAttribute("aria-label", label);
-      ui.toggle.title = label;
-      ui.toggle.classList.toggle("on", v);
-      syncWindow();
     }
 
     // Смахивание не должно открывать ссылку: сравниваем позицию прокрутки
@@ -1201,36 +1169,32 @@
     }
 
     function onKey(e) {
-      if (e.key === "ArrowLeft")  { e.preventDefault(); manual(index - 1); }
-      if (e.key === "ArrowRight") { e.preventDefault(); manual(index + 1); }
+      if (e.key === "ArrowLeft")  { e.preventDefault(); goTo(index - 1, true); }
+      if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1, true); }
     }
 
-    const onEnter = () => { hovered = true; };
-    const onLeave = () => { hovered = false; };
     const onVis = () => { if (document.visibilityState === "visible") syncWindow(); };
 
     ui.viewport.addEventListener("scroll", onScroll, { passive: true });
     ui.viewport.addEventListener("pointerdown", onDown, { passive: true });
     ui.track.addEventListener("click", onClick);
-    ui.root.addEventListener("mouseenter", onEnter);
-    ui.root.addEventListener("mouseleave", onLeave);
     ui.root.addEventListener("keydown", onKey);
-    ui.prev.addEventListener("click", () => manual(index - 1));
-    ui.next.addEventListener("click", () => manual(index + 1));
-    ui.toggle.addEventListener("click", () => { setStopped(!stopped); manualUntil = Date.now() + MANUAL_QUIET_MS; });
-    dots.forEach((d, i) => d.addEventListener("click", () => manual(i)));
+    // Панель держится видимой через :hover и :focus-within. После клика
+    // мышью кнопка остаётся в фокусе, и панель залипала бы на экране, хотя
+    // курсор уже увели. Снимаем фокус — но только с настоящего клика:
+    // у Enter с клавиатуры detail === 0, и там фокус наоборот нужен.
+    const nav = (e, i) => { goTo(i, true); if (e.detail > 0 && e.currentTarget.blur) e.currentTarget.blur(); };
+    ui.prev.addEventListener("click", e => nav(e, index - 1));
+    ui.next.addEventListener("click", e => nav(e, index + 1));
+    dots.forEach((d, i) => d.addEventListener("click", e => nav(e, i)));
     document.addEventListener("visibilitychange", onVis);
 
     ui.root.tabIndex = -1;
-    setStopped(stopped);
     // Позицию восстанавливаем без анимации: после поворота экрана карусель
     // должна оказаться там же, где была, а не уехать на первый слайд.
     goTo(index, false);
-    timer = setInterval(tick, AUTO_MS);
 
     return {
-      pause() { hovered = true; },
-      resume() { hovered = false; },
       // Активный слайд и подмена анимации на статичный кадр — для экспорта.
       freezeForExport() {
         slides.forEach(slide => {
@@ -1241,9 +1205,7 @@
       },
       unfreeze() { syncWindow(); },
       destroy() {
-        clearInterval(timer);
         clearTimeout(settleT);
-        timer = null;
         if (scrollRaf) cancelAnimationFrame(scrollRaf);
         document.removeEventListener("visibilitychange", onVis);
       }
@@ -2358,7 +2320,7 @@
       // случайно оказался на экране, и один и тот же экспорт давал бы разную
       // картинку. Постер делает «ваш баннер попадает в PNG-постер»
       // предсказуемой функцией, а не лотереей.
-      if (stripCtl) { stripCtl.pause(); stripCtl.freezeForExport(); }
+      if (stripCtl) stripCtl.freezeForExport();
       await eagerLoadStageImages();
       if (DEBUG) {
         const all = Array.from(stage.querySelectorAll("img"));
@@ -2468,7 +2430,7 @@
     } finally {
       if (canvas) canvas.width = canvas.height = 0;
       exporting = false;
-      if (stripCtl) { stripCtl.unfreeze(); stripCtl.resume(); }
+      if (stripCtl) stripCtl.unfreeze();
       editToggle.checked = wasEditing;
       applyEditMode();
       if (!readyBlob) { btnPng.textContent = PNG_LABEL; btnPng.disabled = false; }

@@ -933,14 +933,26 @@ body.protected img { -webkit-user-drag: none; }
   }
 }
 
+/* Управление не мозолит глаза: панель проявляется при наведении на баннер
+   (и при переходе на неё с клавиатуры). Прячем прозрачностью, а не
+   display: none — иначе карточка меняла бы высоту под курсором и весь
+   тирлист дёргался бы при наведении. Панель маленькая, правило «никакой
+   прозрачности» касается слоёв размером со сцену, а не строки кнопок. */
 .ptn-bar {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: .7cqw;
   margin-top: .5cqw;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
 }
-.ptn-nav, .ptn-toggle {
+@media (hover: hover) and (pointer: fine) {
+  .ptn-strip:hover .ptn-bar,
+  .ptn-strip:focus-within .ptn-bar { opacity: 1; pointer-events: auto; }
+}
+.ptn-nav {
   width: 2.4cqw; height: 2.4cqw;
   padding: 0;
   border: 1px solid rgba(140,190,255,.42);
@@ -960,21 +972,6 @@ body.protected img { -webkit-user-drag: none; }
 }
 .ptn-prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
 .ptn-next::before { transform: translate(-70%, -50%) rotate(45deg); }
-.ptn-toggle::before {
-  content: "";
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: .7cqw; height: .9cqw;
-  border-left: .26cqw solid #cfe9ff;
-  border-right: .26cqw solid #cfe9ff;
-}
-/* Нажата — рисуем треугольник «продолжить». */
-.ptn-toggle.on::before {
-  width: 0; height: 0;
-  border: .45cqw solid transparent;
-  border-left: .8cqw solid #cfe9ff;
-  border-right: 0;
-}
 .ptn-dots { display: flex; align-items: center; gap: .5cqw; }
 .ptn-dot {
   width: 1cqw; height: 1cqw;
@@ -988,13 +985,13 @@ body.protected img { -webkit-user-drag: none; }
 .ptn-dot.on { background: var(--cyan); box-shadow: 0 0 .8cqw rgba(79,214,255,.7); }
 /* На сайте видимый фокус есть ровно в одном месте (.lang-switch .chip).
    Управление каруселью доступно с клавиатуры, поэтому здесь он обязателен. */
-.ptn-nav:focus-visible, .ptn-toggle:focus-visible, .ptn-dot:focus-visible {
+.ptn-nav:focus-visible, .ptn-dot:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
   .ptn-viewport { scroll-behavior: auto; }
-  .ptn-dot { transition: none; }
+  .ptn-bar, .ptn-dot { transition: none; }
 }
 
 /* ===================== Ad side rails =====================
@@ -1603,16 +1600,11 @@ body.ptn-locked { overflow: hidden; }
   .ptn-chip { font-size: 2cqw; }
   /* на телефоне сцена узкая, а экран высокий — баннер можно отпустить выше */
   .ptn-img { max-height: 45cqw; }
-  /* Пальцем нужно попадать: на телефоне 1cqw ≈ 3.6px, поэтому размеры не
-     наследуются с десктопа, а задаются заново. Кнопки выходят ~40px —
-     основной способ листать здесь всё равно свайп, но промахиваться по
-     стрелкам человек не должен. */
-  .ptn-nav, .ptn-toggle { width: 11cqw; height: 11cqw; }
-  .ptn-nav::before { width: 3.4cqw; height: 3.4cqw; border-width: .8cqw; }
-  .ptn-toggle::before { width: 3cqw; height: 4cqw; border-left-width: 1.1cqw; border-right-width: 1.1cqw; }
-  .ptn-toggle.on::before { border-width: 2cqw; border-left-width: 3.5cqw; border-right-width: 0; }
-  .ptn-dot { width: 3.4cqw; height: 3.4cqw; }
-  .ptn-bar { gap: 2.6cqw; margin-top: 1.8cqw; }
+  /* На телефоне управления нет вовсе: наведения там не существует, а
+     баннеры листаются свайпом — scroll-snap делает это сам, без единой
+     кнопки. Убираем панель целиком, а не прячем прозрачностью, чтобы она
+     не занимала место под баннером. */
+  .ptn-bar { display: none; }
 
   /* подсказка и значок NEW крупнее под палец/экран */
   .cell-new { width: 6.6cqw; }
