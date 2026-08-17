@@ -83,6 +83,10 @@ section { padding: 40px 0; border-top: 1px solid var(--edge); }
   background: #05091f;
 }
 .slot-img.narrow img { max-width: 300px; margin: 0 auto; }
+/* Два телефона рядом: экран в ленте и то же самое со всплывающим окном. */
+.phones { display: flex; gap: 14px; justify-content: center; }
+.phones > div { flex: 1 1 0; min-width: 0; text-align: center; }
+.phones span { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; }
 .slot-img figcaption { color: var(--muted); font-size: 12px; margin-top: 8px; text-align: center; }
 .spec-line {
   margin-top: 12px; padding: 8px 12px;
