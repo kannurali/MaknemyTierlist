@@ -1,8 +1,13 @@
-// Builds public_html/assets/mediakit/mediakit.pdf by PRINTING the media kit
-// page itself, so the file and the page can never drift apart. Re-run it
-// after any edit to mediakit.html, mediakit.css or the screenshots.
+// Builds docs/mediakit/mediakit.pdf by PRINTING the media kit page itself, so
+// the file and the page can never drift apart. Re-run it after any edit to
+// mediakit.html, mediakit.css or the screenshots.
 //
-//   node tools/make-mediakit-pdf.mjs [http://127.0.0.1:8080]
+//   node tools/make-mediakit-pdf.mjs
+//
+// The kit lives in docs/, outside the web root: it is a commercial offer for
+// one advertiser, not a page of the site, and the cPanel deploy is additive -
+// a file published once has to be deleted from the server by hand. So the
+// page is opened from disk over file://, no server involved.
 //
 // Needs Playwright, which is deliberately NOT a dependency of this project
 // (no package.json, no npm — see the Global Constraints in the migration
@@ -18,11 +23,11 @@
 import { chromium } from 'playwright';
 import { statSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
-const BASE = process.argv[2] || 'http://127.0.0.1:8080';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = resolve(ROOT, 'public_html/assets/mediakit/mediakit.pdf');
+const PAGE = pathToFileURL(resolve(ROOT, 'docs/mediakit/mediakit.html')).href;
+const OUT = resolve(ROOT, 'docs/mediakit/mediakit.pdf');
 
 mkdirSync(dirname(OUT), { recursive: true });
 
@@ -32,7 +37,7 @@ const problems = [];
 page.on('pageerror', e => problems.push('JS: ' + e));
 page.on('requestfailed', r => problems.push('FAILED ' + r.url()));
 
-await page.goto(BASE + '/mediakit.html', { waitUntil: 'networkidle' });
+await page.goto(PAGE, { waitUntil: 'networkidle' });
 
 // Every image has to be decoded before printing. The screenshots are lazy,
 // and a lazy image that has not entered the viewport prints as a blank box.
@@ -76,6 +81,6 @@ if (state.broken.length || problems.length) {
 }
 if (state.draftRibbon) {
   console.error(`\n!! В PDF стоит лента ЧЕРНОВИК: не заполнено полей — ${state.unfilled}.`);
-  console.error('   Правится в блоке PRICES / AUDIENCE в конце public_html/mediakit.html.');
+  console.error('   Правится в блоке PRICES / AUDIENCE в конце docs/mediakit/mediakit.html.');
 }
 await browser.close();
