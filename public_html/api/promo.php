@@ -197,6 +197,19 @@ function handle_promo_get(PDO $pdo, bool $admin): array {
     return [200, $admin ? $doc : promo_public_view($doc)];
 }
 
+// Who gets the admin document - the one that still carries `notes`, i.e. what
+// the advertiser paid and until when.
+//
+// Only the panel, and only on its own uncached request. The ?rev= URL is
+// answered with `public, immutable`, and the owner browses the site with an
+// admin session like everyone else: without this split, one page load stores
+// the commercial terms in a response any shared cache may hand to the next
+// visitor. The panel never uses ?rev= (see API_PROMO in js/promo-admin.js),
+// so it loses nothing.
+function promo_admin_view_allowed(bool $admin, bool $hasRev): bool {
+    return $admin && !$hasRev;
+}
+
 // $expectRev is the revision the admin page loaded. Passing -1 skips the
 // check. The tier list blob never got optimistic concurrency and quietly
 // loses edits because of it; there is no reason to repeat that here.
@@ -245,12 +258,15 @@ if (!defined('TESTING')) {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         // Same cache split as tierlist.php: a ?rev= URL never changes its
         // bytes, so it can be cached forever and a repeat poll costs nothing.
-        if (isset($_GET['rev']) && $_GET['rev'] !== '') {
+        $hasRev = isset($_GET['rev']) && $_GET['rev'] !== '';
+        if ($hasRev) {
             header('Cache-Control: public, max-age=31536000, immutable');
         } else {
             header('Cache-Control: no-cache');
+            // The body of this one depends on the session cookie.
+            header('Vary: Cookie');
         }
-        [$status, $payload] = handle_promo_get(db(), is_admin());
+        [$status, $payload] = handle_promo_get(db(), promo_admin_view_allowed(is_admin(), $hasRev));
     } else {
         require_post();
         require_admin();

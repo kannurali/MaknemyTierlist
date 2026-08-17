@@ -104,6 +104,16 @@ test('the public view hides the commercial notes, the admin view keeps them', fu
     assert_eq('buy safely', $publicDoc['campaigns'][0]['text'], 'text kept');
 });
 
+// The ?rev= response is served with a year-long `public, immutable` header. If
+// an admin session could widen its body, the owner loading his own site would
+// park his commercial terms in a cache entry meant for everybody.
+test('the cacheable ?rev= response never carries the admin document', function () {
+    assert_eq(false, promo_admin_view_allowed(true, true),  'admin + ?rev= stays public');
+    assert_eq(true,  promo_admin_view_allowed(true, false), 'admin without ?rev= sees notes');
+    assert_eq(false, promo_admin_view_allowed(false, false), 'visitor never does');
+    assert_eq(false, promo_admin_view_allowed(false, true),  'visitor with ?rev= neither');
+});
+
 // ------------------------------------------------------------ normalization
 
 test('a dangerous href is neutralised before it reaches the database', function () {
