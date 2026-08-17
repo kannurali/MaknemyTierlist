@@ -5,4 +5,9 @@ Allow: /
 Disallow: /api/
 Disallow: /images/
 
+# Панель рекламы и медиакит — внутренние страницы. Индексация их не нужна
+# (доступ всё равно закрыт паролем на стороне сервера, это только про выдачу).
+Disallow: /promo-admin.html
+Disallow: /mediakit.html
+
 Sitemap: https://maknemytierlist.site/sitemap.xml

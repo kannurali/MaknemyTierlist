@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Реклама — панель управления</title>
+<!-- Своя таблица стилей, а не styles.css: тот качает каждый посетитель сайта,
+     и растить его на стили внутренней формы незачем. -->
+<link rel="stylesheet" href="css/promo-admin.css?v=1" />
+</head>
+<body>
+
+<!-- Вход. Пароль тот же, что на сайте; кука ставится на /, поэтому уже
+     залогиненный владелец сюда попадает без второго ввода. Проверка на
+     клиенте косметическая — всё, что пишет, закрыто require_admin(). -->
+<div class="gate" id="gate" hidden>
+  <form class="gate-box" id="gateForm">
+    <h1>Панель рекламы</h1>
+    <p class="muted">Введите пароль администратора.</p>
+    <input type="password" id="gatePass" autocomplete="current-password" placeholder="Пароль" />
+    <button class="btn primary" type="submit">Войти</button>
+    <div class="err" id="gateErr" hidden></div>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="top">
+    <div class="brand">РЕКЛАМА<span>панель</span></div>
+    <div class="top-actions">
+      <button class="btn" id="btnNew" type="button">＋ Кампания</button>
+      <button class="btn" id="btnImportLegacy" type="button"
+              title="Перенести старый баннер из тирлиста в кампанию">Импортировать текущий баннер</button>
+      <button class="btn" id="btnPreview" type="button"
+              title="Открыть сайт с НЕсохранёнными правками — можно показать рекламодателю до публикации">Предпросмотр на сайте</button>
+      <a class="btn" href="mediakit.html" target="_blank" rel="noopener">Медиакит</a>
+      <button class="btn primary" id="btnSave" type="button">Сохранить</button>
+      <span class="hint" id="saveHint"></span>
+    </div>
+  </header>
+
+  <main class="cols">
+    <aside class="list-col">
+      <div class="list-head">Кампании <span class="muted" id="listCount"></span></div>
+      <ul class="list" id="list"></ul>
+      <p class="muted small" id="emptyHint" hidden>Пока пусто. Нажмите «＋ Кампания».</p>
+    </aside>
+
+    <section class="edit-col" id="editor" hidden>
+      <div class="row">
+        <label class="f grow">Название <span class="muted">(для вас)</span>
+          <input type="text" id="fName" placeholder="Playerok · август" />
+        </label>
+        <label class="f">Рекламодатель
+          <input type="text" id="fAdvertiser" placeholder="Playerok" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="f check"><input type="checkbox" id="fEnabled" /> Показывать</label>
+        <label class="f grow">Вес в ротации <span class="muted" id="weightShare"></span>
+          <input type="range" id="fWeight" min="1" max="10" step="1" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="f">Начало <input type="date" id="fStart" /></label>
+        <label class="f">Конец <input type="date" id="fEnd" /></label>
+        <div class="f grow note" id="windowNote"></div>
+      </div>
+
+      <label class="f">Ссылка
+        <div class="withbtn">
+          <input type="url" id="fHref" placeholder="https://playerok.com/" />
+          <button class="btn small" type="button" id="btnUtm" title="Добавить UTM-метки">UTM</button>
+        </div>
+        <div class="err" id="hrefErr" hidden>Такую ссылку сайт открывать не будет.</div>
+      </label>
+
+      <div class="row">
+        <label class="f grow">Текст объявления
+          <input type="text" id="fText" placeholder="Покупай и продавай предметы Blox Fruits безопасно" />
+        </label>
+        <label class="f">Кнопка
+          <input type="text" id="fCta" placeholder="Перейти" />
+        </label>
+      </div>
+
+      <label class="f">Заметки <span class="muted">(видно только вам — на сайт не уходят)</span>
+        <textarea id="fNotes" rows="2" placeholder="оплачено до 20.09, контакт @…"></textarea>
+      </label>
+
+      <div class="slots" id="slots"></div>
+
+      <div class="row popup-cfg">
+        <label class="f">Задержка окна, с <input type="number" id="fDelay" min="5" max="60" step="1" /></label>
+        <label class="f">Не чаще, ч <input type="number" id="fCap" min="1" max="720" step="1" /></label>
+        <label class="f">Показов в неделю <input type="number" id="fWeek" min="1" max="50" step="1" /></label>
+      </div>
+
+      <div class="row end">
+        <button class="btn" id="btnDup" type="button">Дублировать</button>
+        <button class="btn danger" id="btnDel" type="button">Удалить</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/promo.js?v=1"></script>
+<script src="js/promo-admin.js?v=1"></script>
+</body>
+</html>
