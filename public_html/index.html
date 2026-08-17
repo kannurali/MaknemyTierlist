@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=37" />
+<link rel="stylesheet" href="css/styles.css?v=38" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -363,6 +363,31 @@
     </div>
   </div>
 
+  <!-- ====== Рекламное окно (всплывает через ~12 секунд после захода) ======
+       Разметка лежит здесь, а не собирается в JS: applyLang() переводит
+       [data-i18n*] при каждой смене языка, и статическая разметка получает
+       перевод бесплатно. Собранный в JS баннер обновлений этого не умеет и
+       остаётся на языке, который был при его создании — повторять этот баг
+       не будем.
+       Место тоже не случайное: снаружи .stage-wrap. У .stage стоят
+       overflow: hidden и container-type: inline-size, из него ничто не может
+       вылезти. -->
+  <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
+       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       aria-labelledby="promoPopTitle">
+    <div class="ptn-pop-card">
+      <button class="ptn-pop-close" id="promoPopClose" type="button"
+              data-i18n-label="promo.close" data-i18n-title="promo.close"
+              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+      <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" data-i18n-alt="ad.imageAlt" /></div>
+      <!-- Текст и подпись кнопки приходят от рекламодателя — это контент, он
+           не переводится. -->
+      <div class="ptn-pop-title" id="promoPopTitle"></div>
+      <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
+    </div>
+  </div>
+
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
   <script src="js/i18n.js?v=5"></script>
   <script src="js/content.js?v=1"></script>
@@ -370,6 +395,6 @@
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
   <script src="js/promo.js?v=1"></script>
-  <script src="js/app.js?v=50"></script>
+  <script src="js/app.js?v=51"></script>
 </body>
 </html>

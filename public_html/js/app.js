@@ -1251,6 +1251,153 @@
   }
 
   // ============================================================
+  //  РЕКЛАМНОЕ ОКНО (всплывает через ~12 секунд после захода)
+  // ============================================================
+  const PROMO_SEEN_KEY = "nx-ptn-seen-v1";
+  let popupTimer = null;
+  let popupOpened = false;         // одно окно за загрузку страницы
+  let popupCamp = null;
+  let popupRestoreFocus = null;
+
+  // Приватный режим Safari бросает на localStorage. Тогда счётчик живёт
+  // только в памяти: окно покажется раз за сессию вместо раза в сутки —
+  // это хуже, чем задумано, но лучше, чем на каждой перезагрузке.
+  let seenCache = null;
+  function readSeen() {
+    if (seenCache) return seenCache;
+    try { seenCache = JSON.parse(localStorage.getItem(PROMO_SEEN_KEY)) || {}; }
+    catch (e) { seenCache = {}; }
+    return seenCache;
+  }
+  function writeSeen(v) {
+    seenCache = v;
+    try { localStorage.setItem(PROMO_SEEN_KEY, JSON.stringify(v)); } catch (e) {}
+  }
+
+  function otherModalOpen() {
+    return ["#modal", "#viewModal", "#donateModal"].some(sel => {
+      const el = $(sel);
+      return el && !el.hidden;
+    });
+  }
+
+  function schedulePromoPopup() {
+    if (!promo || popupOpened) return;
+    clearTimeout(popupTimer);
+    // Отсчёт идёт только на видимой вкладке. Иначе лимит «раз в сутки»
+    // сгорит на человеке, который открыл сайт в фоне и ничего не увидел.
+    if (document.visibilityState !== "visible") return;
+    const now = Date.now();
+    const list = promo.eligible(promoDoc, "popup", now)
+      .filter(c => promo.shouldShowPopup(c, readSeen(), now));
+    const camp = promo.pickWeighted(list, Math.random());
+    if (!camp) return;
+    popupTimer = setTimeout(() => tryOpenPromoPopup(camp), camp.popup.delayMs);
+  }
+
+  function tryOpenPromoPopup(camp) {
+    if (popupOpened || !promo) return;
+    if (isAdmin || editToggle.checked || exporting) return;
+    if (document.visibilityState !== "visible" || otherModalOpen()) return;
+    if (!promo.shouldShowPopup(camp, readSeen(), Date.now())) return;
+
+    const cre = promo.creativeFor(camp, "popup");
+    if (!cre) return;
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const src = (reduced && cre.anim && cre.poster) ? cre.poster : cre.src;
+
+    // Ждём декодирования: окно, открытое поверх серого прямоугольника,
+    // выглядит как поломка сайта, а не как реклама. Таймаут на случай, если
+    // картинка не приедет вовсе.
+    const img = $("#promoPopImg");
+    let done = false;
+    const go = () => { if (!done) { done = true; openPromoPopup(camp, src); } };
+    img.src = src;
+    if (img.decode) { img.decode().then(go).catch(go); } else { img.onload = go; img.onerror = go; }
+    setTimeout(go, 4000);
+  }
+
+  function openPromoPopup(camp, src) {
+    if (popupOpened) return;
+    if (isAdmin || editToggle.checked || exporting || otherModalOpen()) return;
+    popupOpened = true;
+    popupCamp = camp;
+    writeSeen(promo.recordPopupShown(readSeen(), camp.id, Date.now()));
+
+    const pop = $("#promoPop");
+    $("#promoPopImg").src = src;
+    $("#promoPopTitle").textContent = camp.text || "";
+    const cta = $("#promoPopCta");
+    const url = promo.safeHref(camp.href);
+    cta.textContent = camp.cta || tx("promo.cta");
+    cta.hidden = !url;
+    if (url) cta.href = url;
+
+    pop.hidden = false;
+    // Блокировка прокрутки фона. На iOS одного overflow: hidden у body мало —
+    // тач-скролл всё равно протекает, поэтому у подложки ещё touch-action.
+    document.body.classList.add("ptn-locked");
+    popupRestoreFocus = document.activeElement;
+    ["#toolbar", ".stage-wrap", "#authDock", "#likeBtn", "#donateBtn"].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) el.setAttribute("aria-hidden", "true");
+    });
+    document.addEventListener("keydown", onPopupKey, true);
+    setTimeout(() => { const b = $("#promoPopClose"); if (b) b.focus(); }, 20);
+  }
+
+  function closePromoPopup() {
+    const pop = $("#promoPop");
+    if (!pop || pop.hidden) return;
+    pop.hidden = true;
+    document.body.classList.remove("ptn-locked");
+    ["#toolbar", ".stage-wrap", "#authDock", "#likeBtn", "#donateBtn"].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) el.removeAttribute("aria-hidden");
+    });
+    document.removeEventListener("keydown", onPopupKey, true);
+    // Картинку отцепляем: анимированный креатив иначе продолжает крутить
+    // кадры в скрытом окне.
+    const img = $("#promoPopImg");
+    if (img) img.removeAttribute("src");
+    if (popupRestoreFocus && popupRestoreFocus.focus) { try { popupRestoreFocus.focus(); } catch (e) {} }
+    popupRestoreFocus = null;
+  }
+
+  // Ловушка фокуса. В проекте её нет нигде, но именно это окно человек не
+  // просил открывать, поэтому уйти из него с клавиатуры обязано получаться.
+  function onPopupKey(e) {
+    const pop = $("#promoPop");
+    if (!pop || pop.hidden) return;
+    if (e.key === "Escape") { e.preventDefault(); closePromoPopup(); return; }
+    if (e.key !== "Tab") return;
+    const focusables = Array.from(pop.querySelectorAll("button, a[href], [tabindex]:not([tabindex='-1'])"))
+      .filter(el => !el.hidden && el.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+
+  function initPromoPopup() {
+    const pop = $("#promoPop");
+    if (!pop) return;
+    $("#promoPopClose").addEventListener("click", closePromoPopup);
+    pop.addEventListener("click", e => { if (e.target === pop) closePromoPopup(); });
+    $("#promoPopCta").addEventListener("click", () => {
+      if (!popupCamp || !promo) return;
+      writeSeen(promo.recordPopupClicked(readSeen(), popupCamp.id, Date.now()));
+      try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: popupCamp.id, slot: "popup" }); }
+      catch (e) {}
+      closePromoPopup();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") schedulePromoPopup();
+    });
+    schedulePromoPopup();
+  }
+
+  // ============================================================
   //  CREDITS (команда тирлиста)
   // ============================================================
   function renderCredits() {
@@ -2614,6 +2761,7 @@
     teardownPromoStrip();
     old.replaceWith(renderPromoBlock());
     applyEditMode();                      // вернуть видимость .edit-only
+    schedulePromoPopup();                 // могла приехать новая popup-кампания
   }
 
   // Обработка снимка данных тирлиста, пришедшего с сервера.
@@ -2827,6 +2975,7 @@
   render();
   if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
   initBackend();
+  initPromoPopup();
   // render() полностью перестраивает #tiers (innerHTML=""). На телефоне это
   // опасно: браузер шлёт 'resize' при сворачивании адресной строки во время
   // прокрутки (меняется только ВЫСОТА) — перерисовка сбрасывала прокрутку
