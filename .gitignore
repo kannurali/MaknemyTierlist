@@ -19,5 +19,10 @@
 !/public_html/images/.gitkeep
 !/public_html/images/.htaccess
 /tools/scratch_*
+# Playwright ставится рядом со скриптами проверки и в репозиторий не едет:
+# у проекта нет package.json и зависимостей по npm, это осознанное правило.
+/tools/node_modules/
+/tools/package.json
+/tools/package-lock.json
 /tools/out/
 /scratch_*
