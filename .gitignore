@@ -12,6 +12,8 @@
 # localStorage. Нужны только чтобы посмотреть сайт без PHP, в репозитории им
 # делать нечего.
 /public_html/__seed.local.*
+# То же для демо-рекламы: кампании-заглушки для показа клиенту.
+/public_html/__promo.local.*
 /config.php
 /public_html/images/*
 !/public_html/images/.gitkeep

@@ -803,7 +803,7 @@ body.protected img { -webkit-user-drag: none; }
 /* Рекламный баннер остаётся посреди тирлиста. В макете его нет, поэтому берём
    тон панели предметов — чтобы он читался частью той же плашки, а не чужой
    карточкой. */
-.ad-block {
+.ptn-card {
   position: relative;
   border-radius: 1.2cqw;
   background: linear-gradient(180deg, rgba(20,44,104,.62), rgba(7,18,56,.72));
@@ -816,7 +816,7 @@ body.protected img { -webkit-user-drag: none; }
   gap: .4cqw;
   overflow: hidden;
 }
-.ad-chip {
+.ptn-chip {
   position: absolute; top: 0; left: 0;
   font-family: var(--display);
   font-size: 1.2cqw;
@@ -826,7 +826,7 @@ body.protected img { -webkit-user-drag: none; }
   padding: .2cqw .8cqw .15cqw;
   border-radius: 0 0 .8cqw 0;
 }
-.ad-text {
+.ptn-text {
   font-family: var(--display);
   font-size: 2.4cqw;
   color: #fff;
@@ -836,9 +836,9 @@ body.protected img { -webkit-user-drag: none; }
   outline: none;
   min-width: 8cqw;
 }
-.editing .ad-text { cursor: text; }
-.ad-text:focus { background: rgba(79,214,255,.12); border-radius: 4px; }
-.ad-img-wrap { position: relative; display: block; max-width: 100%; margin: 0 auto; line-height: 0; }
+.editing .ptn-text { cursor: text; }
+.ptn-text:focus { background: rgba(79,214,255,.12); border-radius: 4px; }
+.ptn-img-wrap { position: relative; display: block; max-width: 100%; margin: 0 auto; line-height: 0; }
 /* Баннер тянется на всю ширину блока (max-width: 100%), а высота ограничена
    долей ширины сцены. Раньше здесь стояло max-height: 12cqw (~117px на
    десктопе): любая картинка выше этого сжималась пропорционально, и баннер
@@ -846,7 +846,7 @@ body.protected img { -webkit-user-drag: none; }
    Потолок разный для десктопа и телефона: одинаковая доля ширины сцены даёт
    на десктопе баннер в половину высоты окна (сцена широкая, окно низкое), а на
    телефоне — всего пятую часть. Телефонный потолок — в медиазапросе ниже. */
-.ad-img {
+.ptn-img {
   max-width: 100%;
   max-height: 28cqw;
   height: auto;
@@ -854,15 +854,15 @@ body.protected img { -webkit-user-drag: none; }
   display: block;
   margin: 0 auto;
 }
-.ad-tools { display: flex; gap: .5cqw; flex-wrap: wrap; justify-content: center; }
+.ptn-tools { display: flex; gap: .5cqw; flex-wrap: wrap; justify-content: center; }
 
 /* скрытая ссылка рекламы: вся карточка кликабельна (курсор-рука) + значок 🔗 */
-.stage:not(.editing) .ad-block.has-link,
-.stage:not(.editing) .ad-block.has-link * { cursor: pointer; }
+.stage:not(.editing) .ptn-card.has-link,
+.stage:not(.editing) .ptn-card.has-link * { cursor: pointer; }
 /* Значок «это ссылка». Глиф — фоновая SVG-картинка, а не эмодзи: эмодзи
    рисуется системным шрифтом (на каждой платформе свой) и по-разному попадает
    в PNG-экспорт, а data-URL фон рендерится одинаково везде. */
-.ad-link-badge {
+.ptn-link-badge {
   position: absolute; top: .8cqw; right: .8cqw; z-index: 4;
   width: 4cqw; height: 4cqw; border-radius: 50%;
   background-image:
@@ -879,13 +879,122 @@ body.protected img { -webkit-user-drag: none; }
   transition: transform .15s ease, box-shadow .15s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .stage:not(.editing) .ad-block.has-link:hover .ad-link-badge {
+  .stage:not(.editing) .ptn-card.has-link:hover .ptn-link-badge {
     transform: scale(1.1);
     box-shadow:
       0 0 0 .22cqw rgba(255,255,255,.55),
       0 .3cqw 1cqw rgba(0,0,0,.6),
       0 0 2.6cqw rgba(79,214,255,.85);
   }
+}
+
+/* ===================== Ad carousel =====================
+   Одна поверхность крутит несколько объявлений.
+
+   Листание сделано ПРОКРУТКОЙ со scroll-snap, а не transform/opacity:
+   1) нативный свайп с инерцией и упором в край — без своей обработки жестов,
+      которая ещё и подралась бы с preventDefault в setupProtection();
+   2) слой размером со сцену с прозрачностью WebKit выносит в отдельный буфер
+      на десятки мегабайт (см. комментарии у .stage и .petals — на этом падали
+      вкладки iPhone). Поэтому здесь НЕТ кроссфейдов: слайды едут вбок.
+   overscroll-behavior-x: contain нужен, чтобы свайп на последнем слайде не
+   уводил Safari назад по истории. */
+.ptn-viewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.ptn-viewport::-webkit-scrollbar { display: none; }
+.ptn-track { display: flex; }
+.ptn-slide {
+  position: relative;               /* якорь для значка ссылки */
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4cqw;
+}
+.stage:not(.editing) .ptn-slide.has-link,
+.stage:not(.editing) .ptn-slide.has-link * { cursor: pointer; }
+@media (hover: hover) and (pointer: fine) {
+  .stage:not(.editing) .ptn-slide.has-link:hover .ptn-link-badge {
+    transform: scale(1.1);
+    box-shadow:
+      0 0 0 .22cqw rgba(255,255,255,.55),
+      0 .3cqw 1cqw rgba(0,0,0,.6),
+      0 0 2.6cqw rgba(79,214,255,.85);
+  }
+}
+
+.ptn-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .7cqw;
+  margin-top: .5cqw;
+}
+.ptn-nav, .ptn-toggle {
+  width: 2.4cqw; height: 2.4cqw;
+  padding: 0;
+  border: 1px solid rgba(140,190,255,.42);
+  border-radius: 50%;
+  background: rgba(10,22,52,.62);
+  position: relative;
+  cursor: pointer;
+}
+/* Стрелки и значки нарисованы бордерами, а не эмодзи: эмодзи берёт системный
+   шрифт и на каждой платформе выглядит по-своему. */
+.ptn-nav::before {
+  content: "";
+  position: absolute; top: 50%; left: 50%;
+  width: .8cqw; height: .8cqw;
+  border-top: .18cqw solid #cfe9ff;
+  border-right: .18cqw solid #cfe9ff;
+}
+.ptn-prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
+.ptn-next::before { transform: translate(-70%, -50%) rotate(45deg); }
+.ptn-toggle::before {
+  content: "";
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: .7cqw; height: .9cqw;
+  border-left: .26cqw solid #cfe9ff;
+  border-right: .26cqw solid #cfe9ff;
+}
+/* Нажата — рисуем треугольник «продолжить». */
+.ptn-toggle.on::before {
+  width: 0; height: 0;
+  border: .45cqw solid transparent;
+  border-left: .8cqw solid #cfe9ff;
+  border-right: 0;
+}
+.ptn-dots { display: flex; align-items: center; gap: .5cqw; }
+.ptn-dot {
+  width: 1cqw; height: 1cqw;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(180,215,255,.34);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.ptn-dot.on { background: var(--cyan); box-shadow: 0 0 .8cqw rgba(79,214,255,.7); }
+/* На сайте видимый фокус есть ровно в одном месте (.lang-switch .chip).
+   Управление каруселью доступно с клавиатуры, поэтому здесь он обязателен. */
+.ptn-nav:focus-visible, .ptn-toggle:focus-visible, .ptn-dot:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptn-viewport { scroll-behavior: auto; }
+  .ptn-dot { transition: none; }
 }
 
 /* ===================== Legend =====================
@@ -1345,10 +1454,20 @@ body.protected img { -webkit-user-drag: none; }
   .fl-sub { font-size: 2.5cqw; }
   .cr-role { font-size: 2.3cqw; }
   .cr-name { font-size: 2.5cqw; }
-  .ad-text { font-size: 3.6cqw; }
-  .ad-chip { font-size: 2cqw; }
+  .ptn-text { font-size: 3.6cqw; }
+  .ptn-chip { font-size: 2cqw; }
   /* на телефоне сцена узкая, а экран высокий — баннер можно отпустить выше */
-  .ad-img { max-height: 45cqw; }
+  .ptn-img { max-height: 45cqw; }
+  /* Пальцем нужно попадать: на телефоне 1cqw ≈ 3.6px, поэтому размеры не
+     наследуются с десктопа, а задаются заново. Кнопки выходят ~40px —
+     основной способ листать здесь всё равно свайп, но промахиваться по
+     стрелкам человек не должен. */
+  .ptn-nav, .ptn-toggle { width: 11cqw; height: 11cqw; }
+  .ptn-nav::before { width: 3.4cqw; height: 3.4cqw; border-width: .8cqw; }
+  .ptn-toggle::before { width: 3cqw; height: 4cqw; border-left-width: 1.1cqw; border-right-width: 1.1cqw; }
+  .ptn-toggle.on::before { border-width: 2cqw; border-left-width: 3.5cqw; border-right-width: 0; }
+  .ptn-dot { width: 3.4cqw; height: 3.4cqw; }
+  .ptn-bar { gap: 2.6cqw; margin-top: 1.8cqw; }
 
   /* подсказка и значок NEW крупнее под палец/экран */
   .cell-new { width: 6.6cqw; }

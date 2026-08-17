@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=36" />
+<link rel="stylesheet" href="css/styles.css?v=37" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -158,7 +158,7 @@
 
     <input type="file" id="importFile" accept="application/json" hidden />
     <input type="file" id="tierLogoFile" accept="image/*" hidden />
-    <input type="file" id="adImgFile" accept="image/*" hidden />
+    <input type="file" id="ptnImgFile" accept="image/*" hidden />
     <span class="tb-saved" id="savedHint"></span>
   </div>
 
@@ -366,6 +366,10 @@
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
   <script src="js/i18n.js?v=5"></script>
   <script src="js/content.js?v=1"></script>
-  <script src="js/app.js?v=49"></script>
+  <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
+       первом render(). Файл намеренно не называется js/ads.js — это имя
+       режут сетевые фильтры блокировщиков. -->
+  <script src="js/promo.js?v=1"></script>
+  <script src="js/app.js?v=50"></script>
 </body>
 </html>
