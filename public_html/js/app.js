@@ -835,9 +835,50 @@
   // ============================================================
   const promo = (typeof PROMO !== "undefined") ? PROMO : null;
 
+  // Дом-заглушка: место, которое рекламирует само себя, пока его не купили.
+  // Обычная кампания по форме, поэтому её рисуют те же функции, что и
+  // платную, — отдельной ветки рендера нет. Попапа у неё нет намеренно: окно
+  // «ВАША РЕКЛАМА» поверх сайта каждому посетителю раздражает, а продать
+  // место не помогает.
+  //
+  // Макеты лежат в репозитории (assets/promo/), а не в базе: заглушка должна
+  // работать на чистой установке, где ещё ни одной кампании не заводили.
+  const PROMO_HOUSE_HREF = "https://t.me/mksvtnc";
+  const promoHouse = {
+    id: "house", name: "house", advertiser: "", enabled: true, weight: 1,
+    start: "", end: "", href: PROMO_HOUSE_HREF, text: "", cta: "", erid: "",
+    slots: ["strip", "rail", "dock"],
+    creatives: {
+      strip: { src: "assets/promo/placeholder-strip.webp", w: 1200, h: 300, anim: false, poster: "" },
+      rail:  { src: "assets/promo/placeholder-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "assets/promo/placeholder-dock.webp",  w: 640,  h: 200, anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
+    notes: ""
+  };
+
+  // Заглушка вместо пустоты — но не вместо того, что владелец поставил сам.
+  // Старый одиночный баннер (state.ad) живёт ровно в этом месте, и подменять
+  // его заглушкой значило бы молча снять с сайта то, что там стоит сейчас.
+  //
+  // «Поставил сам» = есть макет или ссылка. Голый текст без того и другого —
+  // это ровно тот дефолт, что зашит выше («МЕСТО ДЛЯ ВАШЕЙ РЕКЛАМЫ — …»),
+  // то есть словесная версия той же заглушки; картинка её и заменяет.
+  //
+  // В режиме редактирования баннер показываем всегда: иначе пропадут его
+  // кнопки и заполнить его будет нечем.
+  function legacyAdEmpty() {
+    const ad = (state && state.ad) || {};
+    return !String(ad.image || "").trim() && !String(ad.link || "").trim();
+  }
+
   function renderPromoBlock() {
     const list = stripOrder();
-    return list.length ? renderPromoStrip(list) : renderLegacyAd();
+    if (list.length) return renderPromoStrip(list);
+    if (legacyAdEmpty() && !stage.classList.contains("editing")) {
+      return renderPromoStrip([promoHouse]);
+    }
+    return renderLegacyAd();
   }
 
   function renderLegacyAd() {
@@ -1244,7 +1285,10 @@
     // Скрытая через display: none картинка всё равно скачивается, а на
     // телефоне это лишние сотни килобайт ради того, что никто не увидит.
     const wide = railMQ ? railMQ.matches : false;
-    const list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now()) : [];
+    let list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now()) : [];
+    // Купленных бортов нет — стоит заглушка. Своего баннера у этого места
+    // никогда не было, подменять нечего.
+    if (wide && promo && !list.length) list = [promoHouse];
     if (!list.length) {
       [left, right].forEach(el => { el.hidden = true; el.innerHTML = ""; });
       return;
@@ -1276,7 +1320,9 @@
     const dock = $("#promoDock");
     if (!dock) return;
     const wide = dockMQ ? dockMQ.matches : false;
-    const list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now()) : [];
+    let list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now()) : [];
+    // Как и у бортов: не куплено — стоит заглушка.
+    if (wide && promo && !list.length) list = [promoHouse];
 
     dock.innerHTML = "";
     if (!list.length) {

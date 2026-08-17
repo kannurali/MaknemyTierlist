@@ -8,6 +8,9 @@
 # assets/poster/bg-export.jpg.
 !/public_html/assets/*.jpg
 !/public_html/assets/*/*.jpg
+# Исходник заглушки «ВАША РЕКЛАМА». Без него make-placeholder-creatives.py
+# нечем пересобрать баннеры из свежей копии репозитория.
+!/tools/art/*.jpg
 # Локальный засев: снимок живой базы + страничка, которая кладёт его в
 # localStorage. Нужны только чтобы посмотреть сайт без PHP, в репозитории им
 # делать нечего.
