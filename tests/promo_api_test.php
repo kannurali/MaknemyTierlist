@@ -14,9 +14,9 @@ function tmp_dir_p(): string {
 
 function one_campaign(array $over = []): array {
     return ['campaigns' => [array_merge([
-        'id' => 'c_playerok', 'name' => 'Playerok', 'advertiser' => 'Playerok',
+        'id' => 'c_shop', 'name' => 'Shop', 'advertiser' => 'Shop',
         'enabled' => true, 'weight' => 3, 'start' => '2026-08-20', 'end' => '2026-09-20',
-        'href' => 'https://playerok.com/', 'text' => 'buy safely', 'cta' => 'Go',
+        'href' => 'https://shop.example/', 'text' => 'buy safely', 'cta' => 'Go',
         'slots' => ['strip'],
         'creatives' => ['strip' => ['src' => '/images/abc.webp', 'w' => 1200, 'h' => 300, 'anim' => false]],
         'notes' => 'paid until 20.09, 15000 RUB, contact @someone',
@@ -56,11 +56,11 @@ test('handle_promo_save inserts on first save and updates afterwards', function 
     assert_eq(1000, $p1['rev'], 'rev returned');
     assert_eq(1, (int)$pdo->query("SELECT COUNT(*) FROM promo")->fetchColumn(), 'row inserted');
 
-    [$s2, $p2] = handle_promo_save($pdo, one_campaign(['name' => 'Playerok v2']), $dir, 2000);
+    [$s2, $p2] = handle_promo_save($pdo, one_campaign(['name' => 'Shop v2']), $dir, 2000);
     assert_eq(200, $s2, 'second save ok');
     assert_eq(1, (int)$pdo->query("SELECT COUNT(*) FROM promo")->fetchColumn(), 'still one row');
     assert_eq(2000, promo_rev($pdo), 'rev advanced');
-    assert_eq('Playerok v2', promo_load($pdo)['campaigns'][0]['name'], 'content replaced');
+    assert_eq('Shop v2', promo_load($pdo)['campaigns'][0]['name'], 'content replaced');
 });
 
 test('saving campaigns never touches the tier list blob', function () {
@@ -82,7 +82,7 @@ test('a saved campaign round-trips through get unchanged', function () {
     [$status, $doc] = handle_promo_get($pdo, true);
     assert_eq(200, $status, 'ok');
     assert_eq(4242, $doc['rev'], 'rev');
-    assert_eq('c_playerok', $doc['campaigns'][0]['id'], 'id');
+    assert_eq('c_shop', $doc['campaigns'][0]['id'], 'id');
     assert_eq(3, $doc['campaigns'][0]['weight'], 'weight');
     assert_eq('2026-09-20', $doc['campaigns'][0]['end'], 'end date');
     assert_eq('/images/abc.webp', $doc['campaigns'][0]['creatives']['strip']['src'], 'creative');
@@ -100,7 +100,7 @@ test('the public view hides the commercial notes, the admin view keeps them', fu
     assert_true(isset($adminDoc['campaigns'][0]['notes']), 'admin sees notes');
     assert_eq(false, isset($publicDoc['campaigns'][0]['notes']), 'public does not');
     // Everything a visitor actually needs is still there.
-    assert_eq('https://playerok.com/', $publicDoc['campaigns'][0]['href'], 'href kept');
+    assert_eq('https://shop.example/', $publicDoc['campaigns'][0]['href'], 'href kept');
     assert_eq('buy safely', $publicDoc['campaigns'][0]['text'], 'text kept');
 });
 
@@ -144,8 +144,8 @@ test('promo_safe_href matches the client-side whitelist', function () {
     assert_eq('', promo_safe_href('data:text/html,x'), 'data');
     assert_eq('', promo_safe_href('https://'), 'placeholder');
     assert_eq('', promo_safe_href('https://a.com/ b'), 'whitespace');
-    assert_eq('https://playerok.com', promo_safe_href('playerok.com'), 'bare domain');
-    assert_eq('https://playerok.com', promo_safe_href('//playerok.com'), 'protocol relative');
+    assert_eq('https://shop.example', promo_safe_href('shop.example'), 'bare domain');
+    assert_eq('https://shop.example', promo_safe_href('//shop.example'), 'protocol relative');
     assert_eq('mailto:a@b.c', promo_safe_href('mailto:a@b.c'), 'mailto');
 });
 

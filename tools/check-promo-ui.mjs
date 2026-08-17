@@ -30,7 +30,7 @@ const head = t => console.log(`\n== ${t} ==`);
 // The popup would swallow hovers and clicks in most of these checks.
 const SUPPRESS_POPUP = () => {
   const now = Date.now(), seen = { _v: 1 };
-  ['c_playerok_aug', 'c_playerok_anim', 'c_demo_brand'].forEach(id => {
+  ['c_demo_aug', 'c_demo_anim', 'c_demo_brand'].forEach(id => {
     seen[id] = { last: now, clicked: 0, hits: [now] };
   });
   localStorage.setItem('nx-ptn-seen-v1', JSON.stringify(seen));

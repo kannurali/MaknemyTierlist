@@ -24,8 +24,8 @@ const HOUR = 60 * 60 * 1000;
 function camp(over = {}) {
     return normalizeDoc({
         campaigns: [Object.assign({
-            id: 'c1', name: 'Test', advertiser: 'Playerok', enabled: true, weight: 1,
-            start: '', end: '', href: 'https://playerok.com/', text: 'buy', cta: 'go',
+            id: 'c1', name: 'Test', advertiser: 'Shop', enabled: true, weight: 1,
+            start: '', end: '', href: 'https://shop.example/', text: 'buy', cta: 'go',
             slots: ['strip'], creatives: { strip: { src: '/images/a.webp', w: 1200, h: 300 } }
         }, over)]
     }).campaigns[0];
@@ -42,11 +42,11 @@ test('safeHref blocks dangerous schemes', () => {
 });
 
 test('safeHref passes and completes real addresses', () => {
-    assert.equal(safeHref('https://playerok.com/'), 'https://playerok.com/');
-    assert.equal(safeHref('http://playerok.com'), 'http://playerok.com');
-    assert.equal(safeHref('playerok.com'), 'https://playerok.com');
-    assert.equal(safeHref('//playerok.com'), 'https://playerok.com');
-    assert.equal(safeHref('mailto:ad@playerok.com'), 'mailto:ad@playerok.com');
+    assert.equal(safeHref('https://shop.example/'), 'https://shop.example/');
+    assert.equal(safeHref('http://shop.example'), 'http://shop.example');
+    assert.equal(safeHref('shop.example'), 'https://shop.example');
+    assert.equal(safeHref('//shop.example'), 'https://shop.example');
+    assert.equal(safeHref('mailto:ad@shop.example'), 'mailto:ad@shop.example');
     assert.equal(safeHref('tel:+79990000000'), 'tel:+79990000000');
 });
 
@@ -206,11 +206,12 @@ test('orderForCarousel shows every campaign once and is deterministic', () => {
 });
 
 test('orderForCarousel never places the same advertiser back to back', () => {
-    // Two campaigns from Playerok and one from another shop: a rotation that
-    // showed Playerok twice in a row would look like a stuck slideshow.
+    // Two campaigns from one advertiser and one from another shop: a
+    // rotation that showed the same one twice in a row would look like a
+    // stuck slideshow.
     const list = [
-        { id: 'p1', advertiser: 'Playerok', weight: 5 },
-        { id: 'p2', advertiser: 'Playerok', weight: 5 },
+        { id: 'p1', advertiser: 'Shop', weight: 5 },
+        { id: 'p2', advertiser: 'Shop', weight: 5 },
         { id: 'x1', advertiser: 'Other', weight: 1 }
     ];
     for (let seed = 0; seed < 20; seed++) {
@@ -228,9 +229,9 @@ test('orderForCarousel still shows everyone when a repeat is unavoidable', () =>
     // Three of four campaigns share an advertiser: no arrangement avoids a
     // neighbouring pair, and dropping a paid campaign is the worse answer.
     const list = [
-        { id: 'p1', advertiser: 'Playerok', weight: 1 },
-        { id: 'p2', advertiser: 'Playerok', weight: 1 },
-        { id: 'p3', advertiser: 'Playerok', weight: 1 },
+        { id: 'p1', advertiser: 'Shop', weight: 1 },
+        { id: 'p2', advertiser: 'Shop', weight: 1 },
+        { id: 'p3', advertiser: 'Shop', weight: 1 },
         { id: 'x1', advertiser: 'Other', weight: 1 }
     ];
     const ids = orderForCarousel(list, () => 0.4, 8).map(c => c.id);
