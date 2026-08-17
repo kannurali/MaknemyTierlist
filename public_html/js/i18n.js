@@ -170,6 +170,20 @@
       "ad.linkTitle":           "Скрытая ссылка: клик по рекламе откроет её, URL в тексте не виден. Пусто — убрать.",
       "ad.linkPrompt":          "Скрытая ссылка (URL) для рекламы. Оставьте пустым, чтобы убрать:",
 
+      // Обвязка рекламных мест. Сами объявления (текст, кнопка от
+      // рекламодателя) — это контент из базы, он не переводится.
+      "promo.region":           "Рекламные баннеры",
+      "promo.counter":          "Реклама {n} из {m}",
+      "promo.prev":             "Предыдущий баннер",
+      "promo.next":             "Следующий баннер",
+      "promo.goto":             "Показать баннер {n}",
+      "promo.pause":            "Остановить показ",
+      "promo.play":             "Продолжить показ",
+      "promo.rail":             "Реклама сбоку",
+      "promo.popLabel":         "Рекламное сообщение",
+      "promo.close":            "Закрыть рекламу",
+      "promo.cta":              "Перейти",
+
       "footer.addLinkBtn":      "＋ ссылка",
       "footer.urlPrompt":       "Ссылка (URL). Можно без https:// — подставится сам:",
 
@@ -354,6 +368,18 @@
       "ad.linkSet":             "🔗 Link ✓",
       "ad.linkTitle":           "Hidden link: tapping the ad opens it, the URL stays out of the text. Empty removes it.",
       "ad.linkPrompt":          "Hidden link (URL) for the ad. Leave empty to remove it:",
+
+      "promo.region":           "Advertisements",
+      "promo.counter":          "Ad {n} of {m}",
+      "promo.prev":             "Previous ad",
+      "promo.next":             "Next ad",
+      "promo.goto":             "Show ad {n}",
+      "promo.pause":            "Pause the rotation",
+      "promo.play":             "Resume the rotation",
+      "promo.rail":             "Side advertisement",
+      "promo.popLabel":         "Advertisement",
+      "promo.close":            "Close the ad",
+      "promo.cta":              "Open",
 
       "footer.addLinkBtn":      "＋ link",
       "footer.urlPrompt":       "Link (URL). You can omit https:// — it is added automatically:",
