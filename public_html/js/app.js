@@ -8,7 +8,16 @@
   const STORAGE_KEY = "nexus-tierlist-v1";
   const DIRTY_KEY = "nexus-tierlist-dirty-v1"; // помним факт НЕопубликованных правок между перезагрузками
   const DEFAULT_ICON = "assets/icon-sample.png";
-  const TIER_LOGOS = { MK: "assets/logo-mk.png", GLH: "assets/logo-glh.png", "💧": "assets/logo-flame.png" };
+  // Марки полос тиров и перевод старых сохранений — js/tiers.js. Модуль берётся
+  // защищённо, как i18n.js и content.js ниже: строки стоят первыми в IIFE, и без
+  // проверки не догрузившийся tiers.js уронил бы ReferenceError'ом весь редактор,
+  // а не одну картинку. Без модуля тир остаётся с той маркой, что лежит в
+  // сохранении (logo-flame.png с сервера никуда не делся), а новый тир — с
+  // текстовым ярлыком вместо картинки.
+  const tierMarks = (typeof TIERS !== "undefined") ? TIERS : null;
+  if (!tierMarks) console.warn("tiers.js не загружен — марки полос тиров останутся как есть");
+  const TIER_LOGOS = tierMarks ? tierMarks.TIER_LOGOS : {};
+  const normalizeTierLogos = tierMarks ? tierMarks.normalizeTierLogos : (list => list);
 
   const uid = () => "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -115,10 +124,8 @@
       if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
       if (!Array.isArray(merged.footer) || !merged.footer.length) merged.footer = d.footer;
       if (typeof merged.autoSort !== "boolean") merged.autoSort = true;
-      // old saves: give default tiers their logos back
-      merged.tiers.forEach(t => {
-        if (t.logo === undefined && TIER_LOGOS[t.label]) t.logo = TIER_LOGOS[t.label];
-      });
+      // old saves: give default tiers their logos back, retire replaced marks
+      normalizeTierLogos(merged.tiers, false);
       return merged;
     } catch (e) { return null; }
   }
@@ -1987,6 +1994,7 @@
         state.filters = Object.assign({}, d.filters, data.filters || {});
         if (!Array.isArray(state.credits) || !state.credits.length) state.credits = d.credits;
         if (!Array.isArray(state.footer) || !state.footer.length) state.footer = d.footer;
+        normalizeTierLogos(state.tiers, true);
         dateEl.textContent = state.date || "";
         autoSortToggle.checked = state.autoSort;
         save(); render();
@@ -2732,7 +2740,7 @@
     merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
     if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
     if (!Array.isArray(merged.footer)  || !merged.footer.length)  merged.footer  = d.footer;
-    merged.tiers.forEach(t => { if (!t.logo && TIER_LOGOS[t.label]) t.logo = TIER_LOGOS[t.label]; });
+    normalizeTierLogos(merged.tiers, true);
     return merged;
   }
   function applyServer(s) {
