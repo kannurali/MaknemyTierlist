@@ -181,6 +181,7 @@
     $("#fHref").value = c.href;
     $("#fText").value = c.text;
     $("#fCta").value = c.cta;
+    $("#fErid").value = c.erid || "";
     $("#fNotes").value = c.notes;
     $("#fDelay").value = Math.round(c.popup.delayMs / 1000);
     $("#fCap").value = c.popup.capHours;
@@ -192,6 +193,7 @@
       : "Сейчас не показывается. Даты считаются по московскому времени, конец включительно.";
 
     $("#hrefErr").hidden = !(c.href === "" && $("#fHref").value.trim() !== "");
+    $("#eridErr").hidden = true;
     renderSlots(c);
   }
 
@@ -449,6 +451,9 @@
       c.id = newId();
       c.name = (from.name || "Кампания") + " (копия)";
       c.enabled = false;
+      // Токен выдаётся под конкретный креатив, а копию делают ради другого.
+      // Утащить чужой erid в новое размещение хуже, чем ввести его заново.
+      c.erid = "";
     }
     doc.campaigns.push(c);
     current = c.id;
@@ -482,6 +487,19 @@
     bind("#fDelay", function (c, v) { c.popup.delayMs = Math.max(5000, Math.min(60000, (parseInt(v, 10) || 12) * 1000)); });
     bind("#fCap", function (c, v) { c.popup.capHours = Math.max(1, Math.min(720, parseInt(v, 10) || 24)); });
     bind("#fWeek", function (c, v) { c.popup.maxPerWeek = Math.max(1, Math.min(50, parseInt(v, 10) || 3)); });
+
+    // Токен маркировки. Тот же набор символов, что принимают promo.js и
+    // promo.php: строку, которую сайт всё равно выбросит, лучше подсветить
+    // здесь, чем молча потерять при сохранении.
+    $("#fErid").addEventListener("input", function () {
+      var c = camp();
+      if (!c) return;
+      var raw = $("#fErid").value.trim();
+      var ok = raw === "" || /^[A-Za-z0-9_-]{1,64}$/.test(raw);
+      c.erid = ok ? raw : "";
+      $("#eridErr").hidden = ok;
+      markDirty();
+    });
 
     $("#fHref").addEventListener("input", function () {
       var c = camp();

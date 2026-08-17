@@ -826,6 +826,25 @@ body.protected img { -webkit-user-drag: none; }
   padding: .2cqw .8cqw .15cqw;
   border-radius: 0 0 .8cqw 0;
 }
+/* Токен маркировки (erid) от ОРД. Это обязательная подпись к рекламе, а не
+   элемент оформления: должен читаться, но не спорить с макетом
+   рекламодателя — поэтому мелко, в углу, поверх подложки. Клики не ловит,
+   чтобы не отнимать нажатие у самого баннера. Пустой erid узла не создаёт,
+   так что у кампании без токена разметка прежняя. */
+.ptn-erid {
+  position: absolute; right: 0; bottom: 0; z-index: 4;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.1cqw;
+  line-height: 1.7;
+  padding: 0 .7cqw;
+  border-radius: .8cqw 0 0 0;
+  color: rgba(226, 240, 255, .82);
+  background: rgba(5, 9, 26, .6);
+  pointer-events: none;
+}
 .ptn-text {
   font-family: var(--display);
   font-size: 2.4cqw;
@@ -1056,6 +1075,13 @@ body.protected img { -webkit-user-drag: none; }
   padding: 2px 8px 1px;
   border-radius: 0 0 8px 0;
 }
+/* Борт живёт вне .stage, container-query единиц здесь нет — размеры в px. */
+.ptn-rail .ptn-erid {
+  font-size: 9px;
+  line-height: 1.9;
+  padding: 0 6px;
+  border-radius: 7px 0 0 0;
+}
 .ptn-rail.has-link { cursor: pointer; }
 .ptn-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
@@ -1093,6 +1119,15 @@ body.protected img { -webkit-user-drag: none; }
     max-height: 22vh;      /* потолок, если рекламодатель прислал макет выше нормы */
     object-fit: contain;
     border-radius: 8px;
+  }
+  /* В полосе токен идёт вверх справа, а не вниз: снизу у неё отступ под
+     системную зону iPhone, и подпись уехала бы в неё. */
+  .ptn-dock .ptn-erid {
+    top: 0; right: 0; bottom: auto;
+    font-size: 9px;
+    line-height: 1.8;
+    padding: 0 7px;
+    border-radius: 0 0 0 7px;
   }
   .ptn-dock .ptn-chip {
     position: absolute; top: 0; left: 0;
@@ -1166,6 +1201,12 @@ body.protected img { -webkit-user-drag: none; }
   font-size: 11px; letter-spacing: 1px;
   padding: 3px 10px 2px;
   border-radius: 0 0 8px 0;
+}
+.ptn-pop-card .ptn-erid {
+  font-size: 10px;
+  line-height: 1.8;
+  padding: 0 8px;
+  border-radius: 8px 0 0 0;
 }
 .ptn-pop-close {
   position: absolute; top: 6px; right: 6px;

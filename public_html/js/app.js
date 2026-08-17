@@ -920,6 +920,18 @@
   // переключатель языка, публикация и повторный проход safeRender. Без
   // фиксированного порядка карусель прыгала бы на другой баннер при каждом
   // из них.
+  // Подпись маркировки. Пустой erid — узла нет вовсе, и разметка остаётся
+  // ровно такой, какой была до появления поля. Токен приходит от
+  // рекламодателя и уже прошёл разбор в promo.js; ставим его textContent —
+  // строка с рекламной биржи на страницу как разметка не попадает.
+  function promoEridNode(camp) {
+    if (!camp || !camp.erid) return null;
+    const el = document.createElement("span");
+    el.className = "ptn-erid";
+    el.textContent = "erid: " + camp.erid;
+    return el;
+  }
+
   const PROMO_SEED = Math.random();
   let promoRndState = 0;
   function promoResetRnd() { promoRndState = Math.floor(PROMO_SEED * 2147483646) + 1; }
@@ -1039,6 +1051,11 @@
         badge.title = tx("ad.isLink");
         slide.appendChild(badge);
       }
+
+      // Маркировка живёт в слайде, а не в карточке: чип «РЕКЛАМА» один на всю
+      // карусель, а токен у каждой кампании свой.
+      const erid = promoEridNode(camp);
+      if (erid) slide.appendChild(erid);
 
       track.appendChild(slide);
     });
@@ -1289,6 +1306,9 @@
     if (cre.h) img.height = cre.h;
     dock.appendChild(img);
 
+    const dockErid = promoEridNode(camp);
+    if (dockErid) dock.appendChild(dockErid);
+
     const url = promo.safeHref(camp.href);
     dock.classList.toggle("has-link", !!url);
     dock.onclick = url ? (() => openPromo(camp, "dock")) : null;
@@ -1331,6 +1351,9 @@
     chip.className = "ptn-chip";
     chip.textContent = tx("ad.chip");
     el.appendChild(chip);
+
+    const railErid = promoEridNode(camp);
+    if (railErid) el.appendChild(railErid);
 
     const url = promo.safeHref(camp.href);
     el.classList.toggle("has-link", !!url);
@@ -1422,6 +1445,14 @@
     cta.textContent = camp.cta || tx("promo.cta");
     cta.hidden = !url;
     if (url) cta.href = url;
+
+    // Узел в окне статический — прячем его, когда токена нет, вместо того
+    // чтобы создавать и удалять.
+    const popErid = $("#promoPopErid");
+    if (popErid) {
+      popErid.textContent = camp.erid ? "erid: " + camp.erid : "";
+      popErid.hidden = !camp.erid;
+    }
 
     pop.hidden = false;
     // Блокировка прокрутки фона. На iOS одного overflow: hidden у body мало —

@@ -114,6 +114,23 @@ test('the cacheable ?rev= response never carries the admin document', function (
     assert_eq(false, promo_admin_view_allowed(false, true),  'visitor with ?rev= neither');
 });
 
+// ------------------------------------------------------------ ad marking
+
+test('the ad marking token is kept when it is one and dropped when it is not', function () {
+    $pdo = test_db();
+    $doc = ['campaigns' => [
+        ['id' => 'a', 'erid' => '2VtzquZgWvo'],
+        ['id' => 'b', 'erid' => '<script>alert(1)</script>'],
+        ['id' => 'c'],
+    ]];
+    handle_promo_save($pdo, $doc, tmp_dir_p(), 2000);
+    [, $saved] = handle_promo_get($pdo, false);
+
+    assert_eq('2VtzquZgWvo', $saved['campaigns'][0]['erid'], 'a real token survives');
+    assert_eq('', $saved['campaigns'][1]['erid'], 'markup never becomes a token');
+    assert_eq('', $saved['campaigns'][2]['erid'], 'no token is the normal case');
+});
+
 // ------------------------------------------------------------ normalization
 
 test('a dangerous href is neutralised before it reaches the database', function () {

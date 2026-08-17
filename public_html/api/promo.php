@@ -110,6 +110,12 @@ function promo_normalize(array $doc): array {
             'href'       => promo_safe_href(promo_str($c['href'] ?? '')),
             'text'       => promo_str($c['text'] ?? ''),
             'cta'        => promo_str($c['cta'] ?? ''),
+            // Ad marking token issued by the ОРД. Optional - empty means the
+            // banner is drawn exactly as it was before the field existed.
+            // Mirror of ERID_RE in js/promo.js; anything else is dropped
+            // rather than stored, because this string is printed on the page.
+            'erid'       => preg_match('~^[A-Za-z0-9_-]{1,64}$~', promo_str($c['erid'] ?? ''))
+                ? promo_str($c['erid']) : '',
             'slots'      => $campSlots,
             'creatives'  => $creatives,
             'popup'      => [

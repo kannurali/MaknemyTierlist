@@ -402,6 +402,26 @@ test('normalizeDoc sanitises hrefs and blanks malformed dates', () => {
     assert.equal(d.campaigns[0].end, '2026-09-20');
 });
 
+// erid is printed on the page next to the banner, so a token that is not a
+// token has to become the empty string - which draws nothing - rather than
+// reach the DOM.
+test('normalizeDoc keeps a valid erid and blanks anything else', () => {
+    const d = normalizeDoc({
+        campaigns: [
+            { id: 'a', erid: '2VtzquZgWvo' },
+            { id: 'b', erid: '  2Vfnxw-Qs_1  ' },
+            { id: 'c', erid: '<script>alert(1)</script>' },
+            { id: 'd', erid: 'x'.repeat(65) },
+            { id: 'e' }
+        ]
+    });
+    assert.equal(d.campaigns[0].erid, '2VtzquZgWvo');
+    assert.equal(d.campaigns[1].erid, '2Vfnxw-Qs_1', 'trimmed, not rejected');
+    assert.equal(d.campaigns[2].erid, '');
+    assert.equal(d.campaigns[3].erid, '', 'over 64 characters is not a token');
+    assert.equal(d.campaigns[4].erid, '', 'a campaign without one is normal');
+});
+
 test('normalizeDoc clamps popup settings into their safe range', () => {
     const d = normalizeDoc({
         campaigns: [

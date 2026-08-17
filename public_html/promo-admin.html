@@ -87,6 +87,11 @@
         </label>
       </div>
 
+      <label class="f">Токен маркировки <span class="muted">(erid — присылает рекламодатель; пусто — подписи не будет)</span>
+        <input type="text" id="fErid" placeholder="2VtzquZgWvo" spellcheck="false" />
+        <div class="err" id="eridErr" hidden>Такой токен сайт не покажет: допустимы латиница, цифры, дефис и подчёркивание.</div>
+      </label>
+
       <label class="f">Заметки <span class="muted">(видно только вам — на сайт не уходят)</span>
         <textarea id="fNotes" rows="2" placeholder="оплачено до 20.09, контакт @…"></textarea>
       </label>

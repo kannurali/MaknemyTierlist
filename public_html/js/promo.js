@@ -51,6 +51,12 @@
   };
 
   var ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+  // Токен маркировки рекламы, который выдаёт ОРД («2VtzquZgWvo»). Поле
+  // необязательное: пустое — под баннером ничего не рисуется, сайт ведёт себя
+  // ровно как до его появления. Формат токена — те же символы, что у id;
+  // всё остальное отбрасываем, чтобы под видом erid не приехала строка,
+  // которую придётся выводить на страницу.
+  var ERID_RE = /^[A-Za-z0-9_-]{1,64}$/;
   var DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
   var SAFE_SCHEME = /^(https?:|mailto:|tel:)/i;
 
@@ -391,6 +397,7 @@
         href: safeHref(c.href),
         text: str(c.text),
         cta: str(c.cta),
+        erid: ERID_RE.test(str(c.erid)) ? str(c.erid) : "",
         slots: slots,
         creatives: creatives,
         popup: popupCfg(c),
@@ -425,6 +432,7 @@
       href: link,
       text: text,
       cta: "",
+      erid: "",
       slots: image ? ["strip"] : [],
       creatives: image ? { strip: { src: image, w: 0, h: 0, anim: false, poster: "" } } : {},
       notes: "импортирован из state.ad"
