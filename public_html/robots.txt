@@ -5,4 +5,10 @@ Allow: /
 Disallow: /api/
 Disallow: /images/
 
+# Админка — внутренние страницы (/admin — редактор тирлиста, /admin/news —
+# новости, /admin/promo — реклама). Разметку они отдают только по паролю, эта
+# строка лишь убирает их из выдачи; префикс закрывает и вложенные адреса.
+# Медиакит на сайте не лежит вовсе — он в docs/, вне веб-корня.
+Disallow: /admin
+
 Sitemap: https://maknemytierlist.site/sitemap.xml

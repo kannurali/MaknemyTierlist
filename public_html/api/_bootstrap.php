@@ -32,6 +32,21 @@ function read_json_body(): array {
     return is_array($data) ? $data : [];
 }
 
+// Строгий разбор id из тела запроса: настоящий int или строка из одних цифр.
+// (int)$x — то, что было раньше в news_delete.php/news_save.php — молча
+// приводит "1abc" к 1, true к 1, [1,2,3] к 1 и 5.7 к 5, то есть превращает
+// мусор в валидный положительный id. filter_var(..., FILTER_VALIDATE_INT) тут
+// не годится: он сам принимает "-5"/"+5" и ведущие/хвостовые пробелы, а нам
+// нужен отказ на любой не-цифровой символ — поэтому явная пара is_int/
+// ctype_digit. Возвращает 0 на любой мусор, и вызывающий код продолжает
+// пользоваться уже существующей проверкой `$id <= 0` → 400.
+function read_row_id(array $body): int {
+    $raw = $body['id'] ?? null;
+    if (is_int($raw)) { return $raw; }
+    if (is_string($raw) && $raw !== '' && ctype_digit($raw)) { return (int)$raw; }
+    return 0;
+}
+
 function json_out(array $data, int $status = 200): void {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');

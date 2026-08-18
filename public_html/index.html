@@ -60,7 +60,8 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=36" />
+<link rel="stylesheet" href="css/base.css?v=3" />
+<link rel="stylesheet" href="css/styles.css?v=45" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -77,14 +78,10 @@
 <!-- /Yandex.Metrika counter -->
 </head>
 <body>
-  <!-- ============ Floating auth control (top-right corner) ============ -->
-  <div class="auth-dock" id="authDock">
-    <button class="btn" id="btnLogin" data-i18n="auth.login" data-i18n-title="auth.loginTitle" title="Войти как администратор">🔑 Войти</button>
-    <div class="tb-admin-badge" id="adminBadge" hidden>
-      <span class="tb-admin-text" data-i18n="auth.admin">👑 Админ</span>
-      <button class="btn small ghost" id="btnLogout" data-i18n="auth.logout">Выйти</button>
-    </div>
-  </div>
+  <!-- Кнопки входа здесь больше нет: админка живёт на отдельном адресе /admin,
+       и роль там решает сервер до отдачи разметки. Тулбар редактирования ниже
+       остаётся в файле — эту же разметку отдаёт admin.php, дописав к ней
+       window.NX_ADMIN_PAGE. Посетителю все админские группы скрыты. -->
 
   <!-- ====== Floating like button (правый нижний угол, для всех посетителей) ====== -->
   <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="Поставить лайк" aria-pressed="false">
@@ -101,6 +98,11 @@
   <!-- ================= Toolbar ================= -->
   <div class="toolbar" id="toolbar">
     <div class="tb-brand">MAKNEMY<span>EDITOR</span></div>
+
+    <nav class="nav-seg" aria-label="Разделы сайта">
+      <a href="/" aria-current="page" data-i18n="news.navTierlist">Тирлист</a>
+      <a href="/news" data-i18n="news.navNews">Новости</a>
+    </nav>
 
     <!-- Кнопки редактирования — только для админа -->
     <div class="tb-group" id="tbEdit" hidden>
@@ -158,7 +160,7 @@
 
     <input type="file" id="importFile" accept="application/json" hidden />
     <input type="file" id="tierLogoFile" accept="image/*" hidden />
-    <input type="file" id="adImgFile" accept="image/*" hidden />
+    <input type="file" id="ptnImgFile" accept="image/*" hidden />
     <span class="tb-saved" id="savedHint"></span>
   </div>
 
@@ -231,6 +233,25 @@
       <section class="credits" id="credits"></section>
     </div>
   </div>
+
+  <!-- ====== Боковые рекламные борта (только широкий десктоп) ======
+       Снаружи .stage-wrap: .stage — контейнер с overflow: hidden, внутри него
+       fixed-элемент был бы обрезан. Побочный полезный эффект — борта не
+       попадают в PNG-экспорт, в отличие от карусели и попапа. -->
+  <aside class="ptn-rail ptn-rail-l" id="promoRailL" hidden
+         data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+  <aside class="ptn-rail ptn-rail-r" id="promoRailR" hidden
+         data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+
+  <!-- ====== Прилипающий баннер внизу экрана (только телефон) ======
+       Тоже снаружи .stage-wrap, и по той же причине, что попап и борта:
+       у .stage стоит container-type, а контейнер перехватывает
+       position: fixed на потомках — изнутри сцены баннер прилип бы к ней,
+       а не к экрану. Плюс собственный container-type здесь обязателен:
+       вся вёрстка баннера в единицах cqw, и без него они бы считались не
+       от той ширины. -->
+  <div class="ptn-dock" id="promoDock" hidden
+       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
 
   <!-- ================= Item editor modal ================= -->
   <div class="modal-backdrop" id="modal" hidden>
@@ -363,10 +384,41 @@
     </div>
   </div>
 
+  <!-- ====== Рекламное окно (всплывает через ~12 секунд после захода) ======
+       Разметка лежит здесь, а не собирается в JS: applyLang() переводит
+       [data-i18n*] при каждой смене языка, и статическая разметка получает
+       перевод бесплатно. Собранный в JS баннер обновлений этого не умеет и
+       остаётся на языке, который был при его создании — повторять этот баг
+       не будем.
+       Место тоже не случайное: снаружи .stage-wrap. У .stage стоят
+       overflow: hidden и container-type: inline-size, из него ничто не может
+       вылезти. -->
+  <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
+       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       aria-labelledby="promoPopTitle">
+    <div class="ptn-pop-card">
+      <button class="ptn-pop-close" id="promoPopClose" type="button"
+              data-i18n-label="promo.close" data-i18n-title="promo.close"
+              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+      <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" data-i18n-alt="ad.imageAlt" /></div>
+      <!-- Текст и подпись кнопки приходят от рекламодателя — это контент, он
+           не переводится. -->
+      <div class="ptn-pop-title" id="promoPopTitle"></div>
+      <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
+      <!-- Токен маркировки. Заполняет app.js; без него узел скрыт. -->
+      <span class="ptn-erid" id="promoPopErid" hidden></span>
+    </div>
+  </div>
+
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=4"></script>
+  <script src="js/i18n.js?v=9"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
-  <script src="js/app.js?v=50"></script>
+  <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
+       первом render(). Файл намеренно не называется js/ads.js — это имя
+       режут сетевые фильтры блокировщиков. -->
+  <script src="js/promo.js?v=2"></script>
+  <script src="js/app.js?v=56"></script>
 </body>
 </html>

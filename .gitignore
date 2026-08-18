@@ -8,14 +8,26 @@
 # assets/poster/bg-export.jpg.
 !/public_html/assets/*.jpg
 !/public_html/assets/*/*.jpg
+# Исходник заглушки «ВАША РЕКЛАМА». Без него make-placeholder-creatives.py
+# нечем пересобрать баннеры из свежей копии репозитория.
+!/tools/art/*.jpg
 # Локальный засев: снимок живой базы + страничка, которая кладёт его в
 # localStorage. Нужны только чтобы посмотреть сайт без PHP, в репозитории им
 # делать нечего.
 /public_html/__seed.local.*
+# То же для демо-рекламы: кампании-заглушки для показа клиенту.
+/public_html/__promo.local.*
 /config.php
 /public_html/images/*
 !/public_html/images/.gitkeep
 !/public_html/images/.htaccess
 /tools/scratch_*
+# Playwright ставится рядом со скриптами проверки и в репозиторий не едет:
+# у проекта нет package.json и зависимостей по npm, это осознанное правило.
+/tools/node_modules/
+/tools/package.json
+/tools/package-lock.json
 /tools/out/
 /scratch_*
+.superpowers/
+/config.php.bak*

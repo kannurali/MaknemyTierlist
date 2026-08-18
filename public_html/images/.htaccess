@@ -17,7 +17,7 @@ Options -ExecCGI
 # Filenames here are content hashes (sha1), so a given URL's bytes never
 # change — safe to cache forever.
 <IfModule mod_headers.c>
-  <FilesMatch "\.(webp|png|jpg|jpeg)$">
+  <FilesMatch "\.(webp|png|jpg|jpeg|gif)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>
