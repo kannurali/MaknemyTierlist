@@ -17,6 +17,18 @@ function seed_post(PDO $pdo, string $cat, string $title, int $publishedAt): int 
     return (int)$pdo->lastInsertId();
 }
 
+test('a missing news table reads as an empty feed, not a 500', function () {
+    // schema.sql на боевой сервер не уезжает (.cpanel.yml копирует только
+    // public_html/), поэтому таблицу заводят руками — и до этого момента
+    // /news обязан открываться. Он объявлен в sitemap.xml: пятисотка здесь
+    // достаётся поисковику, а не только владельцу.
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    [$status, $p] = handle_news($pdo);
+    assert_eq(200, $status, 'still 200 without the table');
+    assert_eq([], $p['posts'], 'empty feed');
+});
+
 test('an empty feed is an empty list, not an error', function () {
     $pdo = test_db();
     [$status, $p] = handle_news($pdo);

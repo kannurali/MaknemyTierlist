@@ -55,7 +55,7 @@
         <img class="brand-logo" src="assets/poster/marks.png" alt="" />
       </header>
 
-      <div class="nw-admin-bar" id="newsAdminBar" hidden></div>
+      <!-- ADMIN-BAR -->
 
       <div class="nw-filters" id="newsFilters" role="group"
            data-i18n-label="news.filterGroupLabel" aria-label="Фильтр по категориям"></div>
@@ -65,73 +65,12 @@
     </div>
   </div>
 
-  <!-- ================= Редактор новости (для админа) ================= -->
-  <div class="modal-backdrop" id="newsEditor" hidden>
-    <div class="modal">
-      <div class="modal-head">
-        <h3 id="neHeading" data-i18n="news.modalNew">Новая новость</h3>
-        <button class="btn small ghost" type="button" id="neClose" data-i18n-label="modal.close" aria-label="Закрыть">✕</button>
-      </div>
-
-      <div class="modal-body">
-        <div class="field">
-          <label for="neTitleRu" data-i18n="news.fieldTitleRu">Заголовок (RU)</label>
-          <input type="text" id="neTitleRu" maxlength="200" />
-        </div>
-        <div class="field">
-          <label for="neTitleEn" data-i18n="news.fieldTitleEn">Заголовок (EN, необязательно)</label>
-          <input type="text" id="neTitleEn" maxlength="200" />
-        </div>
-        <div class="field">
-          <label for="neBodyRu" data-i18n="news.fieldBodyRu">Текст (RU)</label>
-          <textarea id="neBodyRu" rows="8" maxlength="20000"></textarea>
-        </div>
-        <div class="field">
-          <label for="neBodyEn" data-i18n="news.fieldBodyEn">Текст (EN, необязательно)</label>
-          <textarea id="neBodyEn" rows="6" maxlength="20000"></textarea>
-        </div>
-
-        <div class="field">
-          <label data-i18n="news.fieldCategory">Категория</label>
-          <div class="ne-cat-seg" id="neCat"></div>
-        </div>
-
-        <div class="field">
-          <label for="neDate" data-i18n="news.fieldDate">Дата</label>
-          <input type="date" id="neDate" class="ne-date" required />
-        </div>
-
-        <div class="field">
-          <label data-i18n="news.fieldImage">Картинка</label>
-          <div class="tb-group">
-            <button class="btn small" type="button" id="neImagePick" data-i18n="news.imageUpload">🖼 Загрузить</button>
-            <button class="btn small ghost" type="button" id="neImageClear" data-i18n="news.imageClear">Убрать</button>
-          </div>
-          <input type="file" id="neImageFile" accept="image/*" hidden />
-        </div>
-
-        <div class="field">
-          <label data-i18n="news.fieldImageSize">Размер картинки</label>
-          <div class="ne-cat-seg" id="neImageSize"></div>
-        </div>
-
-        <div class="field">
-          <label data-i18n="news.previewHeading">Предпросмотр карточки</label>
-          <div class="ne-preview-card" id="nePreviewCard"></div>
-        </div>
-
-        <p class="ne-error" id="neError" role="alert"></p>
-      </div>
-
-      <div class="modal-foot">
-        <button class="btn" type="button" id="neCancel" data-i18n="news.cancel">Отмена</button>
-        <button class="btn primary" type="button" id="nePublish" data-i18n="news.publish">Опубликовать</button>
-      </div>
-    </div>
-  </div>
+  <!-- Редактора поста здесь нет: его вставляет admin-news.php на /admin/news.
+       Посетитель ленты не качает ни модалку на восемь полей, ни кнопку
+       «Добавить» — на публичной странице админской разметки ноль. -->
 
   <script src="js/i18n.js?v=9"></script>
   <script src="js/news.js?v=2"></script>
-  <script src="js/news-page.js?v=6"></script>
+  <script src="js/news-page.js?v=8"></script>
 </body>
 </html>

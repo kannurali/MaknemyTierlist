@@ -45,6 +45,7 @@ RewriteRule ^news/?$ /news.html [L]
 # вернули бы 404; на /admin разрешаются от корня и работают без правок.
 RewriteRule ^admin/$        /admin              [R=301,L]
 RewriteRule ^admin$         /admin.php          [L]
+RewriteRule ^admin/news/?$  /admin-news.php     [L]
 RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 

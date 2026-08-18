@@ -13,7 +13,17 @@ function handle_news(PDO $pdo): array {
               FROM news
              ORDER BY published_at DESC, id DESC
              LIMIT " . NEWS_FEED_LIMIT;
-    $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    // Нет таблицы — значит «постов пока нет», а не ошибка. Тот же приём, что
+    // и в promo_load(): schema.sql на боевой сервер не уезжает (.cpanel.yml
+    // копирует только public_html/), таблицу заводят руками, и до этого
+    // момента /news отдавал голый HTTP 500 — при том, что он объявлен в
+    // sitemap.xml и его придёт читать поисковик. Пустая лента в этом
+    // состоянии честнее: страница открывается и говорит, что новостей нет.
+    try {
+        $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [200, ['posts' => []]];
+    }
 
     $posts = [];
     foreach ($rows as $r) {

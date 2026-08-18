@@ -5,9 +5,14 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- /news объявится здесь, когда в ленте появится первый пост. Пока она
+       пустая, приглашать на неё поисковик незачем: sitemap говорит «страница
+       важная, индексируй», а Google на этот адрес пришёл бы за тонким
+       содержимым. Вернуть — просто раскомментировать блок ниже.
   <url>
     <loc>https://maknemytierlist.site/news</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+  -->
 </urlset>

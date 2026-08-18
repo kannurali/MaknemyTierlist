@@ -14,17 +14,18 @@
   // не переносился бы между страницами.
   const LANG_KEY = "nexus-lang-v1";
 
+  // Адреса эндпоинтов — от корня. Эта же разметка отдаётся на /admin/news,
+  // а он лежит на глубине 1: документ-относительный "api/news.php" оттуда
+  // уехал бы в /admin/api/news.php. app.js ходит по абсолютным по той же
+  // причине.
+
   let posts = [];
   let activeCat = "all";
-  // true только после того, как load() реально получил ленту с сервера —
-  // не во время "Загружаем…" и не после ошибки. checkSession() читает этот
-  // флаг, чтобы не перерисовывать состояние поверх loading/error (см. ниже).
-  let feedLoaded = false;
   // Как в applyLang в app.js: localStorage бросает в приватном режиме Safari
   // (и в некоторых встроенных webview с отключённым хранилищем). Без try/catch
-  // это исключение случилось бы прямо в теле IIFE до объявления load() и
-  // checkSession() ниже — они бы не вызвались вообще, и посетитель получил бы
-  // пустую сцену без ленты, без ошибки и без кнопки «Повторить».
+  // это исключение случилось бы прямо в теле IIFE до объявления load() ниже —
+  // он бы не вызвался вообще, и посетитель получил бы пустую сцену без ленты,
+  // без ошибки и без кнопки «Повторить».
   let lang = I18N.pickLang(
     (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
     navigator.language);
@@ -163,11 +164,10 @@
   async function load() {
     showState("news.loading", false);
     try {
-      const r = await fetch("api/news.php", { cache: "no-store" });
+      const r = await fetch("/api/news.php", { cache: "no-store" });
       if (!r.ok) { throw new Error("http " + r.status); }
       const data = await r.json();
       posts = Array.isArray(data.posts) ? data.posts : [];
-      feedLoaded = true;
       renderFilters();
       render();
     } catch (e) {
@@ -205,39 +205,13 @@
   }
 
   // ---------- Админ ----------
-  // Сессия общая с тирлистом: cookie ставится с path '/', поэтому вход на
-  // главной уже авторизует и эту страницу.
-  let isAdmin = false;
-
-  async function checkSession() {
-    try {
-      const r = await fetch("api/session.php", { cache: "no-store" });
-      const d = await r.json();
-      isAdmin = !!d.admin;
-    } catch (e) {
-      isAdmin = false;
-    }
-    document.body.classList.toggle("nw-editing", isAdmin);
-    const bar = $("#newsAdminBar");
-    bar.hidden = !isAdmin;
-    if (isAdmin && !bar.childElementCount) {
-      const add = document.createElement("button");
-      add.className = "btn primary";
-      add.dataset.i18n = "news.add";
-      add.textContent = tx("news.add");
-      add.addEventListener("click", () => openEditor(null));
-      bar.append(add);
-    }
-    // checkSession() гонится с load(): api/session.php не трогает БД, поэтому
-    // обычно отвечает первым. Безусловный render() здесь перерисовывал бы
-    // #newsState с posts ещё в [] поверх "Загружаем…" (показывая "пусто" на
-    // деле ещё не загруженной ленты), а при ошибке — поверх текста ошибки
-    // вместе с её кнопкой «Повторить», без единого способа её вернуть.
-    // render() из checkSession() имеет смысл только затем, чтобы дорисовать
-    // ✎/✕ у уже показанных карточек после того, как выяснилась роль —
-    // а это возможно только если feed уже реально загружен.
-    if (feedLoaded) { render(); }
-  }
+  // Разметку редактора вставляет только admin-news.php (/admin/news), он же
+  // ставит этот флаг. На публичной ленте ни того, ни другого нет, и роль у
+  // сервера здесь не спрашивают вовсе — раньше это был лишний запрос с
+  // каждого захода ради ответа «нет» для всех, кроме одного человека.
+  // Роль известна синхронно, поэтому ✎/✕ рисуются с первого же render(),
+  // без второго прохода по уже показанным карточкам.
+  const isAdmin = window.NX_ADMIN_PAGE === true;
 
   const editor = $("#newsEditor");
   let editingPost = null;
@@ -328,6 +302,9 @@
 
   function updatePreview() {
     const box = $("#nePreviewCard");
+    // applyLang() зовёт превью при каждой смене языка, в том числе на
+    // публичной ленте, где редактора нет.
+    if (!box) { return; }
     box.innerHTML = "";
     box.append(cardFor(buildPreviewPost(), false));
   }
@@ -375,7 +352,7 @@
     if (editingPost) { body.id = editingPost.id; }
 
     try {
-      const r = await fetch("api/news_save.php", {
+      const r = await fetch("/api/news_save.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -395,7 +372,7 @@
     const picked = NEWS.pickLang(post, lang);
     if (!confirm(I18N.t("news.confirmDelete", lang, { title: picked.title }))) { return; }
     try {
-      const r = await fetch("api/news_delete.php", {
+      const r = await fetch("/api/news_delete.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: post.id }),
@@ -413,52 +390,72 @@
     }
   }
 
-  $("#nePublish").addEventListener("click", publish);
-  $("#neCancel").addEventListener("click", () => { editor.hidden = true; });
-  $("#neClose").addEventListener("click", () => { editor.hidden = true; });
-  $("#neImagePick").addEventListener("click", () => $("#neImageFile").click());
-  $("#neImageClear").addEventListener("click", () => { setImage(""); updatePreview(); });
-  editor.addEventListener("click", e => { if (e.target === editor) { editor.hidden = true; } });
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && !editor.hidden) { editor.hidden = true; }
-  });
+  // Кнопка «Добавить» и вся обвязка модалки. Вызывается только на /admin/news:
+  // на публичной ленте этих узлов нет, и addEventListener на null бросил бы
+  // прямо в теле IIFE — то есть убил бы и загрузку ленты для посетителя.
+  function wireAdmin() {
+    const bar = $("#newsAdminBar");
+    if (bar) {
+      bar.hidden = false;
+      const add = document.createElement("button");
+      add.className = "btn primary";
+      add.dataset.i18n = "news.add";
+      add.textContent = tx("news.add");
+      add.addEventListener("click", () => openEditor(null));
+      bar.append(add);
+    }
+    if (!editor) { return; }
 
-  $("#neImageFile").addEventListener("change", async ev => {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) { return; }
-    const dataUrl = await new Promise(res => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.readAsDataURL(file);
+    $("#nePublish").addEventListener("click", publish);
+    $("#neCancel").addEventListener("click", () => { editor.hidden = true; });
+    $("#neClose").addEventListener("click", () => { editor.hidden = true; });
+    $("#neImagePick").addEventListener("click", () => $("#neImageFile").click());
+    $("#neImageClear").addEventListener("click", () => { setImage(""); updatePreview(); });
+    editor.addEventListener("click", e => { if (e.target === editor) { editor.hidden = true; } });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && !editor.hidden) { editor.hidden = true; }
     });
-    // kind: "news" поднимает потолок стороны до 1280 — см. upload.php.
-    const r = await fetch("api/upload.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: dataUrl, kind: "news" }),
-    });
-    const d = await r.json();
-    if (r.ok && d.url) { setImage(d.url); }
-    else { $("#neError").textContent = tx("news.saveFailed") + " " + (d.error || ""); }
-    updatePreview();
-    ev.target.value = "";
-  });
 
-  // Живое превью: заголовки, тексты и дата не проходят через отдельные
-  // сеттеры вроде setCat/setImageSize, поэтому слушаем input/change прямо на
-  // полях. Дебаунс не нужен — updatePreview() это несколько DOM-узлов на
-  // короткий пост, лишней нагрузки на каждую нажатую клавишу не создаёт.
-  for (const id of ["neTitleRu", "neTitleEn", "neBodyRu", "neBodyEn"]) {
-    $("#" + id).addEventListener("input", updatePreview);
+    $("#neImageFile").addEventListener("change", async ev => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) { return; }
+      const dataUrl = await new Promise(res => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.readAsDataURL(file);
+      });
+      // kind: "news" поднимает потолок стороны до 1280 — см. upload.php.
+      const r = await fetch("/api/upload.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: dataUrl, kind: "news" }),
+      });
+      const d = await r.json();
+      if (r.ok && d.url) { setImage(d.url); }
+      else { $("#neError").textContent = tx("news.saveFailed") + " " + (d.error || ""); }
+      updatePreview();
+      ev.target.value = "";
+    });
+
+    // Живое превью: заголовки, тексты и дата не проходят через отдельные
+    // сеттеры вроде setCat/setImageSize, поэтому слушаем input/change прямо на
+    // полях. Дебаунс не нужен — updatePreview() это несколько DOM-узлов на
+    // короткий пост, лишней нагрузки на каждую нажатую клавишу не создаёт.
+    for (const id of ["neTitleRu", "neTitleEn", "neBodyRu", "neBodyEn"]) {
+      $("#" + id).addEventListener("input", updatePreview);
+    }
+    $("#neDate").addEventListener("change", updatePreview);
+    $("#neDate").addEventListener("input", updatePreview);
   }
-  $("#neDate").addEventListener("change", updatePreview);
-  $("#neDate").addEventListener("input", updatePreview);
 
   for (const b of document.querySelectorAll("#langSwitch .chip")) {
     b.addEventListener("click", () => applyLang(b.dataset.lang));
   }
 
   applyLang(lang);
+  if (isAdmin) {
+    document.body.classList.add("nw-editing");
+    wireAdmin();
+  }
   load();
-  checkSession();
 })();
