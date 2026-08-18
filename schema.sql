@@ -26,10 +26,15 @@ CREATE TABLE IF NOT EXISTS news (
   -- пустую строку, если английского варианта нет, и INSERT биндит его всегда.
   body_en      TEXT NOT NULL,
   image_url    VARCHAR(255) NOT NULL DEFAULT '',
-  -- VARCHAR, а не TEXT: этой колонке, в отличие от body_en, нужен DEFAULT, а
-  -- TEXT его в MySQL не принимает (см. комментарий у body_en выше — ровно та
-  -- же ошибка ERROR 1101, только для другого столбца).
-  image_size   VARCHAR(8) NOT NULL DEFAULT 'full',
+  -- Свободная ширина картинки (в процентах ширины карточки, 10..100),
+  -- выравнивание и обтекание текстом — заменяют прежние три пресета
+  -- image_size (small/medium/full). VARCHAR/TINYINT, а не TEXT: этим
+  -- колонкам, как и image_url, нужен DEFAULT, а TEXT его в MySQL не
+  -- принимает (см. комментарий у body_en выше — ровно та же ошибка
+  -- ERROR 1101, только для другого столбца).
+  image_pct    TINYINT UNSIGNED NOT NULL DEFAULT 100,
+  image_align  VARCHAR(6) NOT NULL DEFAULT 'center',
+  image_wrap   TINYINT(1) NOT NULL DEFAULT 0,
   -- Ширина/высота УЖЕ СОХРАНЁННОЙ (пересжатой) картинки — подсказка для
   -- <img width/height>, чтобы браузер зарезервировал место под неё до
   -- загрузки байтов. NULL без DEFAULT: у поста без картинки, и у поста,

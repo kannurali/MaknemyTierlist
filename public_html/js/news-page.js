@@ -82,13 +82,31 @@
 
     if (post.image_url) {
       const img = document.createElement("img");
-      // Неизвестный/отсутствующий размер — full, как и на сервере
-      // (validate_news_post трактует пустое так же). Резерв на случай, если
-      // сюда попадёт что-то не из NEWS.IMAGE_SIZES, а не признак того, что
-      // это случается в норме.
-      const size = NEWS.IMAGE_SIZES.find(s => s.key === post.image_size)
-        || NEWS.IMAGE_SIZES[NEWS.IMAGE_SIZES.length - 1];
-      img.className = "nw-image " + size.cls;
+
+      // Ширина — число, которое реально прошло валидацию (10..100), поэтому
+      // её можно класть в inline style напрямую: это не пользовательский
+      // текст, а посчитанное значение. Мусор/выход за границы (пост,
+      // сохранённый до появления этого поля, или что-то незнакомое) — те же
+      // 100, что и на сервере при отсутствующем image_pct.
+      const pctNum = Number(post.image_pct);
+      const pct = Number.isFinite(pctNum) && pctNum >= 10 && pctNum <= 100 ? pctNum : 100;
+      img.style.width = pct + "%";
+
+      // Неизвестное/отсутствующее выравнивание — center, как и на сервере
+      // (validate_news_post трактует пустое так же).
+      const align = NEWS.ALIGNS.find(a => a.key === post.image_align) || NEWS.ALIGNS[1];
+
+      // center + обтекание не имеет смысла: у float нет «по центру» — он
+      // умеет только «к левому» или «к правому» краю. Раз админ явно выбрал
+      // центр, обтекание в этом случае молча выключается и картинка остаётся
+      // блочной (как при wrap=false) — это безопаснее, чем самовольно
+      // прижать её к стороне, которую никто не выбирал.
+      const wrap = !!post.image_wrap && align.key !== "center";
+
+      img.className = "nw-image " + (wrap
+        ? (align.key === "left" ? "nw-img-float-left" : "nw-img-float-right")
+        : "nw-img-" + align.key);
+
       img.src = post.image_url;
       img.alt = picked.title;
       img.loading = "lazy";
@@ -258,10 +276,10 @@
   let currentImageHeight = null;
   // Data URL картинки, выбранной в этой сессии редактирования (см.
   // #neImageFile ниже) — источник, из которого можно перезалить файл под
-  // новый потолок при смене размера картинки. "" значит "источника нет":
+  // новый потолок при смене ширины картинки. "" значит "источника нет":
   // либо ничего не выбирали, либо открыли существующий пост и не трогали
-  // картинку — тогда смена размера не должна ничего перезаливать (см.
-  // renderImageSizeSeg ниже).
+  // картинку — тогда смена ширины не должна ничего перезаливать (см.
+  // обработчик "change" на #nePct ниже).
   let pickedImageDataUrl = "";
 
   // Сегмент категорий строится из того же списка, что рисует чипы фильтра —
@@ -287,35 +305,41 @@
   // Тот же сегмент, что и категории (.ne-cat-seg переиспользуется — это
   // просто "ряд кнопок-переключателей", вид не завязан на то, что именно
   // выбирают), но свой список и свой ключ по умолчанию.
-  let editorImageSize = "full";
+  let editorAlign = "center";
 
-  function renderImageSizeSeg() {
-    const box = $("#neImageSize");
+  function renderAlignSeg() {
+    const box = $("#neAlign");
     box.innerHTML = "";
-    for (const s of NEWS.IMAGE_SIZES) {
+    for (const a of NEWS.ALIGNS) {
       const b = document.createElement("button");
       b.type = "button";
-      b.dataset.v = s.key;
-      b.className = s.key === editorImageSize ? "active" : "";
-      b.textContent = tx(s.i18n);
-      b.addEventListener("click", () => {
-        editorImageSize = s.key;
-        renderImageSizeSeg();
-        updatePreview();
-        // Разный размер — разный потолок стороны (см. NEWS_IMAGE_MAX_SIDE_BY_SIZE
-        // в lib/images.php), поэтому уже загруженный файл нужно перезалить под
-        // новый потолок, а не просто перекрасить CSS-класс поверх старого веса.
-        // Источник для перезаливки есть только в рамках этой сессии
-        // редактирования (см. pickedImageDataUrl выше) — если админ просто
-        // открыл существующий пост и поменял размер, файл на диске остаётся
-        // как есть: он всего лишь крупнее, чем нужно, и это безвредно.
-        if (pickedImageDataUrl) { uploadPickedImage().then(updatePreview); }
-      });
+      b.dataset.v = a.key;
+      b.className = a.key === editorAlign ? "active" : "";
+      b.textContent = tx(a.i18n);
+      b.addEventListener("click", () => { editorAlign = a.key; renderAlignSeg(); updatePreview(); });
       box.append(b);
     }
   }
-  function setImageSize(key) { editorImageSize = NEWS.isImageSize(key) ? key : "full"; renderImageSizeSeg(); }
-  function getImageSize() { return editorImageSize; }
+  function setAlign(key) { editorAlign = NEWS.isAlign(key) ? key : "center"; renderAlignSeg(); }
+  function getAlign() { return editorAlign; }
+
+  // Свободная ширина картинки, 10..100% ширины карточки — тот же range-input,
+  // что рисует превью карточки в редакторе (#nePct в news.html).
+  let editorPct = 100;
+
+  function updatePctOutput() {
+    $("#nePctValue").textContent = editorPct + "%";
+  }
+  function setPct(v) {
+    const n = Number(v);
+    editorPct = Number.isFinite(n) && n >= 10 && n <= 100 ? Math.round(n) : 100;
+    $("#nePct").value = editorPct;
+    updatePctOutput();
+  }
+  function getPct() { return editorPct; }
+
+  function setWrap(v) { $("#neWrap").checked = !!v; }
+  function getWrap() { return $("#neWrap").checked; }
 
   // <input type="date"> работает в YYYY-MM-DD и в локальном времени.
   // Полдень, а не полночь: сдвиг часового пояса на пару часов не должен
@@ -355,7 +379,9 @@
       image_url: currentImage,
       image_width: currentImageWidth,
       image_height: currentImageHeight,
-      image_size: getImageSize(),
+      image_pct: getPct(),
+      image_align: getAlign(),
+      image_wrap: getWrap(),
       // Пустая/битая дата не должна ронять превью на "Invalid Date" —
       // берём "сейчас" вместо неё; publish() всё равно проверяет дату
       // отдельно перед отправкой.
@@ -378,10 +404,12 @@
     $("#neBodyEn").value  = post ? post.body_en  : "";
     $("#neDate").value = isoDay(post ? post.published_at : Date.now());
     setCat(post ? post.category : "tierlist");
-    setImageSize(post ? post.image_size : "full");
+    setAlign(post ? post.image_align : "center");
+    setPct(post ? post.image_pct : 100);
+    setWrap(post ? post.image_wrap : false);
     setImage(post ? post.image_url : "", post ? post.image_width : null, post ? post.image_height : null);
     // Новая сессия редактирования — новый (изначально пустой) источник для
-    // перезаливки при смене размера. Открытие уже существующего поста не
+    // перезаливки при смене ширины. Открытие уже существующего поста не
     // держит его исходный файл в памяти браузера, поэтому источника нет,
     // пока админ сам не выберет файл заново.
     pickedImageDataUrl = "";
@@ -413,7 +441,9 @@
       image_url: currentImage,
       image_width: currentImageWidth,
       image_height: currentImageHeight,
-      image_size: getImageSize(),
+      image_pct: getPct(),
+      image_align: getAlign(),
+      image_wrap: getWrap(),
       published_at: dayToMs(dateVal),
     };
     if (editingPost) { body.id = editingPost.id; }
@@ -473,17 +503,17 @@
     if (e.key === "Escape" && !editor.hidden) { editor.hidden = true; }
   });
 
-  // Заливает pickedImageDataUrl под текущий выбранный размер редактора.
-  // Общая для первого выбора файла и для перезаливки при смене размера
-  // (см. renderImageSizeSeg выше) — оба случая шлют один и тот же запрос,
-  // отличается только источник в pickedImageDataUrl и повод вызова.
+  // Заливает pickedImageDataUrl под текущую выбранную ширину редактора.
+  // Общая для первого выбора файла и для перезаливки при смене ширины (см.
+  // обработчик "change" на #nePct ниже) — оба случая шлют один и тот же
+  // запрос, отличается только источник в pickedImageDataUrl и повод вызова.
   async function uploadPickedImage() {
-    // kind: "news" + size — потолок стороны по выбранному в редакторе
-    // размеру, см. resolve_upload_max_side() в upload.php.
+    // kind: "news" + pct — потолок стороны по выбранной в редакторе ширине,
+    // см. resolve_upload_max_side() в upload.php.
     const r = await fetch("api/upload.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: pickedImageDataUrl, kind: "news", size: getImageSize() }),
+      body: JSON.stringify({ data: pickedImageDataUrl, kind: "news", pct: getPct() }),
     });
     const d = await r.json();
     if (r.ok && d.url) {
@@ -508,7 +538,7 @@
   });
 
   // Живое превью: заголовки, тексты и дата не проходят через отдельные
-  // сеттеры вроде setCat/setImageSize, поэтому слушаем input/change прямо на
+  // сеттеры вроде setCat/setAlign, поэтому слушаем input/change прямо на
   // полях. Тело поста ограничено 20 000 символами (NEWS_BODY_MAX в
   // news_save.php), а updatePreview() на каждый input пересобирает всю
   // карточку заново — режет body на абзацы и пересоздаёт каждый <p> и
@@ -525,6 +555,22 @@
   }
   $("#neDate").addEventListener("change", schedulePreviewUpdate);
   $("#neDate").addEventListener("input", schedulePreviewUpdate);
+
+  // "input" тянется на каждый тик перетаскивания ползунка — обновляет
+  // числовой индикатор и превью (дебаунс тот же, что и у текстовых полей).
+  // "change" срабатывает один раз, когда админ отпустил ползунок или закончил
+  // менять его с клавиатуры — только в этот момент имеет смысл перезаливать
+  // уже выбранный файл под новый потолок стороны (см. uploadPickedImage
+  // выше): гнать запрос на каждый промежуточный тик было бы избыточно.
+  $("#nePct").addEventListener("input", () => {
+    editorPct = Number($("#nePct").value) || 100;
+    updatePctOutput();
+    schedulePreviewUpdate();
+  });
+  $("#nePct").addEventListener("change", () => {
+    if (pickedImageDataUrl) { uploadPickedImage().then(updatePreview); }
+  });
+  $("#neWrap").addEventListener("change", updatePreview);
 
   for (const b of document.querySelectorAll("#langSwitch .chip")) {
     b.addEventListener("click", () => applyLang(b.dataset.lang));

@@ -34,14 +34,17 @@ function handle_upload(string $imagesDir, ?string $dataUrl, ?array $file, int $m
     return [200, $payload];
 }
 
-// Отображает kind+size тела запроса в потолок стороны. kind !== 'news' — это
-// иконка предмета, единственный потолок для неё — ICON_MAX_SIDE, и size к
-// этому пути вообще не относится. kind === 'news' с нераспознанным или
-// отсутствующим size откатывается на news_image_max_side() по умолчанию —
-// то есть на самый маленький потолок среди новостных размеров, а не на
-// самый большой, ровно как в images.php.
-function resolve_upload_max_side(string $kind, string $size): int {
-    return $kind === 'news' ? news_image_max_side($size) : ICON_MAX_SIDE;
+// Отображает kind+pct тела запроса в потолок стороны. kind !== 'news' — это
+// иконка предмета, единственный потолок для неё — ICON_MAX_SIDE, и pct к
+// этому пути вообще не относится. kind === 'news' с нераспознанным,
+// отсутствующим или вне диапазона pct откатывается на
+// news_image_max_side_for_pct() по умолчанию — то есть на самый маленький
+// потолок среди допустимых значений, а не на самый большой, ровно как в
+// images.php. $pct принимает то, что реально приходит из JSON-тела —
+// int|string|null, — а не только string: сам разбор и защита от мусора
+// живут внутри news_image_max_side_for_pct().
+function resolve_upload_max_side(string $kind, $pct): int {
+    return $kind === 'news' ? news_image_max_side_for_pct($pct) : ICON_MAX_SIDE;
 }
 
 if (!defined('TESTING')) {
@@ -56,11 +59,12 @@ if (!defined('TESTING')) {
     // весит куда больше 500 КБ ещё до downscale (см. NEWS_IMAGE_MAX_BYTES в
     // lib/images.php). Неизвестное значение молча означает иконку — так
     // добавление третьего вида не сможет случайно распечатать память или
-    // диск под чужой потолок. size — потолок стороны внутри news, см.
-    // resolve_upload_max_side() выше.
+    // диск под чужой потолок. pct — свободная ширина картинки в процентах
+    // (10..100), выбранная в редакторе; она же определяет потолок стороны
+    // внутри news, см. resolve_upload_max_side() выше.
     $kind = is_string($body['kind'] ?? null) ? $body['kind'] : '';
-    $size = is_string($body['size'] ?? null) ? $body['size'] : '';
-    $maxSide = resolve_upload_max_side($kind, $size);
+    $pct = $body['pct'] ?? null;
+    $maxSide = resolve_upload_max_side($kind, $pct);
     $maxBytes = $kind === 'news' ? NEWS_IMAGE_MAX_BYTES : 512000;
     [$status, $payload] = handle_upload($cfg['images_dir'], $dataUrl, $file, $maxSide, $maxBytes);
     json_out($payload, $status);

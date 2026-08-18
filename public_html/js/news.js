@@ -20,19 +20,21 @@
     return false;
   }
 
-  // Единый список размеров картинки в карточке. Та же логика единого
+  // Единый список выравниваний картинки в карточке. Та же логика единого
   // источника правды, что и у CATEGORIES: api/news_save.php проверяет ровно
   // этот же список из трёх ключей, поэтому редактор не может предложить
-  // размер, который сервер не примет.
-  var IMAGE_SIZES = [
-    { key: "small",  i18n: "news.sizeSmall",  cls: "sz-small" },
-    { key: "medium", i18n: "news.sizeMedium", cls: "sz-medium" },
-    { key: "full",   i18n: "news.sizeFull",   cls: "sz-full" }
+  // выравнивание, которое сервер не примет. Свободная ширина (image_pct)
+  // такого списка не требует — это число 10..100, а не набор из фиксированных
+  // вариантов, поэтому у неё нет ALIGNS-подобного массива.
+  var ALIGNS = [
+    { key: "left",   i18n: "news.alignLeft" },
+    { key: "center", i18n: "news.alignCenter" },
+    { key: "right",  i18n: "news.alignRight" }
   ];
 
-  function isImageSize(key) {
-    for (var i = 0; i < IMAGE_SIZES.length; i++) {
-      if (IMAGE_SIZES[i].key === key) { return true; }
+  function isAlign(key) {
+    for (var i = 0; i < ALIGNS.length; i++) {
+      if (ALIGNS[i].key === key) { return true; }
     }
     return false;
   }
@@ -73,8 +75,8 @@
   var api = {
     CATEGORIES: CATEGORIES,
     isCategory: isCategory,
-    IMAGE_SIZES: IMAGE_SIZES,
-    isImageSize: isImageSize,
+    ALIGNS: ALIGNS,
+    isAlign: isAlign,
     pickLang: pickLang,
     formatDate: formatDate,
     toParagraphs: toParagraphs
