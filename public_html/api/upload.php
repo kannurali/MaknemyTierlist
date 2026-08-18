@@ -8,8 +8,10 @@ require_once __DIR__ . '/lib/images.php';
 // приведёт третий. Значения:
 //
 //   ''                     иконка предмета: 256 px, 500 КБ, PNG/JPG/WebP;
-//   'news'                 картинка новости: 1280 px, 6 МБ (скриншот из игры
-//                          весит куда больше 500 КБ ещё ДО сжатия — см.
+//   'news'                 картинка новости: свободная ширина (image_pct,
+//                          10..100%) определяет потолок стороны — см.
+//                          resolve_upload_max_side() ниже, 6 МБ (скриншот из
+//                          игры весит куда больше 500 КБ ещё ДО сжатия — см.
 //                          NEWS_IMAGE_MAX_BYTES в lib/images.php);
 //   ключ CREATIVE_SPECS    рекламный макет: свой размер на слот, анимация
 //                          разрешена, ответ сообщает, что реально положили.
@@ -17,7 +19,11 @@ require_once __DIR__ . '/lib/images.php';
 // Неизвестное значение сюда не доходит — оно отсекается в блоке ниже, а не
 // трактуется молча как иконка: тихий фолбэк прятал бы опечатку в слоте до
 // того момента, когда рекламодатель увидит обрезанный до 256 px баннер.
-function handle_upload(string $imagesDir, ?string $dataUrl, ?array $file, string $kind = ''): array {
+//
+// $pct — сырое значение image_pct из тела запроса, актуально только для
+// kind='news' (см. resolve_upload_max_side() ниже); для иконки и креатива
+// игнорируется.
+function handle_upload(string $imagesDir, ?string $dataUrl, ?array $file, string $kind = '', $pct = null): array {
     $bytes = null;
     if (is_string($dataUrl) && $dataUrl !== '') {
         $bytes = data_url_to_bytes($dataUrl);
@@ -36,13 +42,49 @@ function handle_upload(string $imagesDir, ?string $dataUrl, ?array $file, string
         if ($kind !== '' && $kind !== 'news') {
             return [200, save_creative_bytes($bytes, $imagesDir, $kind)];
         }
+        $maxSide = resolve_upload_max_side($kind, $pct);
         $url = $kind === 'news'
-            ? save_image_bytes($bytes, $imagesDir, NEWS_IMAGE_MAX_BYTES, ['png', 'jpg', 'webp'], NEWS_IMAGE_MAX_SIDE)
+            ? save_image_bytes($bytes, $imagesDir, NEWS_IMAGE_MAX_BYTES, ['png', 'jpg', 'webp'], $maxSide)
             : save_image_bytes($bytes, $imagesDir);
     } catch (RuntimeException $e) {
         return [400, ['error' => $e->getMessage()]];
     }
-    return [200, ['url' => $url]];
+    $payload = ['url' => $url];
+    // Ширина/высота — только для news: news_save.php кладёт их в БД как
+    // подсказку для <img width/height> (задача 2 в
+    // 2026-08-03-safari-memory-and-i18n-design.md), это её единственный
+    // потребитель. Иконка предмета этих полей не ждёт — tests/upload_test.php
+    // пинит форму её ответа как ['url'] и только, добавлять сюда лишние ключи
+    // безвредно для JS, но ломает этот тест без единой причины на стороне
+    // продукта.
+    //
+    // Значения — той картинки, что реально легла на диск (после
+    // downscale_image_bytes внутри save_image_bytes), а не исходника:
+    // подсказка обязана совпадать с тем, что браузер реально скачает. Читаем
+    // файл обратно, а не расширяем возврат save_image_bytes() — та должна
+    // остаться string-функцией, на неё пинится images_test.php.
+    if ($kind === 'news') {
+        $stored = @file_get_contents(rtrim($imagesDir, '/\\') . '/' . basename($url));
+        $dims = $stored !== false ? @getimagesizefromstring($stored) : false;
+        if ($dims !== false) {
+            $payload['width'] = $dims[0];
+            $payload['height'] = $dims[1];
+        }
+    }
+    return [200, $payload];
+}
+
+// Отображает kind+pct тела запроса в потолок стороны. kind !== 'news' — это
+// иконка предмета, единственный потолок для неё — ICON_MAX_SIDE, и pct к
+// этому пути вообще не относится. kind === 'news' с нераспознанным,
+// отсутствующим или вне диапазона pct откатывается на
+// news_image_max_side_for_pct() по умолчанию — то есть на самый маленький
+// потолок среди допустимых значений, а не на самый большой, ровно как в
+// images.php. $pct принимает то, что реально приходит из JSON-тела —
+// int|string|null, — а не только string: сам разбор и защита от мусора
+// живут внутри news_image_max_side_for_pct().
+function resolve_upload_max_side(string $kind, $pct): int {
+    return $kind === 'news' ? news_image_max_side_for_pct($pct) : ICON_MAX_SIDE;
 }
 
 if (!defined('TESTING')) {
@@ -63,6 +105,9 @@ if (!defined('TESTING')) {
         json_out(['error' => 'unknown upload kind'], 400);
         exit;
     }
-    [$status, $payload] = handle_upload($cfg['images_dir'], $dataUrl, $file, $kind);
+    // pct — свободная ширина картинки в процентах (10..100), выбранная в
+    // редакторе; см. resolve_upload_max_side() выше.
+    $pct = $body['pct'] ?? null;
+    [$status, $payload] = handle_upload($cfg['images_dir'], $dataUrl, $file, $kind, $pct);
     json_out($payload, $status);
 }

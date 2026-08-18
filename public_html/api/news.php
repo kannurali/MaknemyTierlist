@@ -9,7 +9,8 @@ const NEWS_FEED_LIMIT = 50;
 function handle_news(PDO $pdo): array {
     // LIMIT подставляется из константы, а не из запроса пользователя, поэтому
     // интерполяция здесь безопасна: плейсхолдер в LIMIT переносим не везде.
-    $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, image_size, published_at
+    $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, image_pct,
+                   image_align, image_wrap, image_width, image_height, published_at
               FROM news
              ORDER BY published_at DESC, id DESC
              LIMIT " . NEWS_FEED_LIMIT;
@@ -35,7 +36,16 @@ function handle_news(PDO $pdo): array {
             'body_ru'      => (string)$r['body_ru'],
             'body_en'      => (string)$r['body_en'],
             'image_url'    => (string)$r['image_url'],
-            'image_size'   => (string)$r['image_size'],
+            'image_pct'    => (int)$r['image_pct'],
+            'image_align'  => (string)$r['image_align'],
+            'image_wrap'   => (bool)((int)$r['image_wrap']),
+            // NULL остаётся NULL, а не приводится к 0: 0×0 у <img> обнулил бы
+            // зарезервированную высоту, а не подсказал бы её отсутствие.
+            // Пост без картинки и пост, сохранённый до появления этих
+            // колонок, неотличимы для клиента — и это правильно, оба случая
+            // cardFor() в news-page.js обрабатывает одинаково.
+            'image_width'  => $r['image_width']  !== null ? (int)$r['image_width']  : null,
+            'image_height' => $r['image_height'] !== null ? (int)$r['image_height'] : null,
             'published_at' => (int)$r['published_at'],
         ];
     }

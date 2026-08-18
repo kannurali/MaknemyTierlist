@@ -139,52 +139,171 @@ test('an empty image url is allowed', function () {
     assert_eq(200, $status, 'image is optional');
 });
 
-// ---------- image_size ----------
+// ---------- image_pct (свободная ширина, 10..100) ----------
 
-test('a valid image size round-trips through save and the feed', function () {
+test('image width at the boundaries is accepted', function () {
     $pdo = test_db();
-    [, $created] = handle_news_save($pdo, valid_body(['image_size' => 'small']), 1);
-    [, $feed] = handle_news($pdo);
-    assert_eq('small', $feed['posts'][0]['image_size'], 'size stored and returned');
+    [$s1, ] = handle_news_save($pdo, valid_body(['image_pct' => 10]), 1);
+    assert_eq(200, $s1, '10 accepted');
+    [$s2, ] = handle_news_save($pdo, valid_body(['image_pct' => 100]), 1);
+    assert_eq(200, $s2, '100 accepted');
 });
 
-test('each of the three image sizes is accepted', function () {
+test('image width just outside the boundaries is rejected', function () {
     $pdo = test_db();
-    foreach (['small', 'medium', 'full'] as $size) {
-        [$status, $created] = handle_news_save($pdo, valid_body(['image_size' => $size]), 1);
-        assert_eq(200, $status, "accepted: $size");
-        [, $feed] = handle_news($pdo);
-        $row = array_values(array_filter($feed['posts'], fn($p) => $p['id'] === $created['id']))[0];
-        assert_eq($size, $row['image_size'], "stored: $size");
-    }
+    [$s1, $p1] = handle_news_save($pdo, valid_body(['image_pct' => 9]), 1);
+    assert_eq(400, $s1, '9 rejected');
+    assert_eq('bad image_pct', $p1['error'], 'reason for 9');
+    [$s2, $p2] = handle_news_save($pdo, valid_body(['image_pct' => 101]), 1);
+    assert_eq(400, $s2, '101 rejected');
+    assert_eq('bad image_pct', $p2['error'], 'reason for 101');
 });
 
-test('an image size outside the three is rejected', function () {
+test('a non-numeric image width is rejected', function () {
     $pdo = test_db();
-    [$status, $p] = handle_news_save($pdo, valid_body(['image_size' => 'huge']), 1);
+    [$status, $p] = handle_news_save($pdo, valid_body(['image_pct' => 'huge']), 1);
     assert_eq(400, $status, 'rejected');
-    assert_eq('bad image_size', $p['error'], 'reason');
+    assert_eq('bad image_pct', $p['error'], 'reason');
 });
 
-test('a missing image_size defaults to full — the legacy-post case', function () {
+test('a missing image width defaults to 100 — the legacy-post case', function () {
     // Посты, сохранённые до появления этого поля, не должны отваливаться по
     // валидации: отсутствие ключа — не то же самое, что мусорное значение.
     $pdo = test_db();
     $body = valid_body();
-    unset($body['image_size']);
-    assert_true(!array_key_exists('image_size', $body), 'key genuinely absent');
+    unset($body['image_pct']);
+    assert_true(!array_key_exists('image_pct', $body), 'key genuinely absent');
     [$status, ] = handle_news_save($pdo, $body, 1);
     assert_eq(200, $status, 'accepted without the key');
     [, $feed] = handle_news($pdo);
-    assert_eq('full', $feed['posts'][0]['image_size'], 'defaulted to full');
+    assert_eq(100, $feed['posts'][0]['image_pct'], 'defaulted to 100');
 });
 
-test('an empty image_size also defaults to full', function () {
+test('an empty image width also defaults to 100', function () {
     $pdo = test_db();
-    [$status, ] = handle_news_save($pdo, valid_body(['image_size' => '']), 1);
+    [$status, ] = handle_news_save($pdo, valid_body(['image_pct' => '']), 1);
     assert_eq(200, $status, 'accepted');
     [, $feed] = handle_news($pdo);
-    assert_eq('full', $feed['posts'][0]['image_size'], 'defaulted to full');
+    assert_eq(100, $feed['posts'][0]['image_pct'], 'defaulted to 100');
+});
+
+// ---------- image_align ----------
+
+test('each of the three alignments is accepted', function () {
+    $pdo = test_db();
+    foreach (['left', 'center', 'right'] as $align) {
+        [$status, $created] = handle_news_save($pdo, valid_body(['image_align' => $align]), 1);
+        assert_eq(200, $status, "accepted: $align");
+        [, $feed] = handle_news($pdo);
+        $row = array_values(array_filter($feed['posts'], fn($p) => $p['id'] === $created['id']))[0];
+        assert_eq($align, $row['image_align'], "stored: $align");
+    }
+});
+
+test('an alignment outside the three is rejected', function () {
+    $pdo = test_db();
+    [$status, $p] = handle_news_save($pdo, valid_body(['image_align' => 'top']), 1);
+    assert_eq(400, $status, 'rejected');
+    assert_eq('bad image_align', $p['error'], 'reason');
+});
+
+test('a missing or empty alignment defaults to center', function () {
+    $pdo = test_db();
+    $body = valid_body();
+    unset($body['image_align']);
+    [$status, ] = handle_news_save($pdo, $body, 1);
+    assert_eq(200, $status, 'accepted without the key');
+    [, $feed] = handle_news($pdo);
+    assert_eq('center', $feed['posts'][0]['image_align'], 'missing key defaulted to center');
+
+    [$status2, ] = handle_news_save($pdo, valid_body(['image_align' => '']), 1);
+    assert_eq(200, $status2, 'accepted with empty string');
+    [, $feed2] = handle_news($pdo);
+    assert_eq('center', $feed2['posts'][0]['image_align'], 'empty string defaulted to center');
+});
+
+// ---------- image_wrap ----------
+
+test('image wrap round-trips as a boolean', function () {
+    $pdo = test_db();
+    [, $onPost] = handle_news_save($pdo, valid_body(['image_wrap' => true]), 1);
+    [, $feed1] = handle_news($pdo);
+    $row1 = array_values(array_filter($feed1['posts'], fn($p) => $p['id'] === $onPost['id']))[0];
+    assert_eq(true, $row1['image_wrap'], 'true stored and returned as true');
+
+    [, $offPost] = handle_news_save($pdo, valid_body(['image_wrap' => false]), 1);
+    [, $feed2] = handle_news($pdo);
+    $row2 = array_values(array_filter($feed2['posts'], fn($p) => $p['id'] === $offPost['id']))[0];
+    assert_eq(false, $row2['image_wrap'], 'false stored and returned as false');
+});
+
+test('a missing image wrap defaults to false', function () {
+    $pdo = test_db();
+    $body = valid_body();
+    unset($body['image_wrap']);
+    [$status, ] = handle_news_save($pdo, $body, 1);
+    assert_eq(200, $status, 'accepted without the key');
+    [, $feed] = handle_news($pdo);
+    assert_eq(false, $feed['posts'][0]['image_wrap'], 'defaulted to false');
+});
+
+// ---------- всё вместе ----------
+
+test('width, alignment and wrap all round-trip through save and the feed together', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, valid_body(['image_pct' => 45, 'image_align' => 'right', 'image_wrap' => true]), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(45, $feed['posts'][0]['image_pct'], 'pct round-trip');
+    assert_eq('right', $feed['posts'][0]['image_align'], 'align round-trip');
+    assert_eq(true, $feed['posts'][0]['image_wrap'], 'wrap round-trip');
+});
+
+// ---------- image_width / image_height ----------
+
+test('image dimensions round-trip through save and the feed', function () {
+    $pdo = test_db();
+    $img = '/images/' . str_repeat('a', 40) . '.png';
+    handle_news_save($pdo, valid_body(['image_url' => $img, 'image_width' => 1024, 'image_height' => 512]), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(1024, $feed['posts'][0]['image_width'], 'width stored and returned');
+    assert_eq(512, $feed['posts'][0]['image_height'], 'height stored and returned');
+});
+
+test('dimensions update on a re-save just like any other field', function () {
+    $pdo = test_db();
+    $img = '/images/' . str_repeat('a', 40) . '.png';
+    [, $created] = handle_news_save($pdo, valid_body(['image_url' => $img, 'image_width' => 1024, 'image_height' => 1024]), 1);
+    handle_news_save($pdo, valid_body(['id' => $created['id'], 'image_url' => $img, 'image_width' => 300, 'image_height' => 150]), 2);
+    [, $feed] = handle_news($pdo);
+    assert_eq(300, $feed['posts'][0]['image_width'], 'width updated');
+    assert_eq(150, $feed['posts'][0]['image_height'], 'height updated');
+});
+
+test('a post without dimensions comes back with them null, not zero', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, valid_body(), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(null, $feed['posts'][0]['image_width'], 'width null');
+    assert_eq(null, $feed['posts'][0]['image_height'], 'height null');
+});
+
+test('a legacy post inserted without the columns comes back with null dimensions', function () {
+    // seed_post() вставляет строку без image_width/image_height ровно так,
+    // как это делала БД до появления этих колонок, — реальная строка,
+    // оставленная старой версией API.
+    $pdo = test_db();
+    seed_post($pdo, 'game', 'старый пост', 1000);
+    [, $feed] = handle_news($pdo);
+    assert_eq(null, $feed['posts'][0]['image_width'], 'legacy width null');
+    assert_eq(null, $feed['posts'][0]['image_height'], 'legacy height null');
+});
+
+test('junk or non-positive dimensions are dropped rather than stored', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, valid_body(['image_width' => 'abc', 'image_height' => -5]), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(null, $feed['posts'][0]['image_width'], 'non-numeric width dropped');
+    assert_eq(null, $feed['posts'][0]['image_height'], 'non-positive height dropped');
 });
 
 test('a body with an id updates instead of inserting', function () {

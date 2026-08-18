@@ -20,19 +20,21 @@
     return false;
   }
 
-  // Единый список размеров картинки в карточке. Та же логика единого
+  // Единый список выравниваний картинки в карточке. Та же логика единого
   // источника правды, что и у CATEGORIES: api/news_save.php проверяет ровно
   // этот же список из трёх ключей, поэтому редактор не может предложить
-  // размер, который сервер не примет.
-  var IMAGE_SIZES = [
-    { key: "small",  i18n: "news.sizeSmall",  cls: "sz-small" },
-    { key: "medium", i18n: "news.sizeMedium", cls: "sz-medium" },
-    { key: "full",   i18n: "news.sizeFull",   cls: "sz-full" }
+  // выравнивание, которое сервер не примет. Свободная ширина (image_pct)
+  // такого списка не требует — это число 10..100, а не набор из фиксированных
+  // вариантов, поэтому у неё нет ALIGNS-подобного массива.
+  var ALIGNS = [
+    { key: "left",   i18n: "news.alignLeft" },
+    { key: "center", i18n: "news.alignCenter" },
+    { key: "right",  i18n: "news.alignRight" }
   ];
 
-  function isImageSize(key) {
-    for (var i = 0; i < IMAGE_SIZES.length; i++) {
-      if (IMAGE_SIZES[i].key === key) { return true; }
+  function isAlign(key) {
+    for (var i = 0; i < ALIGNS.length; i++) {
+      if (ALIGNS[i].key === key) { return true; }
     }
     return false;
   }
@@ -70,14 +72,54 @@
       .filter(function (s) { return s !== ""; });
   }
 
+  // Кроп-редактор (задача 8, вторая часть): переводит рамку выделения,
+  // нарисованную на превью-канвасе редактора, в прямоугольник на исходном
+  // изображении. Чистая геометрия, без DOM и без canvas — сам рендер и
+  // pointer-обработчики живут в news-page.js и вызывают эту функцию.
+  //
+  // viewport ({width, height}) — размер холста редактора в css-px; сюда
+  // рисуется картинка. image ({width, height}) — натуральный размер
+  // декодированного исходника (ImageBitmap/<img>). zoom — во сколько раз
+  // исходник увеличен при отрисовке на холст (на холсте картинка занимает
+  // image.width*zoom × image.height*zoom px) — это ЭФФЕКТИВНЫЙ масштаб
+  // (вписывание + позиция ползунка вместе), а не одно лишь положение
+  // ползунка. pan ({x, y}) — где на холсте лежит левый верхний угол
+  // картинки; может быть отрицательным, если картинку утащили влево/вверх
+  // за край холста. frame ({x, y, w, h}) — рамка выделения в тех же
+  // координатах холста, что и pan.
+  //
+  // Возвращает {sx, sy, sw, sh} — прямоугольник на исходном изображении.
+  // Это единственное место, которое отвечает за инвариант «кроп не может
+  // прочитать то, чего нет в исходнике»: результат всегда зажат в
+  // [0, image.width] × [0, image.height], даже если рамка или панорама
+  // переданы такими, что наивная формула читала бы за краем картинки —
+  // news-page.js на это полагается, не дублируя зажатие у себя, и тесты
+  // проверяют именно это поведение, а не только «счастливый путь».
+  function cropToSourceRect(frame, zoom, pan, image) {
+    var z = zoom > 0 ? zoom : 1;
+
+    var rawW = frame.w / z;
+    var rawH = frame.h / z;
+    var sw = Math.min(Math.max(rawW, 0), image.width);
+    var sh = Math.min(Math.max(rawH, 0), image.height);
+
+    var rawX = (frame.x - pan.x) / z;
+    var rawY = (frame.y - pan.y) / z;
+    var sx = Math.min(Math.max(rawX, 0), image.width - sw);
+    var sy = Math.min(Math.max(rawY, 0), image.height - sh);
+
+    return { sx: sx, sy: sy, sw: sw, sh: sh };
+  }
+
   var api = {
     CATEGORIES: CATEGORIES,
     isCategory: isCategory,
-    IMAGE_SIZES: IMAGE_SIZES,
-    isImageSize: isImageSize,
+    ALIGNS: ALIGNS,
+    isAlign: isAlign,
     pickLang: pickLang,
     formatDate: formatDate,
-    toParagraphs: toParagraphs
+    toParagraphs: toParagraphs,
+    cropToSourceRect: cropToSourceRect
   };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }

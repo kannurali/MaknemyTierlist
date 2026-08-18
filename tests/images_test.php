@@ -384,4 +384,26 @@ test('save_image_bytes honours an explicit max side', function () {
     @rmdir($dir);
 });
 
+// ---------- news_image_cap / news_image_max_side_for_pct (потолок по свободной ширине) ----------
+
+test('news_image_cap derives the desktop-retina cap from pct', function () {
+    assert_eq(1280, news_image_cap(100), 'pct=100 hits the ceiling');
+    assert_eq(504, news_image_cap(30), 'pct=30');
+    assert_eq(256, news_image_cap(10), 'smallest valid pct floors at 256');
+});
+
+test('news_image_max_side_for_pct matches news_image_cap for valid input', function () {
+    assert_eq(news_image_cap(55), news_image_max_side_for_pct(55), 'int pct');
+    assert_eq(news_image_cap(100), news_image_max_side_for_pct('100'), 'numeric string pct');
+    assert_eq(news_image_cap(10), news_image_max_side_for_pct(10), 'boundary pct');
+});
+
+test('news_image_max_side_for_pct falls back to the smallest cap on bad input, not the largest', function () {
+    assert_eq(256, news_image_max_side_for_pct(150), 'out of range: too big');
+    assert_eq(256, news_image_max_side_for_pct(5), 'out of range: too small');
+    assert_eq(256, news_image_max_side_for_pct('huge'), 'non-numeric');
+    assert_eq(256, news_image_max_side_for_pct(''), 'missing (empty string)');
+    assert_eq(256, news_image_max_side_for_pct(null), 'missing (null)');
+});
+
 run_tests();
