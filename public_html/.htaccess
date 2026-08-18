@@ -13,6 +13,22 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# ---------------------------- Панель управления ----------------------------
+# Адреса без .php. Завершающий слэш у /admin снимается редиректом намеренно:
+# страница отдаёт разметку index.html как есть, а относительные пути внутри
+# неё и внутри app.js ("assets/dot-green.png", "js/html2canvas.min.js")
+# считаются от адреса документа. На /admin/ они уехали бы в /admin/assets/ и
+# вернули бы 404; на /admin разрешаются от корня и работают без правок.
+RewriteRule ^admin/$        /admin              [R=301,L]
+RewriteRule ^admin$         /admin.php          [L]
+RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
+RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
+
+# Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому
+# работает и на боевом сервере, где старый promo-admin.html ещё лежит:
+# деплой копирует поверх (cp -R) и ничего не удаляет.
+RewriteRule ^promo-admin\.html$ /admin/promo [R=301,L]
+
 # Deny access to sensitive files
 <FilesMatch "\.(sql|md|mjs)$">
   Require all denied

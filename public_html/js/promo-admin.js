@@ -1,8 +1,12 @@
-// Панель управления рекламой.
+// Панель управления рекламой (/admin/promo).
 //
 // Отдельная страница, а не инлайн-правка на постере: слотов три, кампаний
 // может быть десяток, и у каждой свои даты, вес и три макета — contentEditable
 // с window.prompt() этого не тянет.
+//
+// Формы входа здесь нет: пароль спрашивает сервер (admin-promo.php) ДО отдачи
+// разметки, поэтому до этого файла доходит только администратор. Сессия всё
+// же может истечь при открытой вкладке — этот случай ловится по 401 на записи.
 //
 // i18n сюда сознательно не подключён: файл словаря качает каждый посетитель
 // сайта, и сорок админских ключей утяжелили бы его ради внутреннего
@@ -10,8 +14,6 @@
 (function () {
   "use strict";
 
-  var API_SESSION = "/api/session.php";
-  var API_LOGIN   = "/api/login.php";
   var API_PROMO   = "/api/promo.php";
   var API_UPLOAD  = "/api/upload.php";
   var API_TIERLIST = "/api/tierlist.php";
@@ -61,43 +63,10 @@
 
   function markDirty() { dirty = true; hint("есть несохранённые правки"); }
 
-  // ------------------------------------------------------------------ вход
-
-  function showGate(err) {
-    $("#gate").hidden = false;
-    $("#app").hidden = true;
-    var e = $("#gateErr");
-    e.hidden = !err;
-    e.textContent = err || "";
-  }
-
-  function checkSession() {
-    return fetch(API_SESSION, { cache: "no-store" })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { return !!(j && j.admin); })
-      .catch(function () { return false; });
-  }
-
-  $("#gateForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var pass = $("#gatePass").value;
-    fetch(API_LOGIN, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pass })
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (res.j && res.j.error === "too_many_attempts") {
-          showGate("Слишком много попыток. Подождите " + (res.j.retry_after || 300) + " с.");
-          return;
-        }
-        if (!res.ok || !res.j || !res.j.ok) { showGate("Неверный пароль."); return; }
-        $("#gatePass").value = "";
-        start();
-      })
-      .catch(function () { showGate("Сервер недоступен. Панель работает только там, где отвечает PHP."); });
-  });
+  // Сессия оборвалась при открытой вкладке. Перезагружать страницу нельзя —
+  // вместе с ней уйдёт несохранённый черновик; просим войти в новой вкладке и
+  // повторить действие.
+  var EXPIRED = "сессия истекла: войдите заново на /admin и повторите";
 
   // -------------------------------------------------------------- загрузка
 
@@ -378,6 +347,7 @@
           body: JSON.stringify({ data: dataUrl, slot: slot })
         }).then(function (r) {
           return r.json().then(function (j) {
+            if (r.status === 401) throw new Error(EXPIRED);
             if (!r.ok) throw new Error(j.error || "загрузка не удалась");
             return j;
           });
@@ -417,6 +387,7 @@
     })
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
       .then(function (res) {
+        if (res.status === 401) { hint(EXPIRED, "bad"); return; }
         if (res.status === 409) {
           // Кто-то (или вторая вкладка) сохранил раньше. Молча затирать чужую
           // правку — именно то, чем страдает блоб тирлиста; здесь спрашиваем.
@@ -579,8 +550,6 @@
   function renderAll() { renderList(); renderEditor(); }
 
   function start() {
-    $("#gate").hidden = true;
-    $("#app").hidden = false;
     loadDoc().then(function (ok) {
       if (!ok) hint("не удалось загрузить кампании", "bad");
       renderAll();
@@ -588,8 +557,5 @@
   }
 
   wire();
-  checkSession().then(function (isAdmin) {
-    if (isAdmin) start();
-    else showGate("");
-  });
+  start();
 })();

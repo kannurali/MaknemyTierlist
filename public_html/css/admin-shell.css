@@ -1,0 +1,124 @@
+/* Шапка админки и страница входа.
+   Отдельный маленький файл: его тянут только /admin и /admin/promo, а у этих
+   двух страниц нет общей таблицы стилей — редактор тирлиста грузит styles.css,
+   панель рекламы promo-admin.css. Класть шапку в любую из них значило бы
+   раздавать её половине, которой она не нужна (styles.css качает каждый
+   посетитель сайта). */
+:root {
+  --adm-cyan: #4fd6ff;
+  --adm-bg: #0a0e1a;
+  --adm-panel: #101c38;
+  --adm-edge: rgba(120, 190, 255, .32);
+  --adm-text: #dbeeff;
+  --adm-muted: #7d9dc4;
+  --adm-bad: #ff5a52;
+  color-scheme: dark;
+}
+
+/* ===================== Шапка ===================== */
+.adm-nav {
+  position: relative;
+  z-index: 80; /* выше .toolbar (50) редактора и плавающих кнопок (60) */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  background: #071026;
+  border-bottom: 1px solid var(--adm-edge);
+  font: 14px/1.4 "Segoe UI", Roboto, system-ui, sans-serif;
+  color: var(--adm-text);
+}
+.adm-nav-brand {
+  font-weight: 800;
+  letter-spacing: .5px;
+  color: var(--adm-cyan);
+  margin-right: 6px;
+}
+.adm-nav-brand b { color: #ff5aa8; font-weight: 800; margin-left: 5px; }
+
+.adm-nav-tab {
+  color: var(--adm-muted);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+.adm-nav-tab:hover { color: var(--adm-text); border-color: var(--adm-edge); }
+.adm-nav-tab.is-active {
+  color: #04101f;
+  background: linear-gradient(180deg, #2aa6e0, #1c7fb4);
+  border-color: #6fd6ff;
+  font-weight: 600;
+}
+.adm-nav-gap { flex: 1 1 auto; }
+
+.adm-nav-out {
+  color: var(--adm-muted);
+  text-decoration: none;
+  background: none;
+  border: 1px solid var(--adm-edge);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font: inherit;
+  cursor: pointer;
+}
+.adm-nav-out:hover { color: var(--adm-text); border-color: var(--adm-cyan); }
+.adm-nav-exit { margin: 0; }
+
+/* ===================== Страница входа ===================== */
+.adm-gate-body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font: 14px/1.45 "Segoe UI", Roboto, system-ui, sans-serif;
+}
+.adm-gate {
+  width: min(340px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--adm-panel);
+  border: 1px solid var(--adm-edge);
+  border-radius: 14px;
+  padding: 22px;
+}
+.adm-gate-brand { font-weight: 800; letter-spacing: .5px; color: var(--adm-cyan); }
+.adm-gate-brand b { color: #ff5aa8; font-weight: 800; margin-left: 5px; }
+.adm-gate h1 { font-size: 19px; margin: 4px 0 0; }
+.adm-gate p { margin: 0; }
+.adm-muted { color: var(--adm-muted); }
+.adm-err { color: var(--adm-bad); font-size: 12px; }
+
+.adm-gate input {
+  width: 100%;
+  background: #0c1730;
+  border: 1px solid var(--adm-edge);
+  border-radius: 8px;
+  color: var(--adm-text);
+  padding: 8px 10px;
+  font: inherit;
+}
+.adm-gate input:focus { outline: none; border-color: var(--adm-cyan); }
+
+.adm-btn {
+  border: 1px solid var(--adm-edge);
+  background: var(--adm-panel);
+  color: var(--adm-text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.adm-btn.primary {
+  background: linear-gradient(180deg, #2aa6e0, #1c7fb4);
+  border-color: #6fd6ff;
+  color: #04101f;
+  font-weight: 600;
+}
+.adm-btn[disabled] { opacity: .5; cursor: default; }

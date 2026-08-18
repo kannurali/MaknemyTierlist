@@ -1501,7 +1501,7 @@
     // тач-скролл всё равно протекает, поэтому у подложки ещё touch-action.
     document.body.classList.add("ptn-locked");
     popupRestoreFocus = document.activeElement;
-    ["#toolbar", ".stage-wrap", "#authDock", "#likeBtn", "#donateBtn"].forEach(sel => {
+    ["#toolbar", ".stage-wrap", "#likeBtn", "#donateBtn"].forEach(sel => {
       const el = document.querySelector(sel);
       if (el) el.setAttribute("aria-hidden", "true");
     });
@@ -1514,7 +1514,7 @@
     if (!pop || pop.hidden) return;
     pop.hidden = true;
     document.body.classList.remove("ptn-locked");
-    ["#toolbar", ".stage-wrap", "#authDock", "#likeBtn", "#donateBtn"].forEach(sel => {
+    ["#toolbar", ".stage-wrap", "#likeBtn", "#donateBtn"].forEach(sel => {
       const el = document.querySelector(sel);
       if (el) el.removeAttribute("aria-hidden");
     });
@@ -2766,12 +2766,14 @@
   })();
 
   // ============================================================
-  //  АВТОРИЗАЦИЯ (пароль + cookie-сессия) и синхронизация
+  //  РОЛЬ (cookie-сессия) и синхронизация
+  // ------------------------------------------------------------
+  //  Пароль этот файл больше не спрашивает: вход живёт на /admin, и роль там
+  //  решает сервер ДО отдачи разметки. Здесь остаётся только включить
+  //  админский режим, когда admin.php поставил window.NX_ADMIN_PAGE.
   // ============================================================
   function setAdminMode(admin) {
     isAdmin = admin;
-    const loginBtn  = $("#btnLogin");
-    const badge     = $("#adminBadge");
     const tbEdit    = $("#tbEdit");
     const tbToggles = $("#tbToggles");
     const tbActions = $("#tbAdminActions");
@@ -2779,8 +2781,6 @@
     const tbPng     = $("#tbPng");
 
     if (admin) {
-      if (loginBtn)  loginBtn.hidden  = true;
-      if (badge)     badge.hidden     = false;
       if (tbEdit)    tbEdit.hidden    = false;
       if (tbToggles) tbToggles.hidden = false;
       if (tbActions) tbActions.hidden = false;
@@ -2788,8 +2788,6 @@
       if (tbPng)     tbPng.hidden     = false;
       renderSaveBtn();
     } else {
-      if (loginBtn)  loginBtn.hidden  = false;
-      if (badge)     badge.hidden     = true;
       if (tbEdit)    tbEdit.hidden    = true;
       if (tbToggles) tbToggles.hidden = true;
       if (tbActions) tbActions.hidden = true;
@@ -2859,8 +2857,6 @@
   const API_LIKE     = "/api/like.php";
   const API_SAVE     = "/api/save.php";
   const API_SESSION  = "/api/session.php";
-  const API_LOGIN    = "/api/login.php";
-  const API_LOGOUT   = "/api/logout.php";
   const API_UPLOAD   = "/api/upload.php";
   const POLL_MS = 30000;
   let pollTimer = null;
@@ -3041,46 +3037,28 @@
     });
   }
 
-  // Инициализация бэкенда: опрос данных + определение роли (админ по сессии) +
-  // кнопки входа/выхода по паролю.
+  // Инициализация бэкенда: опрос данных + определение роли по сессии.
+  // Кнопок входа и выхода здесь нет: вход — отдельная страница /admin, выход —
+  // форма в её шапке (admin-logout.php). Так они работают одинаково и в
+  // редакторе тирлиста, и в панели рекламы, где этого файла нет вовсе.
   function initBackend() {
     startPolling();
     checkSession();
-
-    const btnLogin  = $("#btnLogin");
-    const btnLogout = $("#btnLogout");
-
-    if (btnLogin) btnLogin.addEventListener("click", async () => {
-      const pw = window.prompt(tx("auth.prompt"));
-      if (!pw) return;
-      try {
-        const r = await fetch(API_LOGIN, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: pw }),
-        });
-        const d = await r.json().catch(() => ({}));
-        if (r.ok && d.ok) { setAdminMode(true); fetchSnapshot(); }
-        // Бэкенд блокирует IP после пяти промахов и отвечает 429 с retry_after.
-        // Показывать при этом «Неверный пароль» — обман: пароль может быть
-        // верным, просто попытку сейчас не примут.
-        else if (r.status === 429) { alert(tx("auth.locked") + " " + (d.retry_after || 0) + " " + tx("auth.seconds")); }
-        else { alert(tx("auth.wrong")); }
-      } catch (e) { alert(tx("msg.loginFailed")); }
-    });
-
-    if (btnLogout) btnLogout.addEventListener("click", async () => {
-      try { await fetch(API_LOGOUT, { method: "POST" }); } catch (e) {}
-      setAdminMode(false);
-    });
   }
 
-  // Кто я: спрашиваем сервер (по cookie-сессии), включаем админ-режим если да.
+  // Кто я. На публичной странице — всегда гость, даже с живой кукой админа:
+  // редактирование переехало на /admin целиком, и лишний запрос делал бы
+  // каждый посетитель. Спрашиваем сервер только там, где разметку отдал
+  // admin.php.
   async function checkSession() {
+    if (!window.NX_ADMIN_PAGE) { setAdminMode(false); return; }
     try {
       const r = await fetch(API_SESSION, { cache: "no-store" });
       const d = await r.json();
-      setAdminMode(!!d.admin);
+      // Кука могла протухнуть между отдачей страницы и этим запросом.
+      // Возвращаем на вход, иначе редактор молча не сохранит ни одной правки.
+      if (!d.admin) { location.reload(); return; }
+      setAdminMode(true);
     } catch (e) { setAdminMode(false); }
   }
 

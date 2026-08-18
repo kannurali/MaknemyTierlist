@@ -60,7 +60,7 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=43" />
+<link rel="stylesheet" href="css/styles.css?v=44" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -77,14 +77,10 @@
 <!-- /Yandex.Metrika counter -->
 </head>
 <body>
-  <!-- ============ Floating auth control (top-right corner) ============ -->
-  <div class="auth-dock" id="authDock">
-    <button class="btn" id="btnLogin" data-i18n="auth.login" data-i18n-title="auth.loginTitle" title="Войти как администратор">🔑 Войти</button>
-    <div class="tb-admin-badge" id="adminBadge" hidden>
-      <span class="tb-admin-text" data-i18n="auth.admin">👑 Админ</span>
-      <button class="btn small ghost" id="btnLogout" data-i18n="auth.logout">Выйти</button>
-    </div>
-  </div>
+  <!-- Кнопки входа здесь больше нет: админка живёт на отдельном адресе /admin,
+       и роль там решает сервер до отдачи разметки. Тулбар редактирования ниже
+       остаётся в файле — эту же разметку отдаёт admin.php, дописав к ней
+       window.NX_ADMIN_PAGE. Посетителю все админские группы скрыты. -->
 
   <!-- ====== Floating like button (правый нижний угол, для всех посетителей) ====== -->
   <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="Поставить лайк" aria-pressed="false">
@@ -417,6 +413,6 @@
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
   <script src="js/promo.js?v=2"></script>
-  <script src="js/app.js?v=55"></script>
+  <script src="js/app.js?v=56"></script>
 </body>
 </html>

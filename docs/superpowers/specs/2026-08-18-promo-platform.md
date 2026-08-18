@@ -44,7 +44,7 @@
 | `public_html/js/promo.js` | расписание, ротация, частотный лимит. Без DOM, покрыт `tests/promo_test.mjs` |
 | `public_html/api/promo.php` | хранение кампаний, таблица `promo`, свой `rev`, оптимистичная блокировка |
 | `public_html/api/lib/images.php` | `CREATIVE_SPECS`, детекторы анимации, `save_creative_bytes()` |
-| `public_html/promo-admin.html` + `js/promo-admin.js` + `css/promo-admin.css` | панель |
+| `public_html/admin-promo.php` + `js/promo-admin.js` + `css/promo-admin.css` | панель `/admin/promo` |
 | `docs/mediakit/` | страница для рекламодателя, её стили, скриншоты мест и собранный `mediakit.pdf`. Вне веб-корня: см. «Медиакит на сайте не лежит» |
 | `tools/make-demo-creatives.py` | демо-макеты всех слотов |
 | `tools/make-placeholder-creatives.py` | заглушка «ВАША РЕКЛАМА» под размеры слотов |
@@ -64,7 +64,7 @@
 строка тирлиста бит-в-бит не меняется при сохранении реклам.
 
 **Имена уводят от блокировщиков.** Классы `ptn-*`, файл `promo.js`, эндпоинт
-`promo.php`, страница `promo-admin.html`. `##.ad-block` и `/js/ads.js` —
+`promo.php`, страница `/admin/promo`. `##.ad-block` и `/js/ads.js` —
 стандартные правила фильтров; старый баннер сайта, скорее всего, уже был
 невидим части посетителей. Переименование обратно вернёт проблему.
 

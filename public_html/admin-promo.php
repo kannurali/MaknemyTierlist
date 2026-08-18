@@ -1,3 +1,15 @@
+<?php
+// Панель управления рекламой. Прежний адрес /promo-admin.html редиректит сюда.
+//
+// Вход больше не спрашивает сама страница: пароль проверяет сервер до отдачи
+// разметки, поэтому форма входа и её JS из panel'и убраны — гость получает
+// экран входа от admin_page_guard(), а не пустую панель с оверлеем.
+require_once __DIR__ . '/api/lib/admin_page.php';
+admin_page_guard('Панель рекламы');
+
+header('Content-Type: text/html; charset=utf-8');
+$nav = admin_nav('promo');
+echo <<<HTML
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,26 +18,18 @@
 <meta name="color-scheme" content="dark" />
 <meta name="robots" content="noindex,nofollow" />
 <title>Реклама — панель управления</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <!-- Своя таблица стилей, а не styles.css: тот качает каждый посетитель сайта,
-     и растить его на стили внутренней формы незачем. -->
-<link rel="stylesheet" href="css/promo-admin.css?v=1" />
+     и растить его на стили внутренней формы незачем. Пути абсолютные —
+     страница живёт на /admin/promo, от относительных они уехали бы в
+     /admin/css/. -->
+<link rel="stylesheet" href="/css/admin-shell.css?v=1" />
+<link rel="stylesheet" href="/css/promo-admin.css?v=2" />
 </head>
 <body>
+{$nav}
 
-<!-- Вход. Пароль тот же, что на сайте; кука ставится на /, поэтому уже
-     залогиненный владелец сюда попадает без второго ввода. Проверка на
-     клиенте косметическая — всё, что пишет, закрыто require_admin(). -->
-<div class="gate" id="gate" hidden>
-  <form class="gate-box" id="gateForm">
-    <h1>Панель рекламы</h1>
-    <p class="muted">Введите пароль администратора.</p>
-    <input type="password" id="gatePass" autocomplete="current-password" placeholder="Пароль" />
-    <button class="btn primary" type="submit">Войти</button>
-    <div class="err" id="gateErr" hidden></div>
-  </form>
-</div>
-
-<div class="app" id="app" hidden>
+<div class="app" id="app">
   <header class="top">
     <div class="brand">РЕКЛАМА<span>панель</span></div>
     <div class="top-actions">
@@ -111,7 +115,8 @@
   </main>
 </div>
 
-<script src="js/promo.js?v=2"></script>
-<script src="js/promo-admin.js?v=2"></script>
+<script src="/js/promo.js?v=2"></script>
+<script src="/js/promo-admin.js?v=3"></script>
 </body>
 </html>
+HTML;
