@@ -30,6 +30,16 @@ CREATE TABLE IF NOT EXISTS news (
   -- TEXT его в MySQL не принимает (см. комментарий у body_en выше — ровно та
   -- же ошибка ERROR 1101, только для другого столбца).
   image_size   VARCHAR(8) NOT NULL DEFAULT 'full',
+  -- Ширина/высота УЖЕ СОХРАНЁННОЙ (пересжатой) картинки — подсказка для
+  -- <img width/height>, чтобы браузер зарезервировал место под неё до
+  -- загрузки байтов. NULL без DEFAULT: у поста без картинки, и у поста,
+  -- сохранённого до появления этих колонок, значения нет вообще — это не
+  -- 0×0 (0 обнулил бы зарезервированную высоту), а "неизвестно", и
+  -- cardFor() в news-page.js тогда просто не ставит атрибуты. NULL — не
+  -- TEXT, так что DEFAULT здесь ничем не грозит (см. комментарий у
+  -- body_en выше), но он и не нужен: не будь его — колонка и так NULL.
+  image_width  SMALLINT UNSIGNED NULL,
+  image_height SMALLINT UNSIGNED NULL,
   published_at BIGINT UNSIGNED NOT NULL,
   KEY idx_feed (published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

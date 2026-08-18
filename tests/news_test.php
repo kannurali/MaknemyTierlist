@@ -175,6 +175,54 @@ test('an empty image_size also defaults to full', function () {
     assert_eq('full', $feed['posts'][0]['image_size'], 'defaulted to full');
 });
 
+// ---------- image_width / image_height ----------
+
+test('image dimensions round-trip through save and the feed', function () {
+    $pdo = test_db();
+    $img = '/images/' . str_repeat('a', 40) . '.png';
+    handle_news_save($pdo, valid_body(['image_url' => $img, 'image_width' => 1024, 'image_height' => 512]), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(1024, $feed['posts'][0]['image_width'], 'width stored and returned');
+    assert_eq(512, $feed['posts'][0]['image_height'], 'height stored and returned');
+});
+
+test('dimensions update on a re-save just like any other field', function () {
+    $pdo = test_db();
+    $img = '/images/' . str_repeat('a', 40) . '.png';
+    [, $created] = handle_news_save($pdo, valid_body(['image_url' => $img, 'image_width' => 1024, 'image_height' => 1024]), 1);
+    handle_news_save($pdo, valid_body(['id' => $created['id'], 'image_url' => $img, 'image_width' => 300, 'image_height' => 150]), 2);
+    [, $feed] = handle_news($pdo);
+    assert_eq(300, $feed['posts'][0]['image_width'], 'width updated');
+    assert_eq(150, $feed['posts'][0]['image_height'], 'height updated');
+});
+
+test('a post without dimensions comes back with them null, not zero', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, valid_body(), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(null, $feed['posts'][0]['image_width'], 'width null');
+    assert_eq(null, $feed['posts'][0]['image_height'], 'height null');
+});
+
+test('a legacy post inserted without the columns comes back with null dimensions', function () {
+    // seed_post() вставляет строку без image_width/image_height ровно так,
+    // как это делала БД до появления этих колонок, — реальная строка,
+    // оставленная старой версией API.
+    $pdo = test_db();
+    seed_post($pdo, 'game', 'старый пост', 1000);
+    [, $feed] = handle_news($pdo);
+    assert_eq(null, $feed['posts'][0]['image_width'], 'legacy width null');
+    assert_eq(null, $feed['posts'][0]['image_height'], 'legacy height null');
+});
+
+test('junk or non-positive dimensions are dropped rather than stored', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, valid_body(['image_width' => 'abc', 'image_height' => -5]), 1);
+    [, $feed] = handle_news($pdo);
+    assert_eq(null, $feed['posts'][0]['image_width'], 'non-numeric width dropped');
+    assert_eq(null, $feed['posts'][0]['image_height'], 'non-positive height dropped');
+});
+
 test('a body with an id updates instead of inserting', function () {
     $pdo = test_db();
     [, $created] = handle_news_save($pdo, valid_body(), 1000);

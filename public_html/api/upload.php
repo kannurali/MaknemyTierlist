@@ -17,7 +17,31 @@ function handle_upload(string $imagesDir, ?string $dataUrl, ?array $file, int $m
     } catch (RuntimeException $e) {
         return [400, ['error' => $e->getMessage()]];
     }
-    return [200, ['url' => $url]];
+    $payload = ['url' => $url];
+    // Ширина/высота — той картинки, что реально легла на диск (после
+    // downscale_image_bytes внутри save_image_bytes), а не исходника:
+    // news_save.php кладёт их в БД как подсказку для <img width/height>
+    // (задача 2 в 2026-08-03-safari-memory-and-i18n-design.md), и подсказка
+    // обязана совпадать с тем, что браузер реально скачает. Читаем файл
+    // обратно, а не расширяем возврат save_image_bytes() — та должна
+    // остаться string-функцией, на неё пинится images_test.php.
+    $stored = @file_get_contents(rtrim($imagesDir, '/\\') . '/' . basename($url));
+    $dims = $stored !== false ? @getimagesizefromstring($stored) : false;
+    if ($dims !== false) {
+        $payload['width'] = $dims[0];
+        $payload['height'] = $dims[1];
+    }
+    return [200, $payload];
+}
+
+// Отображает kind+size тела запроса в потолок стороны. kind !== 'news' — это
+// иконка предмета, единственный потолок для неё — ICON_MAX_SIDE, и size к
+// этому пути вообще не относится. kind === 'news' с нераспознанным или
+// отсутствующим size откатывается на news_image_max_side() по умолчанию —
+// то есть на самый маленький потолок среди новостных размеров, а не на
+// самый большой, ровно как в images.php.
+function resolve_upload_max_side(string $kind, string $size): int {
+    return $kind === 'news' ? news_image_max_side($size) : ICON_MAX_SIDE;
 }
 
 if (!defined('TESTING')) {
@@ -27,14 +51,16 @@ if (!defined('TESTING')) {
     $body = read_json_body();
     $dataUrl = is_string($body['data'] ?? null) ? $body['data'] : null;
     $file = $_FILES['image'] ?? null;
-    // kind=news поднимает потолок стороны и потолок веса исходника: иконка
-    // предмета и картинка новости рисуются в совершенно разных размерах, а
-    // обычный скриншот весит куда больше 500 КБ ещё до downscale (см.
-    // NEWS_IMAGE_MAX_BYTES в lib/images.php). Неизвестное значение молча
-    // означает иконку — так добавление третьего вида не сможет случайно
-    // распечатать память или диск под чужой потолок.
+    // kind=news поднимает потолок веса исходника: иконка предмета и картинка
+    // новости рисуются в совершенно разных размерах, а обычный скриншот
+    // весит куда больше 500 КБ ещё до downscale (см. NEWS_IMAGE_MAX_BYTES в
+    // lib/images.php). Неизвестное значение молча означает иконку — так
+    // добавление третьего вида не сможет случайно распечатать память или
+    // диск под чужой потолок. size — потолок стороны внутри news, см.
+    // resolve_upload_max_side() выше.
     $kind = is_string($body['kind'] ?? null) ? $body['kind'] : '';
-    $maxSide = $kind === 'news' ? NEWS_IMAGE_MAX_SIDE : ICON_MAX_SIDE;
+    $size = is_string($body['size'] ?? null) ? $body['size'] : '';
+    $maxSide = resolve_upload_max_side($kind, $size);
     $maxBytes = $kind === 'news' ? NEWS_IMAGE_MAX_BYTES : 512000;
     [$status, $payload] = handle_upload($cfg['images_dir'], $dataUrl, $file, $maxSide, $maxBytes);
     json_out($payload, $status);

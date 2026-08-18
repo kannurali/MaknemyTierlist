@@ -382,4 +382,17 @@ test('save_image_bytes honours an explicit max side', function () {
     @rmdir($dir);
 });
 
+// ---------- news_image_max_side (потолок по выбранному в редакторе размеру) ----------
+
+test('news_image_max_side maps each size key to its documented cap', function () {
+    assert_eq(1024, news_image_max_side('small'), 'small');
+    assert_eq(1024, news_image_max_side('medium'), 'medium');
+    assert_eq(1280, news_image_max_side('full'), 'full');
+});
+
+test('news_image_max_side falls back to the smallest news cap, not the largest', function () {
+    assert_eq(1024, news_image_max_side('huge'), 'unrecognised size');
+    assert_eq(1024, news_image_max_side(''), 'missing size');
+});
+
 run_tests();

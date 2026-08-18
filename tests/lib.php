@@ -54,6 +54,11 @@ function test_db(): PDO {
         body_en TEXT NOT NULL,
         image_url TEXT NOT NULL DEFAULT '',
         image_size TEXT NOT NULL DEFAULT 'full',
+        -- Зеркалит schema.sql: NULL, без DEFAULT — пост без картинки или
+        -- сохранённый до появления этих колонок не хранит ни ширины, ни
+        -- высоты (см. комментарий в schema.sql).
+        image_width INTEGER,
+        image_height INTEGER,
         published_at INTEGER NOT NULL
     )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");

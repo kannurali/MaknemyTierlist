@@ -16,6 +16,21 @@ const NEWS_BODY_MAX   = 20000;
 // обход каталога отсекаются по построению, а не по перечислению.
 const NEWS_IMAGE_RE = '#^/images/[0-9a-f]{40}\.(png|jpg|webp)$#';
 
+// Ширина/высота картинки новости — то, что upload.php вернул после
+// downscale_image_bytes() (см. лист изменений в
+// docs/superpowers/specs/2026-08-03-safari-memory-and-i18n-design.md, задача
+// 2). Валидным считается только положительное целое; всё прочее (строка не
+// из цифр, ноль, отрицательное, дробное, отсутствующее значение) откатывается
+// на null — так же, как у поста, сохранённого до появления этих колонок:
+// cardFor() в news-page.js тогда просто не ставит атрибуты width/height,
+// а не подставляет 0, который обнулил бы зарезервированную высоту.
+function news_image_dim($v): ?int {
+    if (is_int($v)) { return $v > 0 ? $v : null; }
+    if (is_float($v) && $v == (int)$v) { $n = (int)$v; return $n > 0 ? $n : null; }
+    if (is_string($v) && ctype_digit($v)) { $n = (int)$v; return $n > 0 ? $n : null; }
+    return null;
+}
+
 function validate_news_post(array $b): array {
     $cat = (string)($b['category'] ?? '');
     if (!in_array($cat, NEWS_CATEGORIES, true)) {
@@ -55,14 +70,19 @@ function validate_news_post(array $b): array {
         return ['ok' => false, 'error' => 'bad image_size', 'post' => []];
     }
 
+    $width  = news_image_dim($b['image_width']  ?? null);
+    $height = news_image_dim($b['image_height'] ?? null);
+
     return ['ok' => true, 'error' => '', 'post' => [
-        'category'   => $cat,
-        'title_ru'   => $titleRu,
-        'title_en'   => $titleEn,
-        'body_ru'    => $bodyRu,
-        'body_en'    => $bodyEn,
-        'image_url'  => $image,
-        'image_size' => $imageSize,
+        'category'     => $cat,
+        'title_ru'     => $titleRu,
+        'title_en'     => $titleEn,
+        'body_ru'      => $bodyRu,
+        'body_en'      => $bodyEn,
+        'image_url'    => $image,
+        'image_size'   => $imageSize,
+        'image_width'  => $width,
+        'image_height' => $height,
     ]];
 }
 
@@ -86,6 +106,8 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
         ':be'  => $p['body_en'],
         ':img' => $p['image_url'],
         ':sz'  => $p['image_size'],
+        ':iw'  => $p['image_width'],
+        ':ih'  => $p['image_height'],
         ':pa'  => $publishedAt,
     ];
 
@@ -110,7 +132,8 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
             "UPDATE news
                 SET category = :c, title_ru = :tr, title_en = :te,
                     body_ru = :br, body_en = :be, image_url = :img,
-                    image_size = :sz, published_at = :pa
+                    image_size = :sz, image_width = :iw, image_height = :ih,
+                    published_at = :pa
               WHERE id = :id"
         );
         $stmt->execute($params + [':id' => $id]);
@@ -118,8 +141,9 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
     }
 
     $stmt = $pdo->prepare(
-        "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, image_url, image_size, published_at)
-         VALUES (:c, :tr, :te, :br, :be, :img, :sz, :pa)"
+        "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, image_url, image_size,
+                            image_width, image_height, published_at)
+         VALUES (:c, :tr, :te, :br, :be, :img, :sz, :iw, :ih, :pa)"
     );
     $stmt->execute($params);
     return [200, ['ok' => true, 'id' => (int)$pdo->lastInsertId()]];

@@ -92,6 +92,18 @@
       img.src = post.image_url;
       img.alt = picked.title;
       img.loading = "lazy";
+      img.decoding = "async";
+      // width/height — не литеральный размер отображения (тем управляет CSS:
+      // .nw-image{height:auto} и .sz-*{width:%}), а подсказка браузеру для
+      // резервирования места под картинку, пока байты ещё не пришли — иначе
+      // текст под картинкой скачет при догрузке. Пост без картинки и пост,
+      // сохранённый до появления этих колонок (image_width/image_height —
+      // null), не дают атрибутов вовсе, а не 0×0 — 0 обнулил бы
+      // зарезервированную высоту, а не оставил бы её неизвестной.
+      if (post.image_width && post.image_height) {
+        img.width = post.image_width;
+        img.height = post.image_height;
+      }
       card.append(img);
     }
 
@@ -242,6 +254,15 @@
   const editor = $("#newsEditor");
   let editingPost = null;
   let currentImage = "";
+  let currentImageWidth = null;
+  let currentImageHeight = null;
+  // Data URL картинки, выбранной в этой сессии редактирования (см.
+  // #neImageFile ниже) — источник, из которого можно перезалить файл под
+  // новый потолок при смене размера картинки. "" значит "источника нет":
+  // либо ничего не выбирали, либо открыли существующий пост и не трогали
+  // картинку — тогда смена размера не должна ничего перезаливать (см.
+  // renderImageSizeSeg ниже).
+  let pickedImageDataUrl = "";
 
   // Сегмент категорий строится из того же списка, что рисует чипы фильтра —
   // добавленная в news.js категория появляется в редакторе сама.
@@ -277,7 +298,19 @@
       b.dataset.v = s.key;
       b.className = s.key === editorImageSize ? "active" : "";
       b.textContent = tx(s.i18n);
-      b.addEventListener("click", () => { editorImageSize = s.key; renderImageSizeSeg(); updatePreview(); });
+      b.addEventListener("click", () => {
+        editorImageSize = s.key;
+        renderImageSizeSeg();
+        updatePreview();
+        // Разный размер — разный потолок стороны (см. NEWS_IMAGE_MAX_SIDE_BY_SIZE
+        // в lib/images.php), поэтому уже загруженный файл нужно перезалить под
+        // новый потолок, а не просто перекрасить CSS-класс поверх старого веса.
+        // Источник для перезаливки есть только в рамках этой сессии
+        // редактирования (см. pickedImageDataUrl выше) — если админ просто
+        // открыл существующий пост и поменял размер, файл на диске остаётся
+        // как есть: он всего лишь крупнее, чем нужно, и это безвредно.
+        if (pickedImageDataUrl) { uploadPickedImage().then(updatePreview); }
+      });
       box.append(b);
     }
   }
@@ -300,8 +333,10 @@
   // Больше не рисует <img> сама — превью всей карточки (см. ниже) уже
   // показывает картинку в контексте поста, отдельный образец рядом с кнопками
   // стал бы вторым, расходящимся источником правды о том же самом файле.
-  function setImage(url) {
+  function setImage(url, width, height) {
     currentImage = url || "";
+    currentImageWidth = width || null;
+    currentImageHeight = height || null;
   }
 
   // Собирает пост из текущего состояния формы — ровно то, что publish()
@@ -318,6 +353,8 @@
       body_ru:  $("#neBodyRu").value,
       body_en:  $("#neBodyEn").value,
       image_url: currentImage,
+      image_width: currentImageWidth,
+      image_height: currentImageHeight,
       image_size: getImageSize(),
       // Пустая/битая дата не должна ронять превью на "Invalid Date" —
       // берём "сейчас" вместо неё; publish() всё равно проверяет дату
@@ -342,7 +379,12 @@
     $("#neDate").value = isoDay(post ? post.published_at : Date.now());
     setCat(post ? post.category : "tierlist");
     setImageSize(post ? post.image_size : "full");
-    setImage(post ? post.image_url : "");
+    setImage(post ? post.image_url : "", post ? post.image_width : null, post ? post.image_height : null);
+    // Новая сессия редактирования — новый (изначально пустой) источник для
+    // перезаливки при смене размера. Открытие уже существующего поста не
+    // держит его исходный файл в памяти браузера, поэтому источника нет,
+    // пока админ сам не выберет файл заново.
+    pickedImageDataUrl = "";
     $("#neError").textContent = "";
     editor.hidden = false;
     updatePreview();
@@ -369,6 +411,8 @@
       body_ru:  $("#neBodyRu").value.trim(),
       body_en:  $("#neBodyEn").value.trim(),
       image_url: currentImage,
+      image_width: currentImageWidth,
+      image_height: currentImageHeight,
       image_size: getImageSize(),
       published_at: dayToMs(dateVal),
     };
@@ -417,42 +461,70 @@
   $("#neCancel").addEventListener("click", () => { editor.hidden = true; });
   $("#neClose").addEventListener("click", () => { editor.hidden = true; });
   $("#neImagePick").addEventListener("click", () => $("#neImageFile").click());
-  $("#neImageClear").addEventListener("click", () => { setImage(""); updatePreview(); });
+  $("#neImageClear").addEventListener("click", () => {
+    setImage("");
+    // Очищаем и источник: иначе следующая смена размера перезалила бы уже
+    // убранную картинку обратно.
+    pickedImageDataUrl = "";
+    updatePreview();
+  });
   editor.addEventListener("click", e => { if (e.target === editor) { editor.hidden = true; } });
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !editor.hidden) { editor.hidden = true; }
   });
 
+  // Заливает pickedImageDataUrl под текущий выбранный размер редактора.
+  // Общая для первого выбора файла и для перезаливки при смене размера
+  // (см. renderImageSizeSeg выше) — оба случая шлют один и тот же запрос,
+  // отличается только источник в pickedImageDataUrl и повод вызова.
+  async function uploadPickedImage() {
+    // kind: "news" + size — потолок стороны по выбранному в редакторе
+    // размеру, см. resolve_upload_max_side() в upload.php.
+    const r = await fetch("api/upload.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: pickedImageDataUrl, kind: "news", size: getImageSize() }),
+    });
+    const d = await r.json();
+    if (r.ok && d.url) {
+      setImage(d.url, d.width, d.height);
+      $("#neError").textContent = "";
+    } else {
+      $("#neError").textContent = tx("news.saveFailed") + " " + (d.error || "");
+    }
+  }
+
   $("#neImageFile").addEventListener("change", async ev => {
     const file = ev.target.files && ev.target.files[0];
     if (!file) { return; }
-    const dataUrl = await new Promise(res => {
+    pickedImageDataUrl = await new Promise(res => {
       const fr = new FileReader();
       fr.onload = () => res(fr.result);
       fr.readAsDataURL(file);
     });
-    // kind: "news" поднимает потолок стороны до 1280 — см. upload.php.
-    const r = await fetch("api/upload.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: dataUrl, kind: "news" }),
-    });
-    const d = await r.json();
-    if (r.ok && d.url) { setImage(d.url); }
-    else { $("#neError").textContent = tx("news.saveFailed") + " " + (d.error || ""); }
+    await uploadPickedImage();
     updatePreview();
     ev.target.value = "";
   });
 
   // Живое превью: заголовки, тексты и дата не проходят через отдельные
   // сеттеры вроде setCat/setImageSize, поэтому слушаем input/change прямо на
-  // полях. Дебаунс не нужен — updatePreview() это несколько DOM-узлов на
-  // короткий пост, лишней нагрузки на каждую нажатую клавишу не создаёт.
-  for (const id of ["neTitleRu", "neTitleEn", "neBodyRu", "neBodyEn"]) {
-    $("#" + id).addEventListener("input", updatePreview);
+  // полях. Тело поста ограничено 20 000 символами (NEWS_BODY_MAX в
+  // news_save.php), а updatePreview() на каждый input пересобирает всю
+  // карточку заново — режет body на абзацы и пересоздаёт каждый <p> и
+  // <img>. На заголовке это незаметно, но на боди у предела длины —
+  // заметная работа на каждое нажатие клавиши, поэтому обновление
+  // дебаунсится на 150 мс, а не гонится за каждым input.
+  let previewDebounceTimer = null;
+  function schedulePreviewUpdate() {
+    clearTimeout(previewDebounceTimer);
+    previewDebounceTimer = setTimeout(updatePreview, 150);
   }
-  $("#neDate").addEventListener("change", updatePreview);
-  $("#neDate").addEventListener("input", updatePreview);
+  for (const id of ["neTitleRu", "neTitleEn", "neBodyRu", "neBodyEn"]) {
+    $("#" + id).addEventListener("input", schedulePreviewUpdate);
+  }
+  $("#neDate").addEventListener("change", schedulePreviewUpdate);
+  $("#neDate").addEventListener("input", schedulePreviewUpdate);
 
   for (const b of document.querySelectorAll("#langSwitch .chip")) {
     b.addEventListener("click", () => applyLang(b.dataset.lang));

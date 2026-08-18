@@ -35,7 +35,7 @@ test('rejects non-image data url', function () {
 // Валидная сигнатура PNG + честный IHDR (ширина/высота читаются
 // getimagesizefromstring() без проверки CRC — тот же приём, что и
 // fake_png_header() в tests/images_test.php), но раздутый лишним хвостом до
-// $totalBytes. Ширина/высота держим не больше NEWS_IMAGE_MAX_SIDE, поэтому
+// $totalBytes. Ширина/высота держим не больше NEWS_IMAGE_SIDE_FULL, поэтому
 // downscale_image_bytes() отдаёт эти байты как есть, не пытаясь их
 // по-настоящему декодировать — тесту нужен именно вес файла, а не валидный
 // пиксельный формат.
@@ -52,7 +52,7 @@ test('kind=news accepts a source over the icon 500 KB cap; the icon path still r
     $bytes = oversized_png_bytes(600000);
     $dataUrl = 'data:image/png;base64,' . base64_encode($bytes);
 
-    [$statusNews, $pNews] = handle_upload($dir, $dataUrl, null, NEWS_IMAGE_MAX_SIDE, NEWS_IMAGE_MAX_BYTES);
+    [$statusNews, $pNews] = handle_upload($dir, $dataUrl, null, NEWS_IMAGE_SIDE_FULL, NEWS_IMAGE_MAX_BYTES);
     assert_eq(200, $statusNews, 'news path accepts a real-world screenshot size');
     assert_true(isset($pNews['url']), 'news path returns a stored url');
 
@@ -79,6 +79,61 @@ test('upload passes the requested max side through', function () {
     assert_eq(200, $status, 'ok status');
     [$w, ] = getimagesizefromstring(file_get_contents($dir . '/' . basename($p['url'])));
     assert_eq(600, $w, 'kept at source size');
+
+    array_map('unlink', glob($dir . '/*'));
+    @rmdir($dir);
+});
+
+// ---------- resolve_upload_max_side (kind + size -> потолок стороны) ----------
+
+test('resolve_upload_max_side caps a news upload by the selected size', function () {
+    assert_eq(NEWS_IMAGE_SIDE_SMALL,  resolve_upload_max_side('news', 'small'),  'small cap');
+    assert_eq(NEWS_IMAGE_SIDE_MEDIUM, resolve_upload_max_side('news', 'medium'), 'medium cap');
+    assert_eq(NEWS_IMAGE_SIDE_FULL,   resolve_upload_max_side('news', 'full'),   'full cap');
+});
+
+test('resolve_upload_max_side falls back to the smallest news cap on an unknown or missing size', function () {
+    assert_eq(NEWS_IMAGE_SIDE_SMALL, resolve_upload_max_side('news', 'huge'), 'unknown size -> smallest, not largest');
+    assert_eq(NEWS_IMAGE_SIDE_SMALL, resolve_upload_max_side('news', ''),     'missing size -> smallest');
+});
+
+test('resolve_upload_max_side falls back to ICON_MAX_SIDE for an unknown kind', function () {
+    assert_eq(ICON_MAX_SIDE, resolve_upload_max_side('', ''), 'empty kind -> icon cap');
+    assert_eq(ICON_MAX_SIDE, resolve_upload_max_side('bogus', 'full'), 'unknown kind -> icon cap, size ignored');
+});
+
+test('a large source uploaded as small is stored at <= 1024, as full at <= 1280', function () {
+    $dir = tmp_dir_u();
+    $src = imagecreatetruecolor(2000, 2000);
+    ob_start(); imagepng($src); $bytes = ob_get_clean();
+    $dataUrl = 'data:image/png;base64,' . base64_encode($bytes);
+
+    [, $pSmall] = handle_upload($dir, $dataUrl, null, resolve_upload_max_side('news', 'small'), NEWS_IMAGE_MAX_BYTES);
+    [$wSmall, ] = getimagesizefromstring(file_get_contents($dir . '/' . basename($pSmall['url'])));
+    assert_eq(NEWS_IMAGE_SIDE_SMALL, $wSmall, 'small stored exactly at its cap for an oversized source');
+
+    [, $pFull] = handle_upload($dir, $dataUrl, null, resolve_upload_max_side('news', 'full'), NEWS_IMAGE_MAX_BYTES);
+    [$wFull, ] = getimagesizefromstring(file_get_contents($dir . '/' . basename($pFull['url'])));
+    assert_eq(NEWS_IMAGE_SIDE_FULL, $wFull, 'full stored exactly at its cap for an oversized source');
+
+    [, $pUnknown] = handle_upload($dir, $dataUrl, null, resolve_upload_max_side('news', 'nonsense'), NEWS_IMAGE_MAX_BYTES);
+    [$wUnknown, ] = getimagesizefromstring(file_get_contents($dir . '/' . basename($pUnknown['url'])));
+    assert_eq(NEWS_IMAGE_SIDE_SMALL, $wUnknown, 'unrecognised size falls back to the smallest cap, not the largest');
+
+    array_map('unlink', glob($dir . '/*'));
+    @rmdir($dir);
+});
+
+test('handle_upload reports the width and height of the stored (already downscaled) image', function () {
+    $dir = tmp_dir_u();
+    $src = imagecreatetruecolor(2000, 1000);
+    ob_start(); imagepng($src); $bytes = ob_get_clean();
+    $dataUrl = 'data:image/png;base64,' . base64_encode($bytes);
+
+    [$status, $p] = handle_upload($dir, $dataUrl, null, NEWS_IMAGE_SIDE_SMALL, NEWS_IMAGE_MAX_BYTES);
+    assert_eq(200, $status, 'ok');
+    assert_eq(NEWS_IMAGE_SIDE_SMALL, $p['width'], 'width capped and reported');
+    assert_eq((int)(NEWS_IMAGE_SIDE_SMALL / 2), $p['height'], 'height scaled proportionally and reported');
 
     array_map('unlink', glob($dir . '/*'));
     @rmdir($dir);
