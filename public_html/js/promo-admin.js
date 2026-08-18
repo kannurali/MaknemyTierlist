@@ -344,7 +344,9 @@
         return fetch(API_UPLOAD, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: dataUrl, slot: slot })
+          // kind, а не slot: у upload.php один параметр на иконку,
+          // картинку новости и рекламный макет — значение слота и есть вид.
+          body: JSON.stringify({ data: dataUrl, kind: slot })
         }).then(function (r) {
           return r.json().then(function (j) {
             if (r.status === 401) throw new Error(EXPIRED);

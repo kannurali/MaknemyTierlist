@@ -1,76 +1,3 @@
-/* ===================== Fonts ===================== */
-@font-face {
-  font-family: "Bootshaus";
-  src: url("../assets/fonts/Bootshaus/Bootshaus-Regular.ttf") format("truetype");
-  font-weight: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Proto Sans";
-  src: url("../assets/fonts/ProtoSans56.otf") format("opentype");
-  font-weight: normal;
-  font-display: swap;
-}
-
-/* ===================== Theme tokens ===================== */
-:root {
-  /* Явно объявляем тёмную схему: движки на Chromium (в первую очередь
-     Яндекс.Браузер с «Тёмной темой для сайтов») трогают только страницы,
-     у которых своей тёмной темы нет. Без объявления браузер сам инвертирует
-     светлые монохромные картинки — белые логотипы тиров становились чёрными. */
-  color-scheme: dark;
-
-  --display: "Bootshaus", "Proto Sans", "Arial Narrow", Impact, sans-serif;
-  --proto: "Proto Sans", "Arial Narrow", Impact, sans-serif;
-  --ui: "Segoe UI", Roboto, system-ui, sans-serif;
-
-  --cyan: #4fd6ff;
-  --cyan-deep: #1f9fd6;
-  --mk: #d65aff;
-  --bg-dark: #0a0e1a;
-  --panel: rgba(18, 30, 56, 0.62);
-  --panel-edge: rgba(120, 190, 255, 0.45);
-
-  --d-green: #2ecc40;
-  --d-yellow: #ffdc00;
-  --d-orange: #ff851b;
-  --d-red: #ff3b30;
-
-  --t-f: #3dd435;
-  --t-s: #b32ed9;
-  --t-m: #e0218a;
-  --t-p: #f2b01e;
-  --t-gp: #c0392b;
-  --t-cr: #2e86ff;
-}
-
-/* Второй сигнал для тех же движков: сайт отвечает на prefers-color-scheme,
-   значит «своя тёмная тема» у него есть и подкрашивать её не надо.
-   Правило не меняет вид — палитра и так тёмная при любой схеме. */
-@media (prefers-color-scheme: dark) {
-  :root { color-scheme: dark; }
-}
-
-* { box-sizing: border-box; }
-
-/* Атрибут hidden должен реально прятать элемент, даже если класс задаёт
-   display:flex (иначе .tb-group перебивает hidden). */
-[hidden] { display: none !important; }
-
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #05070d;
-  color: #eaf4ff;
-  font-family: var(--ui);
-  -webkit-font-smoothing: antialiased;
-  /* iPhone в ландшафте сам «подкручивает» размер шрифта под ширину экрана.
-     Вся вёрстка тирлиста считается в cqw, поэтому после поворота текст
-     вылезал из ячеек и ломал ряды. Отключаем автоподгонку. */
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
 /* ===================== Защита контента =====================
    Класс висит на <body> у всех, кроме вошедшего админа: гость не выделяет
    текст и не утаскивает картинки. Админу защита снимается целиком, иначе он
@@ -96,30 +23,7 @@ body.protected [contenteditable="true"] {
 /* Картинку нельзя перетащить в соседнюю вкладку или на рабочий стол. */
 body.protected img { -webkit-user-drag: none; }
 
-/* ===================== Toolbar ===================== */
-.toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 10px 16px; /* плавающей кнопки входа справа больше нет — админка на /admin */
-  background: linear-gradient(180deg, #0c1426, #0a0f1d);
-  border-bottom: 1px solid rgba(120, 190, 255, 0.18);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-}
-.tb-brand {
-  font-family: var(--display);
-  font-size: 22px;
-  letter-spacing: 1px;
-  color: var(--cyan);
-  text-shadow: 0 0 10px rgba(79, 214, 255, 0.5);
-}
-.tb-brand span { color: var(--mk); margin-left: 6px; }
-.tb-group { display: flex; gap: 8px; align-items: center; }
-.tb-label { font-size: 12px; font-weight: 600; color: #8fb0dc; }
+/* ===================== Тулбар: статус сохранения и админ-бейдж ===================== */
 .tb-saved { margin-left: auto; font-size: 12px; color: #6f86ad; min-width: 90px; text-align: right; }
 /* На iOS сохранение уходит вторым нажатием (нужен свежий жест пользователя).
    Пульсация нужна, чтобы этот шаг нельзя было пропустить. */
@@ -247,28 +151,6 @@ body.protected img { -webkit-user-drag: none; }
 .sync-banner { top: 72px; border-color: rgba(120,190,255,.6); box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(42,166,224,.35); }
 .sync-banner .uid-banner-row { margin-top: 4px; }
 
-.btn {
-  font-family: var(--ui);
-  font-size: 13px;
-  font-weight: 600;
-  color: #dCe9ff;
-  background: rgba(40, 64, 110, 0.55);
-  border: 1px solid rgba(120, 190, 255, 0.28);
-  border-radius: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: transform .08s, background .15s, border-color .15s;
-  white-space: nowrap;
-}
-.btn:hover { background: rgba(60, 96, 160, 0.7); border-color: var(--cyan); }
-.btn:active { transform: translateY(1px); }
-.btn.primary { background: linear-gradient(180deg, #2aa6e0, #1c7bb5); border-color: #6fd6ff; color: #fff; }
-.btn.primary:hover { background: linear-gradient(180deg, #36b8f0, #2189c6); }
-.btn.danger { background: rgba(120, 36, 36, 0.5); border-color: rgba(255, 90, 80, 0.5); }
-.btn.danger:hover { background: rgba(160, 44, 44, 0.7); border-color: #ff6b5e; }
-.btn.small { font-size: 12px; padding: 6px 10px; }
-.btn.ghost { background: transparent; }
-
 /* ----- Кнопка «Сохранить» (публикация изменений) ----- */
 .save-btn { font-weight: 700; min-width: 124px; transition: background .15s, border-color .15s, box-shadow .2s, transform .08s; }
 /* есть несохранённые изменения — зовём нажать (янтарное свечение + пульс) */
@@ -302,153 +184,6 @@ body.protected img { -webkit-user-drag: none; }
   box-shadow: none;
 }
 
-/* filter chips */
-.chip {
-  font-family: var(--ui);
-  font-size: 12px;
-  font-weight: 700;
-  color: #7e94b8;
-  background: rgba(20, 34, 62, 0.6);
-  border: 1px solid rgba(120, 190, 255, 0.2);
-  border-radius: 999px;
-  padding: 6px 12px;
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-  white-space: nowrap;
-}
-.chip:hover { border-color: var(--cyan); color: #cfe2ff; }
-.chip.active {
-  color: #fff;
-  background: rgba(42, 166, 224, 0.4);
-  border-color: var(--cyan);
-  box-shadow: 0 0 8px rgba(79, 214, 255, 0.25);
-}
-.chip.all { border-style: dashed; }
-
-/* Переключатель языка — сегментированная пара RU|EN на тех же токенах, что и
-   чипы фильтров. Слитная пара, а не два отдельных чипа: это один выбор из
-   двух, и вид должен это показывать. */
-.lang-switch { gap: 0; }
-.lang-switch .chip {
-  padding: 6px 10px;
-  border-radius: 0;
-  min-width: 38px;
-  text-align: center;
-}
-.lang-switch .chip:first-child {
-  border-radius: 999px 0 0 999px;
-  border-right-width: 0;
-}
-.lang-switch .chip:last-child { border-radius: 0 999px 999px 0; }
-/* Активная половина должна перекрывать границу соседа, иначе на стыке
-   остаётся тусклая полоска. */
-.lang-switch .chip.active { border-right-width: 1px; margin-right: -1px; }
-.lang-switch .chip:focus-visible {
-  outline: 2px solid var(--cyan);
-  outline-offset: 2px;
-  z-index: 1;
-}
-
-/* toggle switch */
-.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
-.switch input { display: none; }
-.switch .track {
-  width: 40px; height: 22px; border-radius: 12px;
-  background: rgba(40, 64, 110, 0.8);
-  border: 1px solid rgba(120, 190, 255, 0.3);
-  position: relative; transition: background .2s;
-}
-.switch .thumb {
-  position: absolute; top: 2px; left: 2px;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: #8fa9cc; transition: left .2s, background .2s;
-}
-.switch input:checked + .track { background: rgba(42, 166, 224, 0.7); }
-.switch input:checked + .track .thumb { left: 20px; background: #eaf6ff; }
-.switch-label { font-size: 13px; font-weight: 600; color: #cfe2ff; }
-
-/* ===================== Stage ===================== */
-.stage-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 26px 16px 60px;
-}
-.stage {
-  position: relative;
-  width: min(1040px, 96vw);
-  min-height: 540px;
-  border-radius: 14px;
-  overflow: hidden;
-  /* Фон уже с цветокором (bg-ck.png из макета), поэтому его НЕ домножаем на
-     #091640, как домножали старый: тот был неотгрейженный и без умножения
-     светил. Заодно это принципиально для памяти: каждый blend-mode заставляет
-     WebKit заводить offscreen-слой размером со сцену (на iPhone это ~17 МБ), а
-     при нехватке памяти Safari молча отключает смешивание — картинка «теряет
-     цвет», мерцает и вкладка вылетает.
-     WebP-варианты весят на порядок меньше JPEG-фолбэка (332 КБ → 95 КБ).
-
-     Картинка макета кончается на высоте width * 1959/1200, а сцена на боевых
-     данных вдвое выше — ниже оставался плоский #05091f. Поэтому здесь не сама
-     картинка, а «плитка» из tools/make-poster-tiles.py: картинка плюс её
-     вертикальное отражение. Верхняя строка плитки равна нижней, так что
-     repeat-y стыкуется без шва. Простой repeat-y исходника так не умеет: у
-     него тёмный низ (0,2,6) встречался бы со светлым верхом (6,11,23) — это и
-     была видимая тёмная полоса. Зеркало печём в файл, потому что в CSS нет
-     mirror-варианта background-repeat. */
-  background-color: #05091f;
-  background-image: url("../assets/poster/bg-tile-export.jpg");
-  background-image: -webkit-image-set(url("../assets/poster/bg-tile.webp") 1x);
-  background-image: image-set(url("../assets/poster/bg-tile.webp") type("image/webp"));
-  background-size: 100% auto;
-  background-repeat: repeat-y;
-  background-position: center top;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(120, 190, 255, 0.15);
-  /* internal layout uses container query units for proportional scaling */
-  container-type: inline-size;
-  display: flex;
-  flex-direction: column;
-  /* По горизонтали паддинга нет намеренно: cqw — это процент от content-box
-     контейнера, и с нулевым боковым паддингом 1cqw ровно равен 1% ширины
-     макета (1523 px). Все отступы из PSD пересчитаны в cqw и разложены по
-     самим блокам, а не по сцене. */
-  padding: 0 0 2.4cqw;
-}
-.stage::before {
-  content: "";
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(6,8,18,0.45) 0%, rgba(6,8,18,0.12) 30%, rgba(6,8,18,0.35) 100%);
-  pointer-events: none;
-}
-.petals {
-  position: absolute; inset: 0;
-  background-image: url("../assets/poster/petals-tile-export.png");
-  background-image: -webkit-image-set(url("../assets/poster/petals-tile.webp") 1x);
-  background-image: image-set(url("../assets/poster/petals-tile.webp") type("image/webp"));
-  /* Ровно те же размеры, привязка и повтор, что у фона сцены: лепестки обязаны
-     повторяться с ним синхронно, иначе отражённая половина фона осталась бы без
-     своих бликов. Раньше тут стоял cover: он растягивал картинку по высоте
-     страницы (на живых данных сцена ~4400 px), и яркие блики из углов макета
-     уезжали в середину — над легендой висело синее пятно. */
-  background-size: 100% auto;
-  background-repeat: repeat-y;
-  background-position: center top;
-  /* mix-blend-mode: screen убран намеренно. Лепестки уже с альфа-каналом и
-     почти белые, а подложка тёмно-синяя, поэтому screen и обычное наложение
-     дают разницу максимум 4.9/255 (проверено попиксельно) — глазом не видно.
-     Зато исчезает второй offscreen-слой WebKit: именно он на iPhone съедал
-     память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов.
-
-     opacity: .7 убран по той же причине и запечён в альфа-канал самих файлов
-     (petals-tile.webp / petals-tile-m.webp / petals-tile-export.png). Любая
-     opacity < 1 заставляет WebKit рисовать элемент в отдельный
-     transparency-слой РАЗМЕРОМ СО СЦЕНУ — это 30 МБ на iPhone и 43 МБ на
-     десктопе поверх всего остального. Картинка на экране та же, слоя больше
-     нет. */
-  pointer-events: none;
-  z-index: 1;
-}
-.stage > *:not(.petals) { position: relative; z-index: 2; }
-
 /* ===================== Header =====================
    Геометрия из PSD (канва 1523 px, 1cqw = 15.23 px): лого BF в 23/25 px от
    угла, марки справа в 21/17 px. Заголовок и дата — Proto Sans, а не Bootshaus:
@@ -463,7 +198,6 @@ body.protected img { -webkit-user-drag: none; }
 /* Дата в макете стоит заметно ниже логотипов — на 80 px от верха канвы, тогда
    как марки справа на 17 px. Отсюда отдельный отступ у титульного блока. */
 .title-block { margin-top: 3.7cqw; }
-.bf-logo { width: 10.37cqw; height: auto; justify-self: start; margin-top: .52cqw; filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
 .title-block { text-align: center; }
 .date {
   font-family: var(--proto);
@@ -495,12 +229,6 @@ body.protected img { -webkit-user-drag: none; }
      заголовок читался мыльным. В макете подсветка едва заметна, поэтому радиус
      втрое меньше, а вниз идёт плотная тень для отрыва от фона. */
   text-shadow: 0 0 .55cqw rgba(120,190,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
-}
-.brand-logo {
-  justify-self: end;
-  width: 14.77cqw;
-  height: auto;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,.7));
 }
 
 /* ===================== Tiers =====================
@@ -1378,47 +1106,9 @@ body.ptn-locked { overflow: hidden; }
 }
 .credit-add:hover { border-color: var(--cyan); color: #fff; }
 
-/* ===================== Modal ===================== */
-.modal-backdrop {
-  position: fixed; inset: 0; z-index: 100;
-  background: rgba(4, 8, 16, 0.7);
-  backdrop-filter: blur(3px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-  overflow-y: auto;
-}
-.modal-backdrop[hidden] { display: none; }
-.modal {
-  width: min(420px, 96vw);
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #14213f, #0e1830);
-  border: 1px solid rgba(120,190,255,.35);
-  border-radius: 14px;
-  box-shadow: 0 30px 90px rgba(0,0,0,.7);
-  overflow: hidden;
-}
-.modal-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid rgba(120,190,255,.18); }
-.modal-head h3 { margin: 0; font-family: var(--display); font-size: 20px; color: var(--cyan); letter-spacing: 1px; }
+/* ===================== Модалка редактирования: иконка и переключатели ===================== */
 .icon-btn { background: none; border: none; color: #9fc2ee; font-size: 18px; cursor: pointer; }
 .icon-btn:hover { color: #fff; }
-.modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field > label { font-size: 12px; color: #8fb0dc; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.field input[type="text"] {
-  background: rgba(8, 16, 32, .8);
-  border: 1px solid rgba(120,190,255,.3);
-  border-radius: 8px; padding: 10px 12px; color: #eaf4ff; font-size: 15px; font-family: var(--ui);
-}
-.field input[type="text"]:focus { outline: none; border-color: var(--cyan); }
-.field textarea {
-  background: rgba(8, 16, 32, .8);
-  border: 1px solid rgba(120,190,255,.3);
-  border-radius: 8px; padding: 10px 12px; color: #eaf4ff; font-size: 14px;
-  font-family: var(--ui); resize: vertical; min-height: 64px; line-height: 1.35;
-}
-.field textarea:focus { outline: none; border-color: var(--cyan); }
 .field .new-switch { flex-direction: row; }
 
 .icon-field { flex-direction: row; align-items: center; gap: 14px; }
@@ -1472,8 +1162,6 @@ body.ptn-locked { overflow: hidden; }
   color: #fff; box-shadow: 0 0 0 1px #b06cff, 0 5px 16px rgba(150,80,255,.45);
 }
 .seg-toggle button.active small { opacity: 1; }
-
-.modal-foot { flex: none; display: flex; justify-content: space-between; padding: 14px 16px; border-top: 1px solid rgba(120,190,255,.18); }
 
 /* ===================== Item VIEW modal ===================== */
 .vmodal {

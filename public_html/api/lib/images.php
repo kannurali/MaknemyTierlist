@@ -20,6 +20,32 @@ const MAX_SOURCE_PIXELS = 16000000;
 // Sniffing only — it says what the bytes ARE, not what a caller may store.
 // GIF is recognised here for advertising creatives; the icon path keeps
 // rejecting it through save_image_bytes()'s $allow whitelist.
+// Потолок для картинки новости. Она идёт во всю ширину карточки (1040 px
+// сцены, DPR 2 — до 2080 device px в теории, но карточка уже сцены и на
+// практике это ~880), поэтому 1280 даёт запас и не тащит в память лишнего.
+// Иконки предметов сюда не относятся: у них свой потолок ICON_MAX_SIDE = 256,
+// выбранный под память Safari, и он не меняется.
+const NEWS_IMAGE_MAX_SIDE = 1280;
+
+// Потолок байтов ИСХОДНИКА для картинки новости — отдельный от 500 КБ,
+// который save_image_bytes() применяет по умолчанию (и на который завязана
+// иконка предмета, ICON_MAX_SIDE = 256, см. tests/images_test.php). Обычный
+// скриншот Blox Fruits — это 1-3 МБ PNG ДО сжатия: 500 КБ отсекали его ещё до
+// downscale_image_bytes(), то есть до того, как сработает сам потолок в
+// 1280 px, и админ получал "image too large" без какого-либо способа
+// опубликовать картинку из приложения.
+//
+// Реальный тормоз по памяти — не этот байтовый лимит, а MAX_SOURCE_PIXELS
+// (16 Мпикс) в downscale_image_bytes(): он проверяется ДО imagecreatefromstring
+// и держит декодированный битмап под ~64 МБ независимо от веса файла на
+// диске (вес и число пикселей не связаны — см. комментарий там же). Значит
+// этот байтовый потолок можно держать щедрым: он всего лишь отсекает совсем
+// неадекватные тела запроса, а не защищает память. 6 МБ — это дважды больше
+// худшего реального скриншота (3 МБ) с запасом на новые телефоны с более
+// плотными экранами, но всё ещё далеко от 64 МБ битмапа, которые уже покрыты
+// MAX_SOURCE_PIXELS.
+const NEWS_IMAGE_MAX_BYTES = 6 * 1024 * 1024;
+
 function image_ext_for(string $bytes): ?string {
     if (strncmp($bytes, "\x89PNG\r\n\x1a\n", 8) === 0) { return 'png'; }
     if (strncmp($bytes, "\xFF\xD8\xFF", 3) === 0) { return 'jpg'; }
@@ -100,10 +126,15 @@ function downscale_image_bytes(string $bytes, int $maxSide = ICON_MAX_SIDE): str
 // $allow is the storable-format whitelist, deliberately narrower than what
 // image_ext_for() can recognise. Icons must keep rejecting GIF: they go
 // through GD, which flattens an animation to its first frame, and they are
-// downscaled to 256 px where an animation makes no sense anyway. Existing
-// callers pass nothing and keep their exact behaviour.
+// downscaled to 256 px where an animation makes no sense anyway.
+//
+// $maxSide is the other half of the same idea: what a caller stores decides
+// how large it may stay. Both were added independently — $allow for the
+// advertising creatives, $maxSide for the news images — and both keep their
+// defaults, so every existing call site behaves exactly as before.
 function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000,
-                          array $allow = ['png', 'jpg', 'webp']): string {
+                          array $allow = ['png', 'jpg', 'webp'],
+                          int $maxSide = ICON_MAX_SIDE): string {
     if (strlen($bytes) > $maxBytes) {
         throw new RuntimeException('image too large');
     }
@@ -113,7 +144,7 @@ function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000,
     }
     // Downscale BEFORE hashing: the filename must describe the bytes on disk,
     // or the same source would be written again under a new name every upload.
-    $bytes = downscale_image_bytes($bytes);
+    $bytes = downscale_image_bytes($bytes, $maxSide);
     if (!is_dir($dir)) { mkdir($dir, 0755, true); }
     $name = sha1($bytes) . '.' . $ext;
     $path = rtrim($dir, '/\\') . '/' . $name;

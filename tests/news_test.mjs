@@ -1,0 +1,83 @@
+// Unit tests for the news feed module. Run: node --test tests/news_test.mjs
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const NEWS = require('../public_html/js/news.js');
+
+const { CATEGORIES, isCategory, IMAGE_SIZES, isImageSize, pickLang, formatDate, toParagraphs } = NEWS;
+
+test('the three categories are the ones the API accepts', () => {
+    assert.deepEqual(CATEGORIES.map(c => c.key), ['tierlist', 'game', 'project']);
+    assert.equal(isCategory('game'), true);
+    assert.equal(isCategory('trade'), false);
+});
+
+test('the three image sizes are the ones the API accepts, in small/medium/full order', () => {
+    assert.deepEqual(IMAGE_SIZES.map(s => s.key), ['small', 'medium', 'full']);
+    assert.equal(isImageSize('medium'), true);
+    assert.equal(isImageSize('huge'), false);
+});
+
+test('every image size entry has an i18n key and a css class', () => {
+    for (const size of IMAGE_SIZES) {
+        assert.equal(typeof size.i18n, 'string');
+        assert.ok(size.i18n.length > 0, 'i18n key is not empty');
+        assert.equal(typeof size.cls, 'string');
+        assert.ok(size.cls.length > 0, 'css class is not empty');
+    }
+});
+
+test('image sizes and categories are independent lists', () => {
+    // Same shape ({key, i18n, cls}), but the two lists must not be the same
+    // array or share keys — a size is not a category and vice versa.
+    assert.notEqual(IMAGE_SIZES, CATEGORIES);
+    const sizeKeys = IMAGE_SIZES.map(s => s.key);
+    const catKeys = CATEGORIES.map(c => c.key);
+    assert.equal(sizeKeys.some(k => catKeys.includes(k)), false, 'no key overlap');
+    assert.equal(isCategory('full'), false, 'isCategory does not accept a size key');
+    assert.equal(isImageSize('game'), false, 'isImageSize does not accept a category key');
+});
+
+test('english falls back to russian when it is empty', () => {
+    const post = { title_ru: 'Заголовок', title_en: '', body_ru: 'Текст', body_en: '' };
+    assert.deepEqual(pickLang(post, 'en'), { title: 'Заголовок', body: 'Текст' });
+});
+
+test('russian falls back to english when only english is filled', () => {
+    // Зеркало правила из content.js: пустой экран хуже текста не на том языке.
+    const post = { title_ru: '', title_en: 'Title', body_ru: '', body_en: 'Body' };
+    assert.deepEqual(pickLang(post, 'ru'), { title: 'Title', body: 'Body' });
+});
+
+test('each language wins when both are filled', () => {
+    const post = { title_ru: 'РУ', title_en: 'EN', body_ru: 'ру', body_en: 'en' };
+    assert.deepEqual(pickLang(post, 'ru'), { title: 'РУ', body: 'ру' });
+    assert.deepEqual(pickLang(post, 'en'), { title: 'EN', body: 'en' });
+});
+
+test('a missing post does not throw', () => {
+    assert.deepEqual(pickLang(null, 'ru'), { title: '', body: '' });
+});
+
+test('the date is DD.MM.YYYY with zero padding', () => {
+    // Дата строится в локальном времени с обеих сторон, поэтому тест не зависит
+    // от часового пояса машины, где он запущен.
+    assert.equal(formatDate(new Date(2026, 7, 16).getTime()), '16.08.2026');
+    assert.equal(formatDate(new Date(2026, 0, 3).getTime()), '03.01.2026');
+});
+
+test('paragraphs split on blank lines and survive CRLF', () => {
+    assert.deepEqual(toParagraphs('Первый\r\n\r\nВторой'), ['Первый', 'Второй']);
+});
+
+test('runs of blank lines make one break, not several', () => {
+    assert.deepEqual(toParagraphs('А\n\n\n\n Б '), ['А', 'Б']);
+});
+
+test('empty and missing input give no paragraphs', () => {
+    assert.deepEqual(toParagraphs(''), []);
+    assert.deepEqual(toParagraphs('   \n\n  '), []);
+    assert.deepEqual(toParagraphs(null), []);
+});

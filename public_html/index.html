@@ -60,7 +60,8 @@
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/styles.css?v=44" />
+<link rel="stylesheet" href="css/base.css?v=3" />
+<link rel="stylesheet" href="css/styles.css?v=45" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -97,6 +98,11 @@
   <!-- ================= Toolbar ================= -->
   <div class="toolbar" id="toolbar">
     <div class="tb-brand">MAKNEMY<span>EDITOR</span></div>
+
+    <nav class="nav-seg" aria-label="Разделы сайта">
+      <a href="/" aria-current="page" data-i18n="news.navTierlist">Тирлист</a>
+      <a href="/news" data-i18n="news.navNews">Новости</a>
+    </nav>
 
     <!-- Кнопки редактирования — только для админа -->
     <div class="tb-group" id="tbEdit" hidden>
@@ -406,7 +412,7 @@
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=7"></script>
+  <script src="js/i18n.js?v=9"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при

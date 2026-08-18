@@ -45,6 +45,20 @@ function test_db(): PDO {
     // Deliberately left with no row: schema.sql does not seed one either, and
     // the first save has to create it. Tests assert the empty-document path.
     $pdo->exec("CREATE TABLE promo (id INTEGER PRIMARY KEY, data TEXT NOT NULL, rev INTEGER NOT NULL)");
+    $pdo->exec("CREATE TABLE news (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        title_ru TEXT NOT NULL,
+        title_en TEXT NOT NULL DEFAULT '',
+        body_ru TEXT NOT NULL,
+        -- DEFAULT нет намеренно: в MySQL его у TEXT не бывает, и с ним не
+        -- создаётся вся таблица. Схемы обязаны совпадать, иначе тесты проверяют
+        -- не ту таблицу, которая работает на бою.
+        body_en TEXT NOT NULL,
+        image_url TEXT NOT NULL DEFAULT '',
+        image_size TEXT NOT NULL DEFAULT 'full',
+        published_at INTEGER NOT NULL
+    )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
     return $pdo;

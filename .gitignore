@@ -29,3 +29,5 @@
 /tools/package-lock.json
 /tools/out/
 /scratch_*
+.superpowers/
+/config.php.bak*
