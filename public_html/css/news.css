@@ -131,6 +131,12 @@
   min-width: 42px; text-align: right; font-variant-numeric: tabular-nums;
 }
 
+/* Подсказка "картинка сохранена под меньшую ширину" (#nePctHint) — совет,
+   а не ошибка: свой цвет (--d-yellow, тот же токен предупреждений, что и в
+   base.css), не .ne-error (тот — #ff8a7e, зарезервирован за сбоями
+   сохранения/загрузки), чтобы не читаться как «что-то сломалось». */
+.ne-hint { min-height: 0; margin: 6px 0 0; font-size: 12px; color: var(--d-yellow); }
+
 /* Обтекание (#neWrap) — обычный видимый чекбокс, а не переиспользование
    .switch из base.css: тот прячет <input> (display:none) и не рисует
    :focus-visible ни на чём, а news.css не имеет права переопределять чужой

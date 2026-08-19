@@ -39,6 +39,20 @@
     return false;
   }
 
+  // Потолок стороны картинки, в device-пикселях, для выбранной ширины
+  // (image_pct). Обязана оставаться БУКВАЛЬНО той же формулой, что и
+  // news_image_cap() в api/lib/images.php — вывод геометрии (16.8 × pct,
+  // зажатое в [256, 1280]) описан в русском комментарии над той функцией и
+  // здесь не повторяется, чтобы у формулы было одно место правды, а не два
+  // текста, которые можно незаметно рассинхронить. Та же дисциплина единого
+  // источника, что и у пары CATEGORIES (здесь) / NEWS_CATEGORIES (в
+  // api/news_save.php) — только на этот раз источник живёт на сервере, а
+  // клиент (confirmCrop() в news-page.js) обязан следовать за ним, а не
+  // изобретать собственный потолок.
+  function newsImageCap(pct) {
+    return Math.max(256, Math.min(1280, Math.ceil(16.8 * pct)));
+  }
+
   // Заголовок и текст на нужном языке, с откатом на второй. Зеркалит descFor
   // из content.js по той же причине: наполовину заполненный пост должен
   // показать хоть что-то, а не пустоту.
@@ -116,6 +130,7 @@
     isCategory: isCategory,
     ALIGNS: ALIGNS,
     isAlign: isAlign,
+    newsImageCap: newsImageCap,
     pickLang: pickLang,
     formatDate: formatDate,
     toParagraphs: toParagraphs,

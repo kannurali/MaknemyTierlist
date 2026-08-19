@@ -135,6 +135,11 @@ $editor = <<<'HTML'
             <input type="range" id="nePct" min="10" max="100" step="5" value="100" />
             <output for="nePct" id="nePctValue">100%</output>
           </div>
+          <!-- Совет, а не ошибка (#neError рядом — для сбоев): виден, только
+               когда поднятая ширина требует больше, чем реально хранит
+               сохранённый файл, и перезалить его нечем (см. updatePctHint()
+               в news-page.js). -->
+          <p class="ne-hint" id="nePctHint" hidden aria-live="polite"></p>
         </div>
 
         <div class="field">

@@ -29,6 +29,76 @@ test('a missing news table reads as an empty feed, not a 500', function () {
     assert_eq([], $p['posts'], 'empty feed');
 });
 
+// Таблица из ДО миграции docs/migrations/2026-08-18-image-customisation.sql:
+// image_size вместо image_pct/image_align/image_wrap — именно то окно между
+// выкладкой кода пушем и миграцией, которая запускается руками, о котором
+// предупреждает комментарий над news_table_missing() в api/news.php.
+function old_schema_news_db(): PDO {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("CREATE TABLE news (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        title_ru TEXT NOT NULL,
+        title_en TEXT NOT NULL DEFAULT '',
+        body_ru TEXT NOT NULL,
+        body_en TEXT NOT NULL,
+        image_url TEXT NOT NULL DEFAULT '',
+        image_size TEXT NOT NULL DEFAULT 'full',
+        published_at INTEGER NOT NULL
+    )");
+    return $pdo;
+}
+
+test('a schema mismatch (old image_size column, no image_pct/align/wrap) is not swallowed as an empty feed', function () {
+    // Таблица ЕСТЬ (в отличие от теста выше), но старой формы — SELECT
+    // просит колонки, которых пока нет. Это должно долететь как исключение,
+    // а не быть перепутано с "постов пока нет" (news_table_missing() должна
+    // отличить одно от другого).
+    assert_throws(function () { handle_news(old_schema_news_db()); },
+        'a genuine schema mismatch must propagate, not be swallowed');
+});
+
+test('news_dispatch turns a schema-mismatch PDOException into a 503, not a 500 and not a fake empty feed', function () {
+    [$status, $p] = news_dispatch(old_schema_news_db());
+    assert_eq(503, $status, 'temporarily unavailable, so a crawler retries instead of recording a hard failure');
+    assert_true(isset($p['error']), 'a small JSON error payload, not an empty posts array');
+    assert_true(!isset($p['posts']), 'not disguised as a successful empty feed');
+});
+
+test('news_dispatch logs the real PDOException message instead of hiding it', function () {
+    // "не роняя ленту в 500" не означает "молча" — error_log() должен видеть
+    // настоящую причину, чтобы её можно было диагностировать.
+    $prev = ini_get('error_log');
+    $tmp = tempnam(sys_get_temp_dir(), 'news_err_');
+    ini_set('error_log', $tmp);
+    try {
+        news_dispatch(old_schema_news_db());
+    } finally {
+        ini_set('error_log', $prev);
+    }
+    $logged = (string)file_get_contents($tmp);
+    @unlink($tmp);
+    assert_true(strpos($logged, 'news.php:') !== false, 'log line is tagged with its source');
+    assert_true(strpos($logged, 'image_pct') !== false, 'the real PDO message (missing column) reached the log');
+});
+
+test('news_dispatch still gives 200 with an empty feed for the legitimate missing-table case', function () {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    [$status, $p] = news_dispatch($pdo);
+    assert_eq(200, $status, 'still an empty feed, not 503');
+    assert_eq([], $p['posts'], 'empty feed');
+});
+
+test('news_dispatch passes a healthy feed through unchanged', function () {
+    $pdo = test_db();
+    seed_post($pdo, 'game', 'заголовок', 1000);
+    [$status, $p] = news_dispatch($pdo);
+    assert_eq(200, $status, 'ok status');
+    assert_eq(1, count($p['posts']), 'post present');
+});
+
 test('an empty feed is an empty list, not an error', function () {
     $pdo = test_db();
     [$status, $p] = handle_news($pdo);

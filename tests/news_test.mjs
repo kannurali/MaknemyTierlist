@@ -2,11 +2,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const NEWS = require('../public_html/js/news.js');
 
-const { CATEGORIES, isCategory, ALIGNS, isAlign, pickLang, formatDate, toParagraphs, cropToSourceRect } = NEWS;
+const { CATEGORIES, isCategory, ALIGNS, isAlign, newsImageCap, pickLang, formatDate, toParagraphs, cropToSourceRect } = NEWS;
 
 test('the three categories are the ones the API accepts', () => {
     assert.deepEqual(CATEGORIES.map(c => c.key), ['tierlist', 'game', 'project']);
@@ -78,6 +80,49 @@ test('empty and missing input give no paragraphs', () => {
     assert.deepEqual(toParagraphs(''), []);
     assert.deepEqual(toParagraphs('   \n\n  '), []);
     assert.deepEqual(toParagraphs(null), []);
+});
+
+// ---------- newsImageCap (потолок стороны экспортируемого кропа) ----------
+
+test('newsImageCap: full width (100%) caps at 1280 — the old full-image ceiling', () => {
+    assert.equal(newsImageCap(100), 1280);
+});
+
+test('newsImageCap: 30% caps at 504 (16.8 * 30, well inside [256, 1280])', () => {
+    assert.equal(newsImageCap(30), 504);
+});
+
+test('newsImageCap: a tiny pct floors at 256, the same floor as ICON_MAX_SIDE', () => {
+    // 16.8 * 10 = 168 — картинка новости декодировалась бы мельче иконки
+    // предмета; пол существует именно для того, чтобы это исключить.
+    assert.equal(newsImageCap(10), 256);
+});
+
+test('newsImageCap: a huge pct ceils at 1280 — no real screen shows more', () => {
+    assert.equal(newsImageCap(1000), 1280);
+});
+
+test('newsImageCap agrees with news_image_cap() in api/lib/images.php across the whole 10..100 range', () => {
+    // Две независимые реализации (JS здесь, PHP на сервере) ОДНОЙ и той же
+    // формулы — от чего защищает тест: кто-то поправит одну сторону (число
+    // 16.8 или границы [256, 1280]) и забудет другую, и тогда confirmCrop()
+    // в news-page.js будет экспортировать размер, который сервер потом же
+    // додаунскейлит, тихо возвращая finding 1 обратно. Вместо жёсткой
+    // таблицы ожиданий (которая ловила бы только правки JS-стороны) тест
+    // реально запускает PHP-функцию и сверяется с её настоящим выводом —
+    // правка любой из двух сторон в одиночку валит этот тест.
+    const imagesPhp = fileURLToPath(new URL('../public_html/api/lib/images.php', import.meta.url));
+    const phpScript = `
+require '${imagesPhp.replace(/'/g, "\\'")}';
+$out = [];
+for ($p = 10; $p <= 100; $p++) { $out[] = news_image_cap($p); }
+echo json_encode($out);
+`;
+    const raw = execFileSync(process.env.PHP || 'php', ['-r', phpScript], { encoding: 'utf8' });
+    const expected = JSON.parse(raw);
+    for (let pct = 10; pct <= 100; pct++) {
+        assert.equal(newsImageCap(pct), expected[pct - 10], `pct=${pct}`);
+    }
 });
 
 // ---------- cropToSourceRect (крой-редактор картинки новости) ----------

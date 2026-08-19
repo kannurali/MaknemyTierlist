@@ -345,8 +345,34 @@
     editorPct = Number.isFinite(n) && n >= 10 && n <= 100 ? Math.round(n) : 100;
     $("#nePct").value = editorPct;
     updatePctOutput();
+    // Единственная точка записи editorPct (см. обработчик "input" на #nePct
+    // ниже) — значит и единственная точка, откуда честно пересчитывать
+    // подсказку о мыле: она зависит от того же editorPct.
+    updatePctHint();
   }
   function getPct() { return editorPct; }
+
+  // Подсказка "картинка сохранена под меньшую ширину" (#nePctHint,
+  // задача 3) — не ошибка (та живёт в #neError), а совет: показывается,
+  // когда админ поднимает ширину ВЫШЕ потолка, под который реально хранится
+  // файл, и перезалить его нечем. currentImageWidth/currentImageHeight —
+  // то, что вернул сервер при последней заливке (или что пришло с
+  // сохранённого поста), а не то, что выбрано в кроп-редакторе сейчас.
+  // pickedImageDataUrl пуст ровно тогда, когда "change" на #nePct ниже НЕ
+  // перезаливает файл (см. его комментарий выше и openEditor()) — именно
+  // в этом случае поднятая ширина растягивает старые пиксели мылом молча,
+  // без него смена ширины сама подтянет файл под новый потолок.
+  function updatePctHint() {
+    const hint = $("#nePctHint");
+    if (!hint) { return; }
+    const storedLongest = currentImageWidth && currentImageHeight
+      ? Math.max(currentImageWidth, currentImageHeight)
+      : 0;
+    const show = !!currentImage && !pickedImageDataUrl && storedLongest > 0
+      && NEWS.newsImageCap(getPct()) > storedLongest;
+    hint.hidden = !show;
+    hint.textContent = show ? tx("news.imageStale") : "";
+  }
 
   function setWrap(v) { $("#neWrap").checked = !!v; }
   function getWrap() { return $("#neWrap").checked; }
@@ -371,6 +397,10 @@
     currentImage = url || "";
     currentImageWidth = width || null;
     currentImageHeight = height || null;
+    // Подсказка о мыле (#nePctHint) зависит от currentImage*/pickedImageDataUrl
+    // не меньше, чем от editorPct — пересчитываем и здесь, а не только в
+    // setPct(), иначе она осталась бы висеть после смены/уборки картинки.
+    updatePctHint();
   }
 
   // Читает File как data URL — то же, что раньше делал обработчик
@@ -580,16 +610,33 @@
     const sx = Math.round(rect.sx), sy = Math.round(rect.sy);
     const sw = Math.max(1, Math.round(rect.sw)), sh = Math.max(1, Math.round(rect.sh));
 
+    // Потолок стороны — тот же, что сервер применит к текущей выбранной
+    // ширине (news_image_cap() в api/lib/images.php, см. NEWS.newsImageCap()
+    // в news.js). Без этого шага исходник шёл на выходной canvas в полный
+    // размер кропа В ПИКСЕЛЯХ ИСТОЧНИКА: скриншот телефона 3000×4000,
+    // обрезанный не в упор, легко даёт 15-25 МБ PNG (~30 МБ в base64) —
+    // сервер такое всё равно обрежет под потолок, но не раньше, чем
+    // NEWS_IMAGE_MAX_BYTES (6 МБ) в save_image_bytes() бросит "image too
+    // large", а то и post_max_size на хостинге оборвёт запрос ещё раньше.
+    // Даунскейл здесь — не дублирование серверного, а экономия byte'ов,
+    // которые сервер всё равно бы выбросил.
+    const cap = NEWS.newsImageCap(getPct());
+    const longestSide = Math.max(sw, sh);
+    const scale = longestSide > cap ? cap / longestSide : 1;
+    const dw = Math.max(1, Math.round(sw * scale));
+    const dh = Math.max(1, Math.round(sh * scale));
+
     const out = document.createElement("canvas");
-    out.width = sw;
-    out.height = sh;
+    out.width = dw;
+    out.height = dh;
     const octx = out.getContext("2d");
-    octx.drawImage(cropSrc.source, sx, sy, sw, sh, 0, 0, sw, sh);
+    // sx/sy/sw/sh (окно в исходнике) → 0/0/dw/dh (выходной canvas) одним
+    // вызовом: так ресемплинг делает сам drawImage за один проход, а не
+    // канвас-в-канвас в два прохода с двойной потерей резкости.
+    octx.drawImage(cropSrc.source, sx, sy, sw, sh, 0, 0, dw, dh);
     // JPEG-исходник остаётся JPEG (0.9 — тот же компромисс качество/вес, что
     // и у imagejpeg(..., 88) на сервере в images.php), всё остальное — PNG,
-    // чтобы не потерять альфа-канал. Сервер сам ужмёт результат под потолок
-    // news_image_cap() — здесь только не грузить туда что-то абсурдно
-    // большее, чем он всё равно оставит.
+    // чтобы не потерять альфа-канал.
     const quality = cropOutputMime === "image/jpeg" ? 0.9 : undefined;
     const dataUrl = out.toDataURL(cropOutputMime, quality);
 
@@ -737,12 +784,14 @@
     setAlign(post ? post.image_align : "center");
     setPct(post ? post.image_pct : 100);
     setWrap(post ? post.image_wrap : false);
-    setImage(post ? post.image_url : "", post ? post.image_width : null, post ? post.image_height : null);
     // Новая сессия редактирования — новый (изначально пустой) источник для
     // перезаливки при смене ширины. Открытие уже существующего поста не
     // держит его исходный файл в памяти браузера, поэтому источника нет,
-    // пока админ сам не выберет файл заново.
+    // пока админ сам не выберет файл заново. Обнуляется ДО setImage() ниже:
+    // тот пересчитывает #nePctHint внутри себя и обязан видеть уже пустой
+    // pickedImageDataUrl этой новой сессии, а не хвост от предыдущей.
     pickedImageDataUrl = "";
+    setImage(post ? post.image_url : "", post ? post.image_width : null, post ? post.image_height : null);
     $("#neError").textContent = "";
     editor.hidden = false;
     updatePreview();
@@ -1029,9 +1078,12 @@
     // перезаливать уже выбранный файл под новый потолок стороны (см.
     // uploadPickedImage выше): гнать запрос на каждый промежуточный тик
     // было бы избыточно.
+    // setPct() — единственное место, которое округляет и зажимает editorPct
+    // в 10..100 (и пересчитывает #nePctHint); присвоение editorPct напрямую
+    // здесь означало бы вторую точку записи той же переменной без той же
+    // проверки.
     $("#nePct").addEventListener("input", () => {
-      editorPct = Number($("#nePct").value) || 100;
-      updatePctOutput();
+      setPct($("#nePct").value);
       schedulePreviewUpdate();
     });
     $("#nePct").addEventListener("change", () => {
