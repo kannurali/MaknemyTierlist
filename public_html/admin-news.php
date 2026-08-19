@@ -98,11 +98,60 @@ $editor = <<<'HTML'
             <button class="btn small ghost" type="button" id="neImageClear" data-i18n="news.imageClear">Убрать</button>
           </div>
           <input type="file" id="neImageFile" accept="image/*" hidden />
+
+          <!-- Кроп-редактор: появляется между выбором файла и его заливкой
+               (см. обработчик #neImageFile в news-page.js). Скрыт, пока файл
+               не выбран/не декодировался — открытие существующего поста без
+               смены картинки его не показывает, показывать там нечего. -->
+          <div class="ne-crop" id="neCrop" hidden>
+            <label data-i18n="news.cropHeading">Кадрирование и зум</label>
+            <div class="ne-crop-stage" id="neCropStage">
+              <canvas class="ne-crop-canvas" id="neCropCanvas"></canvas>
+              <div class="ne-crop-frame" id="neCropFrame" tabindex="0"
+                   data-i18n-label="news.cropFrameLabel" data-i18n-title="news.cropFrameLabel"
+                   aria-label="Рамка кадрирования" title="Рамка кадрирования">
+                <div class="ne-crop-handle" data-corner="nw"></div>
+                <div class="ne-crop-handle" data-corner="ne"></div>
+                <div class="ne-crop-handle" data-corner="sw"></div>
+                <div class="ne-crop-handle" data-corner="se"></div>
+              </div>
+            </div>
+            <div class="ne-pct-row">
+              <label for="neCropZoom" data-i18n="news.cropZoom">Зум</label>
+              <input type="range" id="neCropZoom" min="100" max="400" step="1" value="100" />
+              <output for="neCropZoom" id="neCropZoomValue">100%</output>
+            </div>
+            <p class="ne-crop-dims" id="neCropDims" aria-live="polite"></p>
+            <div class="tb-group ne-crop-actions">
+              <button class="btn small ghost" type="button" id="neCropSkip" data-i18n="news.cropSkip">Без кадрирования</button>
+              <button class="btn small primary" type="button" id="neCropConfirm" data-i18n="news.cropConfirm">Обрезать</button>
+            </div>
+          </div>
         </div>
 
         <div class="field">
-          <label data-i18n="news.fieldImageSize">Размер картинки</label>
-          <div class="ne-cat-seg" id="neImageSize"></div>
+          <label for="nePct" data-i18n="news.fieldImageWidth">Ширина картинки</label>
+          <div class="ne-pct-row">
+            <input type="range" id="nePct" min="10" max="100" step="5" value="100" />
+            <output for="nePct" id="nePctValue">100%</output>
+          </div>
+          <!-- Совет, а не ошибка (#neError рядом — для сбоев): виден, только
+               когда поднятая ширина требует больше, чем реально хранит
+               сохранённый файл, и перезалить его нечем (см. updatePctHint()
+               в news-page.js). -->
+          <p class="ne-hint" id="nePctHint" hidden aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label data-i18n="news.fieldImageAlign">Выравнивание картинки</label>
+          <div class="ne-cat-seg" id="neAlign"></div>
+        </div>
+
+        <div class="field">
+          <label class="ne-wrap-field">
+            <input type="checkbox" id="neWrap" class="ne-wrap-check" />
+            <span data-i18n="news.fieldImageWrap">Обтекание текстом</span>
+          </label>
         </div>
 
         <div class="field">

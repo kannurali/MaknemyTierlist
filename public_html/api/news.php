@@ -6,10 +6,25 @@ require_once __DIR__ . '/_bootstrap.php';
 // добавится ?offset= — запрос уже отсортирован так, что это ничего не сломает.
 const NEWS_FEED_LIMIT = 50;
 
+// Отличает "таблицы вообще нет" (законное состояние до ручной миграции — тот
+// же приём, что promo_load() в api/promo.php) от ЛЮБОЙ другой PDOException —
+// в первую очередь от рассинхрона схемы в окне между выкладкой кода (уезжает
+// пушем) и миграцией (запускается руками, см. docs/migrations/2026-08-18-
+// image-customisation.sql): SELECT в handle_news() ниже просит колонки
+// image_pct/image_align/image_wrap, которых в старой схеме ещё нет, и это
+// СОВСЕМ другая ситуация, чем "постов пока нет". SQLite (тесты) и MySQL
+// (прод) сообщают об отсутствующей таблице по-разному, поэтому проверяются
+// оба формата.
+function news_table_missing(PDOException $e): bool {
+    if (($e->errorInfo[1] ?? null) === 1146) { return true; }   // MySQL: ER_NO_SUCH_TABLE
+    return strpos($e->getMessage(), 'no such table') !== false; // SQLite
+}
+
 function handle_news(PDO $pdo): array {
     // LIMIT подставляется из константы, а не из запроса пользователя, поэтому
     // интерполяция здесь безопасна: плейсхолдер в LIMIT переносим не везде.
-    $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, image_size, published_at
+    $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, image_pct,
+                   image_align, image_wrap, image_width, image_height, published_at
               FROM news
              ORDER BY published_at DESC, id DESC
              LIMIT " . NEWS_FEED_LIMIT;
@@ -22,7 +37,14 @@ function handle_news(PDO $pdo): array {
     try {
         $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        return [200, ['posts' => []]];
+        if (news_table_missing($e)) {
+            return [200, ['posts' => []]];
+        }
+        // Не глотать молча: рассинхрон схемы или обрыв соединения — реальная
+        // поломка, а не "новостей пока нет". Пусть долетит до news_dispatch()
+        // ниже, который залогирует настоящую причину и ответит 503, а не
+        // фальшивой пустой лентой и не голой 500кой.
+        throw $e;
     }
 
     $posts = [];
@@ -35,11 +57,45 @@ function handle_news(PDO $pdo): array {
             'body_ru'      => (string)$r['body_ru'],
             'body_en'      => (string)$r['body_en'],
             'image_url'    => (string)$r['image_url'],
-            'image_size'   => (string)$r['image_size'],
+            'image_pct'    => (int)$r['image_pct'],
+            'image_align'  => (string)$r['image_align'],
+            'image_wrap'   => (bool)((int)$r['image_wrap']),
+            // NULL остаётся NULL, а не приводится к 0: 0×0 у <img> обнулил бы
+            // зарезервированную высоту, а не подсказал бы её отсутствие.
+            // Пост без картинки и пост, сохранённый до появления этих
+            // колонок, неотличимы для клиента — и это правильно, оба случая
+            // cardFor() в news-page.js обрабатывает одинаково.
+            'image_width'  => $r['image_width']  !== null ? (int)$r['image_width']  : null,
+            'image_height' => $r['image_height'] !== null ? (int)$r['image_height'] : null,
             'published_at' => (int)$r['published_at'],
         ];
     }
     return [200, ['posts' => $posts]];
+}
+
+// Обёртка боевого пути вокруг handle_news(). Любая PDOException, которая
+// не является "таблицы ещё нет" (см. news_table_missing() выше), долетает
+// сюда — рассинхрон схемы в окне между push кода и ручной миграцией, обрыв
+// соединения с БД и т. п. Настоящее сообщение (может содержать имена
+// колонок/DSN) уходит в error_log(), а не наружу; наружу — 503 с маленьким
+// JSON. 503, а не 500: это сигнал "попробуй ещё раз", на который краулер
+// (страница объявлена в sitemap.xml как changefreq daily) реагирует
+// повтором, а не фиксирует как постоянный сбой. И 503, а не фальшивая
+// пустая лента 200кой: news-page.js#load() при не-ok ответе показывает
+// читателю состояние ошибки с кнопкой «Повторить» — молчаливая пустота
+// прячет поломку и от читателя, и от того, кто мог бы её заметить.
+//
+// $pdo необязателен и по умолчанию берётся из db() ВНУТРИ try — само
+// подключение тоже бросает PDOException при обрыве соединения, и вызов
+// db() снаружи (как аргумент) остался бы этим try не пойман. Тесты
+// подставляют свой $pdo напрямую, минуя db() и config.php целиком.
+function news_dispatch(?PDO $pdo = null): array {
+    try {
+        return handle_news($pdo ?? db());
+    } catch (PDOException $e) {
+        error_log('news.php: ' . $e->getMessage());
+        return [503, ['error' => 'temporarily_unavailable']];
+    }
 }
 
 if (!defined('TESTING')) {
@@ -54,6 +110,6 @@ if (!defined('TESTING')) {
     // Кэшировать нечем: у ленты нет rev, а заводить его — значит вернуть ту
     // самую связку с тирлистом, ради разрыва которой таблица и отдельная.
     header('Cache-Control: no-cache');
-    [$status, $payload] = handle_news(db());
+    [$status, $payload] = news_dispatch();
     json_out($payload, $status);
 }

@@ -2,11 +2,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const NEWS = require('../public_html/js/news.js');
 
-const { CATEGORIES, isCategory, IMAGE_SIZES, isImageSize, pickLang, formatDate, toParagraphs } = NEWS;
+const { CATEGORIES, isCategory, ALIGNS, isAlign, newsImageCap, pickLang, formatDate, toParagraphs, cropToSourceRect } = NEWS;
 
 test('the three categories are the ones the API accepts', () => {
     assert.deepEqual(CATEGORIES.map(c => c.key), ['tierlist', 'game', 'project']);
@@ -14,30 +16,28 @@ test('the three categories are the ones the API accepts', () => {
     assert.equal(isCategory('trade'), false);
 });
 
-test('the three image sizes are the ones the API accepts, in small/medium/full order', () => {
-    assert.deepEqual(IMAGE_SIZES.map(s => s.key), ['small', 'medium', 'full']);
-    assert.equal(isImageSize('medium'), true);
-    assert.equal(isImageSize('huge'), false);
+test('the three alignments are the ones the API accepts, in left/center/right order', () => {
+    assert.deepEqual(ALIGNS.map(a => a.key), ['left', 'center', 'right']);
+    assert.equal(isAlign('right'), true);
+    assert.equal(isAlign('top'), false);
 });
 
-test('every image size entry has an i18n key and a css class', () => {
-    for (const size of IMAGE_SIZES) {
-        assert.equal(typeof size.i18n, 'string');
-        assert.ok(size.i18n.length > 0, 'i18n key is not empty');
-        assert.equal(typeof size.cls, 'string');
-        assert.ok(size.cls.length > 0, 'css class is not empty');
+test('every alignment entry has an i18n key', () => {
+    for (const a of ALIGNS) {
+        assert.equal(typeof a.i18n, 'string');
+        assert.ok(a.i18n.length > 0, 'i18n key is not empty');
     }
 });
 
-test('image sizes and categories are independent lists', () => {
-    // Same shape ({key, i18n, cls}), but the two lists must not be the same
-    // array or share keys — a size is not a category and vice versa.
-    assert.notEqual(IMAGE_SIZES, CATEGORIES);
-    const sizeKeys = IMAGE_SIZES.map(s => s.key);
+test('alignments and categories are independent lists', () => {
+    // Same shape ({key, i18n}), but the two lists must not be the same array
+    // or share keys — an alignment is not a category and vice versa.
+    assert.notEqual(ALIGNS, CATEGORIES);
+    const alignKeys = ALIGNS.map(a => a.key);
     const catKeys = CATEGORIES.map(c => c.key);
-    assert.equal(sizeKeys.some(k => catKeys.includes(k)), false, 'no key overlap');
-    assert.equal(isCategory('full'), false, 'isCategory does not accept a size key');
-    assert.equal(isImageSize('game'), false, 'isImageSize does not accept a category key');
+    assert.equal(alignKeys.some(k => catKeys.includes(k)), false, 'no key overlap');
+    assert.equal(isCategory('center'), false, 'isCategory does not accept an alignment key');
+    assert.equal(isAlign('game'), false, 'isAlign does not accept a category key');
 });
 
 test('english falls back to russian when it is empty', () => {
@@ -80,4 +80,106 @@ test('empty and missing input give no paragraphs', () => {
     assert.deepEqual(toParagraphs(''), []);
     assert.deepEqual(toParagraphs('   \n\n  '), []);
     assert.deepEqual(toParagraphs(null), []);
+});
+
+// ---------- newsImageCap (потолок стороны экспортируемого кропа) ----------
+
+test('newsImageCap: full width (100%) caps at 1280 — the old full-image ceiling', () => {
+    assert.equal(newsImageCap(100), 1280);
+});
+
+test('newsImageCap: 30% caps at 504 (16.8 * 30, well inside [256, 1280])', () => {
+    assert.equal(newsImageCap(30), 504);
+});
+
+test('newsImageCap: a tiny pct floors at 256, the same floor as ICON_MAX_SIDE', () => {
+    // 16.8 * 10 = 168 — картинка новости декодировалась бы мельче иконки
+    // предмета; пол существует именно для того, чтобы это исключить.
+    assert.equal(newsImageCap(10), 256);
+});
+
+test('newsImageCap: a huge pct ceils at 1280 — no real screen shows more', () => {
+    assert.equal(newsImageCap(1000), 1280);
+});
+
+test('newsImageCap agrees with news_image_cap() in api/lib/images.php across the whole 10..100 range', () => {
+    // Две независимые реализации (JS здесь, PHP на сервере) ОДНОЙ и той же
+    // формулы — от чего защищает тест: кто-то поправит одну сторону (число
+    // 16.8 или границы [256, 1280]) и забудет другую, и тогда confirmCrop()
+    // в news-page.js будет экспортировать размер, который сервер потом же
+    // додаунскейлит, тихо возвращая finding 1 обратно. Вместо жёсткой
+    // таблицы ожиданий (которая ловила бы только правки JS-стороны) тест
+    // реально запускает PHP-функцию и сверяется с её настоящим выводом —
+    // правка любой из двух сторон в одиночку валит этот тест.
+    const imagesPhp = fileURLToPath(new URL('../public_html/api/lib/images.php', import.meta.url));
+    const phpScript = `
+require '${imagesPhp.replace(/'/g, "\\'")}';
+$out = [];
+for ($p = 10; $p <= 100; $p++) { $out[] = news_image_cap($p); }
+echo json_encode($out);
+`;
+    const raw = execFileSync(process.env.PHP || 'php', ['-r', phpScript], { encoding: 'utf8' });
+    const expected = JSON.parse(raw);
+    for (let pct = 10; pct <= 100; pct++) {
+        assert.equal(newsImageCap(pct), expected[pct - 10], `pct=${pct}`);
+    }
+});
+
+// ---------- cropToSourceRect (крой-редактор картинки новости) ----------
+
+test('a crop covering the whole image at zoom 1 returns the full source rect', () => {
+    const image = { width: 800, height: 600 };
+    const frame = { x: 0, y: 0, w: 800, h: 600 };
+    const rect = cropToSourceRect(frame, 1, { x: 0, y: 0 }, image);
+    assert.deepEqual(rect, { sx: 0, sy: 0, sw: 800, sh: 600 });
+});
+
+test('zooming in halves the source rect', () => {
+    const image = { width: 800, height: 600 };
+    const frame = { x: 0, y: 0, w: 800, h: 600 };
+    const rect = cropToSourceRect(frame, 2, { x: 0, y: 0 }, image);
+    assert.deepEqual(rect, { sx: 0, sy: 0, sw: 400, sh: 300 });
+});
+
+test('panning shifts the source rect', () => {
+    // Картинка 1000×1000, холст показывает окно 500×500 (frame = весь холст).
+    // Панорама (-300, -100) означает: картинку утащили на 300px влево и на
+    // 100px вверх, поэтому видимое окно сдвигается вглубь исходника ровно на
+    // столько же — clamp здесь ни на что не влияет (300+500=800 ≤ 1000).
+    const image = { width: 1000, height: 1000 };
+    const frame = { x: 0, y: 0, w: 500, h: 500 };
+    const rect = cropToSourceRect(frame, 1, { x: -300, y: -100 }, image);
+    assert.deepEqual(rect, { sx: 300, sy: 100, sw: 500, sh: 500 });
+});
+
+test('panning past an edge is clamped — a crop can never read outside the source', () => {
+    const image = { width: 1000, height: 1000 };
+    const frame = { x: 0, y: 0, w: 500, h: 500 };
+
+    // Картинку утащили далеко влево (pan.x = -700): наивно окно читало бы
+    // sx=700..1200, за правым краем исходника. Итог зажимается так, чтобы
+    // правый край окна совпал с правым краем картинки, а не вышел за него.
+    const rightEdge = cropToSourceRect(frame, 1, { x: -700, y: 0 }, image);
+    assert.deepEqual(rightEdge, { sx: 500, sy: 0, sw: 500, sh: 500 });
+
+    // Обратный случай: картинку утащили далеко вправо (pan.x = 600) — наивно
+    // окно читало бы sx=-600..-100, перед левым краем исходника. Зажимается
+    // к нулю.
+    const leftEdge = cropToSourceRect(frame, 1, { x: 600, y: 0 }, image);
+    assert.deepEqual(leftEdge, { sx: 0, sy: 0, sw: 500, sh: 500 });
+
+    // Инвариант в общем виде: результат всегда лежит внутри исходника,
+    // сколь угодно абсурдная панорама.
+    for (const panX of [-5000, -1000, 0, 1000, 5000]) {
+        const r = cropToSourceRect(frame, 1, { x: panX, y: panX }, image);
+        assert.ok(r.sx >= 0 && r.sx + r.sw <= image.width, `sx in bounds for pan.x=${panX}`);
+        assert.ok(r.sy >= 0 && r.sy + r.sh <= image.height, `sy in bounds for pan.x=${panX}`);
+    }
+});
+
+test('a crop frame smaller than the viewport maps to the correct sub-rectangle', () => {
+    const image = { width: 800, height: 600 };
+    const frame = { x: 100, y: 50, w: 200, h: 150 };
+    const rect = cropToSourceRect(frame, 1, { x: 0, y: 0 }, image);
+    assert.deepEqual(rect, { sx: 100, sy: 50, sw: 200, sh: 150 });
 });

@@ -56,7 +56,16 @@ function test_db(): PDO {
         -- не ту таблицу, которая работает на бою.
         body_en TEXT NOT NULL,
         image_url TEXT NOT NULL DEFAULT '',
-        image_size TEXT NOT NULL DEFAULT 'full',
+        -- Зеркалит schema.sql: свободная ширина/выравнивание/обтекание вместо
+        -- прежних трёх пресетов image_size.
+        image_pct INTEGER NOT NULL DEFAULT 100,
+        image_align TEXT NOT NULL DEFAULT 'center',
+        image_wrap INTEGER NOT NULL DEFAULT 0,
+        -- Зеркалит schema.sql: NULL, без DEFAULT — пост без картинки или
+        -- сохранённый до появления этих колонок не хранит ни ширины, ни
+        -- высоты (см. комментарий в schema.sql).
+        image_width INTEGER,
+        image_height INTEGER,
         published_at INTEGER NOT NULL
     )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");

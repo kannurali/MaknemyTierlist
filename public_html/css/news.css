@@ -47,28 +47,42 @@
 .nw-body p { margin: 0 0 10px; }
 .nw-body p:last-child { margin-bottom: 0; }
 .nw-image { display: block; height: auto; margin: 4px 0 12px; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); }
-/* Три размера картинки в карточке. Проценты от ширины карточки, а не px:
-   карточка сама плавает от ~590px (край медиа-запроса ниже) до ~880px на
-   широком экране, и фиксированный px-размер либо тонул бы в большой
-   карточке, либо не влезал в маленькую. small — скромная иллюстрация сбоку
-   от текста, вроде миниатюры скриншота в патчноуте; medium — крупный
-   скриншот примерно вполовину карточки, для апдейтов игры, где картинка
-   важна не меньше текста; full — как раньше, на всю ширину (шапка/баннер
-   поста). */
-.nw-image.sz-small  { width: 30%; }
-.nw-image.sz-medium { width: 55%; }
-.nw-image.sz-full   { width: 100%; }
+/* Ширина — свободная (10..100% ширины карточки), поэтому не CSS-классом, а
+   инлайновым style, выставленным из провалидированного числа (см. cardFor()
+   в news-page.js). Здесь остаются только выравнивание и обтекание — они
+   конечный набор из трёх/двух вариантов и естественно ложатся в классы.
+
+   Блочные варианты (обтекание выключено, или включено при align=center —
+   см. комментарий в cardFor() о том, почему центр игнорирует обтекание):
+   margin left/right управляет тем, к какому краю карточки прижата картинка
+   при ширине меньше 100%. */
+.nw-image.nw-img-left   { margin: 4px auto 12px 0; }
+.nw-image.nw-img-center { margin: 4px auto 12px; }
+.nw-image.nw-img-right  { margin: 4px 0 12px auto; }
+/* Обтекание: картинка всплывает к своему краю, текст .nw-body обтекает её
+   с другой стороны. .nw-card::after ниже гарантирует, что карточка не
+   схлопнется по высоте до текста, обрезая картинку, и следующую карточку
+   не утащит вверх, в конец float-а. */
+.nw-image.nw-img-float-left  { float: left;  margin: 4px 16px 8px 0; }
+.nw-image.nw-img-float-right { float: right; margin: 4px 0 8px 16px; }
+/* Классический clearfix — а не overflow:hidden на .nw-card, который обрезал
+   бы будущие эффекты у контента, торчащего за край. Работает вне
+   зависимости от того, есть ли в конкретной карточке float вообще: без него
+   это нулевая строка, ничего не меняющая. */
+.nw-card::after { content: ""; display: table; clear: both; }
 .nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
 
 @media (max-width: 720px) {
   .nw-feed, .nw-filters, .nw-state { width: 92cqw; }
   .nw-card { padding: 14px; border-radius: 10px; }
   .nw-body { font-size: 14.5px; }
-  /* На телефоне карточка и без того узкая (92cqw узкого stage), поэтому
-     small/medium — те же 30%/55% — превращались бы в картинку шириной
-     ~110/200px на экране 375px: нечитаемо мелко. Все три размера идут на
-     всю ширину. */
-  .nw-image.sz-small, .nw-image.sz-medium, .nw-image.sz-full { width: 100%; }
+  /* Раньше здесь принудительно растягивало картинку до 100% на телефоне —
+     иначе small/medium стали бы ~110/200px на экране 375px, нечитаемо мелко.
+     С этой правки ширина — свободный выбор админа (image_pct), и телефон её
+     уважает так же, как десктоп: именно это убирало ограничение, которое не
+     давало хранить маленькие картинки маленькими (см. потолок стороны в
+     lib/images.php — он и рассчитан на то, что телефон больше не форсирует
+     100%). Оверрайда здесь больше нет намеренно. */
 }
 
 /* ===================== Редактор новости (админ) ===================== */
@@ -103,7 +117,89 @@
 /* Клавиатурный фокус — как у .nw-tools button и .lang-switch .chip. */
 .ne-cat-seg button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
+/* Ширина картинки (#nePct) — обычный range, без своей track/thumb разметки:
+   accent-color красит нативный ползунок в тот же циан, что и остальной
+   интерфейс, и остаётся полностью клавиатурно управляемым (стрелки,
+   Home/End) без единой строчки JS для этого. output рядом — числовой
+   индикатор, связанный с полем через for="nePct" (нативная семантика
+   HTML5, а не просто визуально соседний текст). */
+.ne-pct-row { display: flex; align-items: center; gap: 10px; }
+.ne-pct-row input[type="range"] { flex: 1; accent-color: var(--cyan); cursor: pointer; }
+.ne-pct-row input[type="range"]:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.ne-pct-row output {
+  font-family: var(--ui); font-size: 13px; font-weight: 700; color: #eaf4ff;
+  min-width: 42px; text-align: right; font-variant-numeric: tabular-nums;
+}
+
+/* Подсказка "картинка сохранена под меньшую ширину" (#nePctHint) — совет,
+   а не ошибка: свой цвет (--d-yellow, тот же токен предупреждений, что и в
+   base.css), не .ne-error (тот — #ff8a7e, зарезервирован за сбоями
+   сохранения/загрузки), чтобы не читаться как «что-то сломалось». */
+.ne-hint { min-height: 0; margin: 6px 0 0; font-size: 12px; color: var(--d-yellow); }
+
+/* Обтекание (#neWrap) — обычный видимый чекбокс, а не переиспользование
+   .switch из base.css: тот прячет <input> (display:none) и не рисует
+   :focus-visible ни на чём, а news.css не имеет права переопределять чужой
+   селектор .switch, чтобы его дорисовать (см. правило "только nw-/ne-" в
+   этом файле). Нативный чекбокс со своим фокус-кольцом решает то же самое
+   без этого конфликта. */
+.ne-wrap-field { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #cfe2ff; }
+.ne-wrap-check { width: 18px; height: 18px; accent-color: var(--cyan); cursor: pointer; }
+.ne-wrap-check:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
 .ne-error { min-height: 18px; margin: 0 0 12px; font-size: 13px; color: #ff8a7e; }
+
+/* ===================== Кроп-редактор картинки (#neCrop) =====================
+   Появляется между выбором файла и заливкой (см. #neImageFile в
+   news-page.js). Холст рисуется в css-px размера самого редактора — не в
+   полном разрешении исходника (см. комментарий у setupCropCanvasSize() в
+   news-page.js про декодированную память и историю Safari в
+   docs/superpowers/specs/2026-08-03-safari-memory-and-i18n-design.md),
+   полное разрешение считается только один раз, в момент подтверждения. */
+.ne-crop { margin-top: 12px; }
+.ne-crop > label { display: block; font-size: 12px; font-weight: 600; color: #8fb0dc; margin-bottom: 6px; }
+
+.ne-crop-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 46vh;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(4, 10, 22, .9);
+  border: 1px solid rgba(120, 190, 255, .28);
+  /* Тач: перетаскивание внутри редактора двигает картинку/рамку, а не
+     страницу под ней — без этого drag на телефоне превращался бы в скролл. */
+  touch-action: none;
+}
+.ne-crop-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.ne-crop-canvas:active { cursor: grabbing; }
+
+/* Рамка выделения — независимый прямоугольник поверх холста (двигается и
+   меняется в размере отдельно от панорамы картинки под ней). Тень в
+   9999px радиусом затемняет всё, что останется за кадром, не прибегая к
+   отдельным четырём затемняющим полосам. */
+.ne-crop-frame {
+  position: absolute;
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 0 9999px rgba(4, 10, 22, .6);
+  cursor: move;
+  touch-action: none;
+}
+.ne-crop-frame:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ne-crop-handle {
+  position: absolute;
+  width: 16px; height: 16px;
+  background: var(--cyan);
+  border: 2px solid #04101a;
+  border-radius: 4px;
+  touch-action: none;
+}
+.ne-crop-handle[data-corner="nw"], .ne-crop-handle[data-corner="se"] { cursor: nwse-resize; }
+.ne-crop-handle[data-corner="ne"], .ne-crop-handle[data-corner="sw"] { cursor: nesw-resize; }
+
+.ne-crop-dims { margin: 6px 0 0; font-size: 12px; color: #8fb0dc; font-variant-numeric: tabular-nums; }
+.ne-crop-actions { margin-top: 10px; }
 
 /* Превью карточки в редакторе — cardFor(post, false) кладёт сюда настоящую
    .nw-card. Пунктирная рамка отделяет её от полей формы (тот же приём, что
