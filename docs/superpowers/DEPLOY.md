@@ -74,6 +74,29 @@ reusing a filename would leave browsers on the old bytes. The script prints the
 Requires the GD extension with WebP support. Without a matching encoder the
 script leaves that image untouched and says so, rather than failing.
 
+## Schema migrations (run by hand after a push)
+
+`.cpanel.yml` and the push webhook copy `public_html/` only. `schema.sql` and
+`docs/migrations/*.sql` never reach the server, and nothing runs them there. So
+a commit that adds a column ships the code that selects it while the live table
+still lacks it — run the pending files in phpMyAdmin after any push that touched
+the schema, oldest first:
+
+- `docs/migrations/2026-08-18-image-customisation.sql` — news: the three
+  `image_size` presets become `image_pct` / `image_align` / `image_wrap`.
+- `docs/migrations/2026-08-20-image-dimensions.sql` — news: `image_width` /
+  `image_height`.
+
+Check the live table first (`SHOW COLUMNS FROM news;`) and export it before
+running anything: the files are not idempotent, a second run fails on the
+duplicate column, and `DROP COLUMN image_size` is not reversible.
+
+A skipped migration is visible, not silent: `/api/news.php` answers 503
+`temporarily_unavailable`, `/news` shows its error state with a retry button,
+and the real PDO message (column names, DSN) goes to the PHP error log only.
+That is what happened on 2026-08-20 — the 2026-08-18 file had never been run,
+so the feed was down while the tier list, likes and promo kept serving fine.
+
 ## Smoke test after deploy
 
 - Load the site: the tier list renders, images load from `/images/...`
