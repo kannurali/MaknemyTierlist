@@ -60,7 +60,11 @@ function og_render_news_png(array $summary, string $imagesDir, string $outPath):
     if (!$bgDrawn) {
         og_cover_crop($canvas, __DIR__ . '/../assets/poster/bg-export.jpg', $w, $h, 'top');
     }
-    og_apply_scrim($canvas, $w, $h);
+    // og_apply_news_scrim(), а не og_apply_scrim(): та тянет один и тот же
+    // уклон .stage::before на весь кадр, что годится для постоянного тёмного
+    // постера тирлиста, но не для чужой фотографии поста произвольной
+    // яркости — см. её комментарий в api/lib/og_render.php.
+    og_apply_news_scrim($canvas, $w, $h);
 
     [$catLabel, $catColor] = og_news_category_style($summary['category']);
     og_draw_pill($canvas, OG_FONT_TEXT, 20, $catColor, OG_COLOR_BG, 56, 48, 18, 10, $catLabel);
