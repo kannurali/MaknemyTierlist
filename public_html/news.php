@@ -36,7 +36,73 @@ function news_og_data(PDO $pdo): array {
     ];
 }
 
+// ---------------------------------------------------------------------------
+//  /news/<id> — постоянная ссылка на конкретный пост (не только на самый
+//  свежий). .htaccess рероутит news/<id> сюда же как news.php?id=<id> — см.
+//  комментарий там же про то, почему это не отдельный файл.
+// ---------------------------------------------------------------------------
+
+// Строгий разбор id из адресной строки — тот же принцип, что у
+// og_parse_version() (api/lib/og.php) и read_row_id() (api/_bootstrap.php):
+// только цифры, только положительное значение, никакого (int)-приведения
+// мусора. id здесь — то, что ввёл посетитель в адресную строку (или скопировал
+// из чужой ссылки), поэтому 'abc', '1abc', '-5', '1;drop' и т. п. обязаны
+// отклоняться целиком, а не обрезаться до цифровой части.
+function news_parse_post_id($raw): ?int {
+    if (is_int($raw)) { return $raw > 0 ? $raw : null; }
+    if (is_string($raw) && $raw !== '' && ctype_digit($raw)) {
+        $n = (int)$raw;
+        return $n > 0 ? $n : null;
+    }
+    return null;
+}
+
+// Пост по id — для og:* конкретной страницы и для подсказки клиенту, какую
+// карточку подсветить (см. NX_LINKED_POST_ID ниже и focusLinkedPost() в
+// js/news-page.js). null — пост с таким id не существует: вызывающая сторона
+// отвечает 404 (см. дальше по файлу), а не 500 и не тихо показывает ленту как
+// ни в чём не бывало.
+function news_post_by_id(PDO $pdo, int $id): ?array {
+    $stmt = $pdo->prepare(
+        'SELECT id, category, title_ru, body_ru, image_url, published_at
+           FROM news WHERE id = :id'
+    );
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row === false ? null : $row;
+}
+
+// og:*/og:image конкретного поста — та же схема, что news_og_data() выше
+// (og_news_summary()/og_news_meta() из api/lib/og.php), только по СВОЕЙ
+// строке, а не по самой свежей. og:image указывает на og-news.php с ЕГО
+// собственными id и версией (id.published_at, склеенные так же, как для
+// самого свежего поста, см. og_news_summary()) — правку поста (значит, смену
+// published_at) это превращает в новый URL картинки без ручной инвалидации
+// кэша, ровно как и было задумано для /news в целом.
+function news_post_og_data(array $row): array {
+    $summary = og_news_summary($row);
+    if ($summary === null) { return news_og_fallback(); }
+
+    // og_news_summary() не кладёт id в свой результат (он не нужен ни одному
+    // из её существующих вызывающих — оба раньше работали только с "самым
+    // свежим" постом, у него id не требовался отдельно от версии) — берём
+    // его из уже провалидированной (title непустой и т. д., иначе $summary
+    // был бы null) исходной строки.
+    $id = (int)($row['id'] ?? 0);
+
+    $meta = og_news_meta($summary);
+    return [
+        'image'       => 'https://maknemytierlist.site/api/og-news.php?id=' . $id . '&v=' . $summary['version'],
+        'title'       => $meta['title'],
+        'description' => $meta['description'] !== '' ? $meta['description'] : news_og_fallback()['description'],
+    ];
+}
+
+$postId = news_parse_post_id($_GET['id'] ?? null);
+$linkedPostId = null; // id поста, на который ведёт /news/<id> — null на обычном /news
+$notFound = false;    // id есть, но такого поста нет — 404, а не тихая подмена на ленту
 $og = news_og_fallback();
+
 if (!defined('TESTING')) {
     // Та же защита, что .htaccess раньше давал news.html через
     // <FilesMatch "\.html$">: без no-cache Safari после деплоя часами
@@ -47,30 +113,70 @@ if (!defined('TESTING')) {
     // проекта уже делают (см. api/tierlist.php, api/news.php).
     header('Cache-Control: no-cache, must-revalidate');
     try {
-        $og = news_og_data(db());
+        $pdo = db();
+        if ($postId !== null) {
+            $row = news_post_by_id($pdo, $postId);
+            if ($row === null) {
+                // id синтаксически валиден, но такого поста нет (удалили,
+                // опечатались, никогда не существовал) — не 500 и не молчаливый
+                // показ всей ленты, как будто ссылка была на /news. Лента при
+                // этом всё равно рисуется ниже (человеку, пришедшему по битой
+                // ссылке, есть что почитать), но статус — настоящий 404, а
+                // не 200: краулер обязан узнать, что этого конкретного адреса
+                // не существует, а не проиндексировать его как дубликат /news.
+                $notFound = true;
+            } else {
+                $linkedPostId = $postId;
+                $og = news_post_og_data($row);
+            }
+        } else {
+            $og = news_og_data($pdo);
+        }
     } catch (Throwable $e) {
         error_log('news.php: og preview fallback: ' . $e->getMessage());
     }
+    if ($notFound) { http_response_code(404); }
 }
+
+// Канонический адрес — свой у каждого поста (иначе /news/<id> и /news были
+// бы двумя URL с формально разным содержимым og:*, но одним и тем же
+// canonical, что путает краулеров). У 404-случая свой персональный адрес
+// невалиден — канонизируем на общую ленту, туда же указывает и og:url.
+$canonicalUrl = 'https://maknemytierlist.site/news' . ($linkedPostId !== null ? '/' . $linkedPostId : '');
+// noindex на 404: сама лента ниже всё равно рисуется (см. комментарий выше),
+// но индексировать битый адрес как рабочую страницу незачем — 404 в статусе
+// это уже даёт понять большинству краулеров, noindex просто не оставляет
+// шанса на исключение для тех, кто по какой-то причине проигнорирует статус.
+$robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:large';
 ?>
+<?php if (!defined('TESTING')): ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- news.php отдаётся и на /news, и на /news/<id> (см. .htaccess) —
+     относительные пути ниже («css/base.css», «js/news.js», …) без этого
+     тега резолвились бы от адреса ДОКУМЕНТА, а не от корня: на /news/<id>
+     (на один уровень глубже /news) это увело бы их в несуществующие
+     /news/css/…, /news/js/… — та же ловушка, которую /news/ → /news 301
+     выше в .htaccess уже решает для одного конкретного случая. Явный
+     <base> решает её сразу для любой глубины запроса, а не только для
+     той, что предусмотрели заранее. -->
+<base href="/" />
 <!-- Как и на тирлисте: без этой строчки принудительное затемнение в
      Яндекс.Браузере инвертирует монохромные логотипы в шапке. -->
 <meta name="color-scheme" content="dark" />
 
 <title>Новости Blox Fruits и обновления тирлиста | Maknemy Tier List</title>
 <meta name="description" content="Новости Blox Fruits, изменения трейд-ценностей в тирлисте Maknemy и анонсы проекта: апдейты, ребалансы, розыгрыши." />
-<link rel="canonical" href="https://maknemytierlist.site/news" />
-<meta name="robots" content="index, follow, max-image-preview:large" />
+<link rel="canonical" href="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>" />
+<meta name="robots" content="<?= htmlspecialchars($robots, ENT_QUOTES, 'UTF-8') ?>" />
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Maknemy Tier List" />
 <meta property="og:locale" content="ru_RU" />
-<meta property="og:url" content="https://maknemytierlist.site/news" />
+<meta property="og:url" content="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
@@ -85,7 +191,7 @@ if (!defined('TESTING')) {
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <link rel="stylesheet" href="css/base.css?v=3" />
-<link rel="stylesheet" href="css/news.css?v=8" />
+<link rel="stylesheet" href="css/news.css?v=9" />
 </head>
 <body>
   <div class="toolbar" id="toolbar">
@@ -120,6 +226,14 @@ if (!defined('TESTING')) {
       <div class="nw-filters" id="newsFilters" role="group"
            data-i18n-label="news.filterGroupLabel" aria-label="Фильтр по категориям"></div>
 
+      <!-- Пояснение для /news/<id>, когда пост из ссылки не входит в
+           последние 50, которые отдаёт api/news.php (пост существует —
+           иначе сервер уже ответил бы 404 выше, — но за пределами ленты
+           показать нечего). Заполняется и показывается из
+           focusLinkedPost() в js/news-page.js, не из PHP: сама лента
+           грузится и рисуется на клиенте. -->
+      <div class="nw-notice" id="newsNotice" role="status" hidden></div>
+
       <main class="nw-feed" id="feed"></main>
       <div class="nw-state" id="newsState" role="status" aria-live="polite" hidden></div>
     </div>
@@ -129,8 +243,12 @@ if (!defined('TESTING')) {
        Посетитель ленты не качает ни модалку на восемь полей, ни кнопку
        «Добавить» — на публичной странице админской разметки ноль. -->
 
-  <script src="js/i18n.js?v=10"></script>
+<?php if ($linkedPostId !== null): ?>
+  <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
+<?php endif; ?>
+  <script src="js/i18n.js?v=11"></script>
   <script src="js/news.js?v=4"></script>
-  <script src="js/news-page.js?v=10"></script>
+  <script src="js/news-page.js?v=11"></script>
 </body>
 </html>
+<?php endif; ?>

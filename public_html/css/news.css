@@ -72,8 +72,26 @@
 .nw-card::after { content: ""; display: table; clear: both; }
 .nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
 
+/* Карточка, на которую вела ссылка /news/<id> — подсвечивается и
+   проскролливается в неё в focusLinkedPost() (js/news-page.js). scroll-margin
+   -top — чтобы липкий .toolbar (position: sticky, base.css) не перекрыл
+   верх карточки при scrollIntoView({block:"start"}). */
+.nw-card.nw-linked { scroll-margin-top: 84px; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(79,214,255,.55), 0 0 22px rgba(79,214,255,.22); }
+.nw-card.nw-linked:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+/* Пояснение над лентой на /news/<id>, когда пост из ссылки существует
+   (иначе сервер уже ответил бы 404), но не входит в последние 50 — см.
+   #newsNotice в news.php и focusLinkedPost() в news-page.js. */
+.nw-notice { width: 84.63cqw; margin: 0 auto 14px; padding: 10px 16px; border-radius: 10px; background: rgba(79,214,255,.12); border: 1px solid rgba(79,214,255,.35); color: #cfe9ff; font-size: 13px; line-height: 1.4; }
+
+/* Визуально скрытый, но доступный скринридерам live-регион — используется
+   отклик на кнопку копирования ссылки (copyPostLink() в news-page.js), а не
+   `hidden`: атрибут hidden убирает элемент из accessibility tree целиком, и
+   его смена текста ничем не озвучилась бы. */
+.nw-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
 @media (max-width: 720px) {
-  .nw-feed, .nw-filters, .nw-state { width: 92cqw; }
+  .nw-feed, .nw-filters, .nw-state, .nw-notice { width: 92cqw; }
   .nw-card { padding: 14px; border-radius: 10px; }
   .nw-body { font-size: 14.5px; }
   /* Раньше здесь принудительно растягивало картинку до 100% на телефоне —
@@ -219,3 +237,8 @@
 .nw-tools button:hover { background: var(--cyan-deep); border-color: var(--cyan); }
 .nw-tools button.danger:hover { background: #a02c2c; border-color: #ff6b5e; }
 .nw-tools button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* Кнопка копирования ссылки — отклик через copyPostLink()/showCopyFeedback()
+   в news-page.js: класс держится 2с и снимается сам же таймером, title
+   (tooltip) на это время тоже меняется на исход попытки. */
+.nw-tools button.nw-copy-ok   { background: rgba(60,200,120,.35); border-color: #3cc878; }
+.nw-tools button.nw-copy-fail { background: rgba(255,90,90,.35);  border-color: #ff6b5e; }

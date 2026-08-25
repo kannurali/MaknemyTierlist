@@ -255,7 +255,11 @@
       "news.publish":           "Опубликовать",
       "news.cancel":            "Отмена",
       "news.saveFailed":        "Не удалось сохранить:",
-      "news.deleteFailed":      "Не удалось удалить:"
+      "news.deleteFailed":      "Не удалось удалить:",
+      "news.copyLink":          "Скопировать ссылку на пост",
+      "news.copyLinkDone":      "Ссылка скопирована",
+      "news.copyLinkFailed":    "Не удалось скопировать",
+      "news.linkedPostMissing": "Пост, на который вела ссылка, не входит в последние 50 показанных — вот вся лента."
     },
 
     en: {
@@ -498,7 +502,11 @@
       "news.publish":           "Publish",
       "news.cancel":            "Cancel",
       "news.saveFailed":        "Could not save:",
-      "news.deleteFailed":      "Could not delete:"
+      "news.deleteFailed":      "Could not delete:",
+      "news.copyLink":          "Copy link to this post",
+      "news.copyLinkDone":      "Link copied",
+      "news.copyLinkFailed":    "Could not copy",
+      "news.linkedPostMissing": "The post this link points to isn't among the latest 50 shown here — here's the full feed instead."
     }
   };
 

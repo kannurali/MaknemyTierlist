@@ -3,25 +3,53 @@ require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/og.php';
 require_once __DIR__ . '/lib/og_render.php';
 
-// Превью-картинка последней новости для og:image — 1200x630: категория,
-// дата, заголовок и собственная картинка поста, если она есть. Та же схема
+// Превью-картинка новости для og:image — 1200x630: категория, дата,
+// заголовок и собственная картинка поста, если она есть. Та же схема
 // кэширования и отказоустойчивости, что у og-tierlist.php — см. комментарий
-// там же; версия здесь — id и published_at свежего поста, склеенные в одно
-// число (og_news_summary() в api/lib/og.php).
+// там же; версия здесь — id и published_at поста, склеенные в одно число
+// (og_news_summary() в api/lib/og.php).
+//
+// Рендерит либо самый свежий пост (как и раньше — $rawId не передан, обратная
+// совместимость со старыми ссылками вида ?v=... без &id=), либо конкретный
+// пост по id (задача про постоянные ссылки: /news/<id> в public_html/news.php
+// строит og:image как og-news.php?id=<id>&v=<версия этого поста>). id и
+// версия — намеренно два разных параметра, а не один: версия одна на
+// склейку id+published_at и однозначно НЕ восстанавливается обратно в id
+// (например, "123000" получается и из id=1+published_at=23000, и из
+// id=12+published_at=3000) — без явного id пришлось бы гадать, какой именно
+// пост рендерить.
 
 const OG_NEWS_CANVAS_W = 1200;
 const OG_NEWS_CANVAS_H = 630;
 
-function handle_og_news(PDO $pdo, string $imagesDir, $rawVersion): ?string {
+function handle_og_news(PDO $pdo, string $imagesDir, $rawVersion, $rawId = null): ?string {
     $cacheDir = rtrim($imagesDir, '/\\') . '/og';
     $cachePath = og_build_cache_path($cacheDir, 'news', $rawVersion);
     if ($cachePath === null) { return null; }
     if (is_file($cachePath)) { return $cachePath; }
 
-    $row = $pdo->query(
-        'SELECT id, category, title_ru, body_ru, image_url, published_at
-           FROM news ORDER BY published_at DESC, id DESC LIMIT 1'
-    )->fetch(PDO::FETCH_ASSOC);
+    if ($rawId === null) {
+        // Старое поведение: без явного id — самый свежий пост.
+        $row = $pdo->query(
+            'SELECT id, category, title_ru, body_ru, image_url, published_at
+               FROM news ORDER BY published_at DESC, id DESC LIMIT 1'
+        )->fetch(PDO::FETCH_ASSOC);
+    } else {
+        // id ЗАДАН — значит, это не "гадай сам", а точный запрос конкретного
+        // поста; мусор здесь отклоняется целиком (откат на баннер), а не
+        // молча трактуется как "id не задан, покажи свежий" — иначе
+        // испорченный ?id= в чужой ссылке незаметно подсунул бы совсем не тот
+        // пост, о котором думает читающий.
+        $id = og_parse_version($rawId);
+        if ($id === null) { return null; }
+        $stmt = $pdo->prepare(
+            'SELECT id, category, title_ru, body_ru, image_url, published_at
+               FROM news WHERE id = :id'
+        );
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     $summary = og_news_summary($row === false ? null : $row);
     if ($summary === null) { return null; }
     if ($summary['version'] !== og_parse_version($rawVersion)) { return null; }
@@ -102,7 +130,7 @@ function og_render_news_png(array $summary, string $imagesDir, string $outPath):
 if (!defined('TESTING')) {
     try {
         $cfg = app_config();
-        $cachePath = handle_og_news(db(), $cfg['images_dir'], $_GET['v'] ?? null);
+        $cachePath = handle_og_news(db(), $cfg['images_dir'], $_GET['v'] ?? null, $_GET['id'] ?? null);
         if ($cachePath !== null) {
                         // Любой шум, попавший в вывод до этой точки (notice, warning,
             // deprecation — так уже случалось с imagedestroy на PHP 8.5),

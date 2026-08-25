@@ -9,10 +9,25 @@
   const feedEl = $("#feed");
   const stateEl = $("#newsState");
   const filtersEl = $("#newsFilters");
+  const noticeEl = $("#newsNotice");
 
   // Тот же ключ, что и на тирлисте (app.js, LANG_KEY) — иначе выбор языка
   // не переносился бы между страницами.
   const LANG_KEY = "nexus-lang-v1";
+
+  // id поста из /news/<id> — news.php кладёт его сюда только когда такой
+  // пост реально существует (иначе сервер уже ответил 404, см.
+  // news_post_by_id() в news.php), поэтому здесь достаточно голой числовой
+  // проверки, без своей валидации "существует ли".
+  const LINKED_POST_ID = (() => {
+    const n = Number(window.NX_LINKED_POST_ID);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  })();
+  // Проскроллить и сфокусировать карточку нужно один раз — на первой отрисовке
+  // после загрузки, а не при каждом render() (смена фильтра/языка тоже зовёт
+  // render() и не должна силой возвращать читателя к посту, от которого он
+  // уже мог уйти).
+  let linkedPostScrolled = false;
 
   // Адреса эндпоинтов — от корня. Эта же разметка отдаётся на /admin/news,
   // а он лежит на глубине 1: документ-относительный "api/news.php" оттуда
@@ -138,6 +153,14 @@
     if (withTools && isAdmin) {
       const tools = document.createElement("div");
       tools.className = "nw-tools";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      // U+FE0E (VARIATION SELECTOR-15) заставляет 🔗 рисоваться текстовым
+      // моно-глифом, как ✎/✕ рядом, а не цветной emoji-картинкой — тот же
+      // визуальный язык, что и у двух других кнопок тулбара.
+      copy.textContent = "🔗︎";
+      copy.title = tx("news.copyLink");
+      copy.addEventListener("click", () => copyPostLink(post, copy));
       const edit = document.createElement("button");
       edit.type = "button";
       edit.textContent = "✎";
@@ -149,7 +172,7 @@
       del.textContent = "✕";
       del.title = tx("news.delete");
       del.addEventListener("click", () => removePost(post));
-      tools.append(edit, del);
+      tools.append(copy, edit, del);
       card.append(tools);
     }
 
@@ -165,11 +188,61 @@
     // не выбрана (activeCat === "all") — это день первый ленты, когда постов
     // нет в принципе, а не "в этом фильтре пусто". Разные строки на разные
     // причины пустоты.
-    if (!visible.length) { showState(activeCat === "all" ? "news.emptyAll" : "news.empty", false); return; }
+    if (!visible.length) {
+      showState(activeCat === "all" ? "news.emptyAll" : "news.empty", false);
+      focusLinkedPost();
+      return;
+    }
 
     stateEl.hidden = true;
     feedEl.innerHTML = "";
     for (const post of visible) { feedEl.append(cardFor(post)); }
+    focusLinkedPost();
+  }
+
+  // /news/<id>: подсвечивает и (один раз, при первой отрисовке) скроллит к
+  // карточке, на которую вела ссылка. Зовётся из render() каждый раз —
+  // render() полностью пересобирает feedEl.innerHTML, поэтому класс
+  // подсветки нужно накладывать заново на каждой перерисовке (смена языка,
+  // смена фильтра), а не один раз при загрузке.
+  function focusLinkedPost() {
+    if (!LINKED_POST_ID || !noticeEl) { return; }
+
+    const inFeed = posts.some(p => p.id === LINKED_POST_ID);
+    const card = feedEl.querySelector('[data-id="' + LINKED_POST_ID + '"]');
+
+    if (card) {
+      noticeEl.hidden = true;
+      card.classList.add("nw-linked");
+      if (!linkedPostScrolled) {
+        linkedPostScrolled = true;
+        const reduceMotion = window.matchMedia
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+        // tabindex делает карточку фокусируемой программно (сама она не
+        // интерактивный элемент) — скринридер объявляет её содержимое сразу
+        // после перехода по ссылке, а не оставляет читателя гадать, куда его
+        // проскроллило молча.
+        card.setAttribute("tabindex", "-1");
+        card.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    // Пост существует (иначе news.php уже ответил бы 404, и
+    // window.NX_LINKED_POST_ID вообще не был бы выставлен), но не попал ни в
+    // последние 50 из api/news.php, ни, тем более, в текущую карточку —
+    // либо он старше 50-го, либо скрыт активным фильтром категории. Фильтр
+    // категории — осознанный выбор читателя ПРЯМО СЕЙЧАС, поясняться нечему;
+    // случай "постов вообще нет" уже виден по #newsState — отдельное
+    // сообщение здесь было бы повтором той же мысли. Настоящая, стоящая
+    // упоминания причина ровно одна: пост есть, но за пределами ленты.
+    if (inFeed || posts.length === 0) {
+      noticeEl.hidden = true;
+    } else {
+      noticeEl.hidden = false;
+      noticeEl.textContent = tx("news.linkedPostMissing");
+    }
   }
 
   function renderFilters() {
@@ -866,6 +939,67 @@
     }
   }
 
+  // Живой (не hidden — см. .nw-sr-only в news.css) регион для скринридеров:
+  // единственный текстовый отклик на копирование ссылки, который не зависит
+  // от того, видит ли читатель title-подсказку на самой кнопке. Создаётся
+  // один раз в wireAdmin() (кнопка копирования вообще существует только у
+  // админа), а не в статичной разметке news.php — публичная лента не должна
+  // тащить элемент, которым никогда не воспользуется.
+  let copyStatusEl = null;
+
+  // Абсолютная ссылка на пост + копирование в буфер с видимым откликом на
+  // самой кнопке. navigator.clipboard.writeText требует секьюр-контекста и
+  // явного разрешения (в некоторых embedded-webview его вовсе нет или он
+  // отклоняется пользователем) — на этот случай запасной путь через скрытый
+  // textarea + document.execCommand("copy"), единственный API, который
+  // работает синхронно из обработчика клика без него.
+  async function copyPostLink(post, btn) {
+    const url = "https://maknemytierlist.site/news/" + post.id;
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        ok = true;
+      }
+    } catch (e) {
+      ok = false; // отклонено браузером/пользователем — пробуем запасной путь
+    }
+    if (!ok) { ok = copyViaFallback(url); }
+    showCopyFeedback(btn, ok);
+  }
+
+  function copyViaFallback(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    // Вне видимой области, но НЕ display:none/hidden — Safari игнорирует
+    // execCommand("copy") на элементе, которого нет в раскладке.
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.left = "-1000px";
+    ta.setAttribute("readonly", "");
+    document.body.append(ta);
+    ta.focus();
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  let copyFeedbackTimer = null;
+  function showCopyFeedback(btn, ok) {
+    if (copyStatusEl) { copyStatusEl.textContent = tx(ok ? "news.copyLinkDone" : "news.copyLinkFailed"); }
+    if (!btn) { return; }
+    clearTimeout(copyFeedbackTimer);
+    btn.classList.remove("nw-copy-ok", "nw-copy-fail");
+    btn.classList.add(ok ? "nw-copy-ok" : "nw-copy-fail");
+    btn.title = tx(ok ? "news.copyLinkDone" : "news.copyLinkFailed");
+    copyFeedbackTimer = setTimeout(() => {
+      btn.classList.remove("nw-copy-ok", "nw-copy-fail");
+      btn.title = tx("news.copyLink");
+    }, 2000);
+  }
+
   // Заливает pickedImageDataUrl под текущую выбранную ширину редактора.
   // Общая для первого выбора файла и для перезаливки при смене ширины (см.
   // обработчик "change" на #nePct в wireAdmin ниже) — оба случая шлют один
@@ -892,6 +1026,14 @@
   // на публичной ленте этих узлов нет, и addEventListener на null бросил бы
   // прямо в теле IIFE — то есть убил бы и загрузку ленты для посетителя.
   function wireAdmin() {
+    // Живой регион для отклика копирования ссылки (см. copyPostLink() выше) —
+    // существует только у админа, поэтому создаётся здесь, а не в разметке
+    // news.php, которую грузит и публичная лента.
+    copyStatusEl = document.createElement("div");
+    copyStatusEl.className = "nw-sr-only";
+    copyStatusEl.setAttribute("aria-live", "polite");
+    document.body.append(copyStatusEl);
+
     const bar = $("#newsAdminBar");
     if (bar) {
       bar.hidden = false;
