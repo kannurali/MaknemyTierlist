@@ -1,3 +1,63 @@
+<?php
+require_once __DIR__ . '/api/_bootstrap.php';
+require_once __DIR__ . '/api/lib/og.php';
+
+// Превью-карточка ссылки (og:image/title/description) собирается из живого
+// тирлиста ДО отдачи <head> — краулеры (Telegram, Discord, VK) не исполняют
+// JS и читают только то, что уже есть в HTML. Тело страницы ниже байт-в-байт
+// то же, что было в index.html (см. историю git) — сам тирлист как рисовался
+// на клиенте js/app.js, так и рисуется.
+//
+// Никогда не роняет страницу: любая ошибка (нет БД, кривой JSON, тиры ещё
+// пустые) откатывает превью на статичный баннер — см. og_tierlist_summary()
+// в api/lib/og.php. Тирлист обязан открываться в любом случае, битое превью —
+// не повод для 500.
+function tierlist_og_fallback(): array {
+    return [
+        'image'       => 'https://maknemytierlist.site/assets/og-image.jpg?v=2',
+        'imageWidth'  => 1920,
+        'imageHeight' => 1080,
+        'imageType'   => 'image/jpeg',
+        'title'       => 'Maknemy Tier List — трейд-ценности Blox Fruits',
+        'description' => 'Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос и тренды цен.',
+    ];
+}
+
+function tierlist_og_data(PDO $pdo): array {
+    $row = $pdo->query('SELECT data, rev FROM tierlist WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+    $summary = og_tierlist_summary($row['data'] ?? null, $row['rev'] ?? null);
+    if ($summary === null) { return tierlist_og_fallback(); }
+
+    $meta = og_tierlist_meta($summary);
+    $fallback = tierlist_og_fallback();
+    return [
+        'image'       => 'https://maknemytierlist.site/api/og-tierlist.php?v=' . $summary['version'],
+        'imageWidth'  => 1200,
+        'imageHeight' => 630,
+        'imageType'   => 'image/png',
+        'title'       => $meta['title'],
+        'description' => $meta['description'] !== '' ? $meta['description'] : $fallback['description'],
+    ];
+}
+
+$og = tierlist_og_fallback();
+if (!defined('TESTING')) {
+    // Та же защита, что .htaccess раньше давал index.html через
+    // <FilesMatch "\.html$"> (см. комментарий там же про Safari, часами
+    // державший старую страницу после деплоя). FilesMatch не годится для
+    // .php — совпадение по одному лишь имени файла зацепило бы заодно
+    // api/news.php (лента) и переписало бы её собственный Cache-Control,
+    // поэтому заголовок ставится здесь же, в самой странице — так же, как
+    // это уже делают остальные PHP-эндпоинты проекта (api/tierlist.php,
+    // api/news.php).
+    header('Cache-Control: no-cache, must-revalidate');
+    try {
+        $og = tierlist_og_data(db());
+    } catch (Throwable $e) {
+        error_log('index.php: og preview fallback: ' . $e->getMessage());
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -17,22 +77,23 @@
 <link rel="canonical" href="https://maknemytierlist.site/" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 
-<!-- Превью-карточка при отправке ссылки в Telegram, Discord, ВК -->
+<!-- Превью-карточка при отправке ссылки в Telegram, Discord, ВК —
+     og:image/title/description echo живые данные тирлиста, см. tierlist_og_data() выше. -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Maknemy Tier List" />
 <meta property="og:locale" content="ru_RU" />
 <meta property="og:url" content="https://maknemytierlist.site/" />
-<meta property="og:title" content="Maknemy Tier List — трейд-ценности Blox Fruits" />
-<meta property="og:description" content="Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос и тренды цен." />
-<meta property="og:image" content="https://maknemytierlist.site/assets/og-image.jpg?v=2" />
-<meta property="og:image:width" content="1920" />
-<meta property="og:image:height" content="1080" />
-<meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:alt" content="Maknemy Tier List — рекламный баннер" />
+<meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta property="og:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta property="og:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta property="og:image:width" content="<?= (int)$og['imageWidth'] ?>" />
+<meta property="og:image:height" content="<?= (int)$og['imageHeight'] ?>" />
+<meta property="og:image:type" content="<?= htmlspecialchars($og['imageType'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta property="og:image:alt" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Maknemy Tier List — трейд-ценности Blox Fruits" />
-<meta name="twitter:description" content="Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации." />
-<meta name="twitter:image" content="https://maknemytierlist.site/assets/og-image.jpg?v=2" />
+<meta name="twitter:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta name="twitter:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta name="twitter:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
 
 <!-- Разметка для поисковиков: связывает сайт с брендом Maknemy -->
 <script type="application/ld+json">
