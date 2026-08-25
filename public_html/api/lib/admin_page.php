@@ -28,6 +28,46 @@ function admin_page_guard(string $title): void {
     exit;
 }
 
+// Отдаёт РЕАЛЬНУЮ разметку публичной страницы ($file — index.php или
+// news.php), а не её копию: /admin и /admin/news не хранят второй экземпляр
+// вёрстки (см. комментарии в admin.php и admin-news.php), поэтому единственный
+// способ получить актуальный HTML — исполнить ту же самую страницу и забрать
+// то, что она печатает. file_get_contents() тут не годится в принципе: он
+// вернул бы PHP-исходник, а не отрендеренный вывод.
+//
+// NX_ADMIN_RENDER глушит побочные эффекты паблик-страницы на время захвата:
+// index.php/news.php за флагом TESTING умеют пропускать свой собственный
+// header('Cache-Control: ...') и поход в БД за og:* — тот же флаг здесь не
+// использован (это не тестовый прогон), поэтому у обеих страниц отдельная
+// проверка на NX_ADMIN_RENDER. Без неё их Cache-Control переписал бы более
+// мягкое значение поверх admin_page_headers() (no-store), а лишний запрос к
+// БД ради og:title/description, которые админка всё равно не показывает,
+// не нужен и не должен ронять панель, если БД в этот момент недоступна —
+// хотя даже без глушения он бы не уронил: index.php/news.php сами ловят
+// Throwable вокруг db() и откатываются на статичный превью.
+//
+// is_file() до require — принципиально: `require` на несуществующий файл
+// падает необрабатываемой fatal-ошибкой (в отличие от исключения, try/catch
+// её не ловит), а именно с исчезновением файла и случилась эта регрессия
+// (index.html/news.html переехали в .php, но админка ещё звала старое имя).
+// Возвращаем null и даём вызывающей стороне решить, что делать: сейчас обе
+// админ-страницы отвечают 500 с понятным текстом вместо пустой оболочки.
+function admin_render_public_page(string $file): ?string {
+    if (!is_file($file)) { return null; }
+    if (!defined('NX_ADMIN_RENDER')) { define('NX_ADMIN_RENDER', true); }
+
+    ob_start();
+    try {
+        require_once $file;
+    } catch (Throwable $e) {
+        ob_end_clean();
+        error_log('admin_render_public_page(' . $file . '): ' . $e->getMessage());
+        return null;
+    }
+    $html = ob_get_clean();
+    return ($html === false || trim($html) === '') ? null : $html;
+}
+
 // Top bar shared by every panel. $active is 'tier', 'news' or 'promo'.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).

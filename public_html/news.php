@@ -103,7 +103,7 @@ $linkedPostId = null; // id поста, на который ведёт /news/<id
 $notFound = false;    // id есть, но такого поста нет — 404, а не тихая подмена на ленту
 $og = news_og_fallback();
 
-if (!defined('TESTING')) {
+if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     // Та же защита, что .htaccess раньше давал news.html через
     // <FilesMatch "\.html$">: без no-cache Safari после деплоя часами
     // держит старую страницу с устаревшими ?v= у css/js. FilesMatch не годится
@@ -111,6 +111,13 @@ if (!defined('TESTING')) {
     // (лента) и переписал бы её собственный Cache-Control, поэтому заголовок
     // ставится здесь же, в самой странице, как и остальные PHP-эндпоинты
     // проекта уже делают (см. api/tierlist.php, api/news.php).
+    //
+    // NX_ADMIN_RENDER — эту же страницу зовёт admin_render_public_page() из
+    // /admin/news, чтобы забрать её вывод (см. admin_page.php). Там уже стоит
+    // свой Cache-Control (no-store, из admin_page_headers()), и более мягкое
+    // значение отсюда переписало бы его; поход в БД за og:* админке не нужен —
+    // эти теги она не показывает. На публичной /news этот флаг не выставлен,
+    // поведение страницы для посетителей не меняется.
     header('Cache-Control: no-cache, must-revalidate');
     try {
         $pdo = db();
