@@ -198,7 +198,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <link rel="stylesheet" href="css/base.css?v=3" />
-<link rel="stylesheet" href="css/news.css?v=9" />
+<link rel="stylesheet" href="css/news.css?v=10" />
 </head>
 <body>
   <div class="toolbar" id="toolbar">
@@ -253,9 +253,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=11"></script>
+  <script src="js/i18n.js?v=12"></script>
   <script src="js/news.js?v=4"></script>
-  <script src="js/news-page.js?v=11"></script>
+  <script src="js/news-page.js?v=12"></script>
 </body>
 </html>
 <?php endif; ?>

@@ -47,6 +47,85 @@
 
   const tx = key => I18N.t(key, lang);
 
+  // ------------------------------------------------------------------------
+  //  Лайк поста — тот же приём, что LIKE BUTTON в app.js (общий счётчик
+  //  тирлиста), только лайков теперь много, по одному на пост: факт лайка
+  //  запоминается в localStorage под id поста, счётчик хранится в БД
+  //  (news.likes) и правится через POST /api/news_like.php.
+  // ------------------------------------------------------------------------
+  const NEWS_LIKED_KEY = "nexus-news-liked-v1";
+
+  // Карта { "<id>": true } — только реально лайкнутые посты, а не полный
+  // список постов со значением true/false: лента растёт, и хранить запись на
+  // каждый когда-либо увиденный пост незачем.
+  function readLikedMap() {
+    try { return JSON.parse(localStorage.getItem(NEWS_LIKED_KEY) || "{}"); }
+    catch (_) { return {}; } // приватный режим Safari / битый JSON
+  }
+  function writeLikedMap(map) {
+    try { localStorage.setItem(NEWS_LIKED_KEY, JSON.stringify(map)); } catch (_) {}
+  }
+  function isPostLiked(id) { return !!readLikedMap()[id]; }
+  function setPostLiked(id, v) {
+    const map = readLikedMap();
+    if (v) { map[id] = true; } else { delete map[id]; }
+    writeLikedMap(map);
+  }
+
+  // Отправка на сервер — тот же контракт, что sendLike() в app.js:
+  //   true  — записано;
+  //   false — сервер отклонил (нужен откат UI);
+  //   null  — сеть недоступна (оффлайн, оставляем оптимистичный счётчик).
+  async function sendNewsLike(id, dir) {
+    try {
+      const r = await fetch("/api/news_like.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, dir }),
+      });
+      return r.ok ? true : false;
+    } catch (e) { /* оффлайн — считаем локальным успехом */ }
+    return null;
+  }
+
+  // короткий «всплеск» сердечка при клике — тот же приём, что popLike() в app.js
+  function popLikeHeart(heartEl) {
+    heartEl.classList.remove("pop");
+    void heartEl.offsetWidth; // перезапустить CSS-анимацию
+    heartEl.classList.add("pop");
+  }
+
+  function renderLikeButton(btn, heartEl, countEl, liked, likes) {
+    btn.classList.toggle("liked", liked);
+    btn.setAttribute("aria-pressed", liked ? "true" : "false");
+    btn.title = tx(liked ? "news.likeRemove" : "news.like");
+    heartEl.textContent = liked ? "💙" : "🤍";
+    countEl.textContent = String(likes);
+  }
+
+  // Карточка не хранит собственное состояние между рендерами (render()
+  // каждый раз пересобирает feedEl.innerHTML с нуля, см. ниже) — счётчик
+  // читается из post.likes (правится этой же функцией оптимистично, так что
+  // смена языка/фильтра между кликом и ответом сервера не откатывает его на
+  // старое значение), а признак "лайкнуто" — из localStorage.
+  function toggleNewsLike(post, btn, heartEl, countEl) {
+    const willLike = !isPostLiked(post.id);
+    const dir = willLike ? 1 : -1;
+    // Оптимистично обновляем UI; откатываем только на явный отказ сервера.
+    setPostLiked(post.id, willLike);
+    post.likes = Math.max(0, (post.likes || 0) + dir);
+    renderLikeButton(btn, heartEl, countEl, willLike, post.likes);
+    popLikeHeart(heartEl);
+
+    sendNewsLike(post.id, dir).then(ok => {
+      if (ok === false) { // запись не прошла — откат
+        setPostLiked(post.id, !willLike);
+        post.likes = Math.max(0, post.likes - dir);
+        renderLikeButton(btn, heartEl, countEl, !willLike, post.likes);
+      }
+    });
+  }
+
   function showState(key, withRetry) {
     feedEl.innerHTML = "";
     stateEl.hidden = false;
@@ -149,6 +228,36 @@
       body.append(p);
     }
     card.append(body);
+
+    // Лайк — виден всем посетителям (не только админу, в отличие от .nw-tools
+    // ниже) и живёт вне её кластера инструментов: своя обёртка .nw-footer, а
+    // не .nw-tools, — чтобы сердечко не оказалось внутри той же группы, что
+    // и ✎/✕, и не покрывалось общим правилом «показывать только в режиме
+    // редактирования» (.nw-editing .nw-card .nw-tools в news.css).
+    const footer = document.createElement("div");
+    footer.className = "nw-footer";
+    const likeBtn = document.createElement("button");
+    likeBtn.type = "button";
+    likeBtn.className = "nw-like";
+    const likeHeart = document.createElement("span");
+    likeHeart.className = "nw-like-heart";
+    likeHeart.setAttribute("aria-hidden", "true");
+    const likeCount = document.createElement("span");
+    likeCount.className = "nw-like-count";
+    renderLikeButton(likeBtn, likeHeart, likeCount, isPostLiked(post.id), post.likes || 0);
+    // Пост без настоящего id — черновик ещё не сохранённой новости в превью
+    // редактора (buildPreviewPost() ставит id: 0). Лайкать нечего: серверный
+    // эндпоинт получил бы id=0 и корректно отклонил бы его как «пост не
+    // найден», но кнопка честнее сразу не отвечать на клик, чем гонять запрос
+    // с заранее известным результатом.
+    if (post.id > 0) {
+      likeBtn.addEventListener("click", () => toggleNewsLike(post, likeBtn, likeHeart, likeCount));
+    } else {
+      likeBtn.disabled = true;
+    }
+    likeBtn.append(likeHeart, likeCount);
+    footer.append(likeBtn);
+    card.append(footer);
 
     if (withTools && isAdmin) {
       const tools = document.createElement("div");

@@ -259,7 +259,9 @@
       "news.copyLink":          "Скопировать ссылку на пост",
       "news.copyLinkDone":      "Ссылка скопирована",
       "news.copyLinkFailed":    "Не удалось скопировать",
-      "news.linkedPostMissing": "Пост, на который вела ссылка, не входит в последние 50 показанных — вот вся лента."
+      "news.linkedPostMissing": "Пост, на который вела ссылка, не входит в последние 50 показанных — вот вся лента.",
+      "news.like":              "Поставить лайк",
+      "news.likeRemove":        "Убрать лайк"
     },
 
     en: {
@@ -506,7 +508,9 @@
       "news.copyLink":          "Copy link to this post",
       "news.copyLinkDone":      "Link copied",
       "news.copyLinkFailed":    "Could not copy",
-      "news.linkedPostMissing": "The post this link points to isn't among the latest 50 shown here — here's the full feed instead."
+      "news.linkedPostMissing": "The post this link points to isn't among the latest 50 shown here — here's the full feed instead.",
+      "news.like":              "Like this post",
+      "news.likeRemove":        "Remove your like"
     }
   };
 

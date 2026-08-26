@@ -70,6 +70,36 @@
    зависимости от того, есть ли в конкретной карточке float вообще: без него
    это нулевая строка, ничего не меняющая. */
 .nw-card::after { content: ""; display: table; clear: both; }
+
+/* Лайк поста (задача про кнопку лайка) — виден всем посетителям, в отличие от
+   .nw-tools ниже (только админ в режиме редактирования). Свой контейнер
+   .nw-footer, а не место внутри .nw-tools: разные аудитории не должны делить
+   один кластер кнопок, и абсолютно позиционированный .nw-tools не должен
+   наезжать на то, что стоит в потоке карточки. */
+.nw-footer { display: flex; margin-top: 10px; }
+.nw-like {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--ui); font-size: 13px; font-weight: 700; color: #9db8dc;
+  background: rgba(18,30,56,.55); border: 1px solid rgba(120,190,255,.25);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.nw-like:hover { border-color: var(--cyan); color: #dce9ff; }
+/* Кнопка лайка в превью редактора (buildPreviewPost() ставит id: 0 для ещё не
+   сохранённого поста, см. cardFor() в news-page.js) отключена — лайкать
+   нечего. */
+.nw-like:disabled { cursor: default; opacity: .55; }
+.nw-like.liked {
+  color: #fff; border-color: #6fd6ff;
+  background: linear-gradient(180deg, rgba(79,214,255,.30), rgba(18,30,56,.55));
+}
+.nw-like:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.nw-like-heart { font-size: 15px; line-height: 1; display: inline-block; }
+.nw-like-count { font-variant-numeric: tabular-nums; }
+@keyframes nwLikePop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.nw-like-heart.pop { animation: nwLikePop .35s ease; }
+@media (prefers-reduced-motion: reduce) { .nw-like-heart.pop { animation: none; } }
+
 .nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
 
 /* Карточка, на которую вела ссылка /news/<id> — подсвечивается и
