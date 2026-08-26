@@ -993,6 +993,14 @@
       $("#neError").textContent = tx("news.dateRequired");
       return;
     }
+    // Кадратор открыт и не подтверждён — значит картинка ещё НЕ загружена и
+    // currentImage пуст. Без этой проверки «Опубликовать» молча сохраняет пост
+    // без картинки: человек её выбрал, видит на экране в кадраторе и уверен,
+    // что она вставлена. Именно так и терялись фотографии.
+    if (cropSrc) {
+      $("#neError").textContent = tx("news.cropPending");
+      return;
+    }
     const body = {
       category: getCat(),
       title_ru: $("#neTitleRu").value.trim(),

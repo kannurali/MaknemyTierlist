@@ -253,9 +253,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=12"></script>
+  <script src="js/i18n.js?v=1"></script>
   <script src="js/news.js?v=4"></script>
-  <script src="js/news-page.js?v=12"></script>
+  <script src="js/news-page.js?v=112"></script>
 </body>
 </html>
 <?php endif; ?>
