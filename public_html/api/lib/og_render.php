@@ -29,8 +29,6 @@ const OG_COLOR_CYAN     = [79, 214, 255]; // --cyan
 const OG_COLOR_MK       = [214, 90, 255]; // --mk
 const OG_COLOR_WHITE    = [234, 244, 255];// цвет текста body (#eaf4ff)
 const OG_COLOR_MUTED    = [160, 190, 220];
-const OG_COLOR_GAME     = [242, 176, 30]; // --t-p, тот же цвет, что у .nw-cat.c-game
-const OG_COLOR_PROJECT  = [214, 90, 255]; // --mk, тот же цвет, что у .nw-cat.c-project
 
 function og_load_image(string $path) {
     if (!is_file($path)) { return false; }
@@ -214,20 +212,3 @@ function og_draw_text_right_aligned($canvas, string $font, float $size, array $r
     og_draw_text($canvas, $font, $size, $rgb, (int)round($rightX - $w), $y, $text);
 }
 
-// Скруглённая плашка-пилюля (категория новости) — заливка + текст поверх.
-/** @param resource|GdImage $canvas */
-function og_draw_pill($canvas, string $font, float $size, array $bg, array $fg, int $x, int $y, int $paddingX, int $paddingY, string $text): void {
-    $textW = og_text_width($font, $size, $text);
-    $textH = $size; // приближение высоты капители, достаточное для плашки
-    $w = (int)round($textW + $paddingX * 2);
-    $h = (int)round($textH + $paddingY * 2);
-    $color = imagecolorallocate($canvas, $bg[0], $bg[1], $bg[2]);
-    // GD не умеет border-radius нативно без ручной отрисовки дуг; при таком
-    // маленьком радиусе на 1200x630 прямоугольник с лёгким скруглением углов
-    // через imagefilledellipse в углах выглядит как настоящая пилюля.
-    $r = (int)round($h / 2);
-    imagefilledrectangle($canvas, $x + $r, $y, $x + $w - $r, $y + $h, $color);
-    imagefilledellipse($canvas, $x + $r, $y + $r, $r * 2, $r * 2, $color);
-    imagefilledellipse($canvas, $x + $w - $r, $y + $r, $r * 2, $r * 2, $color);
-    og_draw_text($canvas, $font, $size, $fg, $x + $paddingX, $y + $paddingY + (int)round($textH), $text);
-}
