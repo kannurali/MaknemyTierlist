@@ -29,8 +29,6 @@ const OG_COLOR_CYAN     = [79, 214, 255]; // --cyan
 const OG_COLOR_MK       = [214, 90, 255]; // --mk
 const OG_COLOR_WHITE    = [234, 244, 255];// цвет текста body (#eaf4ff)
 const OG_COLOR_MUTED    = [160, 190, 220];
-const OG_COLOR_GAME     = [242, 176, 30]; // --t-p, тот же цвет, что у .nw-cat.c-game
-const OG_COLOR_PROJECT  = [214, 90, 255]; // --mk, тот же цвет, что у .nw-cat.c-project
 
 function og_load_image(string $path) {
     if (!is_file($path)) { return false; }
@@ -165,8 +163,28 @@ function og_wrap_text(string $font, float $size, string $text, int $maxWidthPx):
     return $lines;
 }
 
+// GD рисует текст через FreeType, но его обвязка в GD не умеет 4-байтовые
+// последовательности UTF-8 — всё, что выше BMP, то есть эмодзи. Байты уходят
+// в шрифт поодиночке, и «подарок» превращается в «Ð» плюс пустое место
+// (шрифты сайта эмодзи всё равно не содержат, так что дело не только в GD).
+// Заголовки новостей регулярно начинаются со значка, и он попадает ровно на
+// самое видное место превью — поэтому вырезаем: потерять значок лучше, чем
+// показать мусор. В og:title эмодзи остаётся, там его рисует браузер.
+//
+// Схлопывание пробелов — вторая половина работы: без него от вырезанного
+// «(значок) Chromatic» осталась бы строка с провалом в начале.
+function og_strip_unrenderable(string $text): string {
+    $clean = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
+    if ($clean === null) { return $text; } // битый UTF-8 — отдаём как есть
+    $collapsed = preg_replace('/\s{2,}/u', ' ', $clean);
+    return trim($collapsed === null ? $clean : $collapsed);
+}
+
+// Замер и отрисовка чистят строку ОДИНАКОВО, каждая у себя: иначе ширина
+// считалась бы по одному тексту, а рисовался бы другой, и перенос по словам
+// разъехался бы с картинкой.
 function og_text_width(string $font, float $size, string $text): float {
-    $box = imagettfbbox($size, 0, $font, $text);
+    $box = imagettfbbox($size, 0, $font, og_strip_unrenderable($text));
     return abs($box[2] - $box[0]);
 }
 
@@ -205,7 +223,7 @@ function og_truncate_to_width(string $font, float $size, string $text, float $ma
 /** @param resource|GdImage $canvas */
 function og_draw_text($canvas, string $font, float $size, array $rgb, int $x, int $y, string $text): void {
     $color = imagecolorallocate($canvas, $rgb[0], $rgb[1], $rgb[2]);
-    imagettftext($canvas, $size, 0, $x, $y, $color, $font, $text);
+    imagettftext($canvas, $size, 0, $x, $y, $color, $font, og_strip_unrenderable($text));
 }
 
 /** @param resource|GdImage $canvas */
@@ -214,20 +232,3 @@ function og_draw_text_right_aligned($canvas, string $font, float $size, array $r
     og_draw_text($canvas, $font, $size, $rgb, (int)round($rightX - $w), $y, $text);
 }
 
-// Скруглённая плашка-пилюля (категория новости) — заливка + текст поверх.
-/** @param resource|GdImage $canvas */
-function og_draw_pill($canvas, string $font, float $size, array $bg, array $fg, int $x, int $y, int $paddingX, int $paddingY, string $text): void {
-    $textW = og_text_width($font, $size, $text);
-    $textH = $size; // приближение высоты капители, достаточное для плашки
-    $w = (int)round($textW + $paddingX * 2);
-    $h = (int)round($textH + $paddingY * 2);
-    $color = imagecolorallocate($canvas, $bg[0], $bg[1], $bg[2]);
-    // GD не умеет border-radius нативно без ручной отрисовки дуг; при таком
-    // маленьком радиусе на 1200x630 прямоугольник с лёгким скруглением углов
-    // через imagefilledellipse в углах выглядит как настоящая пилюля.
-    $r = (int)round($h / 2);
-    imagefilledrectangle($canvas, $x + $r, $y, $x + $w - $r, $y + $h, $color);
-    imagefilledellipse($canvas, $x + $r, $y + $r, $r * 2, $r * 2, $color);
-    imagefilledellipse($canvas, $x + $w - $r, $y + $r, $r * 2, $r * 2, $color);
-    og_draw_text($canvas, $font, $size, $fg, $x + $paddingX, $y + $paddingY + (int)round($textH), $text);
-}

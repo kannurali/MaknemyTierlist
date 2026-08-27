@@ -257,19 +257,41 @@
     }
     likeBtn.append(likeHeart, likeCount);
     footer.append(likeBtn);
+
+    // Копирование ссылки на пост — рядом с лайком и у КАЖДОГО посетителя.
+    // Раньше кнопка жила в .nw-tools вместе с ✎/✕, то есть существовала
+    // только у админа: постоянные ссылки на посты были, а взять их читателю
+    // было неоткуда, кроме как собрать адрес /news/<id> руками.
+    // Тот же guard по id, что и у лайка выше: у черновика в превью редактора
+    // id === 0, и ссылка вела бы на несуществующий /news/0.
+    if (post.id > 0) {
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "nw-copy";
+      // U+FE0E (VARIATION SELECTOR-15) заставляет 🔗 рисоваться текстовым
+      // моно-глифом, а не цветной emoji-картинкой: рядом с сердечком лайка
+      // вторая цветная иконка спорила бы с ним за внимание.
+      const copyIcon = document.createElement("span");
+      copyIcon.className = "nw-copy-icon";
+      copyIcon.setAttribute("aria-hidden", "true");
+      copyIcon.textContent = "🔗︎";
+      const copyLabel = document.createElement("span");
+      copyLabel.textContent = tx("news.copyLinkShort");
+      copy.append(copyIcon, copyLabel);
+      // Полная фраза — в подсказке и для скринридера; на самой кнопке стоит
+      // короткая подпись, иначе кнопка растянулась бы на полкарточки. Одна
+      // иконка без подписи тут не годится: у лайка рядом есть число, которое
+      // объясняет его само, а у ссылки такого пояснения нет.
+      copy.title = tx("news.copyLink");
+      copy.setAttribute("aria-label", tx("news.copyLink"));
+      copy.addEventListener("click", () => copyPostLink(post, copy));
+      footer.append(copy);
+    }
     card.append(footer);
 
     if (withTools && isAdmin) {
       const tools = document.createElement("div");
       tools.className = "nw-tools";
-      const copy = document.createElement("button");
-      copy.type = "button";
-      // U+FE0E (VARIATION SELECTOR-15) заставляет 🔗 рисоваться текстовым
-      // моно-глифом, как ✎/✕ рядом, а не цветной emoji-картинкой — тот же
-      // визуальный язык, что и у двух других кнопок тулбара.
-      copy.textContent = "🔗︎";
-      copy.title = tx("news.copyLink");
-      copy.addEventListener("click", () => copyPostLink(post, copy));
       const edit = document.createElement("button");
       edit.type = "button";
       edit.textContent = "✎";
@@ -281,7 +303,7 @@
       del.textContent = "✕";
       del.title = tx("news.delete");
       del.addEventListener("click", () => removePost(post));
-      tools.append(copy, edit, del);
+      tools.append(edit, del);
       card.append(tools);
     }
 
@@ -1058,10 +1080,12 @@
 
   // Живой (не hidden — см. .nw-sr-only в news.css) регион для скринридеров:
   // единственный текстовый отклик на копирование ссылки, который не зависит
-  // от того, видит ли читатель title-подсказку на самой кнопке. Создаётся
-  // один раз в wireAdmin() (кнопка копирования вообще существует только у
-  // админа), а не в статичной разметке news.php — публичная лента не должна
-  // тащить элемент, которым никогда не воспользуется.
+  // от того, видит ли читатель title-подсказку на самой кнопке. Создаётся при
+  // инициализации ленты — раньше это делал wireAdmin(), пока кнопка
+  // копирования существовала только у админа.
+  // Именно ЗАРАНЕЕ, а не лениво при первом клике: aria-live объявляет только
+  // те изменения, которые произошли в уже существующем живом регионе, и узел,
+  // созданный и заполненный в одном тике, скринридер промолчит.
   let copyStatusEl = null;
 
   // Абсолютная ссылка на пост + копирование в буфер с видимым откликом на
@@ -1143,14 +1167,6 @@
   // на публичной ленте этих узлов нет, и addEventListener на null бросил бы
   // прямо в теле IIFE — то есть убил бы и загрузку ленты для посетителя.
   function wireAdmin() {
-    // Живой регион для отклика копирования ссылки (см. copyPostLink() выше) —
-    // существует только у админа, поэтому создаётся здесь, а не в разметке
-    // news.php, которую грузит и публичная лента.
-    copyStatusEl = document.createElement("div");
-    copyStatusEl.className = "nw-sr-only";
-    copyStatusEl.setAttribute("aria-live", "polite");
-    document.body.append(copyStatusEl);
-
     const bar = $("#newsAdminBar");
     if (bar) {
       bar.hidden = false;
@@ -1354,6 +1370,11 @@
   for (const b of document.querySelectorAll("#langSwitch .chip")) {
     b.addEventListener("click", () => applyLang(b.dataset.lang));
   }
+
+  copyStatusEl = document.createElement("div");
+  copyStatusEl.className = "nw-sr-only";
+  copyStatusEl.setAttribute("aria-live", "polite");
+  document.body.append(copyStatusEl);
 
   applyLang(lang);
   if (isAdmin) {

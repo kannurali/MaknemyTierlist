@@ -61,17 +61,6 @@ function handle_og_news(PDO $pdo, string $imagesDir, $rawVersion, $rawId = null)
     return is_file($cachePath) ? $cachePath : null;
 }
 
-// Ярлык и цвет плашки категории — те же три категории и те же цвета, что
-// .nw-cat.c-tierlist/c-game/c-project в css/news.css.
-function og_news_category_style(string $cat): array {
-    switch ($cat) {
-        case 'tierlist': return ['ТИРЛИСТ', OG_COLOR_CYAN];
-        case 'game':     return ['ИГРА', OG_COLOR_GAME];
-        case 'project':  return ['ПРОЕКТ', OG_COLOR_PROJECT];
-        default:         return [mb_strtoupper($cat, 'UTF-8'), OG_COLOR_MUTED];
-    }
-}
-
 function og_render_news_png(array $summary, string $imagesDir, string $outPath): void {
     $w = OG_NEWS_CANVAS_W;
     $h = OG_NEWS_CANVAS_H;
@@ -94,9 +83,11 @@ function og_render_news_png(array $summary, string $imagesDir, string $outPath):
     // яркости — см. её комментарий в api/lib/og_render.php.
     og_apply_news_scrim($canvas, $w, $h);
 
-    [$catLabel, $catColor] = og_news_category_style($summary['category']);
-    og_draw_pill($canvas, OG_FONT_TEXT, 20, $catColor, OG_COLOR_BG, 56, 48, 18, 10, $catLabel);
-
+    // Плашки категории здесь больше нет. В карточке мессенджера превью читают
+    // мельком, и «ИГРА»/«ПРОЕКТ» отнимали внимание у того единственного, ради
+    // чего карточку вообще открывают, — у фотографии поста и его заголовка.
+    // Категория никуда не делась из самой ленты (.nw-cat в css/news.css), где
+    // у неё есть работа: там по ней фильтруют.
     if ($summary['publishedAt'] > 0) {
         $dateText = date('d.m.Y', intdiv($summary['publishedAt'], 1000));
         og_draw_text_right_aligned($canvas, OG_FONT_TEXT, 22, OG_COLOR_MUTED, $w - 56, 86, $dateText);
