@@ -57,17 +57,37 @@ test('admin_render_public_page возвращает null на отсутству
 // Запускает $absPath отдельным php-процессом с поддельной админской сессией
 // и возвращает то, что он напечатал, — либо null, если процесс недоступен
 // или страница не дошла до конца (упала в exit из ошибочной ветки).
+// Командная строка дочернего php. Путь к странице уходит АРГУМЕНТОМ
+// ($argv[1]), а не переменной окружения: префикс вида «VAR=value команда» —
+// синтаксис POSIX-шелла, а shell_exec() на Windows исполняет строку через
+// cmd.exe, где это не команда, а ошибка «не удаётся найти указанный путь».
+// Оба теста ниже из-за этого падали на Windows, хотя admin.php и
+// admin-news.php были полностью исправны — то есть красный тест означал не
+// регрессию, а операционную систему разработчика.
+//
+// В $code у вызывающих сторон намеренно нет ни одной ДВОЙНОЙ кавычки:
+// escapeshellarg() на Windows оборачивает аргумент в двойные кавычки, а
+// встреченные внутри заменяет пробелами — код с "..." доехал бы до php
+// покалеченным. Внутри дочернего кода поэтому только одинарные.
+function admin_page_subprocess_cmd(string $php, string $code, string $absPath): string {
+    // Windows определяем по разделителю пути. Сравнение с литералом
+    // обратного слэша здесь требует экранирования и потому легко ломается
+    // при любой правке файла — а падать этот тест будет уже по другой,
+    // непонятной причине.
+    $devnull = DIRECTORY_SEPARATOR === '/' ? '2>/dev/null' : '2>nul';
+    return escapeshellarg($php) . ' -r ' . escapeshellarg($code)
+        . ' ' . escapeshellarg($absPath) . ' ' . $devnull;
+}
+
 function render_admin_page_in_subprocess(string $absPath): ?string {
     if (!function_exists('shell_exec') || !is_file($absPath)) { return null; }
     $php = PHP_BINARY !== '' ? PHP_BINARY : 'php';
     // Маркер печатается ПОСЛЕ require — если admin.php/admin-news.php ушли в
     // exit на ошибочной ветке, маркер в выводе не появится, и мы это увидим.
     $marker = '___NX_ADMIN_PAGE_RENDER_COMPLETED___';
-    $code = 'session_start(); $_SESSION["admin"] = true; require getenv("NX_TARGET"); echo '
-        . var_export($marker, true) . ';';
-    $cmd = 'NX_TARGET=' . escapeshellarg($absPath) . ' ' . escapeshellarg($php)
-        . ' -r ' . escapeshellarg($code) . ' 2>/dev/null';
-    $out = shell_exec($cmd);
+    $code = "session_start(); \$_SESSION['admin'] = true; require \$argv[1]; echo "
+        . var_export($marker, true) . ";";
+    $out = shell_exec(admin_page_subprocess_cmd($php, $code, $absPath));
     if ($out === null || $out === false) { return null; }
     $pos = strpos($out, $marker);
     if ($pos === false) { return null; } // страница не дорендерилась до конца
@@ -81,10 +101,8 @@ function render_admin_page_in_subprocess(string $absPath): ?string {
 function render_length_in_subprocess(string $absPath): ?int {
     if (!function_exists('shell_exec') || !is_file($absPath)) { return null; }
     $php = PHP_BINARY !== '' ? PHP_BINARY : 'php';
-    $code = 'define("TESTING",1); ob_start(); require getenv("NX_TARGET"); echo strlen(ob_get_clean());';
-    $cmd = 'NX_TARGET=' . escapeshellarg($absPath) . ' ' . escapeshellarg($php)
-        . ' -r ' . escapeshellarg($code) . ' 2>/dev/null';
-    $out = shell_exec($cmd);
+    $code = "define('TESTING',1); ob_start(); require \$argv[1]; echo strlen(ob_get_clean());";
+    $out = shell_exec(admin_page_subprocess_cmd($php, $code, $absPath));
     return ($out === null || $out === false || $out === '') ? null : (int)$out;
 }
 

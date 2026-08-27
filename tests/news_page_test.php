@@ -80,7 +80,12 @@ test('news_post_by_id returns the row for a real id, whichever post it is', func
     $row = news_post_by_id($pdo, $freshId);
     assert_true($row !== null, 'row found');
     assert_eq('Свежий', $row['title_ru']);
-    assert_eq($freshId, $row['id']);
+    // (int) — не косметика: pdo_sqlite и pdo_mysql отдают целые колонки
+    // СТРОКАМИ вплоть до PHP 8.1, и без приведения строгий assert_eq
+    // сравнивал бы 2 с '2' и падал на боевой версии PHP (сейчас 7.4).
+    // Продовый код относится к полю ровно так же — см. (int)$row['id'] в
+    // news_post_og_data() и og_news_summary().
+    assert_eq($freshId, (int)$row['id']);
 });
 
 // --------------------------------------------------------------------------
