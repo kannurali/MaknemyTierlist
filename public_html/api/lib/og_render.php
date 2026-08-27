@@ -163,8 +163,28 @@ function og_wrap_text(string $font, float $size, string $text, int $maxWidthPx):
     return $lines;
 }
 
+// GD рисует текст через FreeType, но его обвязка в GD не умеет 4-байтовые
+// последовательности UTF-8 — всё, что выше BMP, то есть эмодзи. Байты уходят
+// в шрифт поодиночке, и «подарок» превращается в «Ð» плюс пустое место
+// (шрифты сайта эмодзи всё равно не содержат, так что дело не только в GD).
+// Заголовки новостей регулярно начинаются со значка, и он попадает ровно на
+// самое видное место превью — поэтому вырезаем: потерять значок лучше, чем
+// показать мусор. В og:title эмодзи остаётся, там его рисует браузер.
+//
+// Схлопывание пробелов — вторая половина работы: без него от вырезанного
+// «(значок) Chromatic» осталась бы строка с провалом в начале.
+function og_strip_unrenderable(string $text): string {
+    $clean = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
+    if ($clean === null) { return $text; } // битый UTF-8 — отдаём как есть
+    $collapsed = preg_replace('/\s{2,}/u', ' ', $clean);
+    return trim($collapsed === null ? $clean : $collapsed);
+}
+
+// Замер и отрисовка чистят строку ОДИНАКОВО, каждая у себя: иначе ширина
+// считалась бы по одному тексту, а рисовался бы другой, и перенос по словам
+// разъехался бы с картинкой.
 function og_text_width(string $font, float $size, string $text): float {
-    $box = imagettfbbox($size, 0, $font, $text);
+    $box = imagettfbbox($size, 0, $font, og_strip_unrenderable($text));
     return abs($box[2] - $box[0]);
 }
 
@@ -203,7 +223,7 @@ function og_truncate_to_width(string $font, float $size, string $text, float $ma
 /** @param resource|GdImage $canvas */
 function og_draw_text($canvas, string $font, float $size, array $rgb, int $x, int $y, string $text): void {
     $color = imagecolorallocate($canvas, $rgb[0], $rgb[1], $rgb[2]);
-    imagettftext($canvas, $size, 0, $x, $y, $color, $font, $text);
+    imagettftext($canvas, $size, 0, $x, $y, $color, $font, og_strip_unrenderable($text));
 }
 
 /** @param resource|GdImage $canvas */
