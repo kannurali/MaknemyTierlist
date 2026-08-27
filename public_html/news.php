@@ -199,14 +199,17 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <meta property="og:locale" content="ru_RU" />
 <meta property="og:url" content="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
-<meta property="og:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
+<!-- og:description здесь нет намеренно: мессенджер рисует его абзацем под
+     заголовком, и карточка превращалась в стену текста, которая забивала
+     собой картинку с заголовком. На поиск это не влияет — выдача берёт
+     meta name="description" выше. Значение по-прежнему считается в
+     news_og_data() и покрыто tests/og_test.php: вернуть тег — одна строка. -->
 <meta property="og:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:image:width" content="<?= (int)$og['imageWidth'] ?>" />
 <meta property="og:image:height" content="<?= (int)$og['imageHeight'] ?>" />
 <meta property="og:image:type" content="<?= htmlspecialchars($og['imageType'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
-<meta name="twitter:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />

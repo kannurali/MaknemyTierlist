@@ -93,20 +93,16 @@ function og_render_news_png(array $summary, string $imagesDir, string $outPath):
         og_draw_text_right_aligned($canvas, OG_FONT_TEXT, 22, OG_COLOR_MUTED, $w - 56, 86, $dateText);
     }
 
-    // Заголовок — крупно, до трёх строк с переносом по словам; если строк
-    // получилось больше, последняя видимая обрезается многоточием, а не
-    // молча теряет хвост.
-    $rawLines = og_wrap_text(OG_FONT_DISPLAY, 48, mb_strtoupper($summary['title'], 'UTF-8'), $w - 112);
-    $titleLines = array_slice($rawLines, 0, 3);
-    if (count($rawLines) > 3) {
-        $last = end($titleLines);
-        $titleLines[count($titleLines) - 1] = rtrim($last) . '…';
-    }
-    $y = $h - 60 - (count($titleLines) - 1) * 58;
-    foreach ($titleLines as $line) {
-        og_draw_text($canvas, OG_FONT_DISPLAY, 48, OG_COLOR_WHITE, 56, $y, $line);
-        $y += 58;
-    }
+    // Заголовок на картинке НЕ рисуется, хотя раньше рисовался внизу крупно.
+    // Мессенджер печатает og:title отдельной строкой над самой картинкой, то
+    // есть читатель видел заголовок дважды: один раз шрифтом интерфейса и тут
+    // же второй раз — врисованным в фотографию. Дубль занимал нижнюю треть
+    // кадра и закрывал собой то, ради чего картинка в карточке и нужна.
+    //
+    // Второй экземпляр был к тому же худшим из двух: GD не умеет 4-байтовые
+    // последовательности UTF-8, и эмодзи в начале заголовка (а они там
+    // регулярно) превращалось в «Ð» с провалом — тогда как в og:title тот же
+    // значок рисует браузер, и там он целый.
 
     $marks = og_load_image(__DIR__ . '/../assets/poster/marks.png');
     if ($marks !== false) {

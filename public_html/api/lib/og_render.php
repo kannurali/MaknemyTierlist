@@ -109,8 +109,15 @@ function og_apply_scrim($canvas, int $w, int $h): void {
 /** @param resource|GdImage $canvas */
 function og_apply_news_scrim($canvas, int $w, int $h): void {
     imagealphablending($canvas, true);
+    // Верхняя полоса держит дату в правом углу. Нижняя раньше была вдвое
+    // длиннее и темнее — под трёхстрочный заголовок, который рисовался внизу
+    // кадра. Заголовок оттуда убран (см. og_render_news_png() в
+    // api/og-news.php), и единственное, что осталось внизу, — марки бренда
+    // высотой 31 px с отступом 30 px от края, то есть 76 px с запасом.
+    // Оставить прежние 210 px значило бы затемнять треть чужой фотографии
+    // просто по инерции.
     $topStops = [[0, 0.74], [60, 0.60], [110, 0.34], [160, 0.08]];
-    $bottomStops = [[0, 0.78], [70, 0.62], [140, 0.34], [210, 0.08]];
+    $bottomStops = [[0, 0.62], [40, 0.44], [76, 0.08]];
     $band = 4;
     for ($y = 0; $y < $h; $y += $band) {
         $topAlpha = og_gradient_alpha_at($topStops, $y);
@@ -141,26 +148,6 @@ function og_gradient_alpha_at(array $stops, float $t): float {
         }
     }
     return end($stops)[1];
-}
-
-// Перенос текста по словам под пиксельную ширину — imagettfbbox меряет
-// реальную геометрию шрифта, а не число символов, поэтому кириллица и Bootshaus
-// (у него неравномерная ширина глифов) переносятся без обрезанных букв.
-function og_wrap_text(string $font, float $size, string $text, int $maxWidthPx): array {
-    $words = preg_split('/\s+/u', trim($text));
-    $lines = [];
-    $line = '';
-    foreach ($words as $word) {
-        $candidate = $line === '' ? $word : $line . ' ' . $word;
-        if (og_text_width($font, $size, $candidate) <= $maxWidthPx || $line === '') {
-            $line = $candidate;
-        } else {
-            $lines[] = $line;
-            $line = $word;
-        }
-    }
-    if ($line !== '') { $lines[] = $line; }
-    return $lines;
 }
 
 // GD рисует текст через FreeType, но его обвязка в GD не умеет 4-байтовые
