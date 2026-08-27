@@ -12,9 +12,17 @@ require_once __DIR__ . '/api/lib/og.php';
 // нет) откатывает превью на статичный баннер — см. og_news_summary() в
 // api/lib/og.php. Лента обязана открываться в любом случае, битое превью —
 // не повод для 500.
+// Размеры едут вместе с картинкой, а не хардкодятся в <head>: статичный
+// баннер и сгенерированное превью РАЗНОГО размера (1920x1080 против
+// 1200x630), и одна пара чисел на оба случая всегда врёт про один из них.
+// Врёт молча: краулер верстает карточку по объявленным числам, а не по
+// файлу. Так это уже сделано в index.php — см. tierlist_og_fallback() там.
 function news_og_fallback(): array {
     return [
         'image'       => 'https://maknemytierlist.site/assets/og-image.jpg?v=2',
+        'imageWidth'  => 1920,
+        'imageHeight' => 1080,
+        'imageType'   => 'image/jpeg',
         'title'       => 'Новости Blox Fruits и обновления тирлиста',
         'description' => 'Апдейты игры, изменения трейд-ценностей и анонсы проекта.',
     ];
@@ -31,6 +39,9 @@ function news_og_data(PDO $pdo): array {
     $meta = og_news_meta($summary);
     return [
         'image'       => 'https://maknemytierlist.site/api/og-news.php?v=' . $summary['version'],
+        'imageWidth'  => 1200,
+        'imageHeight' => 630,
+        'imageType'   => 'image/png',
         'title'       => $meta['title'],
         'description' => $meta['description'] !== '' ? $meta['description'] : news_og_fallback()['description'],
     ];
@@ -93,6 +104,9 @@ function news_post_og_data(array $row): array {
     $meta = og_news_meta($summary);
     return [
         'image'       => 'https://maknemytierlist.site/api/og-news.php?id=' . $id . '&v=' . $summary['version'],
+        'imageWidth'  => 1200,
+        'imageHeight' => 630,
+        'imageType'   => 'image/png',
         'title'       => $meta['title'],
         'description' => $meta['description'] !== '' ? $meta['description'] : news_og_fallback()['description'],
     ];
@@ -187,8 +201,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image:width" content="<?= (int)$og['imageWidth'] ?>" />
+<meta property="og:image:height" content="<?= (int)$og['imageHeight'] ?>" />
+<meta property="og:image:type" content="<?= htmlspecialchars($og['imageType'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
