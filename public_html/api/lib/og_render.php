@@ -5,6 +5,17 @@
 // касается диска/GD, живёт здесь — в отличие от api/lib/og.php (чистые
 // функции без побочных эффектов), поэтому рендеринг картинок сознательно
 // не покрыт юнит-тестами (см. tests/og_test.php и отчёт по задаче).
+//
+// У $canvas СОЗНАТЕЛЬНО нет тайп-хинта GdImage, хотя по смыслу он туда
+// просится. Класс GdImage появился только в PHP 8.0: до неё
+// imagecreatetruecolor() возвращает resource, и хинт превращал бы КАЖДЫЙ
+// вызов в TypeError. Боевой хост сейчас на 7.4 (см. заголовок X-Powered-By),
+// а базовая версия проекта объявлена как «7.4+, без синтаксиса 8.x» в
+// docs/superpowers/plans/2026-07-25-php-mysql-migration.md. Ошибка была бы
+// ТИХОЙ: og-tierlist.php/og-news.php ловят Throwable целиком и откатываются
+// на статичный баннер — превью просто молча не появлялось бы, и чинить его
+// никто бы не пошёл. Когда хост переедет на 8.0+, хинты возвращаются одним
+// движением: типы записаны в @param у каждой функции.
 
 // Шрифты сайта — те же файлы, что подключает css/base.css у @font-face.
 // Bootshaus — дисплейный (заголовки/тиры), Proto Sans — текст помельче.
@@ -38,7 +49,8 @@ function og_load_image(string $path) {
 // cover в CSS. $anchor выбирает, какую часть по вертикали оставить в кадре
 // после кропа: 'top' — верх исходника (для длинного постера сцены, у
 // которого самое узнаваемое — верхняя, «шапочная» часть), 'center' — середину.
-function og_cover_crop(GdImage $canvas, string $srcPath, int $w, int $h, string $anchor = 'top'): bool {
+/** @param resource|GdImage $canvas холст, куда врисовывается исходник. */
+function og_cover_crop($canvas, string $srcPath, int $w, int $h, string $anchor = 'top'): bool {
     $src = og_load_image($srcPath);
     if ($src === false) { return false; }
     $sw = imagesx($src);
@@ -61,7 +73,8 @@ function og_cover_crop(GdImage $canvas, string $srcPath, int $w, int $h, string 
 // без него текст на светлом участке постера/фотографии нечитаем. Рисуется
 // построчно полосами по 4 px — достаточно гладко на итоговом PNG и заметно
 // дешевле, чем честный per-pixel градиент на холсте 1200x630.
-function og_apply_scrim(GdImage $canvas, int $w, int $h): void {
+/** @param resource|GdImage $canvas */
+function og_apply_scrim($canvas, int $w, int $h): void {
     imagealphablending($canvas, true);
     $stops = [[0.0, 0.45], [0.30, 0.12], [1.0, 0.35]];
     $band = 4;
@@ -95,7 +108,8 @@ function og_apply_scrim(GdImage $canvas, int $w, int $h): void {
 // отдаёт альфу последнего стопа как есть, см. её комментарий), у обеих
 // кривых одинакова, и в этой точке нет видимого шва между «верхним» и
 // «нижним» затемнением — есть одна общая, почти нейтральная середина.
-function og_apply_news_scrim(GdImage $canvas, int $w, int $h): void {
+/** @param resource|GdImage $canvas */
+function og_apply_news_scrim($canvas, int $w, int $h): void {
     imagealphablending($canvas, true);
     $topStops = [[0, 0.74], [60, 0.60], [110, 0.34], [160, 0.08]];
     $bottomStops = [[0, 0.78], [70, 0.62], [140, 0.34], [210, 0.08]];
@@ -188,18 +202,21 @@ function og_truncate_to_width(string $font, float $size, string $text, float $ma
 // $y — базовая линия (нижний край строчных букв без выносных элементов),
 // как того и ждёт imagettftext — сознательно не абстрагируем это в "верхний
 // левый угол", чтобы не плодить путаницу в системе координат по всему файлу.
-function og_draw_text(GdImage $canvas, string $font, float $size, array $rgb, int $x, int $y, string $text): void {
+/** @param resource|GdImage $canvas */
+function og_draw_text($canvas, string $font, float $size, array $rgb, int $x, int $y, string $text): void {
     $color = imagecolorallocate($canvas, $rgb[0], $rgb[1], $rgb[2]);
     imagettftext($canvas, $size, 0, $x, $y, $color, $font, $text);
 }
 
-function og_draw_text_right_aligned(GdImage $canvas, string $font, float $size, array $rgb, int $rightX, int $y, string $text): void {
+/** @param resource|GdImage $canvas */
+function og_draw_text_right_aligned($canvas, string $font, float $size, array $rgb, int $rightX, int $y, string $text): void {
     $w = og_text_width($font, $size, $text);
     og_draw_text($canvas, $font, $size, $rgb, (int)round($rightX - $w), $y, $text);
 }
 
 // Скруглённая плашка-пилюля (категория новости) — заливка + текст поверх.
-function og_draw_pill(GdImage $canvas, string $font, float $size, array $bg, array $fg, int $x, int $y, int $paddingX, int $paddingY, string $text): void {
+/** @param resource|GdImage $canvas */
+function og_draw_pill($canvas, string $font, float $size, array $bg, array $fg, int $x, int $y, int $paddingX, int $paddingY, string $text): void {
     $textW = og_text_width($font, $size, $text);
     $textH = $size; // приближение высоты капители, достаточное для плашки
     $w = (int)round($textW + $paddingX * 2);
