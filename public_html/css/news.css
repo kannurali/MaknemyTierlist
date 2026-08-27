@@ -76,7 +76,7 @@
    .nw-footer, а не место внутри .nw-tools: разные аудитории не должны делить
    один кластер кнопок, и абсолютно позиционированный .nw-tools не должен
    наезжать на то, что стоит в потоке карточки. */
-.nw-footer { display: flex; margin-top: 10px; }
+.nw-footer { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .nw-like {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--ui); font-size: 13px; font-weight: 700; color: #9db8dc;
@@ -98,6 +98,30 @@
 .nw-like-count { font-variant-numeric: tabular-nums; }
 @keyframes nwLikePop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .nw-like-heart.pop { animation: nwLikePop .35s ease; }
+
+/* Копирование ссылки на пост — вторая кнопка футера, у каждого посетителя
+   (раньше жила в .nw-tools и существовала только у админа). Геометрия
+   намеренно повторяет .nw-like: та же высота, тот же радиус, та же подложка —
+   пара читается как одна группа, а не как два случайно соседствующих
+   элемента. Внутри один глиф, поэтому padding симметричный. */
+.nw-copy {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--ui); font-size: 13px; font-weight: 700; color: #9db8dc;
+  background: rgba(18,30,56,.55); border: 1px solid rgba(120,190,255,.25);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+/* Глиф цепочки мельче подписи: с U+FE0E он рисуется текстовым моно-символом
+   и в одном кегле с буквами выглядит тяжелее них. */
+.nw-copy-icon { font-size: 11px; line-height: 1; display: inline-block; }
+.nw-copy:hover { border-color: var(--cyan); color: #dce9ff; }
+.nw-copy:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* Отклик на копирование — те же два класса, что вешает showCopyFeedback()
+   в js/news-page.js: держатся 2 с и снимаются своим же таймером. Цветом, а не
+   подписью: рядом нет места под текст, а читатель со скринридером получает
+   словами из живого региона .nw-sr-only. */
+.nw-copy.nw-copy-ok   { color: #8ff0c4; border-color: #3cc878; background: rgba(60,200,120,.22); }
+.nw-copy.nw-copy-fail { color: #ffb3bf; border-color: #ff6b5e; background: rgba(255,90,90,.22); }
 @media (prefers-reduced-motion: reduce) { .nw-like-heart.pop { animation: none; } }
 
 .nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
@@ -267,8 +291,3 @@
 .nw-tools button:hover { background: var(--cyan-deep); border-color: var(--cyan); }
 .nw-tools button.danger:hover { background: #a02c2c; border-color: #ff6b5e; }
 .nw-tools button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-/* Кнопка копирования ссылки — отклик через copyPostLink()/showCopyFeedback()
-   в news-page.js: класс держится 2с и снимается сам же таймером, title
-   (tooltip) на это время тоже меняется на исход попытки. */
-.nw-tools button.nw-copy-ok   { background: rgba(60,200,120,.35); border-color: #3cc878; }
-.nw-tools button.nw-copy-fail { background: rgba(255,90,90,.35);  border-color: #ff6b5e; }

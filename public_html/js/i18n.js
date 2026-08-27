@@ -258,6 +258,11 @@
       "news.saveFailed":        "Не удалось сохранить:",
       "news.deleteFailed":      "Не удалось удалить:",
       "news.copyLink":          "Скопировать ссылку на пост",
+      // Короткая подпись НА кнопке — полная фраза выше уходит в title и
+      // aria-label. Кнопка стоит в ряд с лайком, где место меряется
+      // пикселями: "Скопировать ссылку на пост" растянуло бы её на
+      // полкарточки, а голая иконка не объясняет, что она делает.
+      "news.copyLinkShort":     "Ссылка",
       "news.copyLinkDone":      "Ссылка скопирована",
       "news.copyLinkFailed":    "Не удалось скопировать",
       "news.linkedPostMissing": "Пост, на который вела ссылка, не входит в последние 50 показанных — вот вся лента.",
@@ -508,6 +513,7 @@
       "news.saveFailed":        "Could not save:",
       "news.deleteFailed":      "Could not delete:",
       "news.copyLink":          "Copy link to this post",
+      "news.copyLinkShort":     "Link",
       "news.copyLinkDone":      "Link copied",
       "news.copyLinkFailed":    "Could not copy",
       "news.linkedPostMissing": "The post this link points to isn't among the latest 50 shown here — here's the full feed instead.",
