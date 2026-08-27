@@ -235,6 +235,7 @@
       "news.fieldCategory":     "Категория",
       "news.fieldDate":         "Дата",
       "news.dateRequired":      "Укажите дату — иначе при правке она молча слетит на сегодня.",
+      "news.cropPending":       "Сначала закончите с картинкой: «Готово» или «Без кадрирования». Иначе пост уйдёт без неё.",
       "news.fieldImage":        "Картинка",
       "news.imageUpload":       "🖼 Загрузить",
       "news.imageClear":        "Убрать",
@@ -255,7 +256,13 @@
       "news.publish":           "Опубликовать",
       "news.cancel":            "Отмена",
       "news.saveFailed":        "Не удалось сохранить:",
-      "news.deleteFailed":      "Не удалось удалить:"
+      "news.deleteFailed":      "Не удалось удалить:",
+      "news.copyLink":          "Скопировать ссылку на пост",
+      "news.copyLinkDone":      "Ссылка скопирована",
+      "news.copyLinkFailed":    "Не удалось скопировать",
+      "news.linkedPostMissing": "Пост, на который вела ссылка, не входит в последние 50 показанных — вот вся лента.",
+      "news.like":              "Поставить лайк",
+      "news.likeRemove":        "Убрать лайк"
     },
 
     en: {
@@ -478,6 +485,7 @@
       "news.fieldCategory":     "Category",
       "news.fieldDate":         "Date",
       "news.dateRequired":      "Pick a date — otherwise editing silently resets it to today.",
+      "news.cropPending":       "Finish with the image first: “Done” or “Skip cropping”. Otherwise the post is saved without it.",
       "news.fieldImage":        "Image",
       "news.imageUpload":       "🖼 Upload",
       "news.imageClear":        "Remove",
@@ -498,7 +506,13 @@
       "news.publish":           "Publish",
       "news.cancel":            "Cancel",
       "news.saveFailed":        "Could not save:",
-      "news.deleteFailed":      "Could not delete:"
+      "news.deleteFailed":      "Could not delete:",
+      "news.copyLink":          "Copy link to this post",
+      "news.copyLinkDone":      "Link copied",
+      "news.copyLinkFailed":    "Could not copy",
+      "news.linkedPostMissing": "The post this link points to isn't among the latest 50 shown here — here's the full feed instead.",
+      "news.like":              "Like this post",
+      "news.likeRemove":        "Remove your like"
     }
   };
 

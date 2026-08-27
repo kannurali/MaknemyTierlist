@@ -66,7 +66,10 @@ function test_db(): PDO {
         -- высоты (см. комментарий в schema.sql).
         image_width INTEGER,
         image_height INTEGER,
-        published_at INTEGER NOT NULL
+        published_at INTEGER NOT NULL,
+        -- Зеркалит schema.sql: анонимный счётчик лайков поста, своя
+        -- колонка вместо отдельной таблицы.
+        likes INTEGER NOT NULL DEFAULT 0
     )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");

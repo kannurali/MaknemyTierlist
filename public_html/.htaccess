@@ -13,6 +13,13 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# "/" отдаёт index.php (тирлист теперь сам считает превью ссылки — см.
+# tierlist_og_data() в public_html/index.php), а не index.html: файла с таким
+# именем в public_html больше нет. Явная директива, а не дефолт хостинга:
+# порядок в дефолтном DirectoryIndex шаред-хостинга — деталь конфигурации
+# cPanel, которую не стоит подразумевать молча.
+DirectoryIndex index.php
+
 # /news/ (со слэшем на конце) — 301 на канонический /news, а не на news.html.
 # Без этого правила ниже (^news/?$) молча принимает и /news, и /news/ как один
 # и тот же внутренний рероут на news.html — но это ВНУТРЕННИЙ рероут: адрес в
@@ -34,9 +41,47 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # содержимым.
 RewriteRule ^news/$ /news [L,R=301]
 
+# /news.html — прежний прямой адрес файла, который стал именем ленты после
+# переезда на PHP (news.html -> news.php, см. public_html/news.php). Без этого
+# правила по нему было бы два рабочих адреса с одинаковым содержимым
+# (/news и /news.html) — та же самая ошибка, от которой правило выше защищает
+# /news/. Правило стоит ДО внутреннего рероута ^news/?$ ниже по той же причине,
+# что и правило для /news/ выше: иначе тот рероут (который тоже матчит слэш в
+# конце, но не литеральный ".html") успел бы обслужить что-то раньше внешнего
+# редиректа — здесь это не пересекается, но порядок сохранён для единообразия
+# и на случай, если паттерны когда-нибудь пересекутся.
+RewriteRule ^news\.html$ /news [L,R=301]
+
 # Чистый адрес для ленты. Отдельного PHP-роутинга у сайта нет, а /news.html в
 # ссылках выглядит как файл, а не раздел.
-RewriteRule ^news/?$ /news.html [L]
+RewriteRule ^news/?$ /news.php [L]
+
+# /news/<id> — свой адрес у конкретного поста (задача про постоянные ссылки):
+# та же news.php, но с og:*/canonical этого конкретного поста, а не самого
+# свежего — см. news_parse_post_id()/news_post_by_id() в public_html/news.php.
+#
+# Тот же трюк с document-relative путями внутри news.php («css/base.css»,
+# «js/news.js»), что правило выше уже решает для /news/ → /news: адрес на
+# глубине 2 (news/<id>) сдвинул бы базу документа в "/news/", и все такие пути
+# уехали бы в несуществующие /news/css/…, /news/js/… . Здесь это НЕ чинится
+# точечным переписыванием путей под одну конкретную глубину (как делает
+# admin-news.php для /admin/news — тот приём привязан к глубине 1 и не
+# годится для id произвольной длины): вместо этого news.php сам ставит
+# <base href="/"> в <head>, и относительные пути резолвятся от корня при
+# любой глубине запроса — читать этот трюк там, а не здесь.
+#
+# Сначала — 301 на канонический вид без завершающего слэша (та же причина,
+# что и у /news/ → /news выше: без этого /news/42 и /news/42/ были бы двумя
+# рабочими адресами с одинаковым содержимым).
+RewriteRule ^news/([0-9]+)/$ /news/$1 [L,R=301]
+
+# И только потом — внутренний рероут на канонический вид. [0-9]+ — строго
+# цифры: id приходит из адресной строки посетителя, и мусор здесь должен
+# просто не смэтчиться (запрос упадёт дальше по правилам/в 404 Apache), а не
+# быть молча приведён к какому-то id — тот же принцип строгой валидации, что
+# у og_parse_version()/read_row_id() в api/_bootstrap.php и api/lib/og.php.
+RewriteRule ^news/([0-9]+)$ /news.php?id=$1 [L]
+
 # ---------------------------- Панель управления ----------------------------
 # Адреса без .php. Завершающий слэш у /admin снимается редиректом намеренно:
 # страница отдаёт разметку index.html как есть, а относительные пути внутри
@@ -80,6 +125,19 @@ Options -Indexes
 # invent their own freshness from Last-Modified — Safari in particular then
 # served an old page for hours after a deploy. Always revalidate; the file is
 # 18 KB and the request is a 304 whenever nothing changed.
+#
+# index.html/news.html не существуют больше (index.php/news.php теперь сами
+# считают og:image/title/description из живых данных, см. public_html/
+# index.php и public_html/news.php) — этому FilesMatch больше нечего ловить,
+# он оставлен как безвредный no-op на случай, если .html-файл когда-нибудь
+# вернётся, а не удалён. Сама защита НЕ потеряна — она переехала в сами эти
+# два PHP-файла, которые зовут header('Cache-Control: no-cache,
+# must-revalidate') напрямую. Просто заменить паттерн на
+# <FilesMatch "^(index|news)\.php$"> здесь было нельзя: FilesMatch матчит по
+# имени файла, а не по пути, и этот паттерн зацепил бы заодно
+# public_html/api/news.php (эндпоинт ленты новостей — не тот файл, но то же
+# имя) и молча переписал бы его собственный, намеренный Cache-Control
+# (см. api/news.php) этим значением.
 <IfModule mod_headers.c>
   <FilesMatch "\.html$">
     Header set Cache-Control "no-cache, must-revalidate"

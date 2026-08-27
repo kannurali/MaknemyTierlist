@@ -9,10 +9,25 @@
   const feedEl = $("#feed");
   const stateEl = $("#newsState");
   const filtersEl = $("#newsFilters");
+  const noticeEl = $("#newsNotice");
 
   // Тот же ключ, что и на тирлисте (app.js, LANG_KEY) — иначе выбор языка
   // не переносился бы между страницами.
   const LANG_KEY = "nexus-lang-v1";
+
+  // id поста из /news/<id> — news.php кладёт его сюда только когда такой
+  // пост реально существует (иначе сервер уже ответил 404, см.
+  // news_post_by_id() в news.php), поэтому здесь достаточно голой числовой
+  // проверки, без своей валидации "существует ли".
+  const LINKED_POST_ID = (() => {
+    const n = Number(window.NX_LINKED_POST_ID);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  })();
+  // Проскроллить и сфокусировать карточку нужно один раз — на первой отрисовке
+  // после загрузки, а не при каждом render() (смена фильтра/языка тоже зовёт
+  // render() и не должна силой возвращать читателя к посту, от которого он
+  // уже мог уйти).
+  let linkedPostScrolled = false;
 
   // Адреса эндпоинтов — от корня. Эта же разметка отдаётся на /admin/news,
   // а он лежит на глубине 1: документ-относительный "api/news.php" оттуда
@@ -31,6 +46,85 @@
     navigator.language);
 
   const tx = key => I18N.t(key, lang);
+
+  // ------------------------------------------------------------------------
+  //  Лайк поста — тот же приём, что LIKE BUTTON в app.js (общий счётчик
+  //  тирлиста), только лайков теперь много, по одному на пост: факт лайка
+  //  запоминается в localStorage под id поста, счётчик хранится в БД
+  //  (news.likes) и правится через POST /api/news_like.php.
+  // ------------------------------------------------------------------------
+  const NEWS_LIKED_KEY = "nexus-news-liked-v1";
+
+  // Карта { "<id>": true } — только реально лайкнутые посты, а не полный
+  // список постов со значением true/false: лента растёт, и хранить запись на
+  // каждый когда-либо увиденный пост незачем.
+  function readLikedMap() {
+    try { return JSON.parse(localStorage.getItem(NEWS_LIKED_KEY) || "{}"); }
+    catch (_) { return {}; } // приватный режим Safari / битый JSON
+  }
+  function writeLikedMap(map) {
+    try { localStorage.setItem(NEWS_LIKED_KEY, JSON.stringify(map)); } catch (_) {}
+  }
+  function isPostLiked(id) { return !!readLikedMap()[id]; }
+  function setPostLiked(id, v) {
+    const map = readLikedMap();
+    if (v) { map[id] = true; } else { delete map[id]; }
+    writeLikedMap(map);
+  }
+
+  // Отправка на сервер — тот же контракт, что sendLike() в app.js:
+  //   true  — записано;
+  //   false — сервер отклонил (нужен откат UI);
+  //   null  — сеть недоступна (оффлайн, оставляем оптимистичный счётчик).
+  async function sendNewsLike(id, dir) {
+    try {
+      const r = await fetch("/api/news_like.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, dir }),
+      });
+      return r.ok ? true : false;
+    } catch (e) { /* оффлайн — считаем локальным успехом */ }
+    return null;
+  }
+
+  // короткий «всплеск» сердечка при клике — тот же приём, что popLike() в app.js
+  function popLikeHeart(heartEl) {
+    heartEl.classList.remove("pop");
+    void heartEl.offsetWidth; // перезапустить CSS-анимацию
+    heartEl.classList.add("pop");
+  }
+
+  function renderLikeButton(btn, heartEl, countEl, liked, likes) {
+    btn.classList.toggle("liked", liked);
+    btn.setAttribute("aria-pressed", liked ? "true" : "false");
+    btn.title = tx(liked ? "news.likeRemove" : "news.like");
+    heartEl.textContent = liked ? "💙" : "🤍";
+    countEl.textContent = String(likes);
+  }
+
+  // Карточка не хранит собственное состояние между рендерами (render()
+  // каждый раз пересобирает feedEl.innerHTML с нуля, см. ниже) — счётчик
+  // читается из post.likes (правится этой же функцией оптимистично, так что
+  // смена языка/фильтра между кликом и ответом сервера не откатывает его на
+  // старое значение), а признак "лайкнуто" — из localStorage.
+  function toggleNewsLike(post, btn, heartEl, countEl) {
+    const willLike = !isPostLiked(post.id);
+    const dir = willLike ? 1 : -1;
+    // Оптимистично обновляем UI; откатываем только на явный отказ сервера.
+    setPostLiked(post.id, willLike);
+    post.likes = Math.max(0, (post.likes || 0) + dir);
+    renderLikeButton(btn, heartEl, countEl, willLike, post.likes);
+    popLikeHeart(heartEl);
+
+    sendNewsLike(post.id, dir).then(ok => {
+      if (ok === false) { // запись не прошла — откат
+        setPostLiked(post.id, !willLike);
+        post.likes = Math.max(0, post.likes - dir);
+        renderLikeButton(btn, heartEl, countEl, !willLike, post.likes);
+      }
+    });
+  }
 
   function showState(key, withRetry) {
     feedEl.innerHTML = "";
@@ -135,9 +229,47 @@
     }
     card.append(body);
 
+    // Лайк — виден всем посетителям (не только админу, в отличие от .nw-tools
+    // ниже) и живёт вне её кластера инструментов: своя обёртка .nw-footer, а
+    // не .nw-tools, — чтобы сердечко не оказалось внутри той же группы, что
+    // и ✎/✕, и не покрывалось общим правилом «показывать только в режиме
+    // редактирования» (.nw-editing .nw-card .nw-tools в news.css).
+    const footer = document.createElement("div");
+    footer.className = "nw-footer";
+    const likeBtn = document.createElement("button");
+    likeBtn.type = "button";
+    likeBtn.className = "nw-like";
+    const likeHeart = document.createElement("span");
+    likeHeart.className = "nw-like-heart";
+    likeHeart.setAttribute("aria-hidden", "true");
+    const likeCount = document.createElement("span");
+    likeCount.className = "nw-like-count";
+    renderLikeButton(likeBtn, likeHeart, likeCount, isPostLiked(post.id), post.likes || 0);
+    // Пост без настоящего id — черновик ещё не сохранённой новости в превью
+    // редактора (buildPreviewPost() ставит id: 0). Лайкать нечего: серверный
+    // эндпоинт получил бы id=0 и корректно отклонил бы его как «пост не
+    // найден», но кнопка честнее сразу не отвечать на клик, чем гонять запрос
+    // с заранее известным результатом.
+    if (post.id > 0) {
+      likeBtn.addEventListener("click", () => toggleNewsLike(post, likeBtn, likeHeart, likeCount));
+    } else {
+      likeBtn.disabled = true;
+    }
+    likeBtn.append(likeHeart, likeCount);
+    footer.append(likeBtn);
+    card.append(footer);
+
     if (withTools && isAdmin) {
       const tools = document.createElement("div");
       tools.className = "nw-tools";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      // U+FE0E (VARIATION SELECTOR-15) заставляет 🔗 рисоваться текстовым
+      // моно-глифом, как ✎/✕ рядом, а не цветной emoji-картинкой — тот же
+      // визуальный язык, что и у двух других кнопок тулбара.
+      copy.textContent = "🔗︎";
+      copy.title = tx("news.copyLink");
+      copy.addEventListener("click", () => copyPostLink(post, copy));
       const edit = document.createElement("button");
       edit.type = "button";
       edit.textContent = "✎";
@@ -149,7 +281,7 @@
       del.textContent = "✕";
       del.title = tx("news.delete");
       del.addEventListener("click", () => removePost(post));
-      tools.append(edit, del);
+      tools.append(copy, edit, del);
       card.append(tools);
     }
 
@@ -165,11 +297,61 @@
     // не выбрана (activeCat === "all") — это день первый ленты, когда постов
     // нет в принципе, а не "в этом фильтре пусто". Разные строки на разные
     // причины пустоты.
-    if (!visible.length) { showState(activeCat === "all" ? "news.emptyAll" : "news.empty", false); return; }
+    if (!visible.length) {
+      showState(activeCat === "all" ? "news.emptyAll" : "news.empty", false);
+      focusLinkedPost();
+      return;
+    }
 
     stateEl.hidden = true;
     feedEl.innerHTML = "";
     for (const post of visible) { feedEl.append(cardFor(post)); }
+    focusLinkedPost();
+  }
+
+  // /news/<id>: подсвечивает и (один раз, при первой отрисовке) скроллит к
+  // карточке, на которую вела ссылка. Зовётся из render() каждый раз —
+  // render() полностью пересобирает feedEl.innerHTML, поэтому класс
+  // подсветки нужно накладывать заново на каждой перерисовке (смена языка,
+  // смена фильтра), а не один раз при загрузке.
+  function focusLinkedPost() {
+    if (!LINKED_POST_ID || !noticeEl) { return; }
+
+    const inFeed = posts.some(p => p.id === LINKED_POST_ID);
+    const card = feedEl.querySelector('[data-id="' + LINKED_POST_ID + '"]');
+
+    if (card) {
+      noticeEl.hidden = true;
+      card.classList.add("nw-linked");
+      if (!linkedPostScrolled) {
+        linkedPostScrolled = true;
+        const reduceMotion = window.matchMedia
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+        // tabindex делает карточку фокусируемой программно (сама она не
+        // интерактивный элемент) — скринридер объявляет её содержимое сразу
+        // после перехода по ссылке, а не оставляет читателя гадать, куда его
+        // проскроллило молча.
+        card.setAttribute("tabindex", "-1");
+        card.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    // Пост существует (иначе news.php уже ответил бы 404, и
+    // window.NX_LINKED_POST_ID вообще не был бы выставлен), но не попал ни в
+    // последние 50 из api/news.php, ни, тем более, в текущую карточку —
+    // либо он старше 50-го, либо скрыт активным фильтром категории. Фильтр
+    // категории — осознанный выбор читателя ПРЯМО СЕЙЧАС, поясняться нечему;
+    // случай "постов вообще нет" уже виден по #newsState — отдельное
+    // сообщение здесь было бы повтором той же мысли. Настоящая, стоящая
+    // упоминания причина ровно одна: пост есть, но за пределами ленты.
+    if (inFeed || posts.length === 0) {
+      noticeEl.hidden = true;
+    } else {
+      noticeEl.hidden = false;
+      noticeEl.textContent = tx("news.linkedPostMissing");
+    }
   }
 
   function renderFilters() {
@@ -811,6 +993,14 @@
       $("#neError").textContent = tx("news.dateRequired");
       return;
     }
+    // Кадратор открыт и не подтверждён — значит картинка ещё НЕ загружена и
+    // currentImage пуст. Без этой проверки «Опубликовать» молча сохраняет пост
+    // без картинки: человек её выбрал, видит на экране в кадраторе и уверен,
+    // что она вставлена. Именно так и терялись фотографии.
+    if (cropSrc) {
+      $("#neError").textContent = tx("news.cropPending");
+      return;
+    }
     const body = {
       category: getCat(),
       title_ru: $("#neTitleRu").value.trim(),
@@ -866,6 +1056,67 @@
     }
   }
 
+  // Живой (не hidden — см. .nw-sr-only в news.css) регион для скринридеров:
+  // единственный текстовый отклик на копирование ссылки, который не зависит
+  // от того, видит ли читатель title-подсказку на самой кнопке. Создаётся
+  // один раз в wireAdmin() (кнопка копирования вообще существует только у
+  // админа), а не в статичной разметке news.php — публичная лента не должна
+  // тащить элемент, которым никогда не воспользуется.
+  let copyStatusEl = null;
+
+  // Абсолютная ссылка на пост + копирование в буфер с видимым откликом на
+  // самой кнопке. navigator.clipboard.writeText требует секьюр-контекста и
+  // явного разрешения (в некоторых embedded-webview его вовсе нет или он
+  // отклоняется пользователем) — на этот случай запасной путь через скрытый
+  // textarea + document.execCommand("copy"), единственный API, который
+  // работает синхронно из обработчика клика без него.
+  async function copyPostLink(post, btn) {
+    const url = "https://maknemytierlist.site/news/" + post.id;
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        ok = true;
+      }
+    } catch (e) {
+      ok = false; // отклонено браузером/пользователем — пробуем запасной путь
+    }
+    if (!ok) { ok = copyViaFallback(url); }
+    showCopyFeedback(btn, ok);
+  }
+
+  function copyViaFallback(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    // Вне видимой области, но НЕ display:none/hidden — Safari игнорирует
+    // execCommand("copy") на элементе, которого нет в раскладке.
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.left = "-1000px";
+    ta.setAttribute("readonly", "");
+    document.body.append(ta);
+    ta.focus();
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  let copyFeedbackTimer = null;
+  function showCopyFeedback(btn, ok) {
+    if (copyStatusEl) { copyStatusEl.textContent = tx(ok ? "news.copyLinkDone" : "news.copyLinkFailed"); }
+    if (!btn) { return; }
+    clearTimeout(copyFeedbackTimer);
+    btn.classList.remove("nw-copy-ok", "nw-copy-fail");
+    btn.classList.add(ok ? "nw-copy-ok" : "nw-copy-fail");
+    btn.title = tx(ok ? "news.copyLinkDone" : "news.copyLinkFailed");
+    copyFeedbackTimer = setTimeout(() => {
+      btn.classList.remove("nw-copy-ok", "nw-copy-fail");
+      btn.title = tx("news.copyLink");
+    }, 2000);
+  }
+
   // Заливает pickedImageDataUrl под текущую выбранную ширину редактора.
   // Общая для первого выбора файла и для перезаливки при смене ширины (см.
   // обработчик "change" на #nePct в wireAdmin ниже) — оба случая шлют один
@@ -892,6 +1143,14 @@
   // на публичной ленте этих узлов нет, и addEventListener на null бросил бы
   // прямо в теле IIFE — то есть убил бы и загрузку ленты для посетителя.
   function wireAdmin() {
+    // Живой регион для отклика копирования ссылки (см. copyPostLink() выше) —
+    // существует только у админа, поэтому создаётся здесь, а не в разметке
+    // news.php, которую грузит и публичная лента.
+    copyStatusEl = document.createElement("div");
+    copyStatusEl.className = "nw-sr-only";
+    copyStatusEl.setAttribute("aria-live", "polite");
+    document.body.append(copyStatusEl);
+
     const bar = $("#newsAdminBar");
     if (bar) {
       bar.hidden = false;

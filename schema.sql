@@ -59,5 +59,11 @@ CREATE TABLE IF NOT EXISTS news (
   image_width  SMALLINT UNSIGNED NULL,
   image_height SMALLINT UNSIGNED NULL,
   published_at BIGINT UNSIGNED NOT NULL,
+  -- Анонимный лайк-счётчик поста — своя колонка, а не отдельная таблица:
+  -- лента и так уже выбирает строку поста целиком (см. handle_news() в
+  -- api/news.php), а join ради одного целого числа ничего бы не выиграл.
+  -- INT UNSIGNED, а не TINYINT: у общего счётчика лайков (таблица likes
+  -- выше) тот же тип — здесь тот же потолок ожидаем и по той же причине.
+  likes        INT UNSIGNED NOT NULL DEFAULT 0,
   KEY idx_feed (published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

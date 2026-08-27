@@ -24,7 +24,7 @@ function handle_news(PDO $pdo): array {
     // LIMIT подставляется из константы, а не из запроса пользователя, поэтому
     // интерполяция здесь безопасна: плейсхолдер в LIMIT переносим не везде.
     $sql = "SELECT id, category, title_ru, title_en, body_ru, body_en, image_url, image_pct,
-                   image_align, image_wrap, image_width, image_height, published_at
+                   image_align, image_wrap, image_width, image_height, published_at, likes
               FROM news
              ORDER BY published_at DESC, id DESC
              LIMIT " . NEWS_FEED_LIMIT;
@@ -68,6 +68,11 @@ function handle_news(PDO $pdo): array {
             'image_width'  => $r['image_width']  !== null ? (int)$r['image_width']  : null,
             'image_height' => $r['image_height'] !== null ? (int)$r['image_height'] : null,
             'published_at' => (int)$r['published_at'],
+            // (int), а не голое значение из PDO: и MySQL, и SQLite отдают
+            // числа строками, а сердечко в cardFor() (news-page.js) делает
+            // с ним арифметику (±1) и сравнивает с 0 — строка "0" в этой
+            // роли работала бы только пока никто не пишет строгие сравнения.
+            'likes'        => (int)$r['likes'],
         ];
     }
     return [200, ['posts' => $posts]];
