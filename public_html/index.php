@@ -128,8 +128,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=3" />
-<link rel="stylesheet" href="css/styles.css?v=45" />
+<link rel="stylesheet" href="css/base.css?v=4" />
+<link rel="stylesheet" href="css/styles.css?v=46" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -487,6 +487,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
   <script src="js/promo.js?v=2"></script>
-  <script src="js/app.js?v=56"></script>
+  <!-- Защита контента от копирования — общая с лентой новостей.
+       ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
+  <script src="js/protect.js?v=1"></script>
+  <script src="js/app.js?v=57"></script>
 </body>
 </html>
