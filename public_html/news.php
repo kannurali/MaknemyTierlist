@@ -215,7 +215,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=3" />
+<link rel="stylesheet" href="css/base.css?v=4" />
 <link rel="stylesheet" href="css/news.css?v=11" />
 </head>
 <body>
@@ -273,7 +273,10 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php endif; ?>
   <script src="js/i18n.js?v=13"></script>
   <script src="js/news.js?v=4"></script>
-  <script src="js/news-page.js?v=14"></script>
+  <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
+       ДО news-page.js: он зовёт NX_PROTECT на старте. -->
+  <script src="js/protect.js?v=1"></script>
+  <script src="js/news-page.js?v=15"></script>
 </body>
 </html>
 <?php endif; ?>

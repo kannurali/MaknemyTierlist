@@ -3066,43 +3066,19 @@
   //  ЗАЩИТА КОНТЕНТА
   // ------------------------------------------------------------
   //  Гость не уносит с сайта ни текст, ни картинки: выделение, копирование,
-  //  правая кнопка и перетаскивание отключены. Админу защита снимается сразу
-  //  после входа — иначе он не сможет ни править подписи, ни таскать ячейки
-  //  между тирами (перенос предметов работает на том же dragstart).
-  //  Это заслон от обычного посетителя, а не от исходников: разметка всё равно
-  //  видна через «Просмотр кода», а экран можно сфотографировать.
+  //  правая кнопка и перетаскивание отключены. Сами обработчики живут в
+  //  js/protect.js — тот же код защищает ленту новостей (news-page.js).
+  //
+  //  Роль передаётся функцией, а не значением: здесь она выясняется запросом
+  //  к API уже после установки обработчиков (initBackend), и снятое значение
+  //  навсегда осталось бы «гость».
   // ============================================================
-  function inEditable(t) {
-    // Поля ввода и редактируемые области должны работать как обычно.
-    return !!(t && t.closest && t.closest('input, textarea, [contenteditable="true"]'));
-  }
   function applyProtection() {
-    document.body.classList.toggle("protected", !isAdmin);
+    NX_PROTECT.applyClass(isAdmin);
   }
   function setupProtection() {
     applyProtection();
-    // Правая кнопка — убирает «Сохранить картинку как…» и «Копировать».
-    document.addEventListener("contextmenu", e => {
-      if (isAdmin || inEditable(e.target)) return;
-      e.preventDefault();
-    });
-    // Копирование с клавиатуры и через меню браузера.
-    ["copy", "cut"].forEach(type => {
-      document.addEventListener(type, e => {
-        if (isAdmin || inEditable(e.target)) return;
-        e.preventDefault();
-      });
-    });
-    // Перетаскивание картинки в другую вкладку или на рабочий стол.
-    document.addEventListener("dragstart", e => {
-      if (isAdmin) return;
-      e.preventDefault();
-    });
-    // Движки, которые не понимают user-select: none.
-    document.addEventListener("selectstart", e => {
-      if (isAdmin || inEditable(e.target)) return;
-      e.preventDefault();
-    });
+    NX_PROTECT.install(() => isAdmin);
   }
 
   // ============================================================

@@ -84,6 +84,34 @@ html, body {
   text-size-adjust: 100%;
 }
 
+/* ===================== Защита контента =====================
+   Класс висит на <body> у всех, кроме вошедшего админа: гость не выделяет
+   текст и не утаскивает картинки ни на тирлисте, ни в ленте новостей. Админу
+   защита снимается целиком, иначе он не сможет ни править подписи, ни двигать
+   ячейки между тирами.
+
+   Правила живут в base.css, а не в styles.css, потому что их делят обе
+   страницы. Клавиатура и правая кнопка добиваются из JS — см. js/protect.js. */
+body.protected {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* iOS: долгое нажатие по картинке больше не открывает «Скопировать/Сохранить» */
+  -webkit-touch-callout: none;
+}
+/* Поля ввода и редактируемые области остаются рабочими всегда. */
+body.protected input,
+body.protected textarea,
+body.protected [contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* Картинку нельзя перетащить в соседнюю вкладку или на рабочий стол. */
+body.protected img { -webkit-user-drag: none; }
+
 /* ===================== Тулбар и элементы управления ===================== */
 .toolbar {
   position: sticky;
