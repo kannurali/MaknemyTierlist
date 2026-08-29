@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/lib/news_blocks.php';
 
 // Допустимые категории. Тот же список лежит в js/news.js — если добавляется
 // четвёртая, править надо оба места, иначе редактор предложит то, что сервер
@@ -44,7 +45,12 @@ function validate_news_post(array $b): array {
     $titleRu = trim((string)($b['title_ru'] ?? ''));
     $bodyRu  = trim((string)($b['body_ru']  ?? ''));
     if ($titleRu === '') { return ['ok' => false, 'error' => 'title_ru is required', 'post' => []]; }
-    if ($bodyRu === '')  { return ['ok' => false, 'error' => 'body_ru is required',  'post' => []]; }
+    // У блочного поста body_ru приходит не из запроса, а выводится из блоков в
+    // handle_news_save() ниже — там же он и проверяется на пустоту. Здесь
+    // требование остаётся только для легаси-формы.
+    if ($bodyRu === '' && !array_key_exists('body_json', $b)) {
+        return ['ok' => false, 'error' => 'body_ru is required', 'post' => []];
+    }
 
     $titleEn = trim((string)($b['title_en'] ?? ''));
     $bodyEn  = trim((string)($b['body_en']  ?? ''));
@@ -121,6 +127,46 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
     if (!$v['ok']) { return [400, ['ok' => false, 'error' => $v['error']]]; }
     $p = $v['post'];
 
+    // Блочное тело. Отсутствие ключа — это легаси-пост (и все нынешние
+    // записи), а не ошибка: тогда $bodyJson остаётся null и колонка body_json
+    // не заполняется.
+    $bodyJson = null;
+    if (array_key_exists('body_json', $body) && $body['body_json'] !== null) {
+        $vb = news_blocks_validate($body['body_json']);
+        if (!$vb['ok']) { return [400, ['ok' => false, 'error' => $vb['error']]]; }
+
+        // Кодируем СРАЗУ и меряем байты того, что реально ляжет в колонку:
+        // мерить исходную строку запроса нельзя — она может отличаться
+        // пробелами, а мерить символы вместо байтов значит промахнуться вдвое
+        // на кириллице.
+        $encoded = json_encode($vb['blocks'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false || strlen($encoded) > NB_LIMIT_JSON) {
+            return [400, ['ok' => false, 'error' => 'body_json too large']];
+        }
+        $bodyJson = '{"v":' . NB_DOC_VERSION . ',"blocks":' . $encoded . '}';
+
+        // Производные поля считает СЕРВЕР, а не клиент: это единственное, что
+        // не даёт превью ссылки и тексту поста разойтись. Что бы фронт ни
+        // прислал в body_ru/image_url — оно здесь перетирается.
+        $p['body_ru'] = news_blocks_plain($vb['blocks'], 'ru');
+        $p['body_en'] = news_blocks_plain($vb['blocks'], 'en');
+        if ($p['body_ru'] === '') {
+            return [400, ['ok' => false, 'error' => 'body_ru is required']];
+        }
+        if (mb_strlen($p['body_ru']) > NEWS_BODY_MAX || mb_strlen($p['body_en']) > NEWS_BODY_MAX) {
+            return [400, ['ok' => false, 'error' => 'body too long']];
+        }
+
+        $img = news_blocks_first_image($vb['blocks']);
+        $p['image_url']    = $img ? $img['url'] : '';
+        $p['image_width']  = $img ? $img['w']   : null;
+        $p['image_height'] = $img ? $img['h']   : null;
+        // Геометрия живёт на самом блоке; колонки image_pct/align/wrap
+        // остаются на дефолтах и для блочного поста ничего не значат —
+        // единственный их потребитель (api/lib/og.php) читает только
+        // image_url.
+    }
+
     // Дата поста — контент, а не rev: редактор её показывает и правит, задним
     // числом в том числе. Поэтому явное значение побеждает серверные часы, и
     // монотонности здесь никто не ждёт.
@@ -140,6 +186,7 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
         ':wr'  => $p['image_wrap'] ? 1 : 0,
         ':iw'  => $p['image_width'],
         ':ih'  => $p['image_height'],
+        ':bj'  => $bodyJson,
         ':pa'  => $publishedAt,
     ];
 
@@ -166,7 +213,7 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
                     body_ru = :br, body_en = :be, image_url = :img,
                     image_pct = :pct, image_align = :al, image_wrap = :wr,
                     image_width = :iw, image_height = :ih,
-                    published_at = :pa
+                    body_json = :bj, published_at = :pa
               WHERE id = :id"
         );
         $stmt->execute($params + [':id' => $id]);
@@ -175,8 +222,8 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
 
     $stmt = $pdo->prepare(
         "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, image_url, image_pct,
-                            image_align, image_wrap, image_width, image_height, published_at)
-         VALUES (:c, :tr, :te, :br, :be, :img, :pct, :al, :wr, :iw, :ih, :pa)"
+                            image_align, image_wrap, image_width, image_height, body_json, published_at)
+         VALUES (:c, :tr, :te, :br, :be, :img, :pct, :al, :wr, :iw, :ih, :bj, :pa)"
     );
     $stmt->execute($params);
     return [200, ['ok' => true, 'id' => (int)$pdo->lastInsertId()]];

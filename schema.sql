@@ -58,6 +58,14 @@ CREATE TABLE IF NOT EXISTS news (
   -- body_en выше), но он и не нужен: не будь его — колонка и так NULL.
   image_width  SMALLINT UNSIGNED NULL,
   image_height SMALLINT UNSIGNED NULL,
+  -- Структурированное тело поста: {"v":1,"blocks":[...]} — см.
+  -- docs/superpowers/specs/2026-08-29-news-block-editor-design.md. NULL, а не
+  -- '': пост, сохранённый до появления колонки, и пост без блоков — это одно
+  -- и то же состояние «рисуй по-старому», и cardFor() в news-page.js
+  -- обрабатывает их одинаково. Колонки body_ru/body_en/image_url при этом
+  -- продолжают заполняться (сервер выводит их из блоков), поэтому og.php и
+  -- SSR-мета работают без правок.
+  body_json    LONGTEXT NULL,
   published_at BIGINT UNSIGNED NOT NULL,
   -- Анонимный лайк-счётчик поста — своя колонка, а не отдельная таблица:
   -- лента и так уже выбирает строку поста целиком (см. handle_news() в

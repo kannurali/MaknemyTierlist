@@ -568,4 +568,86 @@ test('the first image is what the link preview will use', function () {
     assert_eq(null, news_blocks_first_image([nb_p('x')]));
 });
 
+test('saving blocks derives body_ru, body_en and the preview image', function () {
+    $pdo = test_db();
+    $blocks = [
+        ['t' => 'p', 'ru' => [['s' => 'Тело поста']], 'en' => [['s' => 'Post body']]],
+        ['t' => 'image', 'url' => nb_img(), 'w' => 800, 'h' => 600, 'pct' => 100,
+         'align' => 'center', 'wrap' => false, 'cap_ru' => [['s' => 'Подпись']], 'cap_en' => []],
+    ];
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'game',
+        'title_ru' => 'Заголовок',
+        // Клиент СПЕЦИАЛЬНО присылает мусор в производных полях: сервер обязан
+        // их проигнорировать и посчитать сам, иначе фронт мог бы врать
+        // краулеру о содержимом поста.
+        'body_ru'  => 'ВРАНЬЁ',
+        'image_url' => '',
+        'body_json' => ['v' => 1, 'blocks' => $blocks],
+    ], 1000);
+    assert_eq(200, $status);
+
+    $row = $pdo->query("SELECT * FROM news WHERE id = " . (int)$p['id'])->fetch(PDO::FETCH_ASSOC);
+    assert_eq("Тело поста\n\nПодпись", $row['body_ru'], 'derived russian body');
+    assert_eq("Post body\n\nПодпись", $row['body_en'], 'derived english body');
+    assert_eq(nb_img(), $row['image_url'], 'derived preview image');
+    assert_eq(800, (int)$row['image_width']);
+    assert_eq(600, (int)$row['image_height']);
+    assert_true($row['body_json'] !== null && $row['body_json'] !== '', 'body_json stored');
+});
+
+test('a block post needs no body_ru of its own', function () {
+    // Без блоков body_ru обязателен (и остаётся обязательным для легаси-формы).
+    // С блоками он выводится, поэтому его отсутствие в запросе — норма.
+    $pdo = test_db();
+    [$status] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [nb_p('Текст')]],
+    ], 1000);
+    assert_eq(200, $status);
+});
+
+test('a block document that says nothing is refused', function () {
+    // Пустой список блоков и пост из одной картинки без единой буквы дают
+    // пустой body_ru — а он NOT NULL и, главное, попадает в превью ссылки.
+    $pdo = test_db();
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => []],
+    ], 1000);
+    assert_eq(400, $status, 'empty blocks rejected');
+    assert_eq('body_ru is required', $p['error']);
+});
+
+test('bad blocks are a 400, not a half-saved post', function () {
+    $pdo = test_db();
+    [$status] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [['t' => 'p', 'ru' => [['s' => 'x', 'href' => 'javascript:1']], 'en' => []]]],
+    ], 1000);
+    assert_eq(400, $status);
+    assert_eq(0, (int)$pdo->query("SELECT COUNT(*) FROM news")->fetchColumn(), 'nothing written');
+});
+
+test('a body_json over the byte ceiling is refused', function () {
+    $pdo = test_db();
+    $big = str_repeat('я', 40000); // utf8: 80000 байт, выше NB_LIMIT_JSON
+    [$status] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [nb_p($big)]],
+    ], 1000);
+    assert_eq(400, $status);
+});
+
+test('a legacy post still saves with no body_json at all', function () {
+    $pdo = test_db();
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T', 'body_ru' => 'Текст',
+    ], 1000);
+    assert_eq(200, $status);
+    $row = $pdo->query("SELECT body_json, body_ru FROM news WHERE id = " . (int)$p['id'])->fetch(PDO::FETCH_ASSOC);
+    assert_eq(null, $row['body_json'], 'stays NULL, renders the old way');
+    assert_eq('Текст', $row['body_ru']);
+});
+
 run_tests();
