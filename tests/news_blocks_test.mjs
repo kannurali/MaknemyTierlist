@@ -96,3 +96,122 @@ test('firstImage finds the first picture, album or not', () => {
     assert.deepEqual(B.firstImage([p('x'), alb]), { url: IMG, w: 4, h: 5 });
     assert.equal(B.firstImage([p('x')]), null);
 });
+
+// Крошечная замена document: ровно те методы, которые зовёт renderBlocks.
+// Настоящего DOM в node нет, а тянуть jsdom ради шести методов — лишняя
+// зависимость в проекте, где их сейчас ровно одна (playwright).
+function fakeDoc() {
+    const mkNode = tag => {
+        const el = {
+            tagName: tag.toUpperCase(), children: [], attrs: {}, style: {},
+            className: '', _text: '',
+            append(...kids) { for (const k of kids) { el.children.push(k); } },
+            setAttribute(k, v) { el.attrs[k] = String(v); },
+            get textContent() {
+                return el._text + el.children.map(c => c.textContent).join('');
+            },
+            set textContent(v) { el._text = String(v); el.children.length = 0; }
+        };
+        return el;
+    };
+    return {
+        createElement: mkNode,
+        createTextNode: t => ({ tagName: '#text', children: [], textContent: String(t) }),
+        createDocumentFragment: () => mkNode('#fragment')
+    };
+}
+
+const flat = node => {
+    const out = [];
+    const walk = n => { out.push(n); (n.children || []).forEach(walk); };
+    walk(node);
+    return out;
+};
+const tags = node => flat(node).map(n => n.tagName);
+
+test('a paragraph renders as P with its text', () => {
+    const d = fakeDoc();
+    const frag = B.renderBlocks(d, [p('Привет')], 'ru');
+    assert.ok(tags(frag).includes('P'));
+    assert.equal(frag.textContent, 'Привет');
+});
+
+test('bold and italic become STRONG and EM, not raw markup', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'p', ru: [{ s: 'жирно', b: true }, { s: 'косо', i: true }], en: [] }];
+    const t = tags(B.renderBlocks(d, blocks, 'ru'));
+    assert.ok(t.includes('STRONG'));
+    assert.ok(t.includes('EM'));
+});
+
+test('a link gets target and a hardened rel', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'p', ru: [{ s: 'тут', href: 'https://example.com/a' }], en: [] }];
+    const a = flat(B.renderBlocks(d, blocks, 'ru')).find(n => n.tagName === 'A');
+    assert.ok(a, 'an A element exists');
+    assert.equal(a.attrs.href, 'https://example.com/a');
+    assert.equal(a.attrs.rel, 'noopener noreferrer nofollow');
+    assert.equal(a.attrs.target, '_blank');
+});
+
+test('an unsafe href never reaches the DOM as a link', () => {
+    // Второй рубеж после validateDoc: рендер может получить блоки из старой
+    // записи, сохранённой до появления какой-то проверки, и всё равно не
+    // имеет права построить javascript:-ссылку.
+    const d = fakeDoc();
+    const blocks = [{ t: 'p', ru: [{ s: 'тут', href: 'javascript:alert(1)' }], en: [] }];
+    const frag = B.renderBlocks(d, blocks, 'ru');
+    assert.equal(tags(frag).includes('A'), false, 'no anchor');
+    assert.equal(frag.textContent, 'тут', 'text survives');
+});
+
+test('a spoiler is a span with the spoiler class, text intact', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'p', ru: [{ s: 'секрет', sp: true }], en: [] }];
+    const sp = flat(B.renderBlocks(d, blocks, 'ru')).find(n => n.className === 'nw-spoiler');
+    assert.ok(sp, 'spoiler span exists');
+    assert.equal(sp.textContent, 'секрет');
+});
+
+test('an ordered list renders OL, an unordered one UL', () => {
+    const d = fakeDoc();
+    const mk = ordered => ({ t: 'list', ordered: ordered, items: [{ ru: [{ s: 'раз' }], en: [] }] });
+    assert.ok(tags(B.renderBlocks(d, [mk(true)], 'ru')).includes('OL'));
+    assert.ok(tags(B.renderBlocks(d, [mk(false)], 'ru')).includes('UL'));
+});
+
+test('an image block carries its own width, alignment and caption', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'image', url: IMG, w: 800, h: 600, pct: 50, align: 'left', wrap: true, cap_ru: [{ s: 'Подпись' }], cap_en: [] }];
+    const nodes = flat(B.renderBlocks(d, blocks, 'ru'));
+    const img = nodes.find(n => n.tagName === 'IMG');
+    assert.equal(img.style.width, '50%');
+    assert.equal(img.className, 'nw-image nw-img-float-left');
+    assert.equal(img.attrs.width, '800');
+    assert.equal(img.attrs.height, '600');
+    assert.ok(nodes.some(n => n.className === 'nw-caption' && n.textContent === 'Подпись'));
+});
+
+test('center plus wrap falls back to a block image, as it does today', () => {
+    // float не умеет «по центру» — cardFor() уже принимает это решение для
+    // легаси-поста, и блок обязан вести себя так же.
+    const d = fakeDoc();
+    const blocks = [{ t: 'image', url: IMG, w: 8, h: 6, pct: 100, align: 'center', wrap: true, cap_ru: [], cap_en: [] }];
+    const img = flat(B.renderBlocks(d, blocks, 'ru')).find(n => n.tagName === 'IMG');
+    assert.equal(img.className, 'nw-image nw-img-center');
+});
+
+test('an album renders one figure with a picture per item', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'album', items: [{ url: IMG, w: 4, h: 3 }, { url: IMG, w: 4, h: 3 }], cap_ru: [{ s: 'Три кадра' }], cap_en: [] }];
+    const nodes = flat(B.renderBlocks(d, blocks, 'ru'));
+    assert.equal(nodes.filter(n => n.tagName === 'IMG').length, 2);
+    const grid = nodes.find(n => n.className && n.className.indexOf('nw-album') === 0);
+    assert.equal(grid.className, 'nw-album nw-album-2');
+});
+
+test('english text falls back to russian per block', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'p', ru: [{ s: 'Русский' }], en: [] }, { t: 'p', ru: [{ s: 'Тоже' }], en: [{ s: 'English' }] }];
+    assert.equal(B.renderBlocks(d, blocks, 'en').textContent, 'РусскийEnglish');
+});

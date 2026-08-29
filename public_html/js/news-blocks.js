@@ -202,6 +202,168 @@
     return null;
   }
 
+  // ------------------------------ Рендер ------------------------------
+  // doc — это document (или его заглушка в тестах): модуль обязан работать и
+  // в браузере, и в node, поэтому глобального document здесь нет.
+  //
+  // Ни одна строка ниже не собирает разметку из текста: только createElement,
+  // createTextNode и textContent. Это то же правило, по которому написан
+  // cardFor() в news-page.js, и единственная причина, по которой тело поста
+  // не может стать скриптом, что бы ни лежало в базе.
+
+  function langKeys(lang) {
+    return lang === "en" ? { self: "en", other: "ru" } : { self: "ru", other: "en" };
+  }
+
+  function pickSpans(holder, keySelf, keyOther) {
+    var s = holder[keySelf];
+    return (Array.isArray(s) && s.length) ? s : (Array.isArray(holder[keyOther]) ? holder[keyOther] : []);
+  }
+
+  // Обёртки флагов, от внутренней к внешней. Порядок фиксирован, чтобы
+  // одинаковый спан всегда давал одинаковый DOM — иначе сравнивать превью
+  // редактора с лентой было бы нечем.
+  var FLAG_TAGS = [
+    ["b", "strong"], ["i", "em"], ["u", "u"], ["st", "s"], ["c", "code"]
+  ];
+
+  function spansToFragment(doc, spans) {
+    var frag = doc.createDocumentFragment();
+    for (var i = 0; i < spans.length; i++) {
+      var sp = spans[i];
+      var node = doc.createTextNode(sp.s);
+      for (var f = 0; f < FLAG_TAGS.length; f++) {
+        if (sp[FLAG_TAGS[f][0]]) {
+          var w = doc.createElement(FLAG_TAGS[f][1]);
+          w.append(node);
+          node = w;
+        }
+      }
+      if (sp.sp) {
+        var spoiler = doc.createElement("span");
+        spoiler.className = "nw-spoiler";
+        // Спойлер открывается кликом, значит он управляющий элемент и обязан
+        // открываться с клавиатуры тоже.
+        spoiler.setAttribute("tabindex", "0");
+        spoiler.setAttribute("role", "button");
+        spoiler.append(node);
+        node = spoiler;
+      }
+      // Второй рубеж после validateDoc: рендер получает блоки из базы, а не
+      // только из редактора, и не имеет права построить javascript:-ссылку,
+      // даже если она каким-то путём туда попала. Небезопасный href просто не
+      // даёт ссылки — текст при этом остаётся на месте.
+      if (sp.href && isSafeHref(sp.href)) {
+        var a = doc.createElement("a");
+        a.setAttribute("href", sp.href);
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener noreferrer nofollow");
+        a.append(node);
+        node = a;
+      }
+      frag.append(node);
+    }
+    return frag;
+  }
+
+  function captionEl(doc, b, k) {
+    var spans = k.self === "ru"
+      ? pickSpans(b, "cap_ru", "cap_en")
+      : pickSpans(b, "cap_en", "cap_ru");
+    if (!spans.length) { return null; }
+    var cap = doc.createElement("figcaption");
+    cap.className = "nw-caption";
+    cap.append(spansToFragment(doc, spans));
+    return cap;
+  }
+
+  function imageEl(doc, item, pct, align, wrap) {
+    var img = doc.createElement("img");
+    img.style.width = pct + "%";
+    // center + обтекание не имеет смысла: у float нет «по центру». Ровно то
+    // же решение, что уже принимает cardFor() для легаси-поста.
+    var floated = wrap && align !== "center";
+    img.className = "nw-image " + (floated
+      ? (align === "left" ? "nw-img-float-left" : "nw-img-float-right")
+      : "nw-img-" + align);
+    img.setAttribute("src", item.url);
+    img.setAttribute("alt", "");
+    img.setAttribute("loading", "lazy");
+    img.setAttribute("decoding", "async");
+    // width/height — не размер показа (им управляет CSS и style.width выше), а
+    // подсказка браузеру, чтобы он зарезервировал место до загрузки байтов и
+    // текст под картинкой не прыгал.
+    img.setAttribute("width", item.w);
+    img.setAttribute("height", item.h);
+    return img;
+  }
+
+  function renderBlock(doc, b, lang) {
+    var k = langKeys(lang);
+    if (b.t === "p") {
+      var pEl = doc.createElement("p");
+      pEl.append(spansToFragment(doc, pickSpans(b, k.self, k.other)));
+      return pEl;
+    }
+    if (b.t === "quote") {
+      var q = doc.createElement("blockquote");
+      q.className = b.collapsible ? "nw-quote nw-quote-collapsible" : "nw-quote";
+      q.append(spansToFragment(doc, pickSpans(b, k.self, k.other)));
+      return q;
+    }
+    if (b.t === "code") {
+      var pre = doc.createElement("pre");
+      pre.className = "nw-code";
+      var codeEl = doc.createElement("code");
+      codeEl.textContent = String(b[k.self] || b[k.other] || "");
+      pre.append(codeEl);
+      return pre;
+    }
+    if (b.t === "list") {
+      var list = doc.createElement(b.ordered ? "ol" : "ul");
+      list.className = "nw-list";
+      for (var i = 0; i < b.items.length; i++) {
+        var li = doc.createElement("li");
+        li.append(spansToFragment(doc, pickSpans(b.items[i], k.self, k.other)));
+        list.append(li);
+      }
+      return list;
+    }
+    if (b.t === "image") {
+      var fig = doc.createElement("figure");
+      fig.className = "nw-figure";
+      fig.append(imageEl(doc, { url: b.url, w: b.w, h: b.h }, b.pct, b.align, b.wrap));
+      var cap = captionEl(doc, b, k);
+      if (cap) { fig.append(cap); }
+      return fig;
+    }
+    if (b.t === "album") {
+      var af = doc.createElement("figure");
+      af.className = "nw-figure";
+      var grid = doc.createElement("div");
+      // Класс несёт количество, а раскладку выбирает CSS: сетка на 2, 3 и 4+
+      // картинок отличается только колонками, и городить это в JS незачем.
+      grid.className = "nw-album nw-album-" + Math.min(b.items.length, 4);
+      for (var j = 0; j < b.items.length; j++) {
+        grid.append(imageEl(doc, b.items[j], 100, "center", false));
+      }
+      af.append(grid);
+      var acap = captionEl(doc, b, k);
+      if (acap) { af.append(acap); }
+      return af;
+    }
+    return null;
+  }
+
+  function renderBlocks(doc, blocks, lang) {
+    var frag = doc.createDocumentFragment();
+    for (var i = 0; i < blocks.length; i++) {
+      var el = renderBlock(doc, blocks[i], lang);
+      if (el) { frag.append(el); }
+    }
+    return frag;
+  }
+
   var api = {
     DOC_VERSION: DOC_VERSION,
     LIMITS: LIMITS,
@@ -210,7 +372,9 @@
     isSafeHref: isSafeHref,
     validateDoc: validateDoc,
     toPlainText: toPlainText,
-    firstImage: firstImage
+    firstImage: firstImage,
+    spansToFragment: spansToFragment,
+    renderBlocks: renderBlocks
   };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }
