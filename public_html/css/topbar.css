@@ -1,0 +1,266 @@
+/* ===================================================================
+   Новая шапка сайта (редизайн из Figma: MAKNEMY → «шапка», node 244:7171).
+
+   Геометрия снята с макета шириной 1443px и выражена через --u: до 1443px
+   шапка масштабируется пропорционально ширине окна, выше — фиксируется на
+   значениях макета. Так пропорции (логотип / пилюли / аватар) не разъезжаются
+   ни на ноутбуке, ни на 4K, и не нужно держать десяток брейкпойнтов.
+
+   Подключается ПОСЛЕ base.css: скрывает старый бренд и .nav-seg в тулбаре —
+   их роль забрала эта шапка. Фильтры, язык и админские группы в тулбаре
+   остаются на месте.
+   =================================================================== */
+
+/* ===================== Шрифт навигации ===================== */
+/* В макете подписи набраны Bebas Neue. Свободной кириллической версии на
+   Google Fonts нет, поэтому подложен Oswald — тот же узкий гротеск с плоскими
+   окончаниями, и с кириллицей. Файлы лежат локально: сайт и так не ходит на
+   сторонние CDN, а шрифт с чужого домена — лишняя точка отказа.
+   Если появится лицензионный Bebas Neue Cyrillic — достаточно заменить
+   @font-face, разметку трогать не нужно. */
+@font-face {
+  font-family: "Oswald";
+  src: url("../assets/fonts/Oswald/oswald-cyrillic.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Oswald";
+  src: url("../assets/fonts/Oswald/oswald-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122;
+}
+
+/* Высота шапки нужна не только ей самой: под неё подстраивается липкий
+   тулбар (design-page.css) и рекламные борта ленты (news-design.css).
+   Держим её одним значением на :root, чтобы три места не разъезжались. */
+:root {
+  --mk-top-h: calc(195 * min(1px, calc(100vw / 1443)));
+}
+
+.mk-top {
+  /* Единица макета. min() держит 1px как потолок: на широких экранах шапка
+     не раздувается вслед за окном, а остаётся ровно такой, как в Figma. */
+  --u: min(1px, calc(100vw / 1443));
+
+  /* Градиент кнопок. В макете ручки идут из правого-верхнего угла в
+     левый-нижний — в CSS это ~255deg (светлый край справа). */
+  --mk-grad: linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%);
+  /* Плашка навигации: в макете два чёрных слоя 42% и 20% друг на друге. */
+  --mk-bar-bg: rgba(0, 0, 0, 0.536);
+
+  /* Липкая: шапка — единственная навигация на всех страницах, и уезжать
+     из виду при прокрутке ей нельзя. */
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  height: var(--mk-top-h);
+  padding-left: calc(41 * var(--u));
+  overflow: hidden; /* плашка навигации в макете уходит за правый край */
+
+  /* В макете шапка стоит на той же картинке, что и страница, одним куском.
+     Поэтому здесь не свой кадр, а ровно тот же фон с той же геометрией, что
+     у body (см. design-page.css): пиксели совпадают, шва на границе нет.
+     Прозрачной шапку оставить нельзя — сквозь неё просвечивали рекламные
+     борта, которые по z-index должны быть под ней. */
+  background-color: #05070d;
+  background-image: url("../assets/design/page-bg.webp");
+  background-repeat: no-repeat;
+  background-size: calc(1983 * var(--pu, calc(100vw / 1443))) auto;
+  background-position:
+    calc(-272 * var(--pu, calc(100vw / 1443)))
+    calc(-533 * var(--pu, calc(100vw / 1443)));
+
+  /* Нижняя линия из макета. Плотность вдвое меньше макетной: на тёмном
+     фоне страницы чёрная линия в 53% читалась как широкая граница, а не
+     как волосяной раздел. */
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.26);
+}
+
+/* ===================== Логотип ===================== */
+.mk-top-brand {
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+.mk-top-mark {
+  width: calc(63 * var(--u));
+  height: calc(63 * var(--u));
+  display: block;
+}
+/* Надпись MAKNEMY набрана Akira Expanded — шрифт платный, в вебе его нет.
+   Поэтому берём её из макета кривыми: SVG с уже запечённым градиентом
+   белый → серый, масштабируется без потерь и не требует шрифта вообще. */
+.mk-top-word {
+  /* 285 — реальная ширина букв. Текстовый слой в макете 300px, но 15px там
+     приходятся на правый апрош последней Y. */
+  width: calc(285 * var(--u));
+  height: auto;
+  display: block;
+}
+
+/* ===================== Плашка навигации ===================== */
+.mk-top-bar {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: calc(57 * var(--u));
+  margin-left: calc(31 * var(--u));
+  padding: 0 calc(60 * var(--u)) 0 calc(25 * var(--u));
+  background: var(--mk-bar-bg);
+  /* Скруглена только слева: справа плашка уходит под край шапки. */
+  border-radius: calc(28.5 * var(--u)) 0 0 calc(28.5 * var(--u));
+}
+
+.mk-nav {
+  display: flex;
+  align-items: center;
+  gap: calc(22 * var(--u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+/* ===================== Пилюля раздела ===================== */
+.mk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(9 * var(--u));
+  padding: calc(9 * var(--u)) calc(24 * var(--u));
+  border: 0;
+  border-radius: 999px;
+  background: var(--mk-grad);
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  /* В макете 20px по Bebas Neue. Oswald при том же кегле шире примерно на
+     четверть, и пилюли переставали влезать в плашку, поэтому 18px: ширины
+     пилюль сходятся с макетом (140 / 140 / 146 / 172 / 139), высота букв —
+     тоже. */
+  font-size: calc(18 * var(--u));
+  line-height: 1;
+  text-transform: uppercase;
+
+  box-shadow:
+    0 calc(4.5 * var(--u)) calc(13.6 * var(--u)) rgba(37, 44, 97, 0.15),
+    0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.2);
+  transition: filter .15s, transform .08s, box-shadow .15s;
+}
+.mk-pill svg {
+  width: calc(16.3 * var(--u));
+  height: calc(16.3 * var(--u));
+  flex: 0 0 auto;
+}
+.mk-pill:hover {
+  filter: brightness(1.12);
+  box-shadow:
+    0 calc(6 * var(--u)) calc(18 * var(--u)) rgba(37, 44, 97, 0.28),
+    0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.28);
+}
+.mk-pill:active { transform: translateY(1px); }
+.mk-pill:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
+
+/* Текущий раздел. В макете все пилюли выглядят одинаково, поэтому активность
+   показываем кольцом, а не сменой заливки — иначе разъедется с макетом. */
+.mk-pill[aria-current="page"] {
+  box-shadow:
+    0 0 0 calc(1.5 * var(--u)) rgba(255, 255, 255, 0.42),
+    0 calc(4.5 * var(--u)) calc(13.6 * var(--u)) rgba(37, 44, 97, 0.15);
+}
+
+/* Разделы, которых на сайте пока нет. Кликать нечего, но в макете они есть. */
+.mk-pill[aria-disabled="true"] { opacity: .78; cursor: default; }
+.mk-pill[aria-disabled="true"]:hover { filter: none; transform: none; }
+
+/* ===================== Аватар ===================== */
+.mk-avatar {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(46 * var(--u));
+  height: calc(46 * var(--u));
+  border: 0;
+  border-radius: 50%;
+  background: var(--mk-grad);
+  cursor: pointer;
+  transition: filter .15s, transform .08s;
+}
+.mk-avatar svg {
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
+  display: block;
+}
+.mk-avatar:hover { filter: brightness(1.12); }
+.mk-avatar:active { transform: translateY(1px); }
+.mk-avatar:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
+
+/* ===================== Узкие экраны ===================== */
+/* Пропорциональное сжатие живёт до ~1000px: ниже подписи в пилюлях становятся
+   мельче 13px и читать их уже нельзя. Дальше — компактная раскладка с
+   фиксированными размерами, а не продолжение масштаба. */
+@media (max-width: 1000px) {
+  .mk-top {
+    --u: 0.7px;
+    height: 100px;
+    padding-left: 14px;
+  }
+  .mk-top-word { width: 176px; }
+  .mk-top-mark { width: 40px; height: 40px; }
+
+  .mk-top-bar {
+    height: 48px;
+    margin-left: 12px;
+    padding: 0 12px;
+    border-radius: 999px 0 0 999px;
+  }
+  .mk-nav {
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .mk-nav::-webkit-scrollbar { display: none; }
+
+  .mk-pill { padding: 8px 13px; font-size: 15px; gap: 6px; }
+  .mk-pill svg { width: 14px; height: 14px; }
+  .mk-avatar { width: 34px; height: 34px; margin-left: 10px; }
+  .mk-avatar svg { width: 24px; height: 24px; }
+}
+
+/* Логотипной надписи первой не хватает места — знак остаётся. */
+@media (max-width: 900px) {
+  .mk-top-word { display: none; }
+}
+
+/* Ниже ~760px пять подписей не помещаются даже без надписи: последняя пилюля
+   уезжала под аватар и выглядела обрезанной. Оставляем иконки — все пять
+   разделов видны целиком. */
+@media (max-width: 760px) {
+  .mk-top {
+    height: 88px;
+    background-image: url("../assets/design/page-bg-m.webp");
+  }
+  .mk-pill { padding: 9px 11px; }
+  .mk-pill .mk-pill-text { display: none; }
+  .mk-pill svg { width: 16px; height: 16px; }
+}
+
+/* ===================== Стыковка со старым тулбаром ===================== */
+/* Бренд и пара «Тирлист / Новости» переехали в шапку выше — в тулбаре они
+   стали вторым набором тех же ссылок. Прячем, остальное (фильтры, язык,
+   админские группы) работает как работало. */
+.mk-top ~ .toolbar .tb-brand,
+.mk-top ~ .toolbar .nav-seg { display: none; }

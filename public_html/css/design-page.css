@@ -1,0 +1,350 @@
+/* ===================================================================
+   Страница тирлиста по редизайну (Figma «тир лист», node 4:324).
+
+   Три куска хрома: фон страницы, панель фильтров и подвал. Тир-карточка
+   (.stage) не трогается — в макете её область оставлена пустой, а на сайте
+   там живут ряды, легенда, реклама и экспорт в PNG.
+
+   Подключается ПОСЛЕ topbar.css.
+   =================================================================== */
+
+/* ===================== Фон страницы ===================== */
+/* В макете фон — одна картинка 1983×3236, положенная в точке (-272, -533)
+   относительно страницы шириной 1443. Шапка показывает её верхний срез,
+   тело — всё остальное, шва между ними нет. Повторяем ровно эту геометрию
+   через --pu: на 1443px совпадение точное, шире и уже — пропорционально. */
+body {
+  --pu: calc(100vw / 1443);
+
+  background-color: #05070d;
+  /* Верхний слой — растушёвка низа: страница на сайте длиннее макетной, и
+     там, где картинка кончается (-533 + 3236 = 2703 по макету), был виден
+     ровный горизонтальный стык с фоновым цветом. */
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(5, 7, 13, 0) calc(2150 * var(--pu)),
+      #05070d calc(2700 * var(--pu))
+    ),
+    url("../assets/design/page-bg.webp");
+  background-repeat: no-repeat, no-repeat;
+  background-size: 100% 100%, calc(1983 * var(--pu)) auto;
+  background-position: 0 0, calc(-272 * var(--pu)) calc(-533 * var(--pu));
+}
+/* Телефонам отдаём облегчённый файл: полноразмерный весит втрое больше,
+   а на 400px всё равно не виден. */
+@media (max-width: 760px) {
+  body { background-image: url("../assets/design/page-bg-m.webp"); }
+}
+
+/* ===================== Полоса прокрутки ===================== */
+/* Цвета сняты с макета: дорожка светло-серая (#D9D9D9 — тот же оттенок,
+   что у стеклянных фигур), ползунок залит акцентным градиентом. В макете
+   это полоса собственной прокрутки ленты новостей; собственной прокрутки
+   у нас нет, поэтому так же оформлена полоса всей страницы — иначе рядом
+   с оформленной страницей стоял бы серый системный ползунок.
+
+   Стандартные свойства (scrollbar-width / scrollbar-color) и правила
+   ::-webkit-scrollbar в Chromium несовместимы: как только задано хоть
+   одно стандартное, движок переключается на него и ::-webkit-* не
+   применяет — вместе со скруглением и градиентом. Поэтому стандартные
+   отданы только Firefox, который ::-webkit-scrollbar не знает вовсе
+   (см. @supports в конце блока).
+
+   Селекторы привязаны к html, а не заданы всем подряд: без этого те же
+   цвета получила бы и горизонтальная прокрутка ряда карточек на
+   телефоне, где светло-серая полоса под карточками совсем не к месту. */
+html::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #d9d9d9;
+  border-radius: 999px;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #61b5e9, #2d4aed);
+  border-radius: 999px;
+  /* Рамка цветом дорожки, а не прозрачная: так ползунок сидит в дорожке с
+     полями, как в макете, и при этом сквозь него не видно страницу. */
+  border: 3px solid #d9d9d9;
+}
+
+html::-webkit-scrollbar-corner { background: #d9d9d9; }
+
+/* Только Firefox: он единственный не поддерживает селектор
+   ::-webkit-scrollbar, поэтому условие отсекает Chromium и Safari, где
+   работают правила выше. Градиента в ползунке стандартные свойства не
+   умеют — отдаём середину градиента одним цветом. */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #3f74e6 #d9d9d9;
+  }
+}
+
+/* ===================== Панель фильтров ===================== */
+/* Была тёмная полоса во всю ширину. В макете — скруглённая плашка с полями
+   42px и высотой 66, отступ 22px от шапки. Липкости нет — как в макете:
+   панель стоит на своём месте в странице и уезжает вместе с ней. Липкой она
+   наезжала на постер и на легенду. Липкой остаётся только шапка. */
+.toolbar {
+  position: static;
+  margin: 22px 42px 0;
+  /* 10px слева — в макете «Фильтры:» начинается на 52-й точке страницы. */
+  padding: 0 16px 0 10px;
+  gap: 12px;
+  min-height: 66px;
+  border: 1px solid #000;
+  border-radius: 10px;
+  /* В макете два чёрных слоя, 42% и 20% друг на друге. */
+  background: rgba(0, 0, 0, 0.536);
+  box-shadow: none;
+}
+
+.toolbar .tb-group { gap: 20px; }
+.toolbar .filters { gap: 20px; }
+
+/* Чип фильтра. В макете: прозрачный, скругление 10, подпись Bebas Neue 17px
+   в верхнем регистре, поля 16px. */
+.toolbar .chip {
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  transition: background .15s, box-shadow .15s, color .15s;
+}
+.toolbar .chip:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.toolbar .chip.all { border-style: none; }
+
+/* Выбранный фильтр — вариант «Variant3» из макета: синий градиент и мягкая
+   рамка 5px светло-синим. Рамку даём тенью, иначе она сдвигает соседей. */
+.toolbar .chip.active,
+.toolbar .chip[aria-pressed="true"] {
+  color: #fff;
+  background: linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%);
+  box-shadow: 0 0 0 5px rgba(136, 176, 255, 0.32);
+}
+
+/* Язык интерфейса в макете живёт в старой шапке, а её больше нет.
+   Уводим пару RU|EN в правый угол панели — единственное свободное место.
+
+   order: 1 ставит её последней, уже за #savedHint («Сохранено» для админа).
+   Без этого переключатель вставал посреди панели: auto-отступ есть и у него,
+   и у .tb-saved (styles.css), а два auto-margin делят свободное место
+   поровну, а не отдают его целиком первому. */
+.toolbar .lang-switch { order: 1; margin-left: auto; gap: 4px; }
+.toolbar .lang-switch .chip { padding: 10px 12px; }
+
+/* Админские группы к макету отношения не имеют — оставляем рабочими, просто
+   не даём им разъехаться внутри новой плашки. */
+.toolbar .btn { border-radius: 8px; }
+.toolbar .tb-saved { margin-left: 12px; font-size: 12px; color: #9fb6d8; }
+
+/* Узкая панель — одна строка. Раньше чипы переносились, и RU|EN уезжал на
+   вторую строку к левому краю (в styles.css у .tb-group.filters на телефоне
+   стоит flex: 1 1 100%, то есть «занять строку целиком»). Вместо переноса
+   отдаём чипам горизонтальную прокрутку: переключатель остаётся в правом
+   углу той же строки, как на десктопе и как в шапке редизайна. */
+@media (max-width: 1000px) {
+  .toolbar .filters {
+    /* Базис 0, а не auto: перенос во флексе считается по базису, и при
+       базисе по содержимому строка ломалась ДО того, как блок успевал
+       сжаться. С нулевым базисом он просто занимает остаток строки. */
+    flex: 1 1 0%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* Кольцо выбранного чипа (box-shadow 5px) вылезает за его границы, а
+       прокрутка режет его: по спецификации overflow-x: auto превращает
+       visible по второй оси в auto, и обрезка идёт заодно сверху и снизу.
+       Отводим ему 5px внутри области прокрутки и тем же отрицательным
+       полем возвращаем блок на место — высота панели не меняется. */
+    padding: 5px;
+    margin: -5px;
+  }
+  .toolbar .filters::-webkit-scrollbar { display: none; }
+  /* Чипы не сжимаются — иначе вместо прокрутки они просто схлопнутся
+     в нечитаемые огрызки. */
+  .toolbar .filters .chip { flex: 0 0 auto; }
+  .toolbar .lang-switch { order: 1; flex: 0 0 auto; margin-left: 8px; }
+  /* Админская подсказка «Сохранено» держала 90px даже пустой и отъедала
+     их у чипов. Пусть занимает ровно свой текст. */
+  .toolbar .tb-saved { min-width: 0; margin-left: 0; }
+  /* Пара RU|EN на узком экране схлопывается в одну кнопку — ту, что
+     показывает текущий язык; нажатие по ней переключает на другой
+     (обработчик в app.js, initLangSwitch). Занимает вдвое меньше места,
+     а на 390px это разница между «влезли чипы» и «не влезли».
+
+     :has() здесь не украшение: до первого applyLang() у обеих кнопок
+     aria-pressed="false", и без этой обёртки переключатель на миг пропал
+     бы целиком. Нет отмеченной кнопки — показываем пару, как было. */
+  .toolbar .lang-switch:has(.chip[aria-pressed="true"]) .chip[aria-pressed="false"] {
+    display: none;
+  }
+  /* Оставшаяся кнопка — самостоятельный чип, а не половина сегментированной
+     пары. В base.css у первой половины скруглены только левые углы
+     (border-radius: 999px 0 0 999px) и висит margin-right: -1px, чтобы
+     активная перекрывала границу соседа. В одиночку это выглядело каплей,
+     положенной набок. Возвращаем ей форму обычного чипа. */
+  .toolbar .lang-switch:has(.chip[aria-pressed="true"]) .chip[aria-pressed="true"] {
+    border-radius: 10px;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .toolbar { margin: 12px 12px 0; padding: 8px 10px; gap: 8px; min-height: 0; }
+  .toolbar .tb-group,
+  /* 12, а не 8: кольцо выбранного чипа занимает по 3px с каждой стороны,
+     и на восьми пикселях соседние кольца сходились вплотную. */
+  .toolbar .filters { gap: 12px; }
+  .toolbar .chip { padding: 8px 12px; font-size: 15px; }
+  /* Кнопка языка живёт по своим полям (base.css), и рядом с чипами фильтров
+     оказывалась выше их на 4px. Ровняем. */
+  .toolbar .lang-switch .chip { padding: 8px 12px; }
+  /* Кольцо тоньше десктопного (там 5px, как в макете): чипы стоят теснее,
+     и на пяти пикселях свечения перекрывали друг друга. */
+  .toolbar .chip.active,
+  .toolbar .chip[aria-pressed="true"] {
+    box-shadow: 0 0 0 3px rgba(136, 176, 255, 0.32);
+  }
+}
+
+/* ===================== Подвал ===================== */
+/* Подвал начинается сразу за постером: зазор между ними убран, чёрная плашка
+   подхватывает нижний край карточки. Отступ снизу у .stage-wrap для этого
+   обнулён — см. правило ниже. */
+.stage-wrap { padding-bottom: 0; }
+
+/* Размеры подвала — из макета (фрейм «подвал», 1443x311): знак на 46, строка
+   ролей на 128, ники на 168, слоган на 241, вся плашка 311. Отступа сверху
+   нет: подвал встык к постеру. */
+.mk-foot {
+  position: relative;
+  /* ::before/::after уезжают на отрицательный z-index, чтобы лежать под
+     текстом. Без isolation они провалились бы под фон страницы целиком. */
+  isolation: isolate;
+  overflow: hidden;
+  margin-top: 0;
+  padding: 50px 20px 48px;
+  /* Нижний слой макета — тот же арт постера, что и на странице, но кадром
+     ровно по плашке. Без него правая часть подвала теряет синие осколки. */
+  background: url("../assets/design/foot/foot-bg.webp") left top / 100% 100% no-repeat, #1d1d1d;
+  text-align: center;
+}
+/* Арт из макета: графити слева и большой знак MK по центру. В макете это
+   белые векторы под чёрной вуалью — здесь так же, вуаль лежит в ::after.
+   Позиции и размеры — из absoluteRenderBounds макета: графити 0..513.6,
+   знак MK 207.9..1330.1, повёрнутый квадрат справа 954..1443 при ширине
+   плашки 1443. Графити и правый квадрат выгружены из макета растром (в них
+   поворот и растровая заливка), знак MK остался вектором — он плоский. */
+.mk-foot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  /* Стопка ровно как в макете: белый арт поверх чёрной заливки на 83%,
+     которая гасит фон постера под ним. */
+  /* Проценты в background-position считаются не от ширины блока, а от
+     (ширина блока − ширина картинки) — то есть 0% прижимает влево, 100%
+     вправо. Поэтому позиция здесь не «отступ из макета», а пересчёт:
+     отступ / (100% − ширина картинки). Знак MK: 14.41 / (100 − 77.77) = 64.81,
+     правый арт: 66.11 / (100 − 33.89) = 100. Всё в долях ширины плашки, так
+     что композиция держится на любой ширине. */
+  background:
+    url("../assets/design/foot/mk-watermark.svg") 64.81% top / 77.77% 100% no-repeat,
+    url("../assets/design/foot/graffiti.webp") left top / 35.59% 100% no-repeat,
+    url("../assets/design/foot/right-art.webp") right top / 33.89% 100% no-repeat,
+    linear-gradient(rgba(0, 0, 0, .83), rgba(0, 0, 0, .83));
+}
+/* Вуаль поверх арта и два синих свечения: широкое справа и пятно снизу по
+   центру-слева. */
+.mk-foot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(40% 115% at 103% 42%, rgba(0, 150, 255, .95), rgba(0, 140, 255, 0) 70%),
+    radial-gradient(30% 85% at 42% 108%, rgba(0, 150, 255, .95), rgba(0, 140, 255, 0) 70%),
+    linear-gradient(180deg, rgba(0, 0, 0, .79), #000);
+}
+.mk-foot-mark {
+  display: block;
+  width: 63px;
+  height: 63px;
+  margin: 0 auto;
+}
+.mk-foot-roles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin: 19px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.mk-foot-roles li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Роль на 142, ник на 182 — между строками ровно 14 при кегле 26. */
+  gap: 14px;
+  padding: 14px;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  /* В макете 26px по Bebas Neue; Oswald шире, 22px даёт ту же длину строки. */
+  font-size: 22px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+/* В новом макете ник набран тем же кеглем и тем же белым, что и роль —
+   цветового выделения у него больше нет. */
+.mk-foot-nick {
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+.mk-foot-tagline {
+  margin: 23px 0 0;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* Прилипающая полоса-баннер на телефоне (.ptn-dock, position: fixed внизу
+   экрана) компенсировалась отступом снизу у .stage-wrap — он был последним
+   блоком страницы (styles.css, body.has-promo-dock .stage-wrap). Теперь
+   последним идёт подвал, и полоса закрывала состав команды и слоган.
+
+   Отступ переносим на подвал, а .stage-wrap возвращаем к обычному: посреди
+   страницы он превратился бы в пустую полосу перед подвалом. Высоту полосы
+   меряет app.js и кладёт в --ptn-dock-h. */
+@media (max-width: 640px) {
+  body.has-promo-dock .stage-wrap { padding-bottom: 0; }
+  body.has-promo-dock .mk-foot {
+    padding-bottom: calc(var(--ptn-dock-h, 90px) + 34px);
+  }
+}
+
+@media (max-width: 760px) {
+  .mk-foot { padding: 28px 14px 26px; margin-top: 0; }
+  .mk-foot-mark { width: 48px; height: 48px; }
+  .mk-foot-roles { gap: 4px; margin-top: 10px; }
+  .mk-foot-roles li { gap: 10px; padding: 6px 8px; font-size: 19px; }
+  .mk-foot-tagline { font-size: 19px; margin-top: 18px; }
+}

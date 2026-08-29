@@ -91,15 +91,20 @@
   // короткий «всплеск» сердечка при клике — тот же приём, что popLike() в app.js
   function popLikeHeart(heartEl) {
     heartEl.classList.remove("pop");
-    void heartEl.offsetWidth; // перезапустить CSS-анимацию
+    // getBoundingClientRect, а не offsetWidth: сердце теперь <svg>, а у
+    // SVG-элементов offsetWidth не существует, и перезапуск анимации
+    // молча переставал работать.
+    heartEl.getBoundingClientRect();
     heartEl.classList.add("pop");
   }
 
   function renderLikeButton(btn, heartEl, countEl, liked, likes) {
     btn.classList.toggle("liked", liked);
     btn.setAttribute("aria-pressed", liked ? "true" : "false");
-    btn.title = tx(liked ? "news.likeRemove" : "news.like");
-    heartEl.textContent = liked ? "💙" : "🤍";
+    // Число лайков на круглой кнопке больше не помещается, поэтому оно
+    // ушло в подсказку и в скрытую от глаз, но читаемую скринридером
+    // подпись (countEl, см. .nw-like-count в news-design.css).
+    btn.title = tx(liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";
     countEl.textContent = String(likes);
   }
 
@@ -147,6 +152,15 @@
   // функция строит и настоящую карточку в ленте, и то, что видит админ до
   // публикации, — чтобы превью не могло разойтись с реальным рендером, но при
   // этом не рисовало кнопки ✎/✕ поверх ещё не сохранённого поста.
+  // Контур сердца снят из макета (icon_filled/Heart, нода 182:573) как
+  // есть — поэтому и viewBox у него нестандартный, "-2 0 57.3 51.2".
+  const HEART_PATH = "M 17.46 0 C 15.82 0 13.96 0.17 12.18 0.78 C 1.47 4.28 -1.98 15.72 1.05 25.15 L 1.07 25.19 L 1.08 25.23 C 2.75 29.91 5.43 34.17 8.93 37.67 L 8.95 37.69 L 8.97 37.71 C 13.96 42.49 19.38 46.65 25.26 50.27 L 26.64 51.12 L 28.03 50.29 C 33.92 46.75 39.45 42.47 44.37 37.73 L 44.39 37.71 L 44.4 37.7 C 47.93 34.19 50.62 29.9 52.26 25.21 L 52.27 25.17 L 52.29 25.13 C 55.26 15.73 51.83 4.27 41.19 0.82 C 39.45 0.25 37.65 0 35.89 0 C 31.94 -0 29.02 1.65 26.66 3.34 C 24.31 1.67 21.37 0 17.46 0 Z";
+
+  // Изогнутая стрелка «поделиться»: сплошная заливка, шаг вправо с хвостом,
+  // уходящим влево-вниз. В наборе макета она называется icon_filled/Send,
+  // но компонент отдаёт пустой экспорт, поэтому контур нарисован здесь.
+  const SHARE_PATH = "M13.4 4.3c0-1 1.2-1.5 1.9-.8l6.9 6.6c.5.5.5 1.3 0 1.8l-6.9 6.6c-.7.7-1.9.2-1.9-.8v-3.2c-4.6.1-8 1.6-10.3 4.6-.6.8-1.9.3-1.7-.7C2.7 11.2 6.9 7 13.4 6.2V4.3Z";
+
   function cardFor(post, withTools = true) {
     const card = document.createElement("article");
     card.className = "nw-card";
@@ -239,9 +253,20 @@
     const likeBtn = document.createElement("button");
     likeBtn.type = "button";
     likeBtn.className = "nw-like";
-    const likeHeart = document.createElement("span");
-    likeHeart.className = "nw-like-heart";
+    // Сердце — контур из макета (icon_filled/Heart), а не эмодзи: по
+    // редизайну кнопка стала круглой с белым знаком внутри, а эмодзи
+    // рисуется системным шрифтом и в разных ОС выглядит по-разному.
+    // Состояние «лайкнуто» показывает класс на кнопке (см.
+    // renderLikeButton), поэтому текст внутрь больше не пишется.
+    const likeHeart = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    likeHeart.setAttribute("class", "nw-like-heart");
+    likeHeart.setAttribute("viewBox", "-2 0 57.3 51.2");
     likeHeart.setAttribute("aria-hidden", "true");
+    const heartPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    heartPath.setAttribute("d", HEART_PATH);
+    heartPath.setAttribute("fill", "currentColor");
+    heartPath.setAttribute("fill-rule", "evenodd");
+    likeHeart.append(heartPath);
     const likeCount = document.createElement("span");
     likeCount.className = "nw-like-count";
     renderLikeButton(likeBtn, likeHeart, likeCount, isPostLiked(post.id), post.likes || 0);
@@ -268,20 +293,23 @@
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "nw-copy";
-      // U+FE0E (VARIATION SELECTOR-15) заставляет 🔗 рисоваться текстовым
-      // моно-глифом, а не цветной emoji-картинкой: рядом с сердечком лайка
-      // вторая цветная иконка спорила бы с ним за внимание.
-      const copyIcon = document.createElement("span");
-      copyIcon.className = "nw-copy-icon";
+      // Иконка из макета (icon_filled/Send — изогнутая стрелка) вместо
+      // прежней эмодзи-скрепки с подписью: по редизайну кнопка круглая и
+      // стоит рядом с сердцем, подписи в ней нет места. Рисуется тем же
+      // контуром, что иконки в шапке: обводка currentColor, скруглённые
+      // концы. Смысл кнопки при этом не изменился — она копирует ссылку
+      // на пост, см. copyPostLink() ниже.
+      const copyIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      copyIcon.setAttribute("viewBox", "0 0 24 24");
       copyIcon.setAttribute("aria-hidden", "true");
-      copyIcon.textContent = "🔗︎";
-      const copyLabel = document.createElement("span");
-      copyLabel.textContent = tx("news.copyLinkShort");
-      copy.append(copyIcon, copyLabel);
-      // Полная фраза — в подсказке и для скринридера; на самой кнопке стоит
-      // короткая подпись, иначе кнопка растянулась бы на полкарточки. Одна
-      // иконка без подписи тут не годится: у лайка рядом есть число, которое
-      // объясняет его само, а у ссылки такого пояснения нет.
+      copyIcon.setAttribute("class", "nw-copy-icon");
+      const copyPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      copyPath.setAttribute("d", SHARE_PATH);
+      copyPath.setAttribute("fill", "currentColor");
+      copyIcon.append(copyPath);
+      copy.append(copyIcon);
+      // Подпись живёт только в title и aria-label: на круглой кнопке текста
+      // нет, и без них назначение иконки было бы неочевидным.
       copy.title = tx("news.copyLink");
       copy.setAttribute("aria-label", tx("news.copyLink"));
       copy.addEventListener("click", () => copyPostLink(post, copy));
@@ -377,6 +405,11 @@
   }
 
   function renderFilters() {
+    // Контейнера может не быть: по редизайну строка фильтров с разметки
+    // убрана. Молча выходим, а не падаем — весь остальной код ленты от
+    // фильтров не зависит, и вернуть их можно, добавив обратно
+    // <div id="newsFilters"> в news.php.
+    if (!filtersEl) return;
     filtersEl.innerHTML = "";
     const label = document.createElement("span");
     label.className = "tb-label";
@@ -1390,6 +1423,88 @@
   //
   // Роль здесь известна синхронно (NX_ADMIN_PAGE), но модуль всё равно берёт
   // функцию — её ждёт тирлист, где роль приезжает ответом API позже.
+  // ============================================================
+  //  Рекламные борта по бокам ленты
+  //
+  //  Полосатые панели из макета — это не декор, а рекламные места. Данные
+  //  и правила отбора берутся из той же системы, что борта на тирлисте:
+  //  документ /api/promo.php и модуль js/promo.js (слот "rail"). Своей
+  //  логики показа здесь нет намеренно — иначе две страницы разошлись бы
+  //  в том, какая кампания сейчас крутится.
+  //
+  //  Пока слот не куплен, панель остаётся такой, как в макете: полоска.
+  //  Поэтому при отсутствии кампаний борт не прячется — он и есть
+  //  «свободное место».
+  // ============================================================
+  const PROMO_API = "/api/promo.php";
+
+  function fillNewsRail(el, camp) {
+    const promo = window.PROMO;
+    const cre = promo && camp ? promo.creativeFor(camp, "rail") : null;
+    if (!cre || !cre.src) return false;
+
+    el.innerHTML = "";
+    el.classList.add("has-ad");
+
+    const img = document.createElement("img");
+    img.src = cre.src;
+    img.alt = tx("ad.imageAlt");
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.draggable = false;
+    el.append(img);
+
+    const chip = document.createElement("span");
+    chip.className = "ptn-chip";
+    chip.textContent = tx("ad.chip");
+    el.append(chip);
+
+    // Маркировка рекламы обязательна по закону, если рекламодатель её
+    // прислал: без erid борт показывать можно, а вот выкидывать
+    // присланный идентификатор — нельзя.
+    if (camp.erid) {
+      const erid = document.createElement("span");
+      erid.className = "ptn-erid";
+      erid.textContent = "erid: " + camp.erid;
+      el.append(erid);
+    }
+
+    const url = promo.safeHref(camp.href);
+    el.classList.toggle("has-link", !!url);
+    if (url) {
+      const open = () => window.open(url, "_blank", "noopener");
+      el.onclick = open;
+      el.tabIndex = 0;
+      el.setAttribute("role", "link");
+      el.onkeydown = e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      };
+    }
+    return true;
+  }
+
+  function renderNewsRails() {
+    const promo = window.PROMO;
+    const left = document.getElementById("newsRailL");
+    const right = document.getElementById("newsRailR");
+    if (!promo || !left || !right) return;
+
+    fetch(PROMO_API, { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(doc => {
+        if (!doc) return;
+        const list = promo.eligible(promo.normalizeDoc(doc), "rail", Date.now());
+        if (!list.length) return;              // не куплено — остаётся полоска
+        fillNewsRail(left, list[0]);
+        // Один рекламодатель занимает оба борта: пустой второй борт рядом с
+        // заполненным читается как поломка, а не как свободное место.
+        fillNewsRail(right, list[1] || list[0]);
+      })
+      // Реклама не должна ронять ленту: не пришёл документ — панели просто
+      // остаются полосатыми.
+      .catch(() => {});
+  }
+
   NX_PROTECT.applyClass(isAdmin);
   NX_PROTECT.install(() => isAdmin);
 
@@ -1399,4 +1514,5 @@
     wireAdmin();
   }
   load();
+  renderNewsRails();
 })();

@@ -5,6 +5,12 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- Тирлист переехал сюда с корня: корень теперь занят главной. -->
+  <url>
+    <loc>https://maknemytierlist.site/tierlist</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
   <!-- /news объявится здесь, когда в ленте появится первый пост. Пока она
        пустая, приглашать на неё поисковик незачем: sitemap говорит «страница
        важная, индексируй», а Google на этот адрес пришёл бы за тонким

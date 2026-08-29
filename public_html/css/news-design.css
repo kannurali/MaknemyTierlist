@@ -1,0 +1,478 @@
+/* ===================================================================
+   Лента новостей по редизайну (Figma «новости», node 169:600).
+
+   Подключается ПОСЛЕ news.css и перекрывает её: прежний вид — постер со
+   «сценой», логотипом Blox Fruits и заголовком «НОВОСТИ» — заменён на
+   колонку карточек между двумя полосатыми панелями, как в макете.
+
+   От макета осознанно отличаются две вещи:
+
+   1. Прокрутка. В макете лента живёт во фрейме 810×902 с собственной
+      вертикальной прокруткой (overflowDirection: VERTICAL, обрезка
+      включена). Здесь лента тянется вниз и катится вместе со страницей:
+      вложенная прокрутка на телефоне дерётся с прокруткой страницы, а
+      постоянные ссылки на пост (/news/<id>) должны доводить читателя до
+      нужной карточки — во внутреннем окне это не работает.
+
+   2. Заголовок страницы и фильтры по категориям. В макете их нет, и по
+      решению заказчика они убраны из разметки. Кнопка «поделиться» при
+      этом осталась — в макете она есть отдельной иконкой.
+
+   Единица --u та же, что на главной и в шапке: одна точка макета
+   шириной 1443.
+   =================================================================== */
+
+.nw-page {
+  --u: min(1px, calc(100vw / 1443));
+
+  --nw-accent-a: #61b5e9;
+  --nw-accent-b: #2d4aed;
+  /* Стекло карточки: в макете чёрный 38% плюс размытие подложки. */
+  --nw-card-bg: rgba(0, 0, 0, 0.38);
+
+  position: relative;
+  /* clip, а не hidden: декор вылезает за края полотна и его надо обрезать,
+     но hidden создаёт скролл-контейнер и ломает position: sticky у
+     рекламных бортов внутри. clip обрезает так же, контейнером не
+     становится. */
+  overflow: clip;
+  font-family: var(--ui);
+  color: #fff;
+}
+
+/* ===================== Полоса тулбара ===================== */
+/* От прежнего тулбара на этой странице остался только переключатель
+   языка: бренд и дублирующее меню прячет topbar.css, а фильтры по
+   категориям убраны по редизайну. Плашка из design-page.css под один
+   переключатель выглядела пустой полосой во всю ширину — оставляем сам
+   переключатель, прижатый вправо, без панели. */
+.mk-top ~ .toolbar {
+  /* Отступы в пикселях, а не в --u: переменная объявлена на .nw-page, а
+     тулбар лежит снаружи неё — calc был невалиден, и весь margin
+     обнулялся. Переключатель из-за этого упирался в линию под шапкой и
+     срезался правым краем окна. */
+  margin: 18px 42px 0;
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  justify-content: flex-end;
+}
+
+/* ===================== Колонка ленты ===================== */
+/* В макете колонка стоит на 288, но там справа от неё живёт полоса
+   прокрутки шириной около 28. Прокрутки у нас нет, поэтому колонка
+   встаёт ровно по центру между панелями — (1443 - 810) / 2. */
+.nw-lead {
+  position: relative;
+  padding: calc(15 * var(--u)) 0 calc(60 * var(--u));
+  min-height: calc(917 * var(--u));
+}
+
+.nw-feed {
+  position: relative;
+  z-index: 2;
+  width: calc(810 * var(--u));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* Шаг между карточками в макете 783.1 при высоте карточки 733.13. */
+  gap: calc(50 * var(--u));
+}
+
+/* ===================== Карточка ===================== */
+/* Геометрия снята с мастер-компонента (843×763) и переведена в единицы
+   колонки множителем 0.9609 (810 / 843) — те же числа, что у экземпляра
+   в макете: 810×733, радиус 23.06, отступы 50.9 / 43.2 / 45.2 / 23. */
+.nw-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: calc(43.2 * var(--u)) calc(45.2 * var(--u)) calc(23 * var(--u)) calc(50.9 * var(--u));
+  border: 0;
+  border-radius: calc(23.06 * var(--u));
+  background: var(--nw-card-bg);
+  box-shadow: 0 calc(10 * var(--u)) calc(28.35 * var(--u)) rgba(0, 0, 0, 0.35);
+  /* Порядок блоков задаётся здесь, а не в js/news-page.js: разметку
+     карточки строит один и тот же код для ленты и для превью в
+     редакторе, и трогать его ради вида не нужно — в макете картинка
+     стоит выше заголовка, в разметке она идёт после него. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Размытие подложки — только на широких экранах: на мобильных GPU оно
+   дорого, а карточек на странице много (см. тот же приём в home.css). */
+@media (min-width: 901px) {
+  .nw-card {
+    backdrop-filter: blur(calc(15 * var(--u)));
+    -webkit-backdrop-filter: blur(calc(15 * var(--u)));
+  }
+}
+
+.nw-card .nw-image { order: 1; }
+.nw-card > h2      { order: 2; }
+.nw-card .nw-meta  { order: 3; }
+.nw-card .nw-body  { order: 4; }
+.nw-card .nw-footer{ order: 5; }
+.nw-card .nw-tools { order: 6; }
+
+/* Картинка поста. В макете это блок 713.9×381.5 с заливкой по размеру
+   (IMAGE FILL), то есть кадрирование по центру. Ширину, выравнивание и
+   обтекание, которые задаёт админ, правила ниже не отменяют — они
+   действуют для постов с настройками по умолчанию, а остальные
+   продолжают работать как раньше (см. cardFor() в js/news-page.js). */
+.nw-card .nw-image {
+  margin: 0 0 calc(13.5 * var(--u));
+  height: calc(381.5 * var(--u));
+  border-radius: calc(6 * var(--u));
+  object-fit: cover;
+}
+
+/* Заголовок — градиентная плашка, выступающая к левому краю карточки.
+   Левые углы прямые: в макете она упирается в край и срезана им. */
+.nw-card > h2 {
+  align-self: flex-start;
+  margin: 0 0 calc(13.5 * var(--u)) calc(-50.9 * var(--u));
+  padding: calc(12 * var(--u)) calc(26 * var(--u)) calc(12 * var(--u)) calc(50.9 * var(--u));
+  border-radius: 0 calc(10 * var(--u)) calc(10 * var(--u)) 0;
+  background: linear-gradient(90deg, var(--nw-accent-a), var(--nw-accent-b));
+  font-family: var(--display);
+  font-size: calc(26 * var(--u));
+  line-height: 1.15;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-transform: none;
+}
+
+/* Строка даты и категории играет роль подзаголовка из макета: своего
+   поля для него в посте нет, а по месту и начертанию это ровно он. */
+.nw-card .nw-meta {
+  display: flex;
+  align-items: center;
+  gap: calc(14 * var(--u));
+  margin: 0 0 calc(13.5 * var(--u));
+  font-family: var(--ui);
+  font-size: calc(19 * var(--u));
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Bootshaus здесь не годится: строка наполовину состоит из цифр даты, а
+   у него они узкие и на 19px читаются с трудом. */
+.nw-card .nw-date { color: rgba(255, 255, 255, 0.7); }
+
+.nw-card .nw-body {
+  margin: 0;
+  max-width: calc(547.7 * var(--u));
+  font-size: calc(20 * var(--u));
+  line-height: 1.45;
+  color: #fff;
+}
+
+.nw-card .nw-body p { margin: 0 0 calc(10 * var(--u)); }
+.nw-card .nw-body p:last-child { margin-bottom: 0; }
+
+/* ===================== Кнопки карточки ===================== */
+/* Обе кнопки — одинаковые круги 64.4 с градиентом макета и белым знаком
+   внутри: сердце и изогнутая стрелка. Прежний вид (пилюля с числом и
+   кружок с бумажным самолётиком) заменён по правке заказчика.
+
+   Числа лайков на круге не осталось места, поэтому счётчик спрятан от
+   глаз, но не от скринридера, а в подсказке кнопки он есть цифрой —
+   см. renderLikeButton() в js/news-page.js. */
+.nw-card .nw-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: calc(16 * var(--u));
+  margin-top: calc(30 * var(--u));
+}
+
+.nw-card .nw-like,
+.nw-card .nw-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(64.4 * var(--u));
+  height: calc(64.4 * var(--u));
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--nw-accent-a), var(--nw-accent-b));
+  color: #fff;
+  cursor: pointer;
+}
+
+.nw-card .nw-like-heart,
+.nw-card .nw-copy-icon {
+  display: block;
+  width: calc(30 * var(--u));
+  height: calc(30 * var(--u));
+}
+
+/* Не лайкнуто — знак чуть приглушён, лайкнуто — в полную силу. Раньше
+   состояние показывала подмена эмодзи (🤍 / 💙), теперь класс на кнопке. */
+.nw-card .nw-like        { color: rgba(255, 255, 255, 0.75); }
+.nw-card .nw-like.liked  { color: #fff; }
+
+/* Счётчик виден только скринридеру: на круглой кнопке для него нет места,
+   а убирать его совсем нельзя — тогда о числе лайков не узнать никак. */
+.nw-card .nw-like-count {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Подтверждение копирования: цвет вместо подписи, которой на круге нет. */
+.nw-card .nw-copy-ok   { background: rgba(76, 200, 120, 0.9); }
+.nw-card .nw-copy-fail { background: rgba(220, 80, 80, 0.9); }
+
+/* ===================== Боковые панели ===================== */
+/* Frame 55 / Frame 56 в макете: 248×670, радиус 24, белая подложка и
+   диагональные полосы под -45° толщиной 30 с шагом 78, залитые тем же
+   градиентом, что кнопки. Полосы нарисованы маской, а не набором
+   прямоугольников: одиннадцать повёрнутых блоков в разметке — это
+   способ Figma, в CSS для того же есть repeating-linear-gradient.
+
+   Полоска — это вид НЕЗАНЯТОГО рекламного места. Когда слот куплен, в
+   борт встаёт креатив (класс .has-ad ниже), и полоска скрывается. */
+/* Колонка во всю высоту ленты. Сама панель внутри неё липкая, поэтому
+   реклама едет вместе со страницей и не уходит из виду — но и не
+   выползает за пределы ленты, упираясь в низ колонки. */
+.nw-rail-slot {
+  position: absolute;
+  top: calc(15 * var(--u));
+  bottom: calc(20 * var(--u));
+  width: calc(248 * var(--u));
+  z-index: 1;
+}
+
+.nw-rail {
+  position: sticky;
+  /* Под шапкой И под строкой переключателя языка: она тоже липкая и
+     прижата вправо, поэтому на прокрученной странице оказывалась ровно
+     поверх правого борта. 55px — её высота вместе с отступом. */
+  top: calc(var(--mk-top-h, 0px) + 16px + 55px);
+  width: 100%;
+  height: calc(670 * var(--u));
+  border-radius: calc(24 * var(--u));
+  background: #fff;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Занятый борт: полосок нет, картинка кампании заполняет панель. */
+.nw-rail.has-ad {
+  background: #05070d;
+  pointer-events: auto;
+}
+
+.nw-rail.has-ad::before { display: none; }
+
+.nw-rail.has-link { cursor: pointer; }
+.nw-rail:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-offset: 2px; }
+
+/* contain, а не cover: борт тирлиста ровно 160×600 — там креатив ложится
+   один в один, — а панель из этого макета 248×670, другая пропорция, и
+   cover срезал рекламодателю верх и низ макета. Лучше показать креатив
+   целиком с полями по бокам, чем обрезать то, за что заплачено. */
+.nw-rail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Плашка «РЕКЛАМА» и маркировка erid — те же, что у бортов тирлиста
+   (стили лежат в styles.css, но она сюда не подключается, поэтому
+   правила продублированы под размеры этой панели). */
+.nw-rail .ptn-chip,
+.nw-rail .ptn-erid {
+  position: absolute;
+  left: calc(10 * var(--u));
+  padding: calc(4 * var(--u)) calc(9 * var(--u));
+  border-radius: calc(6 * var(--u));
+  background: rgba(0, 0, 0, 0.6);
+  font-family: var(--ui);
+  font-size: calc(12 * var(--u));
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.nw-rail .ptn-chip { top: calc(10 * var(--u)); }
+.nw-rail .ptn-erid { bottom: calc(10 * var(--u)); font-size: calc(11 * var(--u)); }
+
+.nw-rail::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--nw-accent-a), var(--nw-accent-b));
+  -webkit-mask: repeating-linear-gradient(-45deg, #000 0 calc(30 * var(--u)), transparent calc(30 * var(--u)) calc(78 * var(--u)));
+  mask: repeating-linear-gradient(-45deg, #000 0 calc(30 * var(--u)), transparent calc(30 * var(--u)) calc(78 * var(--u)));
+}
+
+.nw-rail-l { left: calc(26 * var(--u)); }
+.nw-rail-r { right: calc(28 * var(--u)); }
+
+/* ===================== Декор ===================== */
+/* Тот же набор, что на главной, но разложен иначе: в макете новостей
+   фигуры стоят там, где на главной они стоят ДО вступительной анимации
+   (сравни с «главная 1 слайд»). Поэтому правила здесь свои, а не общие
+   с home.css — совпадают только картинки. Анимации на этой странице
+   нет: в прототипе у фрейма новостей переходов не заведено. */
+.nw-deco {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.nw-fig {
+  transform-origin: 0 0;
+  background: rgba(217, 217, 217, 0.2);
+  box-shadow: 0 calc(4 * var(--u)) calc(7 * var(--u)) rgba(0, 0, 0, 0.25);
+}
+
+@media (min-width: 901px) {
+  .nw-fig {
+    backdrop-filter: blur(calc(14 * var(--u)));
+    -webkit-backdrop-filter: blur(calc(14 * var(--u)));
+  }
+}
+
+.nw-fig-circle {
+  left: calc(1461 * var(--u));
+  top: calc(121 * var(--u));
+  width: calc(163 * var(--u));
+  height: calc(163 * var(--u));
+  border-radius: 50%;
+}
+
+.nw-fig-square-lg {
+  left: calc(1450 * var(--u));
+  top: calc(494.26 * var(--u));
+  width: calc(226 * var(--u));
+  height: calc(226 * var(--u));
+  border-radius: calc(18 * var(--u));
+  rotate: -24.65deg;
+}
+
+.nw-fig-square-sm {
+  left: calc(-114 * var(--u));
+  top: calc(23.62 * var(--u));
+  width: calc(94.65 * var(--u));
+  height: calc(94.65 * var(--u));
+  border-radius: calc(18 * var(--u));
+  rotate: -10.43deg;
+}
+
+.nw-fig-tri {
+  left: calc(-194.85 * var(--u));
+  top: calc(536 * var(--u));
+  width: calc(109 * var(--u));
+  height: calc(109 * var(--u));
+  rotate: 29.78deg;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.nw-sakura {
+  width: calc(868 * var(--u));
+  height: calc(890 * var(--u));
+  transform-origin: 0 0;
+}
+
+.nw-sakura-l {
+  left: calc(136.51 * var(--u));
+  top: calc(552 * var(--u));
+  rotate: 86.69deg;
+}
+
+.nw-sakura-r {
+  left: calc(1316 * var(--u));
+  top: calc(10 * var(--u));
+}
+
+.nw-ghost {
+  width: calc(675 * var(--u));
+  height: calc(61.6 * var(--u));
+  -webkit-mask: url("../assets/design/wordmark.svg") no-repeat center / contain;
+  mask: url("../assets/design/wordmark.svg") no-repeat center / contain;
+}
+
+.nw-ghost-a {
+  left: calc(-672 * var(--u));
+  top: calc(10 * var(--u));
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
+}
+
+.nw-ghost-b {
+  left: calc(1520 * var(--u));
+  top: calc(168 * var(--u));
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
+}
+
+/* ===================== Адаптив ===================== */
+/* Мобильного фрейма в макете нет. Ниже 900px колонка занимает всю
+   ширину, декор и полосатые панели убираются: они рассчитаны на
+   полотно 1443 и в узкой колонке превращаются в кашу. */
+@media (max-width: 900px) {
+  /* На узком экране поля тулбара считались от --u и схлопывались почти в
+     ноль — переключатель языка уезжал за правый край. */
+  .mk-top ~ .toolbar {
+    margin: 10px 12px 0;
+  }
+
+  .nw-lead {
+    min-height: 0;
+    padding: 14px 12px 28px;
+  }
+
+  .nw-feed {
+    width: 100%;
+    gap: 18px;
+  }
+
+  .nw-deco,
+  .nw-rail-slot {
+    display: none;
+  }
+
+  .nw-card {
+    padding: 14px 14px 12px 16px;
+    border-radius: 16px;
+  }
+
+  .nw-card .nw-image { height: 190px; margin-bottom: 10px; }
+
+  .nw-card > h2 {
+    margin: 0 0 10px -16px;
+    padding: 8px 14px 8px 16px;
+    font-size: 19px;
+  }
+
+  .nw-card .nw-meta { gap: 10px; margin-bottom: 10px; font-size: 14px; }
+  .nw-card .nw-body { max-width: none; font-size: 15px; }
+
+  .nw-card .nw-footer { gap: 10px; margin-top: 16px; }
+
+  .nw-card .nw-like,
+  .nw-card .nw-copy {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nw-card .nw-like-heart,
+  .nw-card .nw-copy-icon { width: 21px; height: 21px; }
+}
