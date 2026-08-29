@@ -122,3 +122,101 @@
   font-weight: 600;
 }
 .adm-btn[disabled] { opacity: .5; cursor: default; }
+
+/* ===================== Блочный редактор поста =====================
+   Тело поста — список блоков вместо двух textarea. Разметка в
+   admin-news.php, поведение в js/news-editor.js. */
+
+.ne-body-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+
+.ne-lang-seg { display: inline-flex; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; overflow: hidden; }
+.ne-lang-seg button { background: none; border: 0; color: inherit; padding: 4px 12px; cursor: pointer; font: inherit; }
+.ne-lang-seg button.active { background: rgba(97,181,233,.25); }
+
+.ne-blocks { display: flex; flex-direction: column; gap: 6px; }
+
+.ne-block {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 24px;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px;
+}
+.ne-block.is-drop-target { border-color: #61b5e9; }
+.ne-block-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.ne-grip, .ne-block-del {
+  background: none; border: 0; padding: 2px;
+  color: rgba(255,255,255,.5);
+  font-size: 14px; line-height: 1;
+}
+.ne-grip { cursor: grab; }
+.ne-block-del { cursor: pointer; }
+.ne-grip:hover, .ne-block-del:hover { color: #fff; }
+
+.ne-editable { min-height: 22px; padding: 2px 0; outline: none; line-height: 1.6; word-break: break-word; }
+.ne-editable:focus { box-shadow: inset 0 -1px 0 #61b5e9; }
+
+.ne-block-quote .ne-editable { border-left: 2px solid #61b5e9; padding-left: 10px; }
+.ne-code { width: 100%; font-family: ui-monospace, Consolas, monospace; }
+
+.ne-inline-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; opacity: .75; }
+
+.ne-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.ne-count { margin-left: auto; font-size: 12px; opacity: .6; }
+
+/* ---- Блок картинки и альбома ---- */
+.ne-media { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ne-thumbs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ne-thumb {
+  position: relative;
+  width: 96px; height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255,255,255,.08);
+}
+.ne-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.ne-thumb button {
+  position: absolute; top: 2px; right: 2px;
+  width: 18px; height: 18px;
+  border: 0; border-radius: 50%;
+  background: rgba(0,0,0,.6); color: #fff;
+  cursor: pointer; font-size: 11px; line-height: 1;
+}
+.ne-thumb-add {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed rgba(255,255,255,.3);
+  color: rgba(255,255,255,.6);
+  background: none; cursor: pointer; font-size: 18px;
+}
+.ne-geom { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ne-geom .ne-hint { flex-basis: 100%; margin: 0; }
+.ne-cap-field { display: flex; align-items: baseline; gap: 8px; }
+.ne-cap-label { font-size: 12px; opacity: .6; white-space: nowrap; }
+/* Без flex:1 пустая подпись схлопывается в ноль ширины — кликнуть в неё и
+   начать печатать было нельзя. */
+.ne-cap-field .ne-editable { flex: 1; min-width: 0; }
+
+/* ---- Плавающая панель форматирования ----
+   Лежит вне модалки и позиционируется absolute от документа, поэтому в
+   news-editor.js к координатам выделения прибавляется прокрутка. */
+.ne-fmt {
+  /* fixed, как и сама .modal-backdrop: обе считают от вьюпорта, поэтому
+     координаты выделения кладутся в left/top как есть. absolute здесь давал
+     панель ПОД модалкой — кликнуть по ней было нельзя. */
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 6px;
+  background: #12203c;
+  border: 1px solid rgba(120,190,255,.35);
+}
+.ne-fmt button {
+  background: none; border: 0; color: #fff;
+  padding: 3px 7px; border-radius: 4px; cursor: pointer; font: inherit;
+}
+.ne-fmt button:hover { background: rgba(255,255,255,.12); }

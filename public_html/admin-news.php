@@ -42,7 +42,7 @@ $html = preg_replace('~(src|href)="(?!https?:|//|/|#|data:)~i', '$1="/', $html);
 
 $html = str_replace(
     '</head>',
-    '<link rel="stylesheet" href="/css/admin-shell.css?v=1" />' . "
+    '<link rel="stylesheet" href="/css/admin-shell.css?v=2" />' . "
 </head>",
     $html
 );
@@ -76,13 +76,28 @@ $editor = <<<'HTML'
           <label for="neTitleEn" data-i18n="news.fieldTitleEn">Заголовок (EN, необязательно)</label>
           <input type="text" id="neTitleEn" maxlength="200" />
         </div>
+        <!-- Тело поста — список блоков (абзац, цитата, список, код, картинка,
+             альбом). Переключатель RU/EN меняет ТОЛЬКО текст: порядок блоков
+             и картинки общие для обоих языков, см.
+             docs/superpowers/specs/2026-08-29-news-block-editor-design.md. -->
         <div class="field">
-          <label for="neBodyRu" data-i18n="news.fieldBodyRu">Текст (RU)</label>
-          <textarea id="neBodyRu" rows="8" maxlength="20000"></textarea>
-        </div>
-        <div class="field">
-          <label for="neBodyEn" data-i18n="news.fieldBodyEn">Текст (EN, необязательно)</label>
-          <textarea id="neBodyEn" rows="6" maxlength="20000"></textarea>
+          <div class="ne-body-head">
+            <label data-i18n="news.fieldBody">Текст поста</label>
+            <div class="ne-lang-seg" id="neLang" role="group" data-i18n-label="news.fieldBodyLang" aria-label="Язык текста">
+              <button type="button" data-v="ru" class="active">RU</button>
+              <button type="button" data-v="en">EN</button>
+            </div>
+          </div>
+          <div class="ne-blocks" id="neBlocks"></div>
+          <div class="ne-add" id="neAddRow">
+            <button class="btn small ghost" type="button" data-add="p" data-i18n="news.blockP">Абзац</button>
+            <button class="btn small ghost" type="button" data-add="quote" data-i18n="news.blockQuote">Цитата</button>
+            <button class="btn small ghost" type="button" data-add="list" data-i18n="news.blockList">Список</button>
+            <button class="btn small ghost" type="button" data-add="code" data-i18n="news.blockCode">Код</button>
+            <button class="btn small ghost" type="button" data-add="image" data-i18n="news.blockImage">Картинка</button>
+            <button class="btn small ghost" type="button" data-add="album" data-i18n="news.blockAlbum">Альбом</button>
+            <span class="ne-count" id="neBlockCount"></span>
+          </div>
         </div>
 
         <div class="field">
@@ -95,18 +110,13 @@ $editor = <<<'HTML'
           <input type="date" id="neDate" class="ne-date" required />
         </div>
 
+        <!-- Кроп-редактор: появляется между выбором файла в блоке-картинке
+             (см. startCropFor() в news-editor.js) и его заливкой. Скрыт, пока
+             файл не выбран или не декодировался. Своего поля выбора файла у
+             редактора больше нет: <input type="file"> создаёт тот блок,
+             который его и открыл (chooseFile()), — иначе на пост с десятком
+             картинок пришлось бы держать десяток скрытых полей. -->
         <div class="field">
-          <label data-i18n="news.fieldImage">Картинка</label>
-          <div class="tb-group">
-            <button class="btn small" type="button" id="neImagePick" data-i18n="news.imageUpload">🖼 Загрузить</button>
-            <button class="btn small ghost" type="button" id="neImageClear" data-i18n="news.imageClear">Убрать</button>
-          </div>
-          <input type="file" id="neImageFile" accept="image/*" hidden />
-
-          <!-- Кроп-редактор: появляется между выбором файла и его заливкой
-               (см. обработчик #neImageFile в news-page.js). Скрыт, пока файл
-               не выбран/не декодировался — открытие существующего поста без
-               смены картинки его не показывает, показывать там нечего. -->
           <div class="ne-crop" id="neCrop" hidden>
             <label data-i18n="news.cropHeading">Кадрирование и зум</label>
             <div class="ne-crop-stage" id="neCropStage">
@@ -134,31 +144,6 @@ $editor = <<<'HTML'
         </div>
 
         <div class="field">
-          <label for="nePct" data-i18n="news.fieldImageWidth">Ширина картинки</label>
-          <div class="ne-pct-row">
-            <input type="range" id="nePct" min="10" max="100" step="5" value="100" />
-            <output for="nePct" id="nePctValue">100%</output>
-          </div>
-          <!-- Совет, а не ошибка (#neError рядом — для сбоев): виден, только
-               когда поднятая ширина требует больше, чем реально хранит
-               сохранённый файл, и перезалить его нечем (см. updatePctHint()
-               в news-page.js). -->
-          <p class="ne-hint" id="nePctHint" hidden aria-live="polite"></p>
-        </div>
-
-        <div class="field">
-          <label data-i18n="news.fieldImageAlign">Выравнивание картинки</label>
-          <div class="ne-cat-seg" id="neAlign"></div>
-        </div>
-
-        <div class="field">
-          <label class="ne-wrap-field">
-            <input type="checkbox" id="neWrap" class="ne-wrap-check" />
-            <span data-i18n="news.fieldImageWrap">Обтекание текстом</span>
-          </label>
-        </div>
-
-        <div class="field">
           <label data-i18n="news.previewHeading">Предпросмотр карточки</label>
           <div class="ne-preview-card" id="nePreviewCard"></div>
         </div>
@@ -166,12 +151,28 @@ $editor = <<<'HTML'
         <p class="ne-error" id="neError" role="alert"></p>
       </div>
 
+
+      <!-- Панель форматирования всплывает над выделением. Живёт ВНУТРИ
+           .modal-backdrop (тот position: fixed и перекрыл бы её собой) и
+           позиционируется тоже fixed — по координатам выделения в окне, без
+           арифметики с прокруткой: и модалка, и панель считают от одного и
+           того же вьюпорта. -->
+      <div class="ne-fmt" id="neFmt" hidden role="toolbar" data-i18n-label="news.fmtToolbar" aria-label="Форматирование">
+        <button type="button" data-fmt="b"  data-i18n-title="news.fmtBold"><b>Ж</b></button>
+        <button type="button" data-fmt="i"  data-i18n-title="news.fmtItalic"><i>К</i></button>
+        <button type="button" data-fmt="u"  data-i18n-title="news.fmtUnderline"><u>П</u></button>
+        <button type="button" data-fmt="st" data-i18n-title="news.fmtStrike"><s>З</s></button>
+        <button type="button" data-fmt="c"  data-i18n-title="news.fmtCode">&lt;/&gt;</button>
+        <button type="button" data-fmt="sp" data-i18n-title="news.fmtSpoiler">▨</button>
+        <button type="button" data-fmt="a"  data-i18n-title="news.fmtLink">🔗</button>
+      </div>
       <div class="modal-foot">
         <button class="btn" type="button" id="neCancel" data-i18n="news.cancel">Отмена</button>
         <button class="btn primary" type="button" id="nePublish" data-i18n="news.publish">Опубликовать</button>
       </div>
     </div>
   </div>
+
 HTML;
 
 $html = str_replace(
