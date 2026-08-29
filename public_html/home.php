@@ -64,7 +64,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/topbar.css?v=4" />
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=24" />
-<link rel="stylesheet" href="css/home.css?v=10" />
+<link rel="stylesheet" href="css/home.css?v=11" />
 </head>
 <body>
 
