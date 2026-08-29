@@ -82,6 +82,10 @@
 
   const TAG_FLAG = { STRONG: "b", B: "b", EM: "i", I: "i", U: "u", S: "st", STRIKE: "st", CODE: "c" };
 
+  // Пробел нулевой ширины — служебный разделитель каретки (см. wrapSelection).
+  // В модель он не уезжает никогда.
+  const ZWSP = "​";
+
   function sameFormat(a, b) {
     for (const k of ["b", "i", "u", "st", "c", "sp", "href"]) {
       if ((a[k] || false) !== (b[k] || false)) { return false; }
@@ -97,8 +101,9 @@
     const out = [];
     const walk = (node, state) => {
       if (node.nodeType === 3) {
-        if (node.nodeValue === "") { return; }
-        const sp = { s: node.nodeValue };
+        const text = node.nodeValue.split(ZWSP).join("");
+        if (text === "") { return; }
+        const sp = { s: text };
         for (const k in state) { if (state[k]) { sp[k] = state[k]; } }
         // Соседние одинаково оформленные куски склеиваются: contenteditable
         // дробит текст на узлы, а в базе нужен минимальный список.
@@ -482,15 +487,17 @@
 
   const EXEC = { b: "bold", i: "italic", u: "underline", st: "strikeThrough" };
 
-  function applyFormat(kind) {
-    if (EXEC[kind]) {
+  // fromMarkdown=true — вызов из разметки на лету: там форматирование обязано
+  // закончиться вместе с распознанным куском, поэтому даже жирный/курсив
+  // ставятся своей обёрткой, а не execCommand. У execCommand стиль «липкий»:
+  // после **жирный** весь дальнейший ввод продолжал бы идти жирным.
+  function applyFormat(kind, fromMarkdown) {
+    if (EXEC[kind] && !fromMarkdown) {
       document.execCommand(EXEC[kind], false, null);
-    } else if (kind === "c") {
-      wrapSelection("code", "");
-    } else if (kind === "sp") {
-      // is-open, чтобы в редакторе спойлер оставался читаем: прятать от автора
-      // текст, который он же и пишет, незачем — в ленте класс ставится с нуля.
-      wrapSelection("span", "nw-spoiler is-open");
+    } else if (FMT_TAG[kind]) {
+      // is-open у спойлера: прятать от автора текст, который он же и пишет,
+      // незачем — в ленте класс ставится с нуля.
+      wrapSelection(kind);
     } else if (kind === "a") {
       const url = window.prompt(tx("news.linkPrompt"), "https://");
       if (url === null) { return; }
@@ -500,16 +507,37 @@
     syncActiveEditable();
   }
 
-  // Обёртка выделения тегом, которого нет в execCommand.
-  function wrapSelection(tag, cls) {
+  const FMT_TAG = {
+    b: ["strong", ""], i: ["em", ""], u: ["u", ""], st: ["s", ""],
+    c: ["code", ""], sp: ["span", "nw-spoiler is-open"]
+  };
+
+  // Обёртка выделения тегом. Каретка ставится ПОСЛЕ обёртки, в свежий пустой
+  // текстовый узел: без него дальнейший ввод попадал бы внутрь только что
+  // созданного <strong> (у execCommand это «липкое» состояние стиля), а
+  // removeAllRanges вместо этого оставлял бы блок вообще без каретки — и
+  // следующая же буква улетала бы в начало абзаца.
+  function wrapSelection(fmt) {
     const sel = document.getSelection();
     if (!sel.rangeCount || sel.isCollapsed) { return; }
+    const [tag, cls] = FMT_TAG[fmt];
     const range = sel.getRangeAt(0);
     const el = document.createElement(tag);
     if (cls) { el.className = cls; }
     el.append(range.extractContents());
     range.insertNode(el);
+
+    // Пробел нулевой ширины, а не пустой текстовый узел: каретку сразу за
+    // инлайновым элементом Chrome считает «внутри» него, и следующая буква
+    // уезжала бы в тот же <strong>. Внутри настоящего символа она снаружи
+    // однозначно. Сам символ в контент не попадает — blockToSpans его срезает.
+    const after = document.createTextNode(ZWSP);
+    el.parentNode.insertBefore(after, el.nextSibling);
+    const caret = document.createRange();
+    caret.setStart(after, 1);
+    caret.collapse(true);
     sel.removeAllRanges();
+    sel.addRange(caret);
   }
 
   function activeEditable() {
@@ -980,6 +1008,7 @@
   // следующего выбора файла (или вовсе до перезагрузки страницы).
   function closeEditor() {
     closeCropUI();
+    closeSlashMenu();
     $("#neFmt").hidden = true;
     editor.hidden = true;
   }
@@ -1286,6 +1315,18 @@
       renderBlockList();
     });
 
+    const blocksBox = $("#neBlocks");
+    blocksBox.addEventListener("keydown", onBlocksKeydown);
+    blocksBox.addEventListener("keyup", onBlocksKeyup);
+    blocksBox.addEventListener("input", onBlocksInput);
+    blocksBox.addEventListener("dragstart", onBlocksDragStart);
+    blocksBox.addEventListener("dragover", onBlocksDragOver);
+    blocksBox.addEventListener("drop", onBlocksDrop);
+    // Клик мимо меню типов закрывает его — как любое всплывающее меню.
+    document.addEventListener("click", ev => {
+      if (!ev.target.closest("#neSlash")) { closeSlashMenu(); }
+    });
+
     // Панель форматирования висит над выделением, пока оно есть и находится
     // внутри блока.
     document.addEventListener("selectionchange", positionFormatBar);
@@ -1301,6 +1342,179 @@
       const btn = ev.target.closest("[data-fmt]");
       if (btn) { applyFormat(btn.dataset.fmt); }
     });
+  }
+
+  // --------------------- Клавиатура, «/» и markdown на лету ---------------------
+  // Поведение списка блоков повторяет телеграм и Notion: там та же мышечная
+  // память, которой уже пользуется автор постов.
+
+  function focusBlock(index) {
+    const ed = document.querySelector('.ne-block[data-index="' + index + '"] .ne-editable');
+    if (!ed) { return; }
+    ed.focus();
+    const range = document.createRange();
+    range.selectNodeContents(ed);
+    range.collapse(false);
+    const sel = document.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function onBlocksKeydown(ev) {
+    const ed = ev.target.closest && ev.target.closest(".ne-editable");
+    if (!ed) { return; }
+    const bi = Number(ed.dataset.index);
+
+    if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
+      const map = { b: "b", i: "i", u: "u", k: "a" };
+      const kind = map[ev.key.toLowerCase()];
+      if (kind) { ev.preventDefault(); applyFormat(kind); return; }
+    }
+
+    if (ev.key === "Enter" && !ev.shiftKey) {
+      // Enter — новый блок, а не <br> внутри текущего: пост состоит из блоков,
+      // и «пустая строка внутри абзаца» в этой модели не существует.
+      // Shift+Enter остаётся браузеру — это перенос строки внутри блока.
+      ev.preventDefault();
+      editorBlocks.splice(bi + 1, 0, newBlock("p"));
+      renderBlockList();
+      focusBlock(bi + 1);
+      return;
+    }
+
+    if (ev.key === "Backspace" && ed.textContent === "" && bi > 0) {
+      // Пустой блок склеивается с предыдущим — то же, что делают телеграм и
+      // Notion. Непустой не трогаем: удалять его — работа крестика, иначе
+      // бэкспейс в начале абзаца сносил бы набранный текст.
+      ev.preventDefault();
+      editorBlocks.splice(bi, 1);
+      renderBlockList();
+      focusBlock(bi - 1);
+    }
+  }
+
+  // «/» в пустом блоке открывает список типов — тот же набор, что в кнопках
+  // #neAddRow, просто под рукой, без переноса взгляда вниз формы.
+  const SLASH_TYPES = [
+    ["p", "news.blockP"], ["quote", "news.blockQuote"], ["list", "news.blockList"],
+    ["code", "news.blockCode"], ["image", "news.blockImage"], ["album", "news.blockAlbum"]
+  ];
+
+  function closeSlashMenu() {
+    const old = document.querySelector("#neSlash");
+    if (old) { old.remove(); }
+  }
+
+  function openSlashMenu(ed, index) {
+    closeSlashMenu();
+    const menu = document.createElement("div");
+    menu.className = "ne-slash";
+    menu.id = "neSlash";
+    for (const [type, key] of SLASH_TYPES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = tx(key);
+      // mousedown, а не click: click сначала увёл бы фокус из блока.
+      b.addEventListener("mousedown", mev => {
+        mev.preventDefault();
+        editorBlocks[index] = newBlock(type);
+        closeSlashMenu();
+        renderBlockList();
+        focusBlock(index);
+      });
+      menu.append(b);
+    }
+    const rect = ed.getBoundingClientRect();
+    // fixed, по тем же соображениям, что и панель форматирования: модалка
+    // position: fixed, и абсолютные координаты документа уехали бы мимо.
+    menu.style.left = Math.round(rect.left) + "px";
+    menu.style.top = Math.round(rect.bottom + 4) + "px";
+    editor.append(menu);
+  }
+
+  function onBlocksKeyup(ev) {
+    const ed = ev.target.closest && ev.target.closest(".ne-editable");
+    if (!ed || ev.key !== "/") { return; }
+    // Только в пустом блоке: «/» посреди текста — обычный слэш.
+    if (ed.textContent !== "/") { return; }
+    openSlashMenu(ed, Number(ed.dataset.index));
+  }
+
+  // Разметка на лету: закрывающий символ превращает пару в форматирование, как
+  // в телеграме. Работает только по простому тексту прямо перед кареткой —
+  // никакого разбора всего блока, иначе правка середины абзаца ломала бы уже
+  // расставленное форматирование.
+  const MD_RULES = [
+    { re: /\*\*([^*]+)\*\*$/, fmt: "b" },
+    { re: /__([^_]+)__$/,       fmt: "u" },
+    { re: /~~([^~]+)~~$/,       fmt: "st" },
+    { re: /\|\|([^|]+)\|\|$/,   fmt: "sp" },
+    { re: /`([^`]+)`$/,         fmt: "c" }
+  ];
+
+  function onBlocksInput(ev) {
+    const ed = ev.target.closest && ev.target.closest(".ne-editable");
+    if (!ed) { return; }
+    const sel = document.getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) { return; }
+    const node = sel.anchorNode;
+    if (!node || node.nodeType !== 3) { return; }
+    const upto = node.nodeValue.slice(0, sel.anchorOffset);
+
+    for (const rule of MD_RULES) {
+      const m = rule.re.exec(upto);
+      if (!m) { continue; }
+      const start = sel.anchorOffset - m[0].length;
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, sel.anchorOffset);
+      range.deleteContents();
+
+      // Текст без служебных символов кладётся обратно и выделяется — дальше
+      // за форматирование отвечает тот же applyFormat, что и кнопки панели.
+      const text = document.createTextNode(m[1]);
+      range.insertNode(text);
+      const r2 = document.createRange();
+      r2.selectNodeContents(text);
+      sel.removeAllRanges();
+      sel.addRange(r2);
+      applyFormat(rule.fmt, true);
+      break;
+    }
+  }
+
+  // ------------------------ Перетаскивание блоков ------------------------
+  // Тянут за ручку .ne-grip: она включает draggable на строке в pointerdown и
+  // выключает на dragend (см. blockRow), иначе текст внутри блока нельзя было
+  // бы выделить мышью.
+  let dragFrom = -1;
+
+  function onBlocksDragStart(ev) {
+    const row = ev.target.closest(".ne-block");
+    if (!row) { return; }
+    dragFrom = Number(row.dataset.index);
+    ev.dataTransfer.effectAllowed = "move";
+    // Firefox не начинает перетаскивание без установленных данных.
+    ev.dataTransfer.setData("text/plain", String(dragFrom));
+  }
+
+  function onBlocksDragOver(ev) {
+    const row = ev.target.closest(".ne-block");
+    if (!row || dragFrom < 0) { return; }
+    ev.preventDefault();
+    for (const r of $("#neBlocks").children) { r.classList.remove("is-drop-target"); }
+    row.classList.add("is-drop-target");
+  }
+
+  function onBlocksDrop(ev) {
+    const row = ev.target.closest(".ne-block");
+    if (!row || dragFrom < 0) { return; }
+    ev.preventDefault();
+    const to = Number(row.dataset.index);
+    const moved = editorBlocks.splice(dragFrom, 1)[0];
+    editorBlocks.splice(to, 0, moved);
+    dragFrom = -1;
+    renderBlockList();
   }
 
   function positionFormatBar() {

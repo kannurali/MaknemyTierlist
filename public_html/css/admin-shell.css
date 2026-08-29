@@ -220,3 +220,22 @@
   padding: 3px 7px; border-radius: 4px; cursor: pointer; font: inherit;
 }
 .ne-fmt button:hover { background: rgba(255,255,255,.12); }
+
+/* Меню типов блока по «/». fixed по той же причине, что и .ne-fmt: модалка
+   position: fixed, координаты документа уехали бы мимо. */
+.ne-slash {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #12203c;
+  border: 1px solid rgba(120,190,255,.35);
+}
+.ne-slash button {
+  background: none; border: 0; color: #fff; font: inherit;
+  text-align: left; padding: 5px 8px; border-radius: 4px; cursor: pointer;
+}
+.ne-slash button:hover { background: rgba(255,255,255,.12); }
