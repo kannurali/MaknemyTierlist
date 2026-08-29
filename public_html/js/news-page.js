@@ -171,11 +171,22 @@
 
     const picked = NEWS.pickLang(post, lang);
 
+    // Блочный пост рисуется блоками, легаси-пост — абзацами. Проверка идёт
+    // через validateDoc, а не по одному лишь наличию body_json: строка в базе
+    // могла пережить формат, а рисовать полуразобранный документ — худший из
+    // вариантов. Не прошло проверку — падаем на плоский текст, который сервер
+    // всё равно вывел в body_ru (см. handle_news_save в api/news_save.php).
+    const blockDoc = post.body_json ? NEWSBLOCKS.validateDoc(post.body_json) : null;
+    const asBlocks = !!(blockDoc && blockDoc.ok);
+
     const h = document.createElement("h2");
     h.textContent = picked.title;
     card.append(h);
 
-    if (post.image_url) {
+    // У блочного поста картинки живут в теле, а image_url — производная
+    // колонка для превью ссылки (см. handle_news_save). Рисовать её ещё и
+    // сверху значило бы показать первую картинку дважды.
+    if (post.image_url && !asBlocks) {
       const img = document.createElement("img");
 
       // Ширина — число, которое реально прошло валидацию (10..100), поэтому
@@ -222,10 +233,14 @@
 
     const body = document.createElement("div");
     body.className = "nw-body";
-    for (const para of NEWS.toParagraphs(picked.body)) {
-      const p = document.createElement("p");
-      p.textContent = para;
-      body.append(p);
+    if (asBlocks) {
+      body.append(NEWSBLOCKS.renderBlocks(document, blockDoc.blocks, lang));
+    } else {
+      for (const para of NEWS.toParagraphs(picked.body)) {
+        const p = document.createElement("p");
+        p.textContent = para;
+        body.append(p);
+      }
     }
     card.append(body);
 
@@ -305,6 +320,23 @@
       del.addEventListener("click", () => removePost(post));
       tools.append(edit, del);
       card.append(tools);
+    }
+
+    // Спойлер и раскрывающаяся цитата открываются по клику и с клавиатуры.
+    // Обработчик один на карточку, а не на каждый спан: спанов в длинном
+    // посте десятки, а поведение у них одно.
+    if (asBlocks) {
+      const reveal = target => {
+        const el = target.closest && target.closest(".nw-spoiler, .nw-quote-collapsible");
+        if (!el) { return false; }
+        el.classList.add("is-open");
+        return true;
+      };
+      card.addEventListener("click", ev => { reveal(ev.target); });
+      card.addEventListener("keydown", ev => {
+        if (ev.key !== "Enter" && ev.key !== " ") { return; }
+        if (reveal(ev.target)) { ev.preventDefault(); }
+      });
     }
 
     return card;
