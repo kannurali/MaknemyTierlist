@@ -169,8 +169,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </button>
 
   <!-- ================= Шапка сайта (редизайн) ================= -->
-  <!-- Разделы «Трейдинг» и «Калькулятор» есть в макете, но страниц под них
-       ещё нет — пилюли на месте, ссылки отключены (aria-disabled). -->
+  <!-- Раздел «Трейдинг» есть в макете, но страницы под него ещё нет — пилюля
+       на месте, ссылка отключена (aria-disabled). «Калькулятор» уже ведёт на
+       /calculator, см. public_html/calculator.php. -->
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
@@ -198,7 +199,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="#" aria-disabled="true" title="Раздел в разработке">
+          <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text">Калькулятор</span>
           </a>
@@ -542,7 +543,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=17"></script>
+  <script src="js/i18n.js?v=18"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
