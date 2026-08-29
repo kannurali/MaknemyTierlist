@@ -1,12 +1,40 @@
 <?php
 require_once __DIR__ . '/api/_bootstrap.php';
+require_once __DIR__ . '/api/lib/og.php';
 
-// Страница статичная: ни живых данных, ни превью, собираемого из базы, —
-// поэтому здесь нет ничего похожего на tierlist_og_data() из index.php.
+// Страница в остальном статична: ни списков, ни текста, собираемого из
+// базы, здесь нет. Исключение — og:image: корень сайта самый шаримый адрес
+// (в Telegram и Discord пересылают именно его, а не /tierlist), и он не
+// имеет права рекламировать замороженный баннер, пока тирлист под /tierlist
+// показывает живые данные. Картинка (только картинка — og:title,
+// og:description и canonical ниже остаются про сайт целиком, так и было
+// задумано) берётся из того же источника, что и og:image у index.php:
+// og_tierlist_image() в api/lib/og.php строит её по summary, а summary —
+// тот же og_tierlist_summary() над той же строкой tierlist, что читает
+// index.php. Второй копии этой логики нет нарочно — расхождение между
+// / и /tierlist иначе замечалось бы только когда кто-то уже прислал ссылку
+// с чужой картинкой.
+//
+// Как и у index.php: любая ошибка (нет БД, кривой JSON, тиры ещё пустые)
+// откатывает картинку на статичный баннер — см. og_tierlist_image(null) /
+// og_tierlist_summary() в api/lib/og.php. Главная обязана открываться в
+// любом случае, битое превью — не повод для 500.
+$ogImage = og_tierlist_image(null);
+
 // Cache-Control такой же, как у index.php и news.php: файл несёт номера
 // версий ?v= для css/js, и закешированная копия намертво прибила бы
 // посетителя к старому коду.
 header('Cache-Control: no-cache, must-revalidate');
+if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
+    try {
+        $pdo = db();
+        $row = $pdo->query('SELECT data, rev FROM tierlist WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $summary = og_tierlist_summary($row['data'] ?? null, $row['rev'] ?? null);
+        $ogImage = og_tierlist_image($summary);
+    } catch (Throwable $e) {
+        error_log('home.php: og image fallback: ' . $e->getMessage());
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -31,10 +59,10 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta property="og:url" content="https://maknemytierlist.site/" />
 <meta property="og:title" content="Maknemy — тирлист, цены и новости Blox Fruits" />
 <meta property="og:description" content="Актуальный тир-лист Blox Fruits от создателя Maknemy. Следите за изменениями меты, ловите розыгрыши и всегда будьте в центре игровых новостей." />
-<meta property="og:image" content="https://maknemytierlist.site/assets/og-image.jpg?v=2" />
-<meta property="og:image:width" content="1920" />
-<meta property="og:image:height" content="1080" />
-<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image" content="<?= htmlspecialchars($ogImage['image'], ENT_QUOTES, 'UTF-8') ?>" />
+<meta property="og:image:width" content="<?= (int)$ogImage['imageWidth'] ?>" />
+<meta property="og:image:height" content="<?= (int)$ogImage['imageHeight'] ?>" />
+<meta property="og:image:type" content="<?= htmlspecialchars($ogImage['imageType'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:card" content="summary_large_image" />
 
 <script type="application/ld+json">
@@ -64,7 +92,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/topbar.css?v=4" />
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=24" />
-<link rel="stylesheet" href="css/home.css?v=10" />
+<link rel="stylesheet" href="css/home.css?v=11" />
 </head>
 <body>
 
@@ -90,10 +118,17 @@ header('Cache-Control: no-cache, must-revalidate');
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="#" aria-disabled="true" title="Раздел в разработке">
+          <!-- Раздела нет — а ссылки href="#" не было бы честно: клик ничего не
+               делал бы, только дописывал "#" в адресную строку. Поэтому не
+               <a>, а <span>: не ссылка, не в таб-порядке, но aria-disabled +
+               title по-прежнему сообщают о недоступности — тот же приём, что
+               у карточек .hm-card ниже («Фрукты», «Цены») и у соседнего
+               «Калькулятора». data-i18n-title — тот же приём, что и у
+               остальных подсказок сайта, см. js/i18n.js. -->
+          <span class="mk-pill" aria-disabled="true" data-i18n-title="topbar.tradingUnavailable" title="Раздел в разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text">Трейдинг</span>
-          </a>
+          </span>
         </li>
         <li>
           <a class="mk-pill" href="/calculator">
@@ -159,7 +194,7 @@ header('Cache-Control: no-cache, must-revalidate');
     <div class="hm-lead-actions">
       <!-- Раздела фруктов ещё нет. Кнопка сверстана целиком, но это <span>:
            когда страница появится, меняется только тег и href. -->
-      <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-hover">фрукты</span></span></a>
+      <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest">фрукты</span></span></a>
       <a class="hm-btn hm-btn-ghost" href="https://t.me/theMaknemy" target="_blank" rel="noopener"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest">о нас</span><span class="hm-btn-word hm-btn-word-hover">о нас</span></span></a>
     </div>
 

@@ -18,6 +18,11 @@
       "lang.ru":                "RU",
       "lang.en":                "EN",
 
+      // Пилюля «Трейдинг» в шапке (mk-top) — раздела ещё нет, ссылки под ней
+      // тоже (см. home.php/index.php/news.php): тайтл объясняет посетителю,
+      // почему пилюля не кликается, а не оставляет его гадать.
+      "topbar.tradingUnavailable": "Раздел в разработке",
+
       "auth.login":             "🔑 Войти",
       "auth.loginTitle":        "Войти как администратор",
       "auth.admin":             "👑 Админ",
@@ -310,6 +315,8 @@
       "lang.switch":            "Interface language",
       "lang.ru":                "RU",
       "lang.en":                "EN",
+
+      "topbar.tradingUnavailable": "Coming soon",
 
       "auth.login":             "🔑 Log in",
       "auth.loginTitle":        "Log in as administrator",
