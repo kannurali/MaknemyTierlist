@@ -66,6 +66,9 @@ function test_db(): PDO {
         -- высоты (см. комментарий в schema.sql).
         image_width INTEGER,
         image_height INTEGER,
+        -- Зеркалит schema.sql: структурированное тело поста. LONGTEXT в
+        -- SQLite — просто TEXT.
+        body_json TEXT NULL,
         published_at INTEGER NOT NULL,
         -- Зеркалит schema.sql: анонимный счётчик лайков поста, своя
         -- колонка вместо отдельной таблицы.

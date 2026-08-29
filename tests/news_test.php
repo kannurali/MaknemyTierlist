@@ -2,6 +2,7 @@
 define('TESTING', 1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/../public_html/api/_bootstrap.php';
+require __DIR__ . '/../public_html/api/lib/news_blocks.php';
 require __DIR__ . '/../public_html/api/news.php';
 require __DIR__ . '/../public_html/api/news_save.php';
 require __DIR__ . '/../public_html/api/news_delete.php';
@@ -505,6 +506,220 @@ test('a junk id on save is a 400, not a coerced update', function () {
     [, $feed] = handle_news($pdo);
     assert_eq(1, count($feed['posts']), 'still exactly one post');
     assert_eq('Апдейт 26', $feed['posts'][0]['title_ru'], 'original post unchanged');
+});
+
+// ------------------------- Блочное тело поста -------------------------
+
+function nb_img(): string { return '/images/' . str_repeat('a', 40) . '.webp'; }
+function nb_p(string $ru, string $en = ''): array {
+    return ['t' => 'p', 'ru' => [['s' => $ru]], 'en' => $en === '' ? [] : [['s' => $en]]];
+}
+function nb_doc(array $blocks): array { return ['v' => 1, 'blocks' => $blocks]; }
+
+test('a minimal block document validates on the server too', function () {
+    $r = news_blocks_validate(nb_doc([nb_p('Привет')]));
+    assert_true($r['ok'], $r['error']);
+    assert_eq(1, count($r['blocks']));
+});
+
+test('the server rejects what the browser model rejects', function () {
+    // Список зеркалит tests/news_blocks_test.mjs: если проверка есть только
+    // на одной стороне, вторая — дыра.
+    assert_true(!news_blocks_validate(['v' => 2, 'blocks' => []])['ok'], 'bad version');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'video']]))['ok'], 'unknown type');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'p', 'ru' => [], 'en' => [], 'x' => 1]]))['ok'], 'unknown key');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'p', 'ru' => [['s' => 'x', 'evil' => true]], 'en' => []]]))['ok'], 'unknown flag');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'p', 'ru' => [['s' => 'x', 'href' => 'javascript:alert(1)']], 'en' => []]]))['ok'], 'bad href');
+});
+
+test('an image block outside the upload directory is rejected', function () {
+    $mk = function ($url) {
+        return nb_doc([['t' => 'image', 'url' => $url, 'w' => 10, 'h' => 10,
+                        'pct' => 100, 'align' => 'center', 'wrap' => false,
+                        'cap_ru' => [], 'cap_en' => []]]);
+    };
+    assert_true(news_blocks_validate($mk(nb_img()))['ok'], 'own upload passes');
+    assert_true(!news_blocks_validate($mk('https://evil.example/x.png'))['ok'], 'foreign host');
+    assert_true(!news_blocks_validate($mk('/images/../../etc/passwd'))['ok'], 'traversal');
+});
+
+test('server ceilings match the ones in js/news-blocks.js', function () {
+    $many = array_fill(0, 201, nb_p('x'));
+    assert_true(!news_blocks_validate(nb_doc($many))['ok'], '201 blocks');
+
+    $items = array_fill(0, 11, ['url' => nb_img(), 'w' => 4, 'h' => 3]);
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'album', 'items' => $items,
+        'cap_ru' => [], 'cap_en' => []]]))['ok'], '11 album images');
+});
+
+test('plain text derivation matches what the JS model produces', function () {
+    $blocks = [
+        ['t' => 'p', 'ru' => [['s' => 'Первый'], ['s' => ' абзац', 'b' => true]], 'en' => [['s' => 'First para']]],
+        ['t' => 'quote', 'ru' => [['s' => 'Цитата']], 'en' => [], 'collapsible' => false],
+    ];
+    assert_eq("Первый абзац\n\nЦитата", news_blocks_plain($blocks, 'ru'));
+    assert_eq("First para\n\nЦитата", news_blocks_plain($blocks, 'en'));
+});
+
+test('the first image is what the link preview will use', function () {
+    $alb = ['t' => 'album', 'items' => [['url' => nb_img(), 'w' => 4, 'h' => 3]],
+            'cap_ru' => [], 'cap_en' => []];
+    assert_eq(['url' => nb_img(), 'w' => 4, 'h' => 3], news_blocks_first_image([nb_p('x'), $alb]));
+    assert_eq(null, news_blocks_first_image([nb_p('x')]));
+});
+
+test('saving blocks derives body_ru, body_en and the preview image', function () {
+    $pdo = test_db();
+    $blocks = [
+        ['t' => 'p', 'ru' => [['s' => 'Тело поста']], 'en' => [['s' => 'Post body']]],
+        ['t' => 'image', 'url' => nb_img(), 'w' => 800, 'h' => 600, 'pct' => 100,
+         'align' => 'center', 'wrap' => false, 'cap_ru' => [['s' => 'Подпись']], 'cap_en' => []],
+    ];
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'game',
+        'title_ru' => 'Заголовок',
+        // Клиент СПЕЦИАЛЬНО присылает мусор в производных полях: сервер обязан
+        // их проигнорировать и посчитать сам, иначе фронт мог бы врать
+        // краулеру о содержимом поста.
+        'body_ru'  => 'ВРАНЬЁ',
+        'image_url' => '',
+        'body_json' => ['v' => 1, 'blocks' => $blocks],
+    ], 1000);
+    assert_eq(200, $status);
+
+    $row = $pdo->query("SELECT * FROM news WHERE id = " . (int)$p['id'])->fetch(PDO::FETCH_ASSOC);
+    assert_eq("Тело поста\n\nПодпись", $row['body_ru'], 'derived russian body');
+    assert_eq("Post body\n\nПодпись", $row['body_en'], 'derived english body');
+    assert_eq(nb_img(), $row['image_url'], 'derived preview image');
+    assert_eq(800, (int)$row['image_width']);
+    assert_eq(600, (int)$row['image_height']);
+    assert_true($row['body_json'] !== null && $row['body_json'] !== '', 'body_json stored');
+});
+
+test('a block post needs no body_ru of its own', function () {
+    // Без блоков body_ru обязателен (и остаётся обязательным для легаси-формы).
+    // С блоками он выводится, поэтому его отсутствие в запросе — норма.
+    $pdo = test_db();
+    [$status] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [nb_p('Текст')]],
+    ], 1000);
+    assert_eq(200, $status);
+});
+
+test('a block document that says nothing is refused', function () {
+    // Пустой список блоков и пост из одной картинки без единой буквы дают
+    // пустой body_ru — а он NOT NULL и, главное, попадает в превью ссылки.
+    $pdo = test_db();
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => []],
+    ], 1000);
+    assert_eq(400, $status, 'empty blocks rejected');
+    assert_eq('body_ru is required', $p['error']);
+});
+
+test('bad blocks are a 400, not a half-saved post', function () {
+    $pdo = test_db();
+    [$status] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [['t' => 'p', 'ru' => [['s' => 'x', 'href' => 'javascript:1']], 'en' => []]]],
+    ], 1000);
+    assert_eq(400, $status);
+    assert_eq(0, (int)$pdo->query("SELECT COUNT(*) FROM news")->fetchColumn(), 'nothing written');
+});
+
+test('a body_json over the byte ceiling is refused', function () {
+    $pdo = test_db();
+    $big = str_repeat('я', 40000); // utf8: 80000 байт, выше NB_LIMIT_JSON
+    [$status] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [nb_p($big)]],
+    ], 1000);
+    assert_eq(400, $status);
+});
+
+test('a legacy post still saves with no body_json at all', function () {
+    $pdo = test_db();
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T', 'body_ru' => 'Текст',
+    ], 1000);
+    assert_eq(200, $status);
+    $row = $pdo->query("SELECT body_json, body_ru FROM news WHERE id = " . (int)$p['id'])->fetch(PDO::FETCH_ASSOC);
+    assert_eq(null, $row['body_json'], 'stays NULL, renders the old way');
+    assert_eq('Текст', $row['body_ru']);
+});
+
+test('the feed hands blocks to the client already decoded', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [nb_p('Текст')]],
+    ], 1000);
+    [$status, $p] = handle_news($pdo);
+    assert_eq(200, $status);
+    // Массив, а не строка: разбирать JSON дважды (здесь и в браузере) незачем,
+    // а строка заставила бы фронт делать свой JSON.parse и свой try/catch.
+    assert_true(is_array($p['posts'][0]['body_json']), 'decoded');
+    assert_eq('p', $p['posts'][0]['body_json']['blocks'][0]['t']);
+});
+
+test('a legacy post reports body_json as null, not as an empty array', function () {
+    $pdo = test_db();
+    seed_post($pdo, 'game', 'Старый', 1000);
+    [, $p] = handle_news($pdo);
+    assert_eq(null, $p['posts'][0]['body_json']);
+});
+
+// Таблица из ДО миграции docs/migrations/2026-08-29-news-blocks.sql: колонки
+// body_json ещё нет. Это окно между выкладкой кода (пушем) и миграцией
+// (руками) — и в отличие от рассинхрона в тесте про image_size выше, ЭТОТ
+// конкретный рассинхрон обязан деградировать, а не валить ленту: /news
+// объявлен в sitemap.xml, и краулер не должен получить 503 из-за
+// неисполненного ALTER.
+// Таблица собирается руками, а не через ALTER ... DROP COLUMN: SQLite умеет
+// его только с 3.35, а сборка PHP на этой машине старше — тот же приём и по
+// той же причине, что у old_schema_news_db() выше.
+function news_db_without_body_json(): PDO {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("CREATE TABLE news (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        title_ru TEXT NOT NULL,
+        title_en TEXT NOT NULL DEFAULT '',
+        body_ru TEXT NOT NULL,
+        body_en TEXT NOT NULL,
+        image_url TEXT NOT NULL DEFAULT '',
+        image_pct INTEGER NOT NULL DEFAULT 100,
+        image_align TEXT NOT NULL DEFAULT 'center',
+        image_wrap INTEGER NOT NULL DEFAULT 0,
+        image_width INTEGER,
+        image_height INTEGER,
+        published_at INTEGER NOT NULL,
+        likes INTEGER NOT NULL DEFAULT 0
+    )");
+    return $pdo;
+}
+
+test('a missing body_json column degrades to the legacy path instead of killing the feed', function () {
+    $pdo = news_db_without_body_json();
+    seed_post($pdo, 'game', 'Старый', 1000);
+    [$status, $p] = handle_news($pdo);
+    assert_eq(200, $status, 'feed still serves');
+    assert_eq(1, count($p['posts']));
+    assert_eq('Старый', $p['posts'][0]['title_ru']);
+    assert_eq(null, $p['posts'][0]['body_json']);
+});
+
+test('any OTHER missing column is still a hard failure', function () {
+    // Деградация касается ровно body_json. Таблица old_schema_news_db() не
+    // имеет ни image_pct/align/wrap, ни body_json — то есть у обработчика
+    // есть соблазн списать её на «миграция не запускалась» и отдать ленту.
+    // Он не имеет права: это другой, невыясненный рассинхрон, и глотать его
+    // значит прятать поломку.
+    $pdo = old_schema_news_db();
+    assert_throws(function () use ($pdo) { handle_news($pdo); });
 });
 
 run_tests();
