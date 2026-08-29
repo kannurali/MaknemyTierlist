@@ -291,3 +291,46 @@
 .nw-tools button:hover { background: var(--cyan-deep); border-color: var(--cyan); }
 .nw-tools button.danger:hover { background: #a02c2c; border-color: #ff6b5e; }
 .nw-tools button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ===================== Блочное тело поста =====================
+   Типы блоков описаны в
+   docs/superpowers/specs/2026-08-29-news-block-editor-design.md.
+   Абзац (.nw-body p) уже стилизован выше — здесь только то, чего у плоского
+   тела не было. Все селекторы в неймспейсе nw-, как и весь остальной файл. */
+
+.nw-body a { color: var(--cyan); text-underline-offset: 2px; }
+.nw-body code { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: .92em; padding: 1px 4px; border-radius: 4px; background: rgba(120,190,255,.14); }
+
+.nw-code { margin: 0 0 10px; padding: 10px 12px; border-radius: 8px; background: rgba(6,14,30,.7); overflow-x: auto; }
+.nw-code code { background: none; padding: 0; }
+
+/* Односторонняя граница со скруглением выглядит сломанной — border-radius: 0. */
+.nw-quote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 3px solid var(--cyan); border-radius: 0; color: #b9cde6; }
+
+/* Раскрывающаяся цитата сложена до трёх строк и открывается кликом — класс
+   is-open вешает тот же обработчик карточки, что и у спойлера (cardFor). */
+.nw-quote-collapsible { max-height: 4.8em; overflow: hidden; cursor: pointer; }
+.nw-quote-collapsible.is-open { max-height: none; cursor: auto; }
+
+.nw-list { margin: 0 0 10px; padding-left: 20px; }
+.nw-list li { margin-bottom: 4px; }
+
+.nw-figure { margin: 0 0 10px; }
+.nw-caption { margin-top: 4px; font-size: 13px; color: #8ea5c0; }
+
+/* Спойлер: текст спрятан цветом, а не display — иначе он не занимал бы место
+   и абзац прыгал бы при открытии. user-select запрещает вытащить его
+   выделением, как это делает protect.js со всей страницей. */
+.nw-spoiler { border-radius: 4px; background: rgba(180,205,235,.28); color: transparent; cursor: pointer; user-select: none; }
+.nw-spoiler.is-open { background: none; color: inherit; cursor: auto; user-select: auto; }
+
+/* Альбом. Класс несёт количество картинок, раскладку выбирает CSS. */
+.nw-album { display: grid; gap: 4px; }
+.nw-album-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nw-album-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nw-album-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nw-album img { width: 100%; height: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; }
+
+@media (max-width: 700px) {
+  .nw-album-3, .nw-album-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

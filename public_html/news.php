@@ -373,6 +373,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php endif; ?>
   <script src="js/i18n.js?v=18"></script>
   <script src="js/news.js?v=4"></script>
+  <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
   <script src="js/promo.js?v=2"></script>
   <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
