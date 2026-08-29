@@ -271,13 +271,13 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=13"></script>
+  <script src="js/i18n.js?v=14"></script>
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
        ДО news-page.js: он зовёт NX_PROTECT на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/news-page.js?v=15"></script>
+  <script src="js/news-page.js?v=16"></script>
 </body>
 </html>
 <?php endif; ?>
