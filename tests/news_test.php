@@ -650,4 +650,76 @@ test('a legacy post still saves with no body_json at all', function () {
     assert_eq('Текст', $row['body_ru']);
 });
 
+test('the feed hands blocks to the client already decoded', function () {
+    $pdo = test_db();
+    handle_news_save($pdo, [
+        'category' => 'game', 'title_ru' => 'T',
+        'body_json' => ['v' => 1, 'blocks' => [nb_p('Текст')]],
+    ], 1000);
+    [$status, $p] = handle_news($pdo);
+    assert_eq(200, $status);
+    // Массив, а не строка: разбирать JSON дважды (здесь и в браузере) незачем,
+    // а строка заставила бы фронт делать свой JSON.parse и свой try/catch.
+    assert_true(is_array($p['posts'][0]['body_json']), 'decoded');
+    assert_eq('p', $p['posts'][0]['body_json']['blocks'][0]['t']);
+});
+
+test('a legacy post reports body_json as null, not as an empty array', function () {
+    $pdo = test_db();
+    seed_post($pdo, 'game', 'Старый', 1000);
+    [, $p] = handle_news($pdo);
+    assert_eq(null, $p['posts'][0]['body_json']);
+});
+
+// Таблица из ДО миграции docs/migrations/2026-08-29-news-blocks.sql: колонки
+// body_json ещё нет. Это окно между выкладкой кода (пушем) и миграцией
+// (руками) — и в отличие от рассинхрона в тесте про image_size выше, ЭТОТ
+// конкретный рассинхрон обязан деградировать, а не валить ленту: /news
+// объявлен в sitemap.xml, и краулер не должен получить 503 из-за
+// неисполненного ALTER.
+// Таблица собирается руками, а не через ALTER ... DROP COLUMN: SQLite умеет
+// его только с 3.35, а сборка PHP на этой машине старше — тот же приём и по
+// той же причине, что у old_schema_news_db() выше.
+function news_db_without_body_json(): PDO {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("CREATE TABLE news (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        title_ru TEXT NOT NULL,
+        title_en TEXT NOT NULL DEFAULT '',
+        body_ru TEXT NOT NULL,
+        body_en TEXT NOT NULL,
+        image_url TEXT NOT NULL DEFAULT '',
+        image_pct INTEGER NOT NULL DEFAULT 100,
+        image_align TEXT NOT NULL DEFAULT 'center',
+        image_wrap INTEGER NOT NULL DEFAULT 0,
+        image_width INTEGER,
+        image_height INTEGER,
+        published_at INTEGER NOT NULL,
+        likes INTEGER NOT NULL DEFAULT 0
+    )");
+    return $pdo;
+}
+
+test('a missing body_json column degrades to the legacy path instead of killing the feed', function () {
+    $pdo = news_db_without_body_json();
+    seed_post($pdo, 'game', 'Старый', 1000);
+    [$status, $p] = handle_news($pdo);
+    assert_eq(200, $status, 'feed still serves');
+    assert_eq(1, count($p['posts']));
+    assert_eq('Старый', $p['posts'][0]['title_ru']);
+    assert_eq(null, $p['posts'][0]['body_json']);
+});
+
+test('any OTHER missing column is still a hard failure', function () {
+    // Деградация касается ровно body_json. Таблица old_schema_news_db() не
+    // имеет ни image_pct/align/wrap, ни body_json — то есть у обработчика
+    // есть соблазн списать её на «миграция не запускалась» и отдать ленту.
+    // Он не имеет права: это другой, невыясненный рассинхрон, и глотать его
+    // значит прятать поломку.
+    $pdo = old_schema_news_db();
+    assert_throws(function () use ($pdo) { handle_news($pdo); });
+});
+
 run_tests();
