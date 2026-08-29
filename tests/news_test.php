@@ -2,6 +2,7 @@
 define('TESTING', 1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/../public_html/api/_bootstrap.php';
+require __DIR__ . '/../public_html/api/lib/news_blocks.php';
 require __DIR__ . '/../public_html/api/news.php';
 require __DIR__ . '/../public_html/api/news_save.php';
 require __DIR__ . '/../public_html/api/news_delete.php';
@@ -505,6 +506,66 @@ test('a junk id on save is a 400, not a coerced update', function () {
     [, $feed] = handle_news($pdo);
     assert_eq(1, count($feed['posts']), 'still exactly one post');
     assert_eq('Апдейт 26', $feed['posts'][0]['title_ru'], 'original post unchanged');
+});
+
+// ------------------------- Блочное тело поста -------------------------
+
+function nb_img(): string { return '/images/' . str_repeat('a', 40) . '.webp'; }
+function nb_p(string $ru, string $en = ''): array {
+    return ['t' => 'p', 'ru' => [['s' => $ru]], 'en' => $en === '' ? [] : [['s' => $en]]];
+}
+function nb_doc(array $blocks): array { return ['v' => 1, 'blocks' => $blocks]; }
+
+test('a minimal block document validates on the server too', function () {
+    $r = news_blocks_validate(nb_doc([nb_p('Привет')]));
+    assert_true($r['ok'], $r['error']);
+    assert_eq(1, count($r['blocks']));
+});
+
+test('the server rejects what the browser model rejects', function () {
+    // Список зеркалит tests/news_blocks_test.mjs: если проверка есть только
+    // на одной стороне, вторая — дыра.
+    assert_true(!news_blocks_validate(['v' => 2, 'blocks' => []])['ok'], 'bad version');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'video']]))['ok'], 'unknown type');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'p', 'ru' => [], 'en' => [], 'x' => 1]]))['ok'], 'unknown key');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'p', 'ru' => [['s' => 'x', 'evil' => true]], 'en' => []]]))['ok'], 'unknown flag');
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'p', 'ru' => [['s' => 'x', 'href' => 'javascript:alert(1)']], 'en' => []]]))['ok'], 'bad href');
+});
+
+test('an image block outside the upload directory is rejected', function () {
+    $mk = function ($url) {
+        return nb_doc([['t' => 'image', 'url' => $url, 'w' => 10, 'h' => 10,
+                        'pct' => 100, 'align' => 'center', 'wrap' => false,
+                        'cap_ru' => [], 'cap_en' => []]]);
+    };
+    assert_true(news_blocks_validate($mk(nb_img()))['ok'], 'own upload passes');
+    assert_true(!news_blocks_validate($mk('https://evil.example/x.png'))['ok'], 'foreign host');
+    assert_true(!news_blocks_validate($mk('/images/../../etc/passwd'))['ok'], 'traversal');
+});
+
+test('server ceilings match the ones in js/news-blocks.js', function () {
+    $many = array_fill(0, 201, nb_p('x'));
+    assert_true(!news_blocks_validate(nb_doc($many))['ok'], '201 blocks');
+
+    $items = array_fill(0, 11, ['url' => nb_img(), 'w' => 4, 'h' => 3]);
+    assert_true(!news_blocks_validate(nb_doc([['t' => 'album', 'items' => $items,
+        'cap_ru' => [], 'cap_en' => []]]))['ok'], '11 album images');
+});
+
+test('plain text derivation matches what the JS model produces', function () {
+    $blocks = [
+        ['t' => 'p', 'ru' => [['s' => 'Первый'], ['s' => ' абзац', 'b' => true]], 'en' => [['s' => 'First para']]],
+        ['t' => 'quote', 'ru' => [['s' => 'Цитата']], 'en' => [], 'collapsible' => false],
+    ];
+    assert_eq("Первый абзац\n\nЦитата", news_blocks_plain($blocks, 'ru'));
+    assert_eq("First para\n\nЦитата", news_blocks_plain($blocks, 'en'));
+});
+
+test('the first image is what the link preview will use', function () {
+    $alb = ['t' => 'album', 'items' => [['url' => nb_img(), 'w' => 4, 'h' => 3]],
+            'cap_ru' => [], 'cap_en' => []];
+    assert_eq(['url' => nb_img(), 'w' => 4, 'h' => 3], news_blocks_first_image([nb_p('x'), $alb]));
+    assert_eq(null, news_blocks_first_image([nb_p('x')]));
 });
 
 run_tests();
