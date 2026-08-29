@@ -92,7 +92,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/topbar.css?v=4" />
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=24" />
-<link rel="stylesheet" href="css/home.css?v=10" />
+<link rel="stylesheet" href="css/home.css?v=11" />
 </head>
 <body>
 
@@ -194,7 +194,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     <div class="hm-lead-actions">
       <!-- Раздела фруктов ещё нет. Кнопка сверстана целиком, но это <span>:
            когда страница появится, меняется только тег и href. -->
-      <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-hover">фрукты</span></span></a>
+      <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest">фрукты</span></span></a>
       <a class="hm-btn hm-btn-ghost" href="https://t.me/theMaknemy" target="_blank" rel="noopener"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest">о нас</span><span class="hm-btn-word hm-btn-word-hover">о нас</span></span></a>
     </div>
 
