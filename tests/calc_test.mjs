@@ -8,8 +8,9 @@ const CALC = require('../public_html/js/calc.js');
 
 const {
     parseValue, itemValue, flattenTierlist, buildCatalogIndex,
-    addToSide, removeOneFromSide, sideTotal, demandBalance, computeTrade,
+    canAddToSide, addToSide, removeOneFromSide, sideTotal, demandBalance, demandBucket, computeTrade,
     encodeSide, decodeSide, encodeShareQuery, decodeShareQuery,
+    badgeCodeFor, MAX_SLOTS,
 } = CALC;
 
 function item(id, value, demand) {
@@ -91,6 +92,33 @@ test('removing one instance decrements the count, and removes the row at zero', 
 
 test('removing from an empty side does not throw', () => {
     assert.deepEqual(removeOneFromSide([], 'nope'), []);
+});
+
+// --------------------------------------------------------------------------
+//  6-slot cap — the redesign's hard cap on distinct items per side
+// --------------------------------------------------------------------------
+
+test('MAX_SLOTS is 6, matching the 2x3 slot grid the page renders', () => {
+    assert.equal(MAX_SLOTS, 6);
+});
+
+test('canAddToSide allows a new item while under the cap', () => {
+    let side = [];
+    for (let i = 0; i < 5; i++) side = addToSide(side, item('i' + i, 100));
+    assert.equal(canAddToSide(side, item('new', 100)), true);
+});
+
+test('canAddToSide refuses a 7th distinct item once all 6 slots are taken', () => {
+    let side = [];
+    for (let i = 0; i < 6; i++) side = addToSide(side, item('i' + i, 100));
+    assert.equal(side.length, 6);
+    assert.equal(canAddToSide(side, item('seventh', 100)), false);
+});
+
+test('canAddToSide still allows stacking a count on an item already occupying a slot at the cap', () => {
+    let side = [];
+    for (let i = 0; i < 6; i++) side = addToSide(side, item('i' + i, 100));
+    assert.equal(canAddToSide(side, item('i0', 100)), true); // same id — no new slot needed
 });
 
 // --------------------------------------------------------------------------
@@ -200,6 +228,61 @@ test('no note outside a Fair verdict — a clear win already says enough', () =>
 
 test('demandBalance is null for an empty side, not NaN', () => {
     assert.equal(demandBalance([]), null);
+});
+
+// --------------------------------------------------------------------------
+//  demandBucket — the side's aggregate demand meter, bucketed into the same
+//  four colours as the per-item demand dot
+// --------------------------------------------------------------------------
+
+test('demandBucket maps a null/non-finite balance to null, not a crash', () => {
+    assert.equal(demandBucket(null), null);
+    assert.equal(demandBucket(undefined), null);
+    assert.equal(demandBucket(NaN), null);
+});
+
+test('demandBucket sorts pure demand scores into their own colour', () => {
+    assert.equal(demandBucket(2), 'green');
+    assert.equal(demandBucket(1), 'yellow');
+    assert.equal(demandBucket(-1), 'orange');
+    assert.equal(demandBucket(-2), 'red');
+});
+
+test('demandBucket boundaries sit at the midpoints between the four weights', () => {
+    assert.equal(demandBucket(1.5), 'green');
+    assert.equal(demandBucket(1.49), 'yellow');
+    assert.equal(demandBucket(0), 'yellow');
+    assert.equal(demandBucket(-0.01), 'orange');
+    assert.equal(demandBucket(-1.5), 'orange');
+    assert.equal(demandBucket(-1.51), 'red');
+});
+
+// --------------------------------------------------------------------------
+//  badgeCodeFor — raw item.type -> the legend's two-letter badge code
+//  (index.php's redesigned legend is the source of truth for the codes/colours)
+// --------------------------------------------------------------------------
+
+test('badgeCodeFor maps every raw type value seen in production data', () => {
+    assert.equal(badgeCodeFor('f'), 'fv');
+    assert.equal(badgeCodeFor(''), 'fv');
+    assert.equal(badgeCodeFor('p'), 'pm');
+    assert.equal(badgeCodeFor('s'), 'cs');
+    assert.equal(badgeCodeFor('m'), 'cm');
+    assert.equal(badgeCodeFor('gp'), 'gp');
+    assert.equal(badgeCodeFor('cr'), 'cr');
+    assert.equal(badgeCodeFor('v'), 'vh');
+});
+
+test('badgeCodeFor passes through a legend code stored directly, case-insensitively', () => {
+    assert.equal(badgeCodeFor('MS'), 'ms');
+    assert.equal(badgeCodeFor('vh'), 'vh');
+});
+
+test('badgeCodeFor falls back to the plain-fruit badge for junk instead of throwing', () => {
+    assert.equal(badgeCodeFor('nope'), 'fv');
+    assert.equal(badgeCodeFor(null), 'fv');
+    assert.equal(badgeCodeFor(undefined), 'fv');
+    assert.equal(badgeCodeFor(123), 'fv');
 });
 
 // --------------------------------------------------------------------------

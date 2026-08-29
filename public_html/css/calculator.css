@@ -2,11 +2,13 @@
    Калькулятор трейдов (/calculator). Свой файл, свой префикс tc- — ничего
    отсюда не переопределяет то, что уже объявлено в base.css/topbar.css/
    design-page.css, только использует их токены (--cyan, --panel,
-   --panel-edge, --ui, --display, mk-градиент шапки).
+   --panel-edge, --ui, --display, --d-green/yellow/orange/red, mk-градиент
+   шапки).
 
    Подключается ПОСЛЕ base.css, topbar.css и design-page.css: шапку, фон
    страницы и подвал берёт оттуда как есть, здесь — только сама страница
-   калькулятора.
+   калькулятора: герой, доска сравнения (слоты + шкалы), вердикт, борта
+   и каталог-оверлей.
    =================================================================== */
 
 .tc-page {
@@ -16,6 +18,20 @@
 
   --tc-win: #35d07f;
   --tc-lose: #ff5a5a;
+  --tc-fair: #4fd6ff;
+
+  /* Цвета значков типа сняты с самих ассетов легенды
+     (assets/design/legend/badge-*.svg, верхний стоп градиента заливки) —
+     легенда остаётся источником истины, здесь только повтор её палитры для
+     цветной полосы под именем в карточке каталога. Новых цветов нет. */
+  --tc-badge-fv: #65e700;
+  --tc-badge-cs: #5e2581;
+  --tc-badge-cm: #fb0fdc;
+  --tc-badge-ms: #00ffd9;
+  --tc-badge-pm: #ffcd00;
+  --tc-badge-gp: #a50021;
+  --tc-badge-cr: #00d4ff;
+  --tc-badge-vh: #ff0004;
 
   position: relative;
   z-index: 2; /* поверх фонового изображения body, как .stage-wrap на тирлисте */
@@ -25,7 +41,7 @@
 }
 
 .tc-wrap {
-  width: min(1040px, 100%);
+  width: min(760px, 100%);
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -44,34 +60,38 @@
   border: 0;
 }
 
-/* ===================== Заголовок ===================== */
-.tc-head {
+/* ===================== Герой: заголовок ===================== */
+.tc-hero {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 }
-.tc-head-text { min-width: 0; }
+.tc-hero-text { min-width: 0; text-align: center; width: 100%; }
 .tc-title {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-family: var(--display);
-  font-size: 34px;
-  letter-spacing: .5px;
+  font-size: 44px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   color: #fff;
-  text-shadow: 0 0 18px rgba(79, 214, 255, .35);
+  text-shadow: 0 0 22px rgba(79, 214, 255, .4);
 }
 .tc-subtitle {
   margin: 0;
-  max-width: 52ch;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
   color: #a9c0e4;
 }
-/* Переключатель языка — компонент base.css (.lang-switch/.chip), только со
-   своим отступом сверху под заголовком на узких экранах, где он падает под
-   текст (flex-wrap выше). */
-.tc-lang { flex: 0 0 auto; }
+/* Переключатель языка — компонент base.css (.lang-switch/.chip). В макете
+   ему отдельного места не нашлось — держим его в правом верхнем углу героя,
+   как самостоятельный элемент хрома страницы, а не часть композиции. */
+.tc-lang {
+  position: absolute;
+  right: 16px;
+  top: 28px;
+}
 
 /* Состояние загрузки/ошибки — тот же вид, что .nw-state в новостях, но
    свой класс: делить его между файлами незачем, это одна строка. */
@@ -83,14 +103,102 @@
   border: 1px solid rgba(120, 190, 255, .2);
   color: #cfe2ff;
   font-size: 14px;
+  text-align: center;
 }
 
-/* ===================== Доска: два бортика + "versus" ===================== */
-.tc-board {
+/* ===================== Три колонки: борт | панель | борт ===================== */
+.tc-layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 24px;
+}
+.tc-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 760px;
+}
+
+/* ===================== Рекламные борта =====================
+   Тот же слот "rail", что у тирлиста и у ленты — см. renderRails() в
+   js/calculator-page.js. Пока слот не куплен, борт остаётся полосатой
+   заглушкой, а не прячется: это и есть визуальный образ «свободного
+   места», а не сломанный компонент. */
+.tc-rail-slot {
+  flex: 0 0 auto;
+  width: 160px;
+  align-self: stretch;
+}
+.tc-rail {
+  position: sticky;
+  top: calc(var(--mk-top-h, 0px) + 16px);
+  width: 160px;
+  height: 600px;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, .07) 0 14px,
+      rgba(255, 255, 255, .03) 14px 28px
+    ),
+    var(--panel);
+  border: 1px solid var(--panel-edge);
+  pointer-events: none;
+}
+.tc-rail.has-ad {
+  background: #05070d;
+  pointer-events: auto;
+}
+.tc-rail.has-link { cursor: pointer; }
+.tc-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.tc-rail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* .ptn-chip/.ptn-erid — общая разметка маркировки рекламы (те же классы,
+   что рисует js/promo.js и переиспользуют app.js/news-page.js). Стили не
+   общие: styles.css сюда не подключается, поэтому размеры под 160×600
+   заданы здесь же, как и в news-design.css под свою панель 248×670. */
+.tc-rail .ptn-chip {
+  position: absolute; top: 6px; left: 6px;
+  font-family: var(--display);
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  color: #0a1226;
+  background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
+  padding: 3px 8px 1px;
+  border-radius: 6px;
+}
+.tc-rail .ptn-erid {
+  position: absolute; bottom: 6px; left: 6px; right: 6px;
+  font-size: 9px;
+  line-height: 1.6;
+  color: #cfe2ff;
+  background: rgba(0, 0, 0, .55);
+  padding: 1px 6px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===================== Панель сравнения ===================== */
+.tc-sides {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: start;
   gap: 18px;
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
 }
 
 .tc-versus {
@@ -98,26 +206,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px; height: 40px;
-  margin-top: 46px; /* по центру панелей, а не по центру всей колонки с шапкой стороны */
+  width: 46px; height: 46px;
+  margin-top: 40px;
   border-radius: 50%;
-  background: rgba(20, 34, 62, .7);
-  border: 1px solid rgba(120, 190, 255, .25);
-  color: var(--cyan);
+  background: var(--tc-grad);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: .5px;
   flex: 0 0 auto;
+  box-shadow: 0 8px 22px rgba(45, 74, 237, .4);
 }
-.tc-versus svg { width: 20px; height: 20px; }
 
 .tc-side {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  padding: 18px;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
 }
 
 .tc-side-head {
@@ -126,16 +231,25 @@
   justify-content: space-between;
   gap: 10px;
 }
-.tc-side-title {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 19px;
-  letter-spacing: .5px;
+/* Пилюля «ВЫ»/«ВАМ»/«КАТАЛОГ» — общий небольшой значок раздела, тот же
+   приём градиента, что у .mk-pill в шапке (topbar.css), но с собственными
+   размерами: здесь она мельче навигационной. */
+.tc-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--tc-grad);
   color: #fff;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1;
 }
 .tc-clear-side {
   flex: 0 0 auto;
-  width: 32px; height: 32px;
+  width: 30px; height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -143,223 +257,248 @@
   border: 1px solid rgba(120, 190, 255, .25);
   background: rgba(255, 255, 255, .04);
   color: #9fb6d8;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
 }
-
-/* ===================== Поиск предмета ===================== */
-.tc-search { position: relative; }
-.tc-search-input {
-  width: 100%;
-  min-height: 44px; /* реальная область нажатия на телефоне */
-  padding: 10px 14px;
-  font-family: var(--ui);
-  font-size: 15px;
-  color: #eaf4ff;
-  background: rgba(8, 16, 32, .8);
-  border: 1px solid rgba(120, 190, 255, .3);
-  border-radius: 10px;
-}
-.tc-search-input::placeholder { color: #6f88ad; }
-.tc-search-input:focus-visible {
+.tc-clear-side:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
 }
 
-.tc-suggest {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 6px);
-  left: 0; right: 0;
-  margin: 0;
-  padding: 6px;
-  list-style: none;
-  max-height: 320px;
-  overflow-y: auto;
-  background: #0e1830;
-  border: 1px solid rgba(120, 190, 255, .35);
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, .55);
-}
-.tc-suggest-empty {
-  padding: 10px 12px;
-  color: #7e94b8;
-  font-size: 13px;
-}
-.tc-suggest-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  min-height: 44px;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  color: #eaf4ff;
-  font-family: var(--ui);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-}
-.tc-suggest-btn:focus-visible {
-  background: rgba(79, 214, 255, .16);
-  outline: 2px solid var(--cyan);
-  outline-offset: -2px;
-}
-.tc-suggest-icon { width: 26px; height: 26px; border-radius: 6px; object-fit: contain; flex: 0 0 auto; background: rgba(255, 255, 255, .06); }
-.tc-suggest-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tc-suggest-value { flex: 0 0 auto; color: #8fd6ff; font-variant-numeric: tabular-nums; }
-
-/* ===================== Список добавленных предметов ===================== */
-.tc-list {
+/* ===================== Слоты предмета: 2×3 ===================== */
+.tc-slots {
   margin: 0;
   padding: 0;
   list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.tc-slot {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  /* Грид-ячейка обязана уметь сжиматься уже узкого столбца repeat(2, 1fr):
+     без min-width:0 браузер держит ширину по мин-контенту содержимого
+     (nowrap-имя предмета), и на телефоне вторая колонка вылезала за
+     границы страницы. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-}
-.tc-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid rgba(120, 190, 255, .14);
-  border-radius: 10px;
-}
-.tc-item-icon {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  object-fit: contain;
-  background: rgba(255, 255, 255, .06);
-  flex: 0 0 auto;
-}
-.tc-item-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  color: #eaf4ff;
-}
-.tc-item-dot { width: 10px; height: 10px; flex: 0 0 auto; }
-.tc-item-value {
-  flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  color: #8fd6ff;
-}
-.tc-item-count {
-  flex: 0 0 auto;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(79, 214, 255, .18);
-  color: #cdeeff;
-  font-size: 12px;
-  font-weight: 700;
-}
-.tc-item-remove {
-  flex: 0 0 auto;
-  width: 30px; height: 30px;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  border: 1px solid rgba(120, 190, 255, .2);
-  background: transparent;
-  color: #9fb6d8;
-  font-size: 16px;
-  line-height: 1;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 190, 255, .18);
+  background: rgba(6, 12, 26, .75);
+  color: #eaf4ff;
   cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
+  overflow: hidden;
+  transition: background .15s, border-color .15s;
 }
-.tc-clear-side:focus-visible,
-.tc-item-remove:focus-visible {
+.tc-slot.is-empty {
+  color: #45577c;
+  font-size: 22px;
+  line-height: 1;
+}
+.tc-slot.is-empty::before {
+  content: "+";
+}
+.tc-slot.is-filled {
+  border-color: rgba(120, 190, 255, .3);
+  background: rgba(20, 34, 62, .85);
+}
+.tc-slot:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
 }
-
-.tc-empty {
-  margin: 4px 0;
-  padding: 14px;
-  text-align: center;
-  font-size: 13px;
-  color: #6f88ad;
-  border: 1px dashed rgba(120, 190, 255, .2);
-  border-radius: 10px;
+.tc-slot-badge {
+  position: absolute;
+  top: 4px; left: 4px;
+  height: 13px;
+  width: auto;
 }
-/* .tc-list скрыт не через display:none в JS — пустая сторона всё равно
-   рендерит пустой <ul>, а плейсхолдер (.tc-empty) прячется/показывается
-   через [hidden] уже из base.css. */
-
-.tc-total-row {
-  margin-top: auto;
-  padding-top: 10px;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  border-top: 1px solid rgba(120, 190, 255, .18);
-  font-family: var(--ui);
-}
-.tc-total-label { font-size: 13px; color: #8fb0dc; text-transform: uppercase; letter-spacing: .5px; }
-.tc-total-value { font-size: 22px; font-variant-numeric: tabular-nums; color: #fff; }
-
-/* ===================== Итог: разница и вердикт ===================== */
-.tc-result {
-  padding: 20px;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 16px;
-  text-align: center;
-}
-.tc-result-top {
+.tc-slot-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .55);
+  color: #ffb4ae;
+  font-size: 11px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  flex-wrap: wrap;
 }
-.tc-diff { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.tc-diff-label { font-size: 12px; color: #8fb0dc; text-transform: uppercase; letter-spacing: .5px; }
-.tc-diff-value { font-size: 20px; font-variant-numeric: tabular-nums; color: #eaf4ff; }
-
-.tc-verdict {
-  padding: 10px 22px;
+.tc-slot-count {
+  position: absolute;
+  bottom: 4px; right: 4px;
+  padding: 1px 6px;
   border-radius: 999px;
+  background: rgba(79, 214, 255, .22);
+  color: #cdeeff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.tc-slot-icon {
+  width: 44%;
+  max-width: 46px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .06);
+}
+.tc-slot-name {
+  max-width: 100%;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tc-slot-bottom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tc-slot-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #8fd6ff;
+}
+.tc-slot-dot { width: 8px; height: 8px; }
+
+/* ===================== Шкалы: пойнты / спрос ===================== */
+.tc-meters {
+  display: flex;
+  gap: 10px;
+}
+.tc-meter {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(120, 190, 255, .14);
+}
+.tc-meter-label {
+  font-size: 11px;
+  color: #8fb0dc;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.tc-meter-value {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+/* Точка агрегированного спроса стороны — своя раскраска (не переиспользует
+   PNG-точки предмета: там конкретный цвет спроса, здесь — свёрнутый в один
+   цвет средний балл стороны, demandBucket() в calc.js), но палитра —
+   ровно та же, что задаёт demand-dot по всему сайту: --d-green/yellow/
+   orange/red из base.css. */
+.tc-demand-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: #3a4a6b; /* нет данных — сторона пуста */
+}
+.tc-demand-dot[data-demand="green"]  { background: var(--d-green); }
+.tc-demand-dot[data-demand="yellow"] { background: var(--d-yellow); }
+.tc-demand-dot[data-demand="orange"] { background: var(--d-orange); }
+.tc-demand-dot[data-demand="red"]    { background: var(--d-red); }
+
+/* Тонкая полоса под шкалами: доля стороны в сумме двух сторон (leftTotal /
+   max(leftTotal, rightTotal)) — быстрый взгляд на то, какая сторона
+   тяжелее, без чтения чисел. Чистое отображение, вердикт считается только
+   в calc.js (computeTrade), сюда просто прокидывается trade.leftTotal/
+   rightTotal. */
+.tc-meter-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  overflow: hidden;
+}
+.tc-meter-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--tc-grad);
+  transition: width .25s ease;
+}
+
+/* ===================== Вердикт ===================== */
+.tc-result {
+  position: relative;
+  margin-top: 4px;
+  padding: 26px 20px 18px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 18px;
+  text-align: center;
+}
+.tc-result-badge {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: rgba(120, 190, 255, .25);
+  border: 1px solid rgba(120, 190, 255, .4);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .4);
+}
+.tc-result-badge::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: var(--tc-fair);
+}
+.tc-result-badge[data-verdict="win"]::before  { background: var(--tc-win); }
+.tc-result-badge[data-verdict="lose"]::before { background: var(--tc-lose); }
+
+.tc-diff-label {
+  display: block;
+  font-size: 12px;
+  color: #8fb0dc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tc-verdict-heading {
+  margin: 6px 0 0;
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 26px;
   letter-spacing: .5px;
   color: #fff;
-  background: rgba(120, 190, 255, .16);
-  border: 1px solid rgba(120, 190, 255, .3);
+  text-shadow: 0 0 12px rgba(79, 214, 255, .35);
+}
+.tc-verdict-number {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--display);
+  font-size: 40px;
+  letter-spacing: .5px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
 }
 /* Цвет вердикта — единственное место в интерфейсе, где итог сделки читается
    с одного взгляда, без чтения чисел. data-verdict ставит JS (computeTrade()
    в calc.js), сама раскраска — забота CSS. */
-.tc-verdict[data-verdict="win"] {
-  color: #d8ffe9;
-  background: rgba(53, 208, 127, .22);
-  border-color: rgba(53, 208, 127, .5);
-  text-shadow: 0 0 12px rgba(53, 208, 127, .4);
-}
-.tc-verdict[data-verdict="lose"] {
-  color: #ffd9d6;
-  background: rgba(255, 90, 90, .2);
-  border-color: rgba(255, 90, 90, .5);
-  text-shadow: 0 0 12px rgba(255, 90, 90, .4);
-}
-.tc-verdict[data-verdict="fair"] {
-  color: #eaf9ff;
-  background: rgba(79, 214, 255, .18);
-  border-color: rgba(79, 214, 255, .45);
-  text-shadow: 0 0 12px rgba(79, 214, 255, .35);
-}
+#tcResult[data-verdict="win"] .tc-verdict-heading,
+#tcResult[data-verdict="win"] .tc-verdict-number { color: #d8ffe9; text-shadow: 0 0 14px rgba(53, 208, 127, .45); }
+#tcResult[data-verdict="lose"] .tc-verdict-heading,
+#tcResult[data-verdict="lose"] .tc-verdict-number { color: #ffd9d6; text-shadow: 0 0 14px rgba(255, 90, 90, .45); }
 
 .tc-threshold {
   margin: 14px 0 0;
@@ -416,40 +555,224 @@
 }
 .tc-btn-ghost { background: transparent; }
 
+/* ===================== Каталог — оверлей поверх страницы ===================== */
+.tc-cat-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 6, 14, .78);
+  backdrop-filter: blur(3px);
+}
+.tc-cat {
+  width: min(760px, 100%);
+  max-height: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: #0e1830;
+  border: 1px solid var(--panel-edge);
+  border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+}
+.tc-cat-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tc-cat-search {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tc-cat-search-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  width: 18px; height: 18px;
+  color: #6f88ad;
+  pointer-events: none;
+}
+.tc-search-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px 10px 40px;
+  font-family: var(--ui);
+  font-size: 15px;
+  color: #eaf4ff;
+  background: rgba(8, 16, 32, .8);
+  border: 1px solid rgba(120, 190, 255, .3);
+  border-radius: 999px;
+}
+.tc-search-input::placeholder { color: #6f88ad; }
+.tc-search-input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.tc-cat-close {
+  flex: 0 0 auto;
+  width: 38px; height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(120, 190, 255, .25);
+  background: rgba(255, 255, 255, .04);
+  color: #9fb6d8;
+  font-size: 15px;
+  cursor: pointer;
+}
+.tc-cat-close:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.tc-cat-status {
+  margin: 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: #ffb4ae;
+  text-align: center;
+}
+.tc-cat-status:empty { display: none; }
+
+.tc-cat-grid {
+  margin: 0;
+  padding: 4px 2px;
+  list-style: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+/* Настоящая ячейка грида — это <li> (карточка .tc-cat-card лежит внутри
+   него как <button>), поэтому min-width:0 нужен именно тут: без него
+   браузер держит ширину столбца по мин-контенту самого длинного name
+   где-то в списке (nowrap-текст), и на телефоне вторая колонка вылезала
+   за границы страницы, хотя у самой кнопки min-width уже был обнулён. */
+.tc-cat-grid > li {
+  min-width: 0;
+}
+.tc-cat-card {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(120, 190, 255, .16);
+  color: #eaf4ff;
+  cursor: pointer;
+  text-align: left;
+}
+.tc-cat-card:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.tc-cat-card.is-full {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.tc-cat-badge {
+  position: absolute;
+  top: 6px; left: 6px;
+  height: 14px;
+  width: auto;
+  z-index: 1;
+}
+.tc-cat-icon {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  padding: 14px;
+  background: rgba(255, 255, 255, .05);
+}
+.tc-cat-name {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--tc-badge-color, #4fd6ff) 32%, #0a1226 68%);
+}
+.tc-cat-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+}
+.tc-cat-value {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #8fd6ff;
+}
+.tc-cat-dot { width: 9px; height: 9px; flex: 0 0 auto; }
+
+.tc-cat-footer {
+  margin: 0;
+  padding-top: 4px;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: .5px;
+  text-align: center;
+  color: #7e94b8;
+}
+
 /* Наведение — только там, где есть настоящий указатель мыши. На тач-экране
    :hover залипает после тапа до следующего касания где-то ещё (тот же
    принцип, что в home.css) — поэтому все правила наведения собраны здесь,
    а не разбросаны по местам объявления самих элементов. */
 @media (hover: hover) {
   .tc-clear-side:hover { background: rgba(255, 90, 80, .18); border-color: rgba(255, 90, 80, .4); color: #ffb4ae; }
-  .tc-item-remove:hover { background: rgba(255, 90, 80, .18); border-color: rgba(255, 90, 80, .4); color: #ffb4ae; }
-  .tc-suggest-btn:hover { background: rgba(79, 214, 255, .16); }
+  .tc-slot.is-empty:hover { border-color: var(--cyan); color: var(--cyan); }
+  .tc-slot.is-filled:hover { border-color: rgba(255, 90, 80, .45); }
   .tc-btn:hover { background: rgba(60, 96, 160, .7); border-color: var(--cyan); }
   .tc-btn-accent:hover { filter: brightness(1.1); background: var(--tc-grad); }
+  .tc-cat-close:hover { background: rgba(255, 90, 80, .18); border-color: rgba(255, 90, 80, .4); color: #ffb4ae; }
+  .tc-cat-card:not(.is-full):hover { border-color: var(--cyan); }
+  .tc-rail.has-link:hover { filter: brightness(1.05); }
 }
 
 /* Отключаем плавные переходы по явному запросу пользователя — переходы
-   здесь чисто декоративные (цвет/фон/рамка при наведении), но правило
-   держим на уровне всей страницы, а не только на "движущихся" элементах. */
+   здесь чисто декоративные (цвет/фон/рамка при наведении, ширина полосы
+   шкалы), но правило держим на уровне всей страницы. */
 @media (prefers-reduced-motion: reduce) {
   .tc-page * { transition: none !important; }
+}
+
+/* ===================== Борта: только на просторном экране =====================
+   160 (борт) + 24 (зазор) + 760 (панель) + 24 + 160 = 1128, плюс поля
+   страницы — тот же приём, что порог у .ptn-rail в styles.css (там он тоже
+   посчитан, а не подобран). Ниже борта не показываем вовсе: в узкую
+   колонку рядом с панелью сравнения они не влезают и превращаются в кашу
+   (тот же довод, что и у .nw-rail-slot в news-design.css). */
+@media (max-width: 1220px) {
+  .tc-rail-slot { display: none; }
 }
 
 /* ===================== Телефон ===================== */
 @media (max-width: 760px) {
   .tc-page { padding: 18px 12px 48px; }
-  .tc-title { font-size: 26px; }
+  .tc-title { font-size: 30px; }
   .tc-subtitle { font-size: 14px; }
+  .tc-lang { position: static; margin: 10px auto 0; }
 
   /* Стороны сделки складываются в столбец, "versus" превращается в
      горизонтальный разделитель между ними. */
-  .tc-board { grid-template-columns: 1fr; }
-  .tc-versus {
-    margin: 0 auto;
-    transform: rotate(90deg);
-  }
-  .tc-side { padding: 14px; }
+  .tc-sides { grid-template-columns: 1fr; padding: 14px; gap: 14px; }
+  .tc-versus { margin: 0 auto; }
 
-  .tc-result-top { gap: 14px; }
-  .tc-verdict { font-size: 18px; padding: 8px 16px; }
+  .tc-verdict-heading { font-size: 21px; }
+  .tc-verdict-number { font-size: 32px; }
+
+  .tc-cat-grid { grid-template-columns: repeat(2, 1fr); }
+  .tc-cat { padding: 14px; gap: 10px; }
 }

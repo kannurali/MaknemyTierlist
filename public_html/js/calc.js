@@ -63,6 +63,25 @@
   // ==========================================================================
   //  Состояние одной стороны сделки: [{item, count}], без дубликатов по id
   // ==========================================================================
+  // Доска — ровно 6 слотов на сторону (см. ТЗ редизайна). Слот — это строка
+  // entries, а не единица count: один и тот же предмет, добавленный второй
+  // раз, увеличивает count в своей же строке и нового слота не занимает.
+  // Значит "мест не осталось" — это ровно entries.length === MAX_SLOTS.
+  var MAX_SLOTS = 6;
+
+  // Можно ли добавить item в entries без превышения потолка слотов.
+  // true и тогда, когда предмет уже есть на стороне (в этом случае add
+  // просто увеличит существующую строку, слот не тратится) — интерфейс
+  // обязан звать эту проверку ПЕРЕД addToSide, чтобы отличить «седьмой
+  // слот» (нужно отказать и объяснить почему) от «второй экземпляр уже
+  // занятого» (обычное действие).
+  function canAddToSide(entries, item, maxSlots) {
+    var max = typeof maxSlots === "number" ? maxSlots : MAX_SLOTS;
+    var list = entries || [];
+    if (item && list.some(function (e) { return e.item && e.item.id === item.id; })) { return true; }
+    return list.length < max;
+  }
+
   function addToSide(entries, item, count) {
     var add = count > 0 ? count : 1;
     var found = false;
@@ -99,6 +118,34 @@
   }
 
   // ==========================================================================
+  //  Значок типа предмета — двухбуквенный код из легенды редизайна тирлиста
+  // (index.php, section.legend: fv/cs/cm/ms/pm/gp/cr/vh, ассеты лежат в
+  // assets/design/legend/badge-<code>.svg). Сама легенда — источник истины
+  // по кодам и цветам, здесь только перевод "сырого" item.type (f/p/s/m/gp/
+  // cr/v, как их хранит БД и редактор в app.js, см. groupOf()/CATEGORIES
+  // там же) в код легенды. "ms" (Скины мутации) и "vh" (Ваучер) в живых
+  // данных пока не встречаются — value уже готов к ним на будущее.
+  // ==========================================================================
+  var BADGE_CODES = ["fv", "cs", "cm", "ms", "pm", "gp", "cr", "vh"];
+  var RAW_TYPE_TO_BADGE = {
+    "": "fv", "f": "fv",
+    "p": "pm",
+    "s": "cs",
+    "m": "cm",
+    "gp": "gp",
+    "cr": "cr",
+    "v": "vh"
+  };
+
+  // Неизвестный/битый type не должен ронять рендер слота — по умолчанию
+  // предмет считается обычным фруктом, ровно как groupOf() в app.js.
+  function badgeCodeFor(type) {
+    var t = typeof type === "string" ? type.trim().toLowerCase() : "";
+    if (BADGE_CODES.indexOf(t) >= 0) { return t; } // данные уже хранят код легенды напрямую
+    return Object.prototype.hasOwnProperty.call(RAW_TYPE_TO_BADGE, t) ? RAW_TYPE_TO_BADGE[t] : "fv";
+  }
+
+  // ==========================================================================
   //  Спрос — подсказка, не арифметика (см. комментарий у computeTrade)
   // ==========================================================================
   var DEMAND_WEIGHT = { green: 2, yellow: 1, orange: -1, red: -2 };
@@ -116,6 +163,18 @@
       return s + w * e.count;
     }, 0);
     return weighted / totalCount;
+  }
+
+  // Балл спроса стороны → один из четырёх цветов легенды (те же green/
+  // yellow/orange/red, что и точка спроса у предмета). Границы — середины
+  // между соседними весами DEMAND_WEIGHT (2,1,-1,-2): 1.5, 0, -1.5. null —
+  // сторона пуста, сравнивать не с чем (см. demandBalance выше).
+  function demandBucket(balance) {
+    if (typeof balance !== "number" || !isFinite(balance)) { return null; }
+    if (balance >= 1.5) { return "green"; }
+    if (balance >= 0) { return "yellow"; }
+    if (balance >= -1.5) { return "orange"; }
+    return "red";
   }
 
   // ==========================================================================
@@ -259,15 +318,20 @@
     THRESHOLD_PCT: THRESHOLD_PCT,
     DEMAND_WEIGHT: DEMAND_WEIGHT,
     DEMAND_NOTE_THRESHOLD: DEMAND_NOTE_THRESHOLD,
+    MAX_SLOTS: MAX_SLOTS,
+    BADGE_CODES: BADGE_CODES,
+    badgeCodeFor: badgeCodeFor,
     parseValue: parseValue,
     itemValue: itemValue,
     flattenTierlist: flattenTierlist,
     buildCatalogIndex: buildCatalogIndex,
+    canAddToSide: canAddToSide,
     addToSide: addToSide,
     removeOneFromSide: removeOneFromSide,
     clearSide: clearSide,
     sideTotal: sideTotal,
     demandBalance: demandBalance,
+    demandBucket: demandBucket,
     computeTrade: computeTrade,
     encodeSide: encodeSide,
     decodeSide: decodeSide,

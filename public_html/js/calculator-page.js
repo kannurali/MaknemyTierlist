@@ -1,7 +1,7 @@
 /* ============================================================
    Страница калькулятора трейдов. Вся арифметика (парсинг значений,
    суммы, вердикт, кодирование ссылки) живёт в js/calc.js — этот файл
-   только DOM: рендер сторон, поиск предметов, обработчики кликов.
+   только DOM: слоты, каталог предметов, шкалы, вердикт, рекламные борта.
    ============================================================ */
 (() => {
   "use strict";
@@ -29,100 +29,172 @@
   // ------------------------------------------------------------------------
   //  Состояние: две стороны сделки. Формат — ровно тот, что понимает calc.js:
   //  [{item, count}], без дублей по id (дубль показывается счётчиком).
+  //  Слот доски — это строка entries, а не единица count: одна и та же
+  //  сторона не может занять больше CALC.MAX_SLOTS строк (см. canAddToSide()
+  //  в calc.js и wireSlots() ниже).
   // ------------------------------------------------------------------------
   let catalog = [];       // плоский список предметов тирлиста
   let catalogIndex = {};  // id -> предмет
   const sides = { left: [], right: [] };
 
-  // ------------------------------------------------------------------------
-  //  Рендер одной стороны
-  // ------------------------------------------------------------------------
-  function buildItemRow(side, entry) {
-    const li = document.createElement("li");
-    li.className = "tc-item";
-    li.dataset.id = entry.item.id;
-
-    const icon = document.createElement("img");
-    icon.className = "tc-item-icon";
-    icon.src = entry.item.icon || "";
-    icon.alt = "";
-    li.appendChild(icon);
-
-    const name = document.createElement("span");
-    name.className = "tc-item-name";
-    name.textContent = entry.item.name || "";
-    li.appendChild(name);
-
-    // Точка спроса — тот же приём, что и в самой карточке тирлиста (app.js,
-    // renderCell): реальная картинка assets/dot-<цвет>.png, а не CSS-кружок
-    // легенды. У предмета без выставленного спроса точки просто нет.
-    if (entry.item.demand) {
-      const dot = document.createElement("img");
-      dot.className = "tc-item-dot";
-      dot.src = "assets/dot-" + entry.item.demand + ".png";
-      dot.alt = "";
-      li.appendChild(dot);
-    }
-
-    const value = document.createElement("span");
-    value.className = "tc-item-value";
-    value.textContent = entry.item.value || "0";
-    li.appendChild(value);
-
-    // Счётчик показываем только при повторном добавлении — единственная
-    // строка с count===1 и так читается однозначно, а вечное "×1" на каждой
-    // строке было бы шумом.
-    const count = document.createElement("span");
-    count.className = "tc-item-count";
-    count.textContent = tx("calc.itemCount", { count: entry.count });
-    count.hidden = entry.count <= 1;
-    li.appendChild(count);
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "tc-item-remove";
-    removeBtn.setAttribute("aria-label", tx("calc.removeOne", { name: entry.item.name || "" }));
-    removeBtn.textContent = "−"; // минус, не дефис — читается как кнопка убавления
-    removeBtn.addEventListener("click", () => {
-      sides[side] = window.CALC.removeOneFromSide(sides[side], entry.item.id);
-      onSidesChanged();
-    });
-    li.appendChild(removeBtn);
-
-    return li;
+  // Слот доски == позиция в entries. Защитный потолок нужен и здесь, не
+  // только в интерактивном добавлении: старая/враждебная ссылка-«поделиться»
+  // могла закодировать больше шести предметов, и без обрезки на восстановлении
+  // доска нарисовала бы седьмой слот, которого в разметке физически нет.
+  function capSide(entries) {
+    return (entries || []).slice(0, CALC.MAX_SLOTS);
   }
 
-  function renderSide(side) {
+  // ------------------------------------------------------------------------
+  //  Значок типа предмета — общий для слота доски и карточки каталога.
+  // ------------------------------------------------------------------------
+  function badgeImg(type, className) {
+    const code = CALC.badgeCodeFor(type);
+    const img = document.createElement("img");
+    img.className = className;
+    img.src = "assets/design/legend/badge-" + code + ".svg";
+    img.alt = code.toUpperCase();
+    return img;
+  }
+
+  // ------------------------------------------------------------------------
+  //  Слоты стороны: ровно CALC.MAX_SLOTS штук, часть занята предметом,
+  //  остальные — пустые "плюсы", открывающие каталог.
+  // ------------------------------------------------------------------------
+  function buildEmptySlot(side, index) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tc-slot is-empty";
+    btn.dataset.side = side;
+    btn.dataset.index = String(index);
+    const label = side === "left" ? tx("calc.giveLabel") : tx("calc.getLabel");
+    btn.setAttribute("aria-label", tx("calc.emptySlot", { n: index + 1, side: label }));
+    return btn;
+  }
+
+  function buildFilledSlot(side, index, entry) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tc-slot is-filled";
+    btn.dataset.side = side;
+    btn.dataset.index = String(index);
+    btn.dataset.id = entry.item.id;
+    btn.setAttribute("aria-label", tx("calc.removeOne", { name: entry.item.name || "" }));
+
+    btn.appendChild(badgeImg(entry.item.type, "tc-slot-badge"));
+
+    const removeMark = document.createElement("span");
+    removeMark.className = "tc-slot-remove";
+    removeMark.setAttribute("aria-hidden", "true");
+    removeMark.textContent = "✕"; // ✕ — клик по слоту убирает предмет
+    btn.appendChild(removeMark);
+
+    const icon = document.createElement("img");
+    icon.className = "tc-slot-icon";
+    icon.src = entry.item.icon || "";
+    icon.alt = "";
+    btn.appendChild(icon);
+
+    const name = document.createElement("span");
+    name.className = "tc-slot-name";
+    name.textContent = entry.item.name || "";
+    btn.appendChild(name);
+
+    const bottom = document.createElement("span");
+    bottom.className = "tc-slot-bottom";
+
+    const value = document.createElement("span");
+    value.className = "tc-slot-value";
+    value.textContent = entry.item.value || "0";
+    bottom.appendChild(value);
+
+    if (entry.item.demand) {
+      const dot = document.createElement("img");
+      dot.className = "tc-slot-dot";
+      dot.src = "assets/dot-" + entry.item.demand + ".png";
+      dot.alt = "";
+      bottom.appendChild(dot);
+    }
+    btn.appendChild(bottom);
+
+    if (entry.count > 1) {
+      const count = document.createElement("span");
+      count.className = "tc-slot-count";
+      count.textContent = tx("calc.itemCount", { count: entry.count });
+      btn.appendChild(count);
+    }
+
+    return btn;
+  }
+
+  function renderSlots(side) {
     const root = sideRoot(side);
     if (!root) return;
-    const list = root.querySelector(".tc-list");
-    const empty = root.querySelector(".tc-empty");
-    const totalEl = root.querySelector(".tc-total-value");
+    const list = root.querySelector(".tc-slots");
     const entries = sides[side];
 
     list.textContent = "";
-    entries.forEach(entry => list.appendChild(buildItemRow(side, entry)));
-    empty.hidden = entries.length > 0;
-    totalEl.textContent = fmtNum(window.CALC.sideTotal(entries));
+    for (let i = 0; i < CALC.MAX_SLOTS; i++) {
+      const entry = entries[i];
+      list.appendChild(entry ? buildFilledSlot(side, i, entry) : buildEmptySlot(side, i));
+    }
+  }
+
+  // Цвет агрегированного спроса → уже переведённое название уровня. Те же
+  // четыре слова, что и в легенде тирлиста (index.php: "Хорошо"/"Средне"/
+  // "Ниже среднего"/"Плохо") — новых строк под них заводить незачем.
+  const DEMAND_LEVEL_KEY = { green: "legend.good", yellow: "legend.mid", orange: "legend.low", red: "legend.bad" };
+
+  // ------------------------------------------------------------------------
+  //  Шкалы стороны: «Пойнты» (сумма value — и ничего больше, отдельной
+  //  метрики "очков" в данных нет), «Спрос» (агрегированная точка,
+  //  demandBucket() в calc.js) и тонкая полоса относительно другой стороны.
+  // ------------------------------------------------------------------------
+  function renderMeters(side, trade) {
+    const root = sideRoot(side);
+    if (!root) return;
+    const total = side === "left" ? trade.leftTotal : trade.rightTotal;
+    const otherTotal = side === "left" ? trade.rightTotal : trade.leftTotal;
+
+    root.querySelector('[data-role="points"]').textContent = fmtNum(total);
+
+    const bucket = CALC.demandBucket(CALC.demandBalance(sides[side]));
+    const dot = root.querySelector('[data-role="demand"]');
+    dot.dataset.demand = bucket || "none";
+    dot.setAttribute("aria-label", bucket
+      ? tx("calc.demandAggregate", { level: tx(DEMAND_LEVEL_KEY[bucket]) })
+      : tx("calc.demandUnknown"));
+
+    const max = Math.max(total, otherTotal, 1);
+    const pct = Math.max(0, Math.min(100, (total / max) * 100));
+    root.querySelector('[data-role="bar"]').style.width = pct + "%";
   }
 
   // ------------------------------------------------------------------------
-  //  Итог сделки: сумма, разница, вердикт, подсказка по спросу
+  //  Итог сделки: вердикт, разница, подсказка по спросу
   // ------------------------------------------------------------------------
-  function renderResult() {
-    const trade = window.CALC.computeTrade(sides.left, sides.right);
+  function renderResult(trade) {
+    const resultEl = $("#tcResult");
+    const bothEmpty = sides.left.length === 0 && sides.right.length === 0;
 
-    const diffAbs = Math.round(trade.diffAbs);
-    const diffPct = Math.round(trade.diffPct * 10) / 10;
-    const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
-    const pctSign = diffPct > 0 ? "+" : "";
-    $("#tcDiffValue").textContent = sign + fmtNum(Math.abs(diffAbs)) + " (" + pctSign + diffPct + "%)";
+    resultEl.dataset.verdict = bothEmpty ? "none" : trade.verdict;
+    $("#tcVerdictBadge").dataset.verdict = bothEmpty ? "none" : trade.verdict;
 
-    const verdictKey = trade.verdict === "win" ? "calc.verdictWin"
-      : trade.verdict === "lose" ? "calc.verdictLose"
-      : "calc.verdictFair";
-    $("#tcVerdict").dataset.verdict = trade.verdict;
-    $("#tcVerdictText").textContent = tx(verdictKey);
+    if (bothEmpty) {
+      $("#tcVerdictHeading").textContent = tx("calc.verdictPrompt");
+      $("#tcVerdictNumber").textContent = "—"; // — placeholder, пока сторон нет
+    } else {
+      const verdictKey = trade.verdict === "win" ? "calc.verdictWin"
+        : trade.verdict === "lose" ? "calc.verdictLose"
+        : "calc.verdictFair";
+      $("#tcVerdictHeading").textContent = tx(verdictKey);
+
+      const diffAbs = Math.round(trade.diffAbs);
+      const diffPct = Math.round(trade.diffPct * 10) / 10;
+      const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
+      const pctSign = diffPct > 0 ? "+" : "";
+      $("#tcVerdictNumber").textContent = sign + fmtNum(Math.abs(diffAbs)) + " (" + pctSign + diffPct + "%)";
+    }
 
     const noteEl = $("#tcDemandNote");
     if (trade.demandNote) {
@@ -137,13 +209,11 @@
   // Помечено data-i18n в разметке не может — строка с подстановкой {pct}, а
   // общий проход applyLang() подстановки не делает. Отдельная функция.
   function renderThreshold() {
-    $("#tcThreshold").textContent = tx("calc.thresholdNote", { pct: window.CALC.THRESHOLD_PCT });
+    $("#tcThreshold").textContent = tx("calc.thresholdNote", { pct: CALC.THRESHOLD_PCT });
   }
 
   // Подпись кнопки очистки стороны зависит от названия стороны — подстановка,
   // общий проход applyLang() её не делает (см. renderThreshold() выше).
-  // title и aria-label ставятся вместе — кнопка несёт только "✕", без
-  // aria-label скринридер не озвучил бы вообще ничего осмысленного.
   function renderClearTitles() {
     const giveTitle = tx("calc.clearSide", { side: tx("calc.giveLabel") });
     const getTitle = tx("calc.clearSide", { side: tx("calc.getLabel") });
@@ -160,7 +230,7 @@
   // отдельного шага «собрать ссылку». replaceState, а не pushState: смена
   // состава сторон не должна плодить историю переходов браузера.
   function syncUrl() {
-    const query = window.CALC.encodeShareQuery(sides.left, sides.right);
+    const query = CALC.encodeShareQuery(sides.left, sides.right);
     const url = query ? ("/calculator?" + query) : "/calculator";
     history.replaceState(null, "", url);
   }
@@ -173,9 +243,12 @@
   // адреса раньше, чем их успели разобрать. Смена языка (applyLang) тоже не
   // должна трогать ссылку — состав сторон не менялся.
   function renderAll() {
-    renderSide("left");
-    renderSide("right");
-    renderResult();
+    const trade = CALC.computeTrade(sides.left, sides.right);
+    renderSlots("left");
+    renderSlots("right");
+    renderMeters("left", trade);
+    renderMeters("right", trade);
+    renderResult(trade);
   }
 
   function onSidesChanged() {
@@ -184,120 +257,143 @@
   }
 
   // ------------------------------------------------------------------------
-  //  Поиск предмета
+  //  Каталог предметов — единый оверлей на обе стороны. Клик по пустому
+  //  слоту открывает его для этой стороны; карточка добавляет предмет и
+  //  диалог остаётся открытым — так удобнее заполнять сразу несколько
+  //  слотов подряд. Закрывается крестиком, кликом по подложке или Escape.
   // ------------------------------------------------------------------------
+  const catalogState = { open: false, side: null, triggerEl: null };
+
   function norm(s) { return String(s || "").toLowerCase(); }
 
-  function closeSuggest(side) {
-    const box = sideRoot(side).querySelector(".tc-suggest");
-    box.hidden = true;
-    box.textContent = "";
+  function buildCatalogCard(it) {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tc-cat-card";
+
+    const full = !CALC.canAddToSide(sides[catalogState.side], it);
+    btn.classList.toggle("is-full", full);
+    btn.setAttribute("aria-label", tx("calc.addItem", { name: it.name || "" }));
+
+    const code = CALC.badgeCodeFor(it.type);
+    btn.appendChild(badgeImg(it.type, "tc-cat-badge"));
+
+    const icon = document.createElement("img");
+    icon.className = "tc-cat-icon";
+    icon.src = it.icon || "";
+    icon.alt = "";
+    btn.appendChild(icon);
+
+    const name = document.createElement("span");
+    name.className = "tc-cat-name";
+    name.style.setProperty("--tc-badge-color", "var(--tc-badge-" + code + ")");
+    name.textContent = it.name || "";
+    btn.appendChild(name);
+
+    const bottom = document.createElement("span");
+    bottom.className = "tc-cat-bottom";
+    const value = document.createElement("span");
+    value.className = "tc-cat-value";
+    value.textContent = it.value || "0";
+    bottom.appendChild(value);
+    if (it.demand) {
+      const dot = document.createElement("img");
+      dot.className = "tc-cat-dot";
+      dot.src = "assets/dot-" + it.demand + ".png";
+      dot.alt = "";
+      bottom.appendChild(dot);
+    }
+    btn.appendChild(bottom);
+
+    btn.addEventListener("click", () => {
+      const side = catalogState.side;
+      if (!side) return;
+      if (!CALC.canAddToSide(sides[side], it)) {
+        $("#tcCatalogStatus").textContent = tx("calc.slotsFull");
+        return;
+      }
+      $("#tcCatalogStatus").textContent = "";
+      sides[side] = capSide(CALC.addToSide(sides[side], it));
+      onSidesChanged();
+      renderCatalogGrid($("#tcCatalogSearch").value);
+    });
+
+    li.appendChild(btn);
+    return li;
   }
 
-  function renderSuggestions(side, query) {
-    const root = sideRoot(side);
-    const box = root.querySelector(".tc-suggest");
+  function renderCatalogGrid(query) {
+    const grid = $("#tcCatalogGrid");
     const q = norm(query).trim();
-    box.textContent = "";
-    if (!q) { box.hidden = true; return; }
-
-    const matches = catalog.filter(it => norm(it.name).includes(q)).slice(0, 8);
+    grid.textContent = "";
+    const matches = q ? catalog.filter(it => norm(it.name).includes(q)) : catalog;
     if (!matches.length) {
       const li = document.createElement("li");
-      li.className = "tc-suggest-empty";
+      li.className = "tc-cat-empty";
       li.textContent = tx("calc.searchNoResults");
-      box.appendChild(li);
-      box.hidden = false;
+      grid.appendChild(li);
       return;
     }
-
-    matches.forEach(it => {
-      const li = document.createElement("li");
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "tc-suggest-btn";
-      btn.setAttribute("aria-label", tx("calc.addItem", { name: it.name || "" }));
-
-      const icon = document.createElement("img");
-      icon.className = "tc-suggest-icon";
-      icon.src = it.icon || "";
-      icon.alt = "";
-      btn.appendChild(icon);
-
-      const name = document.createElement("span");
-      name.className = "tc-suggest-name";
-      name.textContent = it.name || "";
-      btn.appendChild(name);
-
-      const value = document.createElement("span");
-      value.className = "tc-suggest-value";
-      value.textContent = it.value || "0";
-      btn.appendChild(value);
-
-      btn.addEventListener("click", () => {
-        sides[side] = window.CALC.addToSide(sides[side], it);
-        onSidesChanged();
-        const input = root.querySelector(".tc-search-input");
-        input.value = "";
-        closeSuggest(side);
-        input.focus();
-      });
-
-      li.appendChild(btn);
-      box.appendChild(li);
-    });
-    box.hidden = false;
+    matches.forEach(it => grid.appendChild(buildCatalogCard(it)));
   }
 
-  function wireSide(side) {
-    const root = sideRoot(side);
-    const input = root.querySelector(".tc-search-input");
-    const box = root.querySelector(".tc-suggest");
+  function openCatalog(side, triggerEl) {
+    catalogState.open = true;
+    catalogState.side = side;
+    catalogState.triggerEl = triggerEl || null;
+    $("#tcCatalogStatus").textContent = "";
+    $("#tcCatalogSearch").value = "";
+    renderCatalogGrid("");
+    $("#tcCatalogBackdrop").hidden = false;
+    document.body.style.overflow = "hidden";
+    $("#tcCatalogSearch").focus();
+  }
 
-    input.addEventListener("input", () => renderSuggestions(side, input.value));
+  function closeCatalog() {
+    if (!catalogState.open) return;
+    catalogState.open = false;
+    $("#tcCatalogBackdrop").hidden = true;
+    document.body.style.overflow = "";
+    const back = catalogState.side ? sideRoot(catalogState.side) : null;
+    (catalogState.triggerEl || (back && back.querySelector(".tc-slot"))
+    )?.focus();
+    catalogState.side = null;
+    catalogState.triggerEl = null;
+  }
 
-    input.addEventListener("keydown", e => {
-      if (e.key === "Escape") {
-        input.value = "";
-        closeSuggest(side);
-      } else if (e.key === "ArrowDown") {
-        const first = box.querySelector(".tc-suggest-btn");
-        if (first) { e.preventDefault(); first.focus(); }
-      }
+  function wireCatalog() {
+    $("#tcCatalogSearch").addEventListener("input", e => renderCatalogGrid(e.target.value));
+    $("#tcCatalogClose").addEventListener("click", closeCatalog);
+    $("#tcCatalogBackdrop").addEventListener("click", e => {
+      if (e.target === $("#tcCatalogBackdrop")) closeCatalog();
     });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && catalogState.open) { closeCatalog(); }
+    });
+  }
 
-    // Клавиатурная навигация внутри самого списка подсказок — стрелками
-    // между кнопками, Escape возвращает фокус в поле поиска.
-    box.addEventListener("keydown", e => {
-      const buttons = Array.from(box.querySelectorAll(".tc-suggest-btn"));
-      const idx = buttons.indexOf(document.activeElement);
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        (buttons[idx + 1] || buttons[0])?.focus();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        if (idx <= 0) { input.focus(); } else { buttons[idx - 1].focus(); }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        closeSuggest(side);
-        input.focus();
+  // ------------------------------------------------------------------------
+  //  Слоты и очистка стороны
+  // ------------------------------------------------------------------------
+  function wireSlots(side) {
+    const root = sideRoot(side);
+    root.querySelector(".tc-slots").addEventListener("click", e => {
+      const slot = e.target.closest(".tc-slot");
+      if (!slot) return;
+      if (slot.classList.contains("is-empty")) {
+        openCatalog(side, slot);
+      } else {
+        sides[side] = CALC.removeOneFromSide(sides[side], slot.dataset.id);
+        onSidesChanged();
       }
     });
 
     root.querySelector(".tc-clear-side").addEventListener("click", () => {
-      sides[side] = window.CALC.clearSide();
+      sides[side] = CALC.clearSide();
       onSidesChanged();
     });
   }
-
-  // Клик вне поля поиска/списка подсказок закрывает список — иначе он
-  // остаётся раскрытым и перекрывает соседние элементы стороны.
-  document.addEventListener("click", e => {
-    ["left", "right"].forEach(side => {
-      const root = sideRoot(side);
-      if (root && !root.contains(e.target)) { closeSuggest(side); }
-    });
-  });
 
   // ------------------------------------------------------------------------
   //  Общие действия
@@ -305,8 +401,8 @@
   function wireActions() {
     $("#tcClearAllBtn").addEventListener("click", () => {
       if (!window.confirm(tx("calc.confirmClearAll"))) return;
-      sides.left = window.CALC.clearSide();
-      sides.right = window.CALC.clearSide();
+      sides.left = CALC.clearSide();
+      sides.right = CALC.clearSide();
       onSidesChanged();
     });
 
@@ -322,6 +418,83 @@
         statusEl.textContent = tx("calc.shareFailed") + ": " + location.href;
       }
     });
+  }
+
+  // ------------------------------------------------------------------------
+  //  Рекламные борта — слот "rail", тот же документ /api/promo.php и тот же
+  //  модуль js/promo.js, что у тирлиста (app.js) и ленты (news-page.js,
+  //  fillNewsRail()/renderNewsRails()). Своей логики отбора кампании здесь
+  //  нет умышленно: третий independent-механизм показа рекламы — это ровно
+  //  тот способ рассинхронизировать три страницы, которого ТЗ требует
+  //  избежать.
+  // ------------------------------------------------------------------------
+  const PROMO_API = "/api/promo.php";
+
+  function fillRail(el, camp) {
+    const promo = window.PROMO;
+    const cre = promo && camp ? promo.creativeFor(camp, "rail") : null;
+    if (!cre || !cre.src) return false;
+
+    el.textContent = "";
+    el.classList.add("has-ad");
+
+    const img = document.createElement("img");
+    img.src = cre.src;
+    img.alt = tx("ad.imageAlt");
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.draggable = false;
+    el.appendChild(img);
+
+    const chip = document.createElement("span");
+    chip.className = "ptn-chip";
+    chip.textContent = tx("ad.chip");
+    el.appendChild(chip);
+
+    // Маркировка рекламы обязательна по закону, если рекламодатель её
+    // прислал: без erid борт показывать можно, а вот выкидывать
+    // присланный идентификатор — нельзя.
+    if (camp.erid) {
+      const erid = document.createElement("span");
+      erid.className = "ptn-erid";
+      erid.textContent = "erid: " + camp.erid;
+      el.appendChild(erid);
+    }
+
+    const url = promo.safeHref(camp.href);
+    el.classList.toggle("has-link", !!url);
+    if (url) {
+      const open = () => window.open(url, "_blank", "noopener");
+      el.onclick = open;
+      el.tabIndex = 0;
+      el.setAttribute("role", "link");
+      el.onkeydown = e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      };
+    }
+    return true;
+  }
+
+  function renderRails() {
+    const promo = window.PROMO;
+    const left = document.getElementById("tcRailL");
+    const right = document.getElementById("tcRailR");
+    if (!promo || !left || !right) return;
+
+    fetch(PROMO_API, { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(doc => {
+        if (!doc) return;
+        const list = promo.eligible(promo.normalizeDoc(doc), "rail", Date.now());
+        if (!list.length) return; // не куплено — борт остаётся полосатой заглушкой
+        fillRail(left, list[0]);
+        // Один рекламодатель занимает оба борта: пустой второй борт рядом с
+        // заполненным читается как поломка, а не как свободное место.
+        fillRail(right, list[1] || list[0]);
+      })
+      // Реклама не должна ронять калькулятор: не пришёл документ — борта
+      // остаются полосатыми.
+      .catch(() => {});
   }
 
   // ------------------------------------------------------------------------
@@ -346,12 +519,14 @@
 
     renderThreshold();
     renderClearTitles();
-    // Строки-подстановки (счётчик, вердикт, подсказка по спросу) заново
-    // рисуются вместе со всей сделкой — их не покрывает общий проход выше.
-    // renderAll(), не onSidesChanged(): состав сторон не менялся, трогать
-    // адресную строку незачем (и до первой загрузки каталога — см. load() —
-    // это ещё и стёрло бы l=/r= из входящей ссылки раньше, чем она прочитана).
+    // Строки-подстановки (счётчик, слоты, вердикт, подсказка по спросу)
+    // заново рисуются вместе со всей сделкой — их не покрывает общий проход
+    // выше. renderAll(), не onSidesChanged(): состав сторон не менялся,
+    // трогать адресную строку незачем (и до первой загрузки каталога —
+    // см. load() — это ещё и стёрло бы l=/r= из входящей ссылки раньше, чем
+    // она прочитана).
     renderAll();
+    if (catalogState.open) { renderCatalogGrid($("#tcCatalogSearch").value); }
   }
 
   (function initLangSwitch() {
@@ -374,8 +549,8 @@
       const res = await fetch("/api/tierlist.php", { cache: "no-store" });
       if (!res.ok) throw new Error("http " + res.status);
       const data = await res.json();
-      catalog = window.CALC.flattenTierlist(data && data.tierlist);
-      catalogIndex = window.CALC.buildCatalogIndex(catalog);
+      catalog = CALC.flattenTierlist(data && data.tierlist);
+      catalogIndex = CALC.buildCatalogIndex(catalog);
       stateEl.hidden = true;
       stateEl.textContent = "";
 
@@ -383,9 +558,9 @@
       // decodeShareQuery обязана проверить, что id реально существуют, и без
       // индекса у неё нет данных, чтобы отличить настоящий предмет от
       // подделки — см. русский комментарий в calc.js про враждебный ввод.
-      const restored = window.CALC.decodeShareQuery(new URLSearchParams(location.search), catalogIndex);
-      sides.left = restored.left;
-      sides.right = restored.right;
+      const restored = CALC.decodeShareQuery(new URLSearchParams(location.search), catalogIndex);
+      sides.left = capSide(restored.left);
+      sides.right = capSide(restored.right);
       // renderAll(), не onSidesChanged(): адрес и так уже несёт ровно эту
       // сделку (мы её из него и прочитали) — переписывать нечего.
       renderAll();
@@ -396,9 +571,11 @@
     }
   }
 
-  wireSide("left");
-  wireSide("right");
+  wireSlots("left");
+  wireSlots("right");
+  wireCatalog();
   wireActions();
   applyLang(); // без аргумента — язык уже выбран выше, localStorage лишний раз не трогаем
   load();
+  renderRails();
 })();

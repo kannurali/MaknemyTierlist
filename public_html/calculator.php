@@ -49,7 +49,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/topbar.css?v=4" />
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=24" />
-<link rel="stylesheet" href="css/calculator.css?v=1" />
+<link rel="stylesheet" href="css/calculator.css?v=4" />
 </head>
 <body>
 
@@ -103,10 +103,11 @@ header('Cache-Control: no-cache, must-revalidate');
   <main class="tc-page">
     <div class="tc-wrap">
 
-      <div class="tc-head">
-        <div class="tc-head-text">
-          <h1 class="tc-title" data-i18n="calc.title">Калькулятор трейдов</h1>
-          <p class="tc-subtitle" data-i18n="calc.subtitle">Соберите обе стороны сделки — калькулятор покажет, выгодна ли она</p>
+      <!-- Заголовок: крупный дисплейный H1 по макету + строка-подзаголовок. -->
+      <div class="tc-hero">
+        <div class="tc-hero-text">
+          <h1 class="tc-title" data-i18n="calc.title">Сравнить цены</h1>
+          <p class="tc-subtitle" data-i18n="calc.subtitle">Сравните цены фруктов в реальном времени!</p>
         </div>
         <!-- Тот же компонент, что в тулбаре тирлиста/ленты (base.css: .lang-switch/.chip) —
              своих стилей переключателю здесь заводить не нужно. -->
@@ -119,56 +120,74 @@ header('Cache-Control: no-cache, must-revalidate');
 
       <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
 
-      <div class="tc-board">
-        <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
-          <div class="tc-side-head">
-            <h2 class="tc-side-title" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-            <button type="button" class="tc-clear-side" title="Очистить: Вы отдаёте" aria-label="Очистить: Вы отдаёте">✕</button>
-          </div>
-
-          <div class="tc-search">
-            <label class="tc-sr-only" for="tcSearchLeft" data-i18n="calc.searchLabel">Поиск предмета</label>
-            <input type="text" class="tc-search-input" id="tcSearchLeft"
-                   data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
-                   autocomplete="off" spellcheck="false" />
-            <ul class="tc-suggest" hidden></ul>
-          </div>
-
-          <ul class="tc-list"></ul>
-          <p class="tc-empty" data-i18n="calc.emptySide">Пока пусто — добавьте предметы</p>
-
-          <div class="tc-total-row">
-            <span class="tc-total-label" data-i18n="calc.total">Итого</span>
-            <strong class="tc-total-value">0</strong>
-          </div>
-        </section>
-
-        <div class="tc-versus" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <!-- Три колонки: рекламный борт | панель сравнения | рекламный борт.
+           Борта — реальные размещения слота "rail" (см. renderRails() в
+           js/calculator-page.js) — тот же документ /api/promo.php и тот же
+           модуль js/promo.js, что у тирлиста (app.js) и ленты (news-page.js,
+           fillNewsRail()/renderNewsRails()). Пока слот не куплен, борт остаётся
+           тем, чем он и является в макете, — полосатой заглушкой (см. CSS). -->
+      <div class="tc-layout">
+        <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
+          <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
         </div>
 
-        <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
-          <div class="tc-side-head">
-            <h2 class="tc-side-title" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-            <button type="button" class="tc-clear-side" title="Очистить: Вы получаете" aria-label="Очистить: Вы получаете">✕</button>
-          </div>
+        <div class="tc-panel">
+          <div class="tc-sides">
+            <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
+              <!-- Полный смысл стороны остаётся доступным именем секции для
+                   скринридера; на глаз в макете — короткая пилюля «ВЫ». -->
+              <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
+              <div class="tc-side-head">
+                <span class="tc-pill tc-pill-side" data-i18n="calc.givePill" aria-hidden="true">ВЫ</span>
+                <button type="button" class="tc-clear-side" title="Очистить: Вы отдаёте" aria-label="Очистить: Вы отдаёте">✕</button>
+              </div>
 
-          <div class="tc-search">
-            <label class="tc-sr-only" for="tcSearchRight" data-i18n="calc.searchLabel">Поиск предмета</label>
-            <input type="text" class="tc-search-input" id="tcSearchRight"
-                   data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
-                   autocomplete="off" spellcheck="false" />
-            <ul class="tc-suggest" hidden></ul>
-          </div>
+              <ul class="tc-slots" data-side="left"></ul>
 
-          <ul class="tc-list"></ul>
-          <p class="tc-empty" data-i18n="calc.emptySide">Пока пусто — добавьте предметы</p>
+              <div class="tc-meters">
+                <div class="tc-meter">
+                  <span class="tc-meter-label" data-i18n="calc.pointsLabel">Пойнты</span>
+                  <strong class="tc-meter-value" data-role="points">0</strong>
+                </div>
+                <div class="tc-meter">
+                  <span class="tc-meter-label" data-i18n="calc.demandLabel">Спрос</span>
+                  <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
+                </div>
+              </div>
+              <div class="tc-meter-bar"><span class="tc-meter-bar-fill" data-role="bar"></span></div>
+            </section>
 
-          <div class="tc-total-row">
-            <span class="tc-total-label" data-i18n="calc.total">Итого</span>
-            <strong class="tc-total-value">0</strong>
+            <div class="tc-versus" aria-hidden="true">
+              <span data-i18n="calc.versus">VS</span>
+            </div>
+
+            <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
+              <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
+              <div class="tc-side-head">
+                <span class="tc-pill tc-pill-side" data-i18n="calc.getPill" aria-hidden="true">ВАМ</span>
+                <button type="button" class="tc-clear-side" title="Очистить: Вы получаете" aria-label="Очистить: Вы получаете">✕</button>
+              </div>
+
+              <ul class="tc-slots" data-side="right"></ul>
+
+              <div class="tc-meters">
+                <div class="tc-meter">
+                  <span class="tc-meter-label" data-i18n="calc.pointsLabel">Пойнты</span>
+                  <strong class="tc-meter-value" data-role="points">0</strong>
+                </div>
+                <div class="tc-meter">
+                  <span class="tc-meter-label" data-i18n="calc.demandLabel">Спрос</span>
+                  <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
+                </div>
+              </div>
+              <div class="tc-meter-bar"><span class="tc-meter-bar-fill" data-role="bar"></span></div>
+            </section>
           </div>
-        </section>
+        </div>
+
+        <div class="tc-rail-slot tc-rail-slot-r" aria-hidden="true">
+          <aside class="tc-rail" id="tcRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+        </div>
       </div>
 
       <!-- role="status" + aria-live: разница и вердикт обязаны озвучиваться
@@ -176,15 +195,10 @@ header('Cache-Control: no-cache, must-revalidate');
            общая область, а не отдельная на каждый кусок — иначе смена сделки
            звучала бы двумя-тремя отдельными, рассинхронизированными репликами. -->
       <section class="tc-result" id="tcResult" role="status" aria-live="polite">
-        <div class="tc-result-top">
-          <div class="tc-diff">
-            <span class="tc-diff-label" data-i18n="calc.diffLabel">Разница</span>
-            <strong class="tc-diff-value" id="tcDiffValue">0 (0%)</strong>
-          </div>
-          <div class="tc-verdict" id="tcVerdict" data-verdict="fair">
-            <span id="tcVerdictText" data-i18n="calc.verdictFair">Честная сделка</span>
-          </div>
-        </div>
+        <span class="tc-result-badge" id="tcVerdictBadge" data-verdict="none" aria-hidden="true"></span>
+        <span class="tc-diff-label" data-i18n="calc.diffLabel">Разница</span>
+        <h2 class="tc-verdict-heading" id="tcVerdictHeading" data-i18n="calc.verdictPrompt">Проверим?</h2>
+        <strong class="tc-verdict-number" id="tcVerdictNumber">—</strong>
         <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
         <p class="tc-demand-note" id="tcDemandNote" hidden></p>
       </section>
@@ -196,6 +210,29 @@ header('Cache-Control: no-cache, must-revalidate');
         <button type="button" class="tc-btn tc-btn-ghost" id="tcClearAllBtn" data-i18n="calc.clearAll">Очистить всё</button>
       </div>
       <p class="tc-sr-only" id="tcShareStatus" role="status" aria-live="polite"></p>
+    </div>
+
+    <!-- ============ Каталог предметов — отдельная панель поверх страницы ============ -->
+    <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
+      <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
+        <div class="tc-cat-head">
+          <div class="tc-cat-search">
+            <svg class="tc-cat-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
+              <path d="M18 18L13.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            <label class="tc-sr-only" for="tcCatalogSearch" data-i18n="calc.searchLabel">Поиск предмета</label>
+            <input type="text" id="tcCatalogSearch" class="tc-search-input"
+                   data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
+                   autocomplete="off" spellcheck="false" />
+          </div>
+          <span class="tc-pill" id="tcCatalogTitle" data-i18n="calc.catalogPill">Каталог</span>
+          <button type="button" class="tc-cat-close" id="tcCatalogClose" data-i18n-label="calc.catalogClose" aria-label="Закрыть каталог">✕</button>
+        </div>
+        <p class="tc-cat-status" id="tcCatalogStatus" role="status" aria-live="polite"></p>
+        <ul class="tc-cat-grid" id="tcCatalogGrid"></ul>
+        <p class="tc-cat-footer" data-i18n="calc.catalogFooter">Используйте калькулятор с умом!</p>
+      </div>
     </div>
   </main>
 
@@ -212,8 +249,9 @@ header('Cache-Control: no-cache, must-revalidate');
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=18"></script>
-  <script src="js/calc.js?v=1"></script>
-  <script src="js/calculator-page.js?v=1"></script>
+  <script src="js/i18n.js?v=19"></script>
+  <script src="js/promo.js?v=2"></script>
+  <script src="js/calc.js?v=2"></script>
+  <script src="js/calculator-page.js?v=2"></script>
 </body>
 </html>

@@ -547,7 +547,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=18"></script>
+  <script src="js/i18n.js?v=19"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
