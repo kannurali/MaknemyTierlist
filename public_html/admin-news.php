@@ -182,5 +182,17 @@ $html = str_replace(
     $html
 );
 
+// Сам редактор — отдельным файлом и ТОЛЬКО здесь. На публичной /news его нет:
+// читателю не нужны ни модалка на восемь полей, ни кроп-канвас. Подключается
+// ПОСЛЕ news-page.js: тот в конце объявляет window.NEWSPAGE, из которого
+// редактор берёт cardFor/reload/getLang — до объявления шва он бы не нашёл
+// ничего и молча ничего не сделал.
+$html = preg_replace(
+    '~(<script src="/js/news-page\.js[^"]*"></script>)~',
+    '$1' . "\n  " . '<script src="/js/news-editor.js?v=1"></script>',
+    $html,
+    1
+);
+
 header('Content-Type: text/html; charset=utf-8');
 echo $html;
