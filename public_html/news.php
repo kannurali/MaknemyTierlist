@@ -248,10 +248,15 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="#" aria-disabled="true" title="Раздел в разработке">
+          <!-- Не <a>: реального раздела нет, а href="#" был нечестной ссылкой —
+               клик не делал ничего, только дописывал "#" в адрес. <span> не
+               попадает в таб-порядок и не кликается, aria-disabled + title
+               по-прежнему сообщают о недоступности — тот же приём, что у
+               .hm-card (см. home.php) и у соседнего «Калькулятора». -->
+          <span class="mk-pill" aria-disabled="true" data-i18n-title="topbar.tradingUnavailable" title="Раздел в разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text">Трейдинг</span>
-          </a>
+          </span>
         </li>
         <li>
           <a class="mk-pill" href="#" aria-disabled="true" title="Раздел в разработке">
@@ -366,7 +371,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=16"></script>
+  <script src="js/i18n.js?v=17"></script>
   <script src="js/news.js?v=4"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
   <script src="js/promo.js?v=2"></script>

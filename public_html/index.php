@@ -12,12 +12,12 @@ require_once __DIR__ . '/api/lib/og.php';
 // пустые) откатывает превью на статичный баннер — см. og_tierlist_summary()
 // в api/lib/og.php. Тирлист обязан открываться в любом случае, битое превью —
 // не повод для 500.
+// Картинка (og_tierlist_image()) — общая с home.php, см. api/lib/og.php:
+// корень сайта рекламирует ровно ту же живую превьюшку, что и /tierlist.
+// Здесь, в отличие от home.php, картинка идёт в комплекте со своими
+// title/description — тирлисту нужны оба, а не только картинка.
 function tierlist_og_fallback(): array {
-    return [
-        'image'       => 'https://maknemytierlist.site/assets/og-image.jpg?v=2',
-        'imageWidth'  => 1920,
-        'imageHeight' => 1080,
-        'imageType'   => 'image/jpeg',
+    return og_tierlist_image(null) + [
         'title'       => 'Maknemy Tier List — трейд-ценности Blox Fruits',
         'description' => 'Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос и тренды цен.',
     ];
@@ -30,11 +30,7 @@ function tierlist_og_data(PDO $pdo): array {
 
     $meta = og_tierlist_meta($summary);
     $fallback = tierlist_og_fallback();
-    return [
-        'image'       => 'https://maknemytierlist.site/api/og-tierlist.php?v=' . $summary['version'],
-        'imageWidth'  => 1200,
-        'imageHeight' => 630,
-        'imageType'   => 'image/png',
+    return og_tierlist_image($summary) + [
         'title'       => $meta['title'],
         'description' => $meta['description'] !== '' ? $meta['description'] : $fallback['description'],
     ];
@@ -170,7 +166,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <!-- ================= Шапка сайта (редизайн) ================= -->
   <!-- Разделы «Трейдинг» и «Калькулятор» есть в макете, но страниц под них
-       ещё нет — пилюли на месте, ссылки отключены (aria-disabled). -->
+       ещё нет — пилюли на месте. «Калькулятор» — ссылка с aria-disabled (её
+       правит отдельная ветка). «Трейдинг» — уже не ссылка вовсе: href="#" был
+       нечестным, клик по нему ничего не делал, только дописывал "#" в адрес —
+       см. комментарий у самой пилюли ниже. -->
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
@@ -192,10 +191,15 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="#" aria-disabled="true" title="Раздел в разработке">
+          <!-- Не <a>: реального раздела нет, а href="#" был нечестной ссылкой —
+               клик не делал ничего, только дописывал "#" в адрес. <span> не
+               попадает в таб-порядок и не кликается, aria-disabled + title
+               по-прежнему сообщают о недоступности — тот же приём, что у
+               .hm-card (см. home.php) и у соседнего «Калькулятора». -->
+          <span class="mk-pill" aria-disabled="true" data-i18n-title="topbar.tradingUnavailable" title="Раздел в разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text">Трейдинг</span>
-          </a>
+          </span>
         </li>
         <li>
           <a class="mk-pill" href="#" aria-disabled="true" title="Раздел в разработке">
@@ -542,7 +546,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=17"></script>
+  <script src="js/i18n.js?v=18"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при

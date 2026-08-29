@@ -228,4 +228,27 @@ test('og_news_meta truncates a long body for the description', function () {
     assert_true(mb_substr($meta['description'], -1) === '…', 'truncated body gets an ellipsis');
 });
 
+// --------------------------------------------------------------------------
+//  og_tierlist_image — общая картинка для / (home.php) и /tierlist
+//  (index.php): null-summary обязан откатывать на статичный баннер, живой
+//  summary — на сгенерированную превьюшку с версией rev в адресе.
+// --------------------------------------------------------------------------
+
+test('og_tierlist_image falls back to the static banner when summary is null', function () {
+    $img = og_tierlist_image(null);
+    assert_eq('https://maknemytierlist.site/assets/og-image.jpg?v=2', $img['image']);
+    assert_eq(1920, $img['imageWidth']);
+    assert_eq(1080, $img['imageHeight']);
+    assert_eq('image/jpeg', $img['imageType']);
+});
+
+test('og_tierlist_image points at the generator with the summary version', function () {
+    $summary = ['version' => 42, 'tierLabel' => 'S', 'date' => '', 'items' => [['name' => 'X', 'value' => '']]];
+    $img = og_tierlist_image($summary);
+    assert_eq('https://maknemytierlist.site/api/og-tierlist.php?v=42', $img['image']);
+    assert_eq(1200, $img['imageWidth']);
+    assert_eq(630, $img['imageHeight']);
+    assert_eq('image/png', $img['imageType']);
+});
+
 run_tests();
