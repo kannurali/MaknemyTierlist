@@ -1,0 +1,141 @@
+/* ===================================================================
+   Страница «в разработке» (/soon). Свой файл, свой префикс sn- — ничего
+   отсюда не переопределяет то, что уже объявлено в base.css/topbar.css/
+   design-page.css, только использует их токены (--cyan, --panel,
+   --panel-edge, --ui, --display, mk-градиент шапки).
+
+   Подключается ПОСЛЕ base.css, topbar.css и design-page.css: шапку, фон
+   страницы и подвал берёт оттуда как есть, здесь — только сама страница:
+   центральная карточка с сообщением и ссылками на разделы, которые
+   работают. Раскладка нарочно простая (как у /calculator) — страница не
+   несёт макета из Figma, только сообщает статус и даёт путь дальше.
+   =================================================================== */
+
+.sn-page {
+  position: relative;
+  z-index: 2; /* поверх фонового изображения body, как .stage-wrap/.tc-page */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* Без min-height на весь экран: страница короткая (карточка + подвал), и
+     принудительная высота viewport'а просто разводила бы их пустым полем —
+     тот же приём (только padding, без min-height), что и у .tc-page
+     калькулятора. */
+  padding: 64px 16px;
+}
+
+.sn-card {
+  position: relative;
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 48px 36px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* Переключатель языка — в правом верхнем углу карточки, как самостоятельный
+   элемент хрома страницы, а не часть композиции (тот же приём, что .tc-lang
+   у калькулятора). */
+.sn-lang {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+}
+
+@media (max-width: 640px) {
+  .sn-lang { right: 12px; top: 12px; }
+}
+
+/* Значок статуса — контурная иконка (гаечный ключ), нарисованная в той же
+   манере, что и иконки пилюль шапки (topbar.css): тонкий stroke, без
+   заливки. Эмодзи здесь нарочно нет — это декоративный шум, а не часть
+   визуального языка сайта. */
+.sn-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--cyan);
+  flex: 0 0 auto;
+}
+
+.sn-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--mk-grad, linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%));
+  color: #fff;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.sn-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 32px;
+  line-height: 1.25;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+.sn-desc {
+  margin: 0;
+  max-width: 46ch;
+  font-family: var(--ui);
+  font-size: 16px;
+  line-height: 1.55;
+  color: #a9c0e4;
+}
+
+/* ===================== Ссылки на рабочие разделы ===================== */
+.sn-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px по высоте — минимальный удобный тап-таргет на телефоне (см.
+     ограничение проекта «реальные тап-таргеты»). */
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-edge);
+  background: rgba(20, 34, 62, 0.6);
+  color: #fff;
+  font-family: var(--ui);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s, border-color .15s, filter .15s;
+}
+.sn-btn:hover { background: rgba(60, 96, 160, 0.7); border-color: var(--cyan); }
+.sn-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.sn-btn-accent {
+  border: 0;
+  background: var(--mk-grad, linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%));
+}
+.sn-btn-accent:hover { filter: brightness(1.12); background: var(--mk-grad, linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%)); }
+
+@media (max-width: 640px) {
+  .sn-page { padding: 40px 12px; }
+  .sn-card { padding: 36px 20px; gap: 14px; }
+  .sn-title { font-size: 26px; }
+  .sn-desc { font-size: 15px; }
+  .sn-links { gap: 10px; }
+  .sn-btn { width: 100%; }
+}

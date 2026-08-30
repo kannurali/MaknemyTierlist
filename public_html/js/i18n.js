@@ -18,10 +18,22 @@
       "lang.ru":                "RU",
       "lang.en":                "EN",
 
-      // Пилюля «Трейдинг» в шапке (mk-top) — раздела ещё нет, ссылки под ней
-      // тоже (см. home.php/index.php/news.php): тайтл объясняет посетителю,
-      // почему пилюля не кликается, а не оставляет его гадать.
-      "topbar.tradingUnavailable": "Раздел в разработке",
+      // Страница «в разработке» (/soon) — сюда теперь ведут «Трейдинг»,
+      // «Калькулятор» и аватар «Профиль» из шапки (см. .mk-top в
+      // home.php/index.php/news.php и public_html/soon.php). Заголовок
+      // называет конкретный раздел — soon.php сам выбирает нужный ключ по
+      // строгому белому списку (см. soon_parse_section()), generic —
+      // запасной вариант на случай мусора или пустого параметра.
+      "soon.eyebrow":           "В разработке",
+      "soon.messageTrading":    "Раздел «Трейдинг» ещё строится",
+      "soon.messageCalculator": "Раздел «Калькулятор» ещё строится",
+      "soon.messageProfile":    "Раздел «Профиль» ещё строится",
+      "soon.messageGeneric":    "Этот раздел ещё строится",
+      "soon.desc":              "Мы уже над ним работаем, но дату запуска пока не называем — обещать её сейчас было бы нечестно.",
+      "soon.linksLabel":        "Разделы, которые уже работают",
+      "soon.goHome":            "Главная",
+      "soon.goTierlist":        "Тирлист",
+      "soon.goNews":            "Новости",
 
       "auth.login":             "🔑 Войти",
       "auth.loginTitle":        "Войти как администратор",
@@ -315,7 +327,16 @@
       "lang.ru":                "RU",
       "lang.en":                "EN",
 
-      "topbar.tradingUnavailable": "Coming soon",
+      "soon.eyebrow":           "In progress",
+      "soon.messageTrading":    "The Trading section is still being built",
+      "soon.messageCalculator": "The Calculator section is still being built",
+      "soon.messageProfile":    "The Profile section is still being built",
+      "soon.messageGeneric":    "This section is still being built",
+      "soon.desc":              "We're already working on it, but we're not naming a launch date yet — promising one now would be dishonest.",
+      "soon.linksLabel":        "Sections that already work",
+      "soon.goHome":            "Home",
+      "soon.goTierlist":        "Tier list",
+      "soon.goNews":            "News",
 
       "auth.login":             "🔑 Log in",
       "auth.loginTitle":        "Log in as administrator",
