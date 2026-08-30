@@ -18,6 +18,18 @@
       "lang.ru":                "RU",
       "lang.en":                "EN",
 
+      // Пилюли «Трейдинг», «Калькулятор» и кнопка профиля в шапке (mk-top):
+      // разделов на сайте пока нет. Строка идёт и в title, и в плашку,
+      // которую js/topbar.js показывает по клику, — посетителю отвечают, а
+      // не оставляют гадать, почему кнопка ничего не делает.
+      "topbar.soon":            "В активной разработке",
+
+      // Язычок, которым плашка разделов возвращается на прокрученной
+      // странице. Подпись меняется вместе с состоянием (js/topbar.js):
+      // объявлять «показать», когда нажатие скроет, нельзя.
+      "topbar.showNav":         "Показать разделы",
+      "topbar.hideNav":         "Скрыть разделы",
+
       "auth.login":             "🔑 Войти",
       "auth.loginTitle":        "Войти как администратор",
       "auth.admin":             "👑 Админ",
@@ -44,19 +56,16 @@
       "donate.qrAlt":           "QR для доната",
       "donate.qrCaption":       "Наведи камеру телефона",
 
-      "filters.label":          "Показать:",
-      "filters.fruits":         "Фрукты",
-      "filters.fruitsTitle":    "Обычные фрукты",
-      "filters.mutations":      "Мутации",
-      "filters.mutationsTitle": "Мутации",
-      "filters.perms":          "Пермы",
-      "filters.permsTitle":     "Перманентные фрукты",
-      "filters.passes":         "Пассы",
-      "filters.passesTitle":    "Геймпассы",
-      "filters.skins":          "Скины",
-      "filters.skinsTitle":     "Скины и хроматики",
-      "filters.all":            "Все",
-      "filters.allTitle":       "Показать всё",
+      "filters.configurators":      "Конфигураторы",
+      "filters.configuratorsTitle": "Скины, хроматики и мутации",
+      "filters.fruits":             "Фрукты",
+      "filters.fruitsTitle":        "Обычные фрукты",
+      "filters.perms":              "Пермы",
+      "filters.permsTitle":         "Перманентные фрукты",
+      "filters.passes":             "Пассы",
+      "filters.passesTitle":        "Геймпассы и воучеры",
+      "filters.all":                "Все",
+      "filters.allTitle":           "Показать всё",
 
       "admin.addTier":          "＋ Тир",
       "admin.addTierTitle":     "Добавить новый тир",
@@ -85,22 +94,24 @@
       "stage.dateTitle":        "Кликните, чтобы изменить дату",
       "stage.brandAlt":         "Логотип",
 
-      "legend.title":           "ПОМОЩЬ ДЛЯ НОВЕНЬКИХ",
-      "legend.f":               "Обычный фрукт",
-      "legend.s":               "Скин",
-      "legend.m":               "Мутация",
-      "legend.p":               "Перманент",
-      "legend.gp":              "Пасс",
-      "legend.cr":              "Хроматик",
-      "legend.good":            "Хорошо",
-      "legend.mid":             "Средне",
-      "legend.low":             "Ниже среднего",
-      "legend.bad":             "Плохо",
-      "legend.up":              "Рост",
-      "legend.swap":            "Пересмотр",
-      "legend.down":            "Упадок",
-      "legend.wip":             "Под вопросом",
-      "legend.new":             "Новый",
+      "legend.title":          "ПОМОЩЬ НОВИЧКАМ",
+      "legend.fv":             "Фрукт",
+      "legend.cs":             "Конфигурация скин",
+      "legend.cm":             "Конфигурация мутация",
+      "legend.ms":             "Скины мутации",
+      "legend.pm":             "Перманент",
+      "legend.gp":             "Геймпасс",
+      "legend.cr":             "Хроматик",
+      "legend.vh":             "Ваучер",
+      "legend.good":           "Хорошо",
+      "legend.mid":            "Средне",
+      "legend.low":            "Ниже среднего",
+      "legend.bad":            "Плохо",
+      "legend.wip":            "Под вопросом",
+      "legend.up":             "Рост цены",
+      "legend.swap":           "Перерассмотр цены",
+      "legend.down":           "Падение цены",
+      "legend.new":            "Новый",
 
       "modal.itemTitle":        "Предмет",
       "modal.close":            "Закрыть",
@@ -145,6 +156,14 @@
       "ad.isLink":              "Это ссылка — нажмите по рекламе, чтобы открыть",
 
       "cell.wipTitle":          "Цена под вопросом",
+
+      "site.footAuthor":        "автор",
+      "site.footDesigner":      "дизайнер",
+      "site.footAnalyst":       "аналитик",
+      "site.footAnalystAide":   "помощник аналитика",
+      "site.footCoder":         "разработчик",
+      "site.footHiring":        "активно ищем",
+      "site.footTagline":       "макнеми тирлист - гарантия успешных трейдов",
 
       "credits.remove":         "Убрать из списка",
       "credits.add":            "Добавить участника",
@@ -296,12 +315,17 @@
       "news.linkedPostMissing": "Пост, на который вела ссылка, не входит в последние 50 показанных — вот вся лента.",
       "news.like":              "Поставить лайк",
       "news.likeRemove":        "Убрать лайк"
+
     },
 
     en: {
       "lang.switch":            "Interface language",
       "lang.ru":                "RU",
       "lang.en":                "EN",
+
+      "topbar.soon":            "In active development",
+      "topbar.showNav":         "Show sections",
+      "topbar.hideNav":         "Hide sections",
 
       "auth.login":             "🔑 Log in",
       "auth.loginTitle":        "Log in as administrator",
@@ -329,19 +353,16 @@
       "donate.qrAlt":           "Donation QR code",
       "donate.qrCaption":       "Point your phone camera here",
 
-      "filters.label":          "Show:",
-      "filters.fruits":         "Fruits",
-      "filters.fruitsTitle":    "Regular fruits",
-      "filters.mutations":      "Mutations",
-      "filters.mutationsTitle": "Mutations",
-      "filters.perms":          "Perms",
-      "filters.permsTitle":     "Permanent fruits",
-      "filters.passes":         "Passes",
-      "filters.passesTitle":    "Game passes",
-      "filters.skins":          "Skins",
-      "filters.skinsTitle":     "Skins and chromatics",
-      "filters.all":            "All",
-      "filters.allTitle":       "Show everything",
+      "filters.configurators":      "Configurators",
+      "filters.configuratorsTitle": "Skins, chromatics and mutations",
+      "filters.fruits":             "Fruits",
+      "filters.fruitsTitle":        "Regular fruits",
+      "filters.perms":              "Perms",
+      "filters.permsTitle":         "Permanent fruits",
+      "filters.passes":             "Passes",
+      "filters.passesTitle":        "Game passes and vouchers",
+      "filters.all":                "All",
+      "filters.allTitle":           "Show everything",
 
       "admin.addTier":          "＋ Tier",
       "admin.addTierTitle":     "Add a new tier",
@@ -370,22 +391,24 @@
       "stage.dateTitle":        "Click to change the date",
       "stage.brandAlt":         "Logo",
 
-      "legend.title":           "BEGINNER'S GUIDE",
-      "legend.f":               "Regular fruit",
-      "legend.s":               "Skin",
-      "legend.m":               "Mutation",
-      "legend.p":               "Permanent",
-      "legend.gp":              "Game pass",
-      "legend.cr":              "Chromatic",
-      "legend.good":            "High",
-      "legend.mid":             "Medium",
-      "legend.low":             "Below average",
-      "legend.bad":             "Low",
-      "legend.up":              "Rising",
-      "legend.swap":            "Under review",
-      "legend.down":            "Falling",
-      "legend.wip":             "Uncertain",
-      "legend.new":             "New",
+      "legend.title":          "BEGINNER'S GUIDE",
+      "legend.fv":             "Fruit",
+      "legend.cs":             "Skin config",
+      "legend.cm":             "Mutation config",
+      "legend.ms":             "Mutation skins",
+      "legend.pm":             "Permanent",
+      "legend.gp":             "Game pass",
+      "legend.cr":             "Chromatic",
+      "legend.vh":             "Voucher",
+      "legend.good":           "High",
+      "legend.mid":            "Medium",
+      "legend.low":            "Below average",
+      "legend.bad":            "Low",
+      "legend.wip":            "Uncertain",
+      "legend.up":             "Price rising",
+      "legend.swap":           "Price review",
+      "legend.down":           "Price falling",
+      "legend.new":            "New",
 
       "modal.itemTitle":        "Item",
       "modal.close":            "Close",
@@ -430,6 +453,14 @@
       "ad.isLink":              "This is a link — tap the ad to open it",
 
       "cell.wipTitle":          "Value uncertain",
+
+      "site.footAuthor":        "author",
+      "site.footDesigner":      "designer",
+      "site.footAnalyst":       "analyst",
+      "site.footAnalystAide":   "analyst's aide",
+      "site.footCoder":         "developer",
+      "site.footHiring":        "hiring",
+      "site.footTagline":       "maknemy tier list - your guarantee of good trades",
 
       "credits.remove":         "Remove from the list",
       "credits.add":            "Add a member",
@@ -575,6 +606,7 @@
       "news.linkedPostMissing": "The post this link points to isn't among the latest 50 shown here — here's the full feed instead.",
       "news.like":              "Like this post",
       "news.likeRemove":        "Remove your like"
+
     }
   };
 

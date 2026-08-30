@@ -718,6 +718,12 @@
    его низ на 696px, а .like-fab и .donate-fab висят на bottom: 18px и 62px.
    На вьюпорте ниже 760px они встречаются — там борта прячем.
 
+   96px — только нижняя граница. Само значение считает syncRailTop() в
+   app.js и кладёт в --rail-top: борт не должен подниматься выше верхнего
+   края тирлиста, иначе он лезет на шапку и панель фильтров редизайна.
+   На низком окне 600px под тирлист целиком не влезают, и борт свешивается
+   за нижний край — это отыгрывается первой же прокруткой.
+
    position: fixed, а не sticky: постер на боевых данных около 4400px
    высотой, и рекламодатель покупает именно присутствие на всём скролле.
    Заодно не приходится перестраивать .stage-wrap в три колонки — это
@@ -731,7 +737,7 @@
   .ptn-rail:not([hidden]) {
     display: block;
     position: fixed;
-    top: 96px;
+    top: var(--rail-top, 96px);
     width: 160px;
     height: 600px;
     z-index: 20;
@@ -947,52 +953,82 @@ body.ptn-locked { overflow: hidden; }
 }
 
 /* ===================== Legend =====================
-   Три блока, как в макете: типы слева, спрос по центру под заголовком, тренды
-   справа. Заголовок центрован по среднему блоку, а не по всей панели — поэтому
-   он лежит внутри него, а не отдельной строкой сверху. */
+   Новый макет плашки «помощь новичкам» (Figma, группа 343:2185, 912×403):
+   заголовок по центру сверху, под ним три колонки — типы предмета, спрос,
+   тренды цены. Ширина плашки осталась общей для постера (84.63cqw), поэтому
+   все размеры пересчитаны из макетных пикселей как px / 912 * 84.63cqw. */
 .legend {
   margin-top: .85cqw;
-  padding: 1cqw 2.4cqw 1.2cqw 1.3cqw;
-  border-radius: 1.18cqw;
-  /* Панель в макете — белая заливка на 30%, но поверх неё лежит стопка
-     цветокора, которая уводит её в синий (#36508E на композите). CSS этой
-     стопки не повторяет, поэтому цвет подобран так, чтобы совпасть с итогом. */
-  background: rgba(110,170,255,.40);
+  padding: 2.41cqw 2.51cqw 4.83cqw 2.41cqw;
+  border-radius: 2.23cqw;
+  /* Заливка из макета: сверху плотный синий, книзу уходит в ноль прозрачности,
+     так что низ плашки живёт прямо на фоне постера. */
+  background: linear-gradient(180deg, #3d5694 0%, rgba(68,102,174,0) 100%);
 }
-.legend-grid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5cqw;
-}
-.legend-block { display: flex; gap: 1.9cqw; }
-.lb-demand { flex-direction: column; align-items: center; gap: .55cqw; }
-.legend-cols { display: flex; gap: 1.9cqw; }
-.legend-col { display: flex; flex-direction: column; gap: .8cqw; }
 .legend-title {
-  font-family: var(--display);
-  text-align: center;
-  font-size: 2.5cqw;
   margin: 0;
-  color: #eaf6ff;
-  letter-spacing: .1cqw;
-  text-shadow: 0 0 8px rgba(79,214,255,.5);
-}
-.lg {
-  display: flex; align-items: center; gap: .55cqw;
   font-family: var(--display);
-  letter-spacing: .03cqw;
-  font-size: 2.05cqw; color: #eaf4ff; white-space: nowrap;
+  font-size: 3.53cqw;
+  line-height: 1.1;
+  text-align: center;
+  color: #fff;
 }
-/* Размеры значков в легенде отличаются от значков на карточках предметов,
-   поэтому задаются здесь, а не в общих .tbadge/.dot/.trend. */
-.lg .tbadge, .lg .dot, .lg .trend { flex: none; }
-.lg .tbadge { height: 1.64cqw; width: auto; }
-.lg .dot { width: 1.18cqw; height: 1.18cqw; }
+/* Колонки стоят на макетных позициях 26 / 379 / 659 px внутри плашки, то есть
+   353 и 280 px шириной от 859 px содержимого. */
+.legend-grid {
+  margin-top: 1.86cqw;
+  display: grid;
+  grid-template-columns: 41.09% 32.6% auto;
+}
+.legend-col { display: flex; flex-direction: column; gap: .84cqw; }
+/* У трендов строки реже: значки выше подписи и в макете разведены на 52 px. */
+.lc-trends { gap: 2.51cqw; }
+/* Высота строки зафиксирована по подписи (25 px). Значки трендов выше и
+   спокойно вылезают за неё — так шаг колонки не пляшет от формы значка. */
+.lg {
+  display: grid;
+  align-items: center;
+  height: 2.32cqw;
+  font-family: var(--display);
+  font-size: 2.13cqw;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+}
+.lc-types .lg { grid-template-columns: 4.73cqw auto; }
+.lc-demand .lg { grid-template-columns: 2.6cqw auto; }
+.lc-trends .lg { grid-template-columns: 5.38cqw auto; column-gap: .65cqw; }
+.lg .lgl::before { content: "- "; }
+
+/* Значки типов — SVG из макета: буквы Proto Sans, переведённые в кривые, с
+   градиентной заливкой и тёмной обводкой наружу. Картинкой, а не текстом с
+   background-clip, потому что экспорт постера в PNG идёт через html2canvas —
+   он не умеет ни градиент по тексту, ни text-stroke и нарисовал бы вместо
+   букв цветные прямоугольники. Все восемь файлов приведены к одному
+   viewBox 42x18, поэтому размер один на всех. */
+.lgb { width: 3.9cqw; height: 1.67cqw; }
+
+/* Точки спроса — сплошные круги, картинка тут не нужна. */
+.lgd::before {
+  content: "";
+  display: block;
+  width: 1.39cqw; height: 1.39cqw;
+  border-radius: 50%;
+  background: var(--dc);
+}
+.d-green { --dc: #1aff00; }
+.d-yellow { --dc: #fff200; }
+.d-orange { --dc: #ffa100; }
+.d-red { --dc: #ff0000; }
+
 /* Значки трендов в макете разной формы и высоты («new» широкий и низкий,
-   стрелки узкие и высокие). Фиксированная коробка + contain держит колонку
-   ровной, не искажая ни один из них. */
-.lg .trend { width: 3.94cqw; height: 2.3cqw; object-fit: contain; }
+   стрелки узкие и высокие), но выровнены по правому краю своей колонки. */
+.lc-trends .trend { justify-self: end; }
+.lc-trends .tr-wip { width: 2.23cqw; height: 3.25cqw; }
+.lc-trends .tr-up,
+.lc-trends .tr-down { width: 2.51cqw; height: 2.97cqw; }
+.lc-trends .tr-swap { width: 3.43cqw; height: 3.99cqw; }
+.lc-trends .tr-new { width: 5.38cqw; height: 2.97cqw; }
 
 /* ===================== Footer =====================
    В макете колонки прижаты влево, а не растянуты на всю панель, поэтому
@@ -1341,23 +1377,28 @@ body.ptn-locked { overflow: hidden; }
   .date { font-size: 4.2cqw; }
   .tl-title { font-size: 8.4cqw; }
 
-  /* Легенда держит ту же раскладку в три блока, что и на десктопе — по просьбе
-     владельца. Размеры не наследуются как есть: панель здесь 95cqw против
-     84.63cqw на десктопе, поэтому все десктопные значения умножены на
-     95/84.63 = 1.1225 — композиция совпадает один в один, только в масштабе
-     экрана. Текст выходит ~8.6 px на 375 px; на телефоне с DPR 2-3 он
-     отрисовывается чётко, но это заметно мельче остального интерфейса. */
-  .legend { padding: 1.12cqw 2.69cqw 1.35cqw 1.46cqw; }
-  .legend-grid { gap: 1.68cqw; }
-  .legend-block { gap: 2.13cqw; }
-  .legend-cols { gap: 2.13cqw; }
-  .lb-demand { gap: .62cqw; }
-  .legend-col { gap: .9cqw; }
-  .legend-title { font-size: 2.81cqw; }
-  .lg { font-size: 2.3cqw; gap: .62cqw; }
-  .lg .tbadge { height: 1.84cqw; }
-  .lg .dot { width: 1.32cqw; height: 1.32cqw; }
-  .lg .trend { width: 4.42cqw; height: 2.58cqw; }
+  /* Легенда держит ту же раскладку, что и на десктопе — по просьбе владельца.
+     Размеры не наследуются как есть: панель здесь 95cqw против 84.63cqw на
+     десктопе, поэтому все десктопные значения умножены на 95/84.63 = 1.1225 —
+     композиция совпадает один в один, только в масштабе экрана. Текст выходит
+     ~9 px на 375 px; на телефоне с DPR 2-3 он отрисовывается чётко, но это
+     заметно мельче остального интерфейса. */
+  .legend { padding: 2.71cqw 2.82cqw 5.42cqw 2.71cqw; border-radius: 2.5cqw; }
+  .legend-title { font-size: 3.96cqw; }
+  .legend-grid { margin-top: 2.09cqw; }
+  .legend-col { gap: .94cqw; }
+  .lc-trends { gap: 2.82cqw; }
+  .lg { height: 2.6cqw; font-size: 2.39cqw; }
+  .lc-types .lg { grid-template-columns: 5.31cqw auto; }
+  .lc-demand .lg { grid-template-columns: 2.92cqw auto; }
+  .lc-trends .lg { grid-template-columns: 6.04cqw auto; column-gap: .73cqw; }
+  .lgb { width: 4.38cqw; height: 1.87cqw; }
+  .lgd::before { width: 1.56cqw; height: 1.56cqw; }
+  .lc-trends .tr-wip { width: 2.5cqw; height: 3.65cqw; }
+  .lc-trends .tr-up,
+  .lc-trends .tr-down { width: 2.82cqw; height: 3.33cqw; }
+  .lc-trends .tr-swap { width: 3.85cqw; height: 4.48cqw; }
+  .lc-trends .tr-new { width: 6.04cqw; height: 3.33cqw; }
 
   /* Подвал: три колонки в ряд не влезают — две. */
   .tl-footer {

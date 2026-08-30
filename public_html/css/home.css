@@ -1,0 +1,1118 @@
+/* ===================================================================
+   Главная страница (редизайн из Figma: MAKNEMY → «главная 1 слайд»
+   (node 4:456) и «главная 2 слайд» (node 102:373)).
+
+   Два слайда в макете — это НЕ две страницы, а два состояния одной:
+   слайд 1 — стартовое положение, слайд 2 — конечное. Между ними в
+   прототипе висит переход
+
+       AFTER_TIMEOUT 0.8s → SMART_ANIMATE, EASE_OUT, 1.0s
+
+   то есть вступительная анимация при загрузке. Вся геометрия ниже —
+   это слайд 2 (конечное положение), а слайд 1 живёт только в блоке
+   «Анимация» как набор стартовых сдвигов.
+
+   Подключается ПОСЛЕ base.css и topbar.css: шапку и шрифт навигации
+   берём оттуда как есть.
+   =================================================================== */
+
+/* ===================== Единица макета ===================== */
+/* Тот же приём, что в topbar.css: --u равна одной точке макета шириной
+   1443. min() держит 1px как потолок — на широких экранах страница не
+   раздувается вслед за окном, а фиксируется на макетных размерах. */
+.hm {
+  --u: min(1px, calc(100vw / 1443));
+
+  /* Акцентный градиент макета: им залиты карточки, кнопка и полоса
+     бегущей строки. */
+  --hm-accent-a: #61b5e9;
+  --hm-accent-b: #2d4aed;
+
+  /* Плашки. В макете это два чёрных слоя, 42% и 20% друг на друге —
+     вместе дают 0.536. Та же величина уже используется в панели
+     фильтров тирлиста (design-page.css). */
+  --hm-panel: rgba(0, 0, 0, 0.536);
+  --hm-glass: rgba(0, 0, 0, 0.2);
+  /* Декоративные фигуры (круг, квадраты, треугольник) — светлое стекло. */
+  --hm-figure: rgba(217, 217, 217, 0.2);
+
+  /* Наведение. В прототипе это подмена варианта компонента:
+     SMART_ANIMATE, easing QUICK, 0.744s. QUICK у Figma — пружина; кривой
+     её один в один не выразить, поэтому взята самая резкая из стандартных
+     ease-out — на глаз попадает в тот же характер. */
+  --hm-hover: 0.744s;
+  --hm-hover-ease: cubic-bezier(0.33, 1, 0.68, 1);
+
+  position: relative;
+  overflow: hidden;
+  /* Те же шрифты, что на тирлисте: --ui и --display объявлены в base.css,
+     который подключается раньше. Раньше здесь стоял Oswald — он подменял
+     Bebas Neue из макета, но на сайте так не набрано больше нигде, и
+     главная выбивалась из остальных страниц. */
+  font-family: var(--ui);
+  color: #fff;
+}
+
+/* Надписи, набранные в макете Akira Expanded. Шрифт платный, свободной
+   замены нет; берём Bootshaus — тот же, которым набраны тиры и заголовки
+   на тирлисте. Слово MAKNEMY лежит кривыми в assets/design/wordmark.svg
+   (см. .hm-word ниже) и в подмене не нуждается. */
+.hm-ak {
+  font-family: var(--display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Слово MAKNEMY кривыми. Пропорции файла — 285×26; в макете надпись
+   занимает 675×65, из которых на сами буквы приходится 675/10.96 ≈ 61.6. */
+.hm-word {
+  display: block;
+  width: calc(675 * var(--u));
+  height: calc(61.6 * var(--u));
+}
+
+/* ===================== Лид ===================== */
+/* Фрейм «лид» в макете — 1443×1237, сразу под шапкой. Внутри всё
+   разложено абсолютно, координаты сняты с макета один в один. */
+.hm-lead {
+  position: relative;
+  width: 100%;
+  height: calc(1237 * var(--u));
+}
+
+/* Общий приём для всех абсолютных слоёв лида: точка отсчёта — левый
+   верхний угол фрейма, размеры и координаты в единицах макета. */
+.hm-lead > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Стеклянная панель под всем первым экраном (Rectangle 16). */
+.hm-panel-main {
+  left: calc(32 * var(--u));
+  top: calc(7 * var(--u));
+  width: calc(1359 * var(--u));
+  height: calc(660 * var(--u));
+  border-radius: calc(24 * var(--u));
+  background: var(--hm-glass);
+}
+
+/* Плашка под описанием (Rectangle 17). */
+.hm-panel-text {
+  left: calc(120 * var(--u));
+  top: calc(245 * var(--u));
+  width: calc(741 * var(--u));
+  height: calc(213 * var(--u));
+  border-radius: calc(33 * var(--u));
+  background: var(--hm-panel);
+}
+
+.hm-title {
+  left: calc(156 * var(--u));
+  top: calc(88.9 * var(--u));
+  margin: 0;
+}
+
+.hm-since {
+  left: calc(156 * var(--u));
+  top: calc(176 * var(--u));
+  width: calc(560 * var(--u));
+  margin: 0;
+  font-size: calc(30 * var(--u));
+  line-height: 1.2;
+}
+
+.hm-desc {
+  left: calc(156 * var(--u));
+  top: calc(276 * var(--u));
+  width: calc(675 * var(--u));
+  margin: 0;
+  font-size: calc(26 * var(--u));
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+/* ===================== Кнопки лида ===================== */
+/* Обёртка нужна только на телефоне, где кнопки становятся обычным
+   рядом. На десктопе она растворяется, и каждая кнопка позиционируется
+   от фрейма лида — как в макете. */
+.hm-lead-actions {
+  display: contents;
+}
+
+/* В макете обе кнопки — пилюли высотой ~78 с двумя мягкими тенями.
+   Радиус в макете 182 при высоте 78 — это просто «скруглить полностью». */
+.hm-btn {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* Размеры — из экземпляров макета, у кнопок они разные: «о нас» 273×72,
+     «фрукты» 252×81. */
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: calc(34 * var(--u));
+  line-height: 1.15;
+  font-weight: 400;
+  text-transform: lowercase;
+  text-decoration: none;
+  color: #fff;
+  box-shadow:
+    0 calc(11 * var(--u)) calc(33 * var(--u)) rgba(37, 44, 97, 0.15),
+    0 calc(4.4 * var(--u)) calc(8.8 * var(--u)) rgba(136, 144, 194, 0.2);
+  /* Наведение описано ниже, в разделе «Наведение». */
+  /* На наведении кнопка не только перекрашивается, но и растёт — поэтому
+     в переходе участвуют ширина с высотой, а не только радиус. Обе кнопки
+     позиционированы абсолютно, так что пересчёт раскладки ими и
+     ограничивается: соседей он не двигает. */
+  transition:
+    width var(--hm-hover) var(--hm-hover-ease),
+    height var(--hm-hover) var(--hm-hover-ease),
+    border-radius var(--hm-hover) var(--hm-hover-ease),
+    box-shadow var(--hm-hover) var(--hm-hover-ease);
+}
+
+/* «о нас» — прозрачная, с ПУНКТИРНОЙ обводкой. Пунктир рисуется SVG, а не
+   `border: dashed`: браузер сам считает длину штрихов от толщины рамки и
+   даёт отношение штрих:промежуток примерно 1:1, а в макете оно 1:2
+   (strokeDashes [4.39, 8.78] при толщине 2.19) — на глаз это вдвое более
+   густой пунктир, чем нужно. В SVG обе величины задаются явно и вдобавок
+   анимируются.
+
+   preserveAspectRatio="none" тянет рамку за размерами кнопки, а
+   vector-effect="non-scaling-stroke" не даёт этому растяжению перекосить
+   толщину штрихов: они считаются уже в экранных пикселях. */
+.hm-btn-ghost {
+  left: calc(120 * var(--u));
+  top: calc(475.8 * var(--u));
+  width: calc(273 * var(--u));
+  height: calc(72 * var(--u));
+  padding: 0 calc(60 * var(--u));
+  border: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.hm-btn-dash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Цвет один, а не градиент: градиентный пунктир на такой толщине не
+   читается, взята середина градиента #61B5E9 → #2D4AED. */
+.hm-btn-dash rect {
+  rx: 36px;
+  stroke: #476feb;
+  stroke-width: calc(2.19 * var(--u));
+  stroke-dasharray: calc(4.39 * var(--u)) calc(8.78 * var(--u));
+  transition:
+    rx var(--hm-hover) var(--hm-hover-ease),
+    stroke-width var(--hm-hover) var(--hm-hover-ease),
+    stroke-dasharray var(--hm-hover) var(--hm-hover-ease);
+}
+
+/* Подпись. В макете у неё два состояния разными шрифтами: обычное —
+   узкий Bebas прописными («О НАС»), наведённое — широкий гротеск
+   строчными («о нас»). Bebas подменён Oswald; для широкого начертания
+   отдельный файл не тянем — системный гротеск того же гуманистического
+   склада попадает в характер. Слои лежат друг на друге и перетекают
+   прозрачностью, как это делает Smart Animate между вариантами. */
+.hm-btn-label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+}
+
+.hm-btn-word {
+  grid-area: 1 / 1;
+  transition: opacity var(--hm-hover) var(--hm-hover-ease);
+}
+
+.hm-btn-word-rest {
+  font-family: var(--display);
+  text-transform: uppercase;
+}
+
+.hm-btn-word-hover {
+  font-family: var(--ui);
+  font-weight: 400;
+  text-transform: lowercase;
+}
+
+/* У «о нас» широкая подпись проявляется только на наведении, у «фрукты»
+   подпись одна и всегда узкая (Bootshaus) — второго слоя в разметке просто
+   нет. Обе кнопки в покое набраны одним шрифтом, это одна пара. */
+.hm-btn-ghost .hm-btn-word-hover { opacity: 0; }
+
+/* «фрукты» — акцентная, ведёт на тирлист. Угол градиента посчитан из
+   ручек макета ([0.967, -0.076] → [0, 1] в долях бокса 252×81): светлый
+   конец справа. */
+.hm-btn-accent {
+  left: calc(465 * var(--u));
+  top: calc(471.8 * var(--u));
+  width: calc(252 * var(--u));
+  height: calc(81 * var(--u));
+  padding: 0 calc(60 * var(--u));
+  background: linear-gradient(252deg, var(--hm-accent-a), var(--hm-accent-b));
+}
+
+.hm-btn[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* ===================================================================
+   Наведение
+
+   В макете это не CSS-эффект, а подмена варианта компонента: кнопка
+   32:892 → 32:895, акцентная 32:902 → 32:904, карточка → 81:239. Переход
+   везде один: SMART_ANIMATE, easing QUICK, 0.744s.
+
+   Числа из компонентов домножены на 2.194 — во столько раз экземпляры в
+   лиде крупнее мастер-компонента (проверяется по радиусу: 83 в компоненте
+   и 182.08 в экземпляре).
+
+   Всё завёрнуто в @media (hover: hover): на тач-экранах :hover залипает
+   после тапа, и карточка осталась бы в наведённом состоянии.
+   =================================================================== */
+@media (hover: hover) {
+
+  /* Кнопки без своей страницы («фрукты») размечены как <span> с
+     aria-disabled — им наведение не положено: оно обещает переход,
+     которого нет. Когда страница появится и тег станет <a>, правило
+     заработает само. */
+  .hm-btn:not([aria-disabled="true"]):hover,
+  .hm-btn:not([aria-disabled="true"]):focus-visible {
+    box-shadow:
+      0 calc(15.4 * var(--u)) calc(46.1 * var(--u)) rgba(37, 44, 97, 0.2),
+      0 calc(6.6 * var(--u)) calc(17.6 * var(--u)) rgba(136, 144, 194, 0.25);
+  }
+
+  /* Кнопка на наведении РАСТЁТ: в макете вариант наведения крупнее
+     обычного — 127×35 → 142×43 у «о нас» и 127×35 → 138×39 у «фрукты».
+     Отсюда и вся смена силуэта: радиус остаётся прежним, а высота растёт,
+     и пилюля сама собой становится скруглённым прямоугольником. Точка
+     привязки — левый верхний угол, как при подмене варианта в Figma.
+
+     Размеры пересчитаны в единицы лида по тем же пропорциям, что и
+     обычное состояние (273×72 и 252×81). */
+  .hm-btn-ghost:not([aria-disabled="true"]):hover,
+  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible {
+    width: calc(298 * var(--u));
+    height: calc(90 * var(--u));
+  }
+
+  /* Пунктир: толщина 2 → 4 и штрихи [4, 10] → [8, 20] (в единицах лида
+     после множителя 2.194).
+
+     Радиус — 10, а не 16: у варианта наведения в макете два вложенных
+     радиуса, 16 на внешнем контуре и 10 на внутреннем боксе, и по записи
+     прототипа видно, что пунктир идёт по внутреннему — прямой участок
+     вертикальной кромки там примерно половина высоты, а при 16 он был бы
+     вчетверо короче. rx задан в единицах viewBox (высота 72), поэтому
+     10 из макета превращается в 17: 21 × 72/90. */
+  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-dash rect,
+  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-dash rect {
+    rx: 17px;
+    stroke-width: calc(4.39 * var(--u));
+    stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
+  }
+
+  /* Подпись перетекает из узкой прописной в широкую строчную. */
+  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-word-rest,
+  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-word-rest {
+    opacity: 0;
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-word-hover,
+  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-word-hover {
+    opacity: 1;
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):hover,
+  .hm-btn-accent:not([aria-disabled="true"]):focus-visible {
+    width: calc(274 * var(--u));
+    height: calc(90 * var(--u));
+  }
+
+  /* Заливки на наведении у «о нас» НЕТ: в макете экземпляр перекрывает
+     заливку варианта нулевой альфой, и на записи прототипа кнопка
+     остаётся тёмной — меняются только рамка и размер. */
+
+  /* У «фрукты» разворачивается градиент: ручки в макете переезжают с
+     [0.967,-0.076] → [0,1] на [0,0] → [1,1.163], то есть светлый конец
+     перебегает справа налево. Отдельным слоем, а не сменой background:
+     background-image между значениями не интерполируется — он бы
+     перещёлкнулся вместо перехода. */
+  .hm-btn-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(109deg, var(--hm-accent-a), var(--hm-accent-b));
+    opacity: 0;
+    transition: opacity var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):hover::before,
+  .hm-btn-accent:not([aria-disabled="true"]):focus-visible::before {
+    opacity: 1;
+  }
+
+  /* --- Карточки --- */
+  /* Арт не просто увеличивается — он в основном ПОВОРАЧИВАЕТСЯ. Числа
+     сняты прямо из ноды варианта наведения (81:239) через мост Figma:
+
+         обычная:    252 × 252   в точке (40, -10),   поворот 0°
+         наведение:  265.84²     в точке (100.04, -81), поворот -23.743°
+
+     То есть увеличение всего в 1.055 раза, а вся заметность движения —
+     от поворота. Габаритная рамка при этом 350.4 (265.84 × (cos + sin)),
+     и именно она раньше сбивала с толку: тот же габарит раскладывается
+     и как «увеличение в 1.39 без поворота», и как «в 1.2 с поворотом
+     10°» — обе догадки были мимо, пока не удалось прочитать ноду.
+
+     Поворот в Figma отсчитывается против часовой, в CSS — по часовой,
+     поэтому -23.743° макета превращается в +23.743deg здесь.
+
+     Единицы макета переводятся в единицы лида множителем 0.9577
+     (328.5 / 343): по X и по размерам — да, по Y — нет, высота карточки
+     в обеих системах одна и та же, 405.
+
+     Сдвиг посчитан от левого верхнего угла, вокруг него же идёт и
+     вращение: (38.3, -10) → (95.81, -81). */
+  .hm-card-art {
+    transform-origin: 0 0;
+    transition: transform var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  a.hm-card:hover .hm-card-art,
+  a.hm-card:focus-visible .hm-card-art {
+    transform:
+      translate(calc(57.51 * var(--u)), calc(-71 * var(--u)))
+      rotate(23.743deg)
+      scale(1.0548);
+  }
+
+  /* Кружок со стрелкой в правом нижнем углу. В обычном состоянии его в
+     макете нет вовсе — Smart Animate проявляет его из ничего. */
+  .hm-card-go {
+    position: absolute;
+    left: calc(252.8 * var(--u));
+    top: calc(322 * var(--u));
+    width: calc(46.9 * var(--u));
+    height: calc(46.9 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(24, 24, 25, 0.2);
+    box-shadow: 0 calc(4 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    scale: 0.8;
+    transition:
+      opacity var(--hm-hover) var(--hm-hover-ease),
+      scale var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-card-go svg {
+    width: calc(22.98 * var(--u));
+    height: calc(22.98 * var(--u));
+  }
+
+  a.hm-card:hover .hm-card-go,
+  a.hm-card:focus-visible .hm-card-go {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* Кружок со стрелкой существует только ради наведения: там, где наведения
+   нет (тач-экраны), он не должен занимать место и попадать в озвучку. */
+@media not all and (hover: hover) {
+  .hm-card-go { display: none; }
+}
+
+/* ===================== Бегущая строка ===================== */
+/* Полоса шире страницы и торчит за оба края (в макете -235…1677 при
+   ширине страницы 1443) — так и задумано. */
+.hm-ticker {
+  left: calc(-235 * var(--u));
+  top: calc(579 * var(--u));
+  width: calc(1912 * var(--u));
+  height: calc(98 * var(--u));
+  overflow: hidden;
+  background: linear-gradient(100deg, var(--hm-accent-a), var(--hm-accent-b));
+}
+
+.hm-ticker-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  height: 100%;
+  /* Лента в макете продублирована дважды с шагом 1878 — значит задумана
+     бесконечной. Прокрутка ровно на одну копию, поэтому стык незаметен. */
+  animation: hm-ticker 8s linear infinite;
+}
+
+.hm-ticker-list {
+  display: flex;
+  align-items: center;
+  gap: calc(15 * var(--u));
+  margin: 0;
+  padding: 0 0 0 calc(15 * var(--u));
+  list-style: none;
+}
+
+.hm-ticker-list li {
+  display: flex;
+  align-items: center;
+  gap: calc(15 * var(--u));
+  font-size: calc(40 * var(--u));
+  line-height: 1.1;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Маркер-точка перед каждым пунктом — 17×17 в макете. */
+.hm-ticker-list li::before {
+  content: "";
+  width: calc(17 * var(--u));
+  height: calc(17 * var(--u));
+  border-radius: 50%;
+  background: #fff;
+}
+
+@keyframes hm-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ===================== Карточки ===================== */
+/* Ряд в макете шире страницы: пять карточек 328.5 с шагом 358.5 занимают
+   1762.5 при ширине страницы 1443, и он намеренно подрезан с обеих
+   сторон — первая и последняя карточки выходят за экран. */
+.hm-cards {
+  left: 0;
+  top: calc(779 * var(--u));
+  width: 100%;
+  height: calc(405 * var(--u));
+  /* Лента тянется рукой (js/home.js). По вертикали жест остаётся
+     странице, иначе с телефона не пролистать саму главную. */
+  touch-action: pan-y;
+  cursor: grab;
+}
+.hm-cards.is-drag { cursor: grabbing; }
+/* Пока тянут — не выделять подписи карточек. */
+.hm-cards.is-drag,
+.hm-cards.is-drag * { user-select: none; }
+
+.hm-cards-row {
+  position: absolute;
+  left: calc(-159.75 * var(--u));
+  top: 0;
+  display: flex;
+  gap: calc(30 * var(--u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  will-change: transform;
+}
+
+/* Координаты внутри карточки — прямо из макета, от её левого верхнего
+   угла. Padding сознательно не используется: часть содержимого (арт)
+   выходит за верхний край, и от padding пришлось бы каждый раз
+   отсчитывать назад. */
+.hm-card {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: calc(328.5 * var(--u));
+  height: calc(405 * var(--u));
+  border-radius: calc(24 * var(--u));
+  /* В макете это булев вычет: тёмная стеклянная рамка с вырезанной
+     серединой. Вырез спрятан под градиентной плашкой, которая шире
+     отверстия, поэтому вычет не воспроизводится — сплошная тёмная
+     подложка даёт тот же результат десятком правил меньше. */
+  background: var(--hm-glass);
+  color: #fff;
+  text-decoration: none;
+}
+
+.hm-card-body {
+  position: absolute;
+  left: calc(19.2 * var(--u));
+  top: calc(26 * var(--u));
+  width: calc(290.2 * var(--u));
+  height: calc(352 * var(--u));
+  border-radius: calc(17 * var(--u));
+  background: linear-gradient(135deg, var(--hm-accent-a), var(--hm-accent-b));
+}
+
+/* Персонаж намеренно вылезает за верхний край карточки: в макете он
+   стоит на y = -10 при собственной высоте 241. */
+.hm-card-art {
+  position: absolute;
+  left: calc(38.3 * var(--u));
+  top: calc(-10 * var(--u));
+  width: calc(241.3 * var(--u));
+  height: calc(241.3 * var(--u));
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.hm-card-name {
+  position: absolute;
+  left: calc(38.3 * var(--u));
+  top: calc(219 * var(--u));
+  margin: 0;
+  font-size: calc(40 * var(--u));
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+/* Тонкая белая линия под названием (Vector 1 в макете). */
+.hm-card-rule {
+  position: absolute;
+  left: calc(41.2 * var(--u));
+  top: calc(267 * var(--u));
+  width: calc(241.3 * var(--u));
+  height: 1px;
+  background: #fff;
+}
+
+.hm-card-note {
+  position: absolute;
+  left: calc(38.3 * var(--u));
+  top: calc(282 * var(--u));
+  /* Коробка шире макетных 184: там текст набран Bebas, он вдвое уже
+     Segoe UI и укладывался в три строки. Правый край выровнен по концу
+     белой линейки над подписью (41.2 + 241.3 = 282.5). */
+  width: calc(244 * var(--u));
+  margin: 0;
+  font-size: calc(19 * var(--u));
+  /* Интерлиньяж всегда больше кегля. В макете 26.8/21.5 работало только
+     потому, что у Bebas низкий рост строчных и надстрочных элементов нет
+     вовсе; с обычным гротеском такие строки наезжают друг на друга. */
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Длинное название («РОЗЫГРЫШИ») в макете набрано мельче, чтобы влезть. */
+.hm-card-name--tight {
+  font-size: calc(31 * var(--u));
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+/* Карточки без своей страницы («ФРУКТЫ», «ЦЕНЫ») — это <div>, не <a>: вести
+   с них некуда. Но нажать на них можно, и по нажатию js/topbar.js показывает
+   ту же плашку «В активной разработке», что и пилюли шапки, — поэтому и
+   курсор обычный указательный, а не «мимо». */
+.hm-card[data-soon] {
+  cursor: pointer;
+}
+
+/* ===================== Вопросы ===================== */
+.hm-faq {
+  position: relative;
+  padding: calc(86 * var(--u)) calc(42 * var(--u)) calc(60 * var(--u));
+  /* Фона у секции нет намеренно. В макете у фрейма «вопросы» лежит чёрная
+     заливка, но поверх неё — та же фоновая картинка страницы, что и везде;
+     на сайте эта картинка приходит из design-page.css как фон body, и
+     собственный фон секции просто закрыл бы её. */
+}
+
+.hm-faq-inner {
+  box-sizing: border-box;
+  padding: calc(52 * var(--u)) calc(126.5 * var(--u)) calc(48 * var(--u));
+  border-radius: calc(42 * var(--u));
+  background: var(--hm-panel);
+}
+
+.hm-faq-head {
+  margin: 0 0 calc(48 * var(--u));
+  text-align: center;
+}
+
+.hm-faq-head h2 {
+  margin: 0;
+  font-size: calc(40 * var(--u));
+  line-height: 1.1;
+}
+
+.hm-faq-head p {
+  margin: calc(18 * var(--u)) 0 0;
+  font-size: calc(17 * var(--u));
+  line-height: 1.3;
+  font-weight: 400;
+}
+
+.hm-faq-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hm-faq-item + .hm-faq-item {
+  margin-top: calc(14 * var(--u));
+}
+
+/* Строка вопроса. Кнопка, а не <summary>: <details> не даёт
+   анимировать раскрытие и по-разному читается скринридерами. */
+.hm-faq-q {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(57.3 * var(--u));
+  /* Поля больше макетных: длинные вопросы иначе упираются в скругление. */
+  padding: calc(16 * var(--u)) calc(36 * var(--u));
+  border: 0;
+  border-radius: calc(22.7 * var(--u));
+  background: var(--hm-panel);
+  font-family: inherit;
+  font-size: calc(26 * var(--u));
+  line-height: 1.3;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  /* Своя система координат для подсветки: она лежит отдельным слоем под
+     текстом, см. ::before ниже. */
+  position: relative;
+  z-index: 0;
+}
+
+/* Подсветка при наведении — как в макете (вариант строки «Frame 21»):
+   горизонтальный градиент от тёмно-синего слева к голубому справа.
+   Отдельным слоем, а не сменой background: градиенты в CSS не
+   интерполируются, и переход получился бы рывком. Слой с отрицательным
+   z-index лежит над фоном кнопки, но под её текстом. */
+.hm-faq-q::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  /* Точки остановок — из макета: градиент выходит на чистые цвета
+     на 27% и 59% ширины строки. */
+  background: linear-gradient(90deg, #2d4aed 27%, #61b5e9 59%);
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+/* На тач-экранах :hover залипает после тапа, поэтому только для мыши.
+   Клавиатурный фокус подсвечиваем всегда. */
+@media (hover: hover) and (pointer: fine) {
+  .hm-faq-q:hover::before { opacity: 1; }
+}
+.hm-faq-q:focus-visible::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-faq-q::before { transition: none; }
+}
+
+.hm-faq-a {
+  padding: calc(14 * var(--u)) calc(36 * var(--u)) calc(6 * var(--u));
+  font-size: calc(19 * var(--u));
+  line-height: 1.5;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+}
+/* Ответы состоят из нескольких абзацев. Браузерный margin у <p> сверху и
+   снизу схлопывался бы с padding блока и растил зазор между вопросом и
+   первой строкой — задаём отступ только между абзацами. */
+.hm-faq-a p { margin: 0; }
+.hm-faq-a p + p { margin-top: calc(12 * var(--u)); }
+
+.hm-faq-q[aria-expanded="false"] + .hm-faq-a {
+  display: none;
+}
+
+/* ===================== Декор ===================== */
+/* Всё, что лежит поверх текста: лепестки, мокап телефона, стеклянные
+   фигуры и полупрозрачные надписи MAKNEMY. Клики не перехватывают. */
+.hm-deco {
+  pointer-events: none;
+}
+
+/* Фигуры повёрнуты вокруг своего левого верхнего угла — так же, как в
+   макете, поэтому left/top берутся прямо из relativeTransform ноды, а не
+   из habitual bounding box (у повёрнутого элемента это разные точки). */
+.hm-fig {
+  transform-origin: 0 0;
+  background: var(--hm-figure);
+  box-shadow: 0 calc(4 * var(--u)) calc(7 * var(--u)) rgba(0, 0, 0, 0.25);
+}
+
+.hm-fig-circle {
+  left: calc(943 * var(--u));
+  top: calc(121 * var(--u));
+  width: calc(163 * var(--u));
+  height: calc(163 * var(--u));
+  border-radius: 50%;
+}
+
+.hm-fig-square-lg {
+  left: calc(1132 * var(--u));
+  top: calc(494.26 * var(--u));
+  width: calc(226 * var(--u));
+  height: calc(226 * var(--u));
+  border-radius: calc(18 * var(--u));
+  rotate: -24.65deg;
+}
+
+.hm-fig-square-sm {
+  left: calc(423 * var(--u));
+  top: calc(23.62 * var(--u));
+  width: calc(94.65 * var(--u));
+  height: calc(94.65 * var(--u));
+  border-radius: calc(18 * var(--u));
+  rotate: -10.43deg;
+}
+
+.hm-fig-tri {
+  left: calc(432.15 * var(--u));
+  top: calc(536 * var(--u));
+  width: calc(109 * var(--u));
+  height: calc(109 * var(--u));
+  rotate: 29.78deg;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  border-radius: 0;
+}
+
+/* Лепестки. Один файл на оба слоя: правый лежит как есть, левый
+   развёрнут почти на прямой угол — ровно так же, как в макете. */
+.hm-sakura {
+  width: calc(868 * var(--u));
+  height: calc(890 * var(--u));
+  transform-origin: 0 0;
+}
+
+.hm-sakura-r {
+  left: calc(1231 * var(--u));
+  top: calc(28 * var(--u));
+}
+
+.hm-sakura-l {
+  left: calc(167.51 * var(--u));
+  top: calc(252 * var(--u));
+  rotate: 86.69deg;
+}
+
+/* Мокап телефона. В макете это группа из четырёх слоёв (корпус, маска
+   экрана, скриншот канала, рамка); здесь они уже сведены в один файл —
+   ни один из них по отдельности на странице не нужен. */
+.hm-phone {
+  left: calc(745 * var(--u));
+  top: calc(-0.38 * var(--u));
+  width: calc(814.44 * var(--u));
+  height: calc(814.44 * var(--u));
+  transform-origin: 0 0;
+  rotate: -3deg;
+  background: url("../assets/design/home/iphone.webp") no-repeat center / contain;
+}
+
+/* Полупрозрачные надписи MAKNEMY на фоне. Градиент положен маской по
+   тем же кривым, что и заголовок, — отдельный файл не нужен. */
+.hm-ghost {
+  width: calc(675 * var(--u));
+  height: calc(61.6 * var(--u));
+  -webkit-mask: url("../assets/design/wordmark.svg") no-repeat center / contain;
+  mask: url("../assets/design/wordmark.svg") no-repeat center / contain;
+}
+
+.hm-ghost-a {
+  left: calc(-51 * var(--u));
+  top: calc(10 * var(--u));
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
+}
+
+.hm-ghost-b {
+  left: calc(443 * var(--u));
+  top: calc(163 * var(--u));
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
+}
+
+.hm-ghost-c {
+  left: calc(1520 * var(--u));
+  top: calc(168 * var(--u));
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
+}
+
+/* ===================================================================
+   Анимация
+
+   Один раз при загрузке. Сдвиги — это разница «слайд 1 минус слайд 2»,
+   то есть откуда элемент прилетает; конечная точка у всех своя родная,
+   поэтому @keyframes задают только from.
+
+   Анимируется исключительно translate (и opacity в одном месте) — это
+   уходит на композитор и не вызывает пересчёта раскладки. Поворот у
+   фигур снят в отдельное свойство rotate, чтобы анимация сдвига его не
+   затирала: индивидуальные translate/rotate применяются независимо.
+   =================================================================== */
+.hm-anim {
+  animation-duration: 1s;
+  animation-delay: 0.8s;
+  animation-fill-mode: both;
+  /* Figma EASE_OUT. */
+  animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
+}
+
+@keyframes hm-fly-sakura-l { from { translate: calc(-199 * var(--u)); } }
+@keyframes hm-fly-sakura-r { from { translate: calc(301 * var(--u)); } }
+@keyframes hm-fly-phone    { from { translate: calc(473 * var(--u)); } }
+@keyframes hm-fly-circle   { from { translate: calc(518 * var(--u)); } }
+@keyframes hm-fly-sq-lg    { from { translate: calc(318 * var(--u)); } }
+@keyframes hm-fly-sq-sm    { from { translate: calc(-537 * var(--u)); } }
+@keyframes hm-fly-tri      { from { translate: calc(-627 * var(--u)); } }
+@keyframes hm-fly-ghost    { from { translate: calc(-621 * var(--u)); } }
+@keyframes hm-fade         { from { opacity: 0; } }
+@keyframes hm-fly-cards    { from { translate: 0 calc(476 * var(--u)); } }
+@keyframes hm-fly-card     { from { translate: calc(160 * var(--u)); } }
+
+.hm-sakura-l      { animation-name: hm-fly-sakura-l; }
+.hm-sakura-r      { animation-name: hm-fly-sakura-r; }
+.hm-phone         { animation-name: hm-fly-phone; }
+.hm-fig-circle    { animation-name: hm-fly-circle; }
+.hm-fig-square-lg { animation-name: hm-fly-sq-lg; }
+.hm-fig-square-sm { animation-name: hm-fly-sq-sm; }
+.hm-fig-tri       { animation-name: hm-fly-tri; }
+.hm-ghost-a       { animation-name: hm-fly-ghost; }
+.hm-ghost-b       { animation-name: hm-fade; }
+.hm-cards         { animation-name: hm-fly-cards; }
+.hm-cards-row     { animation-name: hm-fly-card; }
+
+/* Ряд карточек в макете едет двумя уровнями сразу: контейнер вверх,
+   сами карточки влево. Поэтому и здесь два элемента, а не один. */
+.hm-cards-row {
+  animation-duration: 1s;
+  animation-delay: 0.8s;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-anim,
+  .hm-cards-row,
+  .hm-ticker-track {
+    animation: none;
+  }
+}
+
+/* ===================== Стекло ===================== */
+/* Эффект GLASS из макета — это размытие подложки. Включается только на
+   широких экранах: размытие подложки дорого стоит мобильным GPU, а
+   проект уже ловил падения iPhone на тяжёлых композитных слоях (см.
+   отказ от mix-blend-mode на сцене тирлиста). На телефоне остаётся
+   плоская заливка — она в этих слоях и так основная. */
+@media (min-width: 901px) {
+  .hm-panel-main,
+  .hm-card,
+  .hm-fig {
+    backdrop-filter: blur(calc(14 * var(--u)));
+    -webkit-backdrop-filter: blur(calc(14 * var(--u)));
+  }
+}
+
+/* ===================================================================
+   Адаптив
+
+   Мобильного фрейма в макете нет, поэтому ниже 900px раскладка
+   пересобрана: лид перестаёт быть абсолютным полотном и становится
+   обычным потоком, ряд карточек — горизонтальным скроллом, тяжёлый
+   декор убран. Единица --u при этом уже не годится (на 375px точка
+   макета = 0.26px, текст стал бы нечитаемым), поэтому размеры здесь
+   заданы обычными единицами.
+   =================================================================== */
+@media (max-width: 900px) {
+  .hm-lead {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding: 24px 16px 0;
+    /* Свой стекинг-контекст: без него лепестки с z-index: -1 проваливаются
+       под фон страницы и не видны вовсе. */
+    isolation: isolate;
+  }
+
+  .hm-lead-actions { order: 2; }
+  .hm-ticker       { order: 3; }
+  .hm-cards        { order: 4; }
+
+  /* В макете «о нас» слева, акцентная — справа. */
+  .hm-btn-accent { order: 2; }
+
+  /* Абсолютное позиционирование снимается со всех слоёв разом. Именно
+     static, а не relative: у каждого слоя свои макетные left/top, и при
+     relative они снова заработали бы — как сдвиг, и колонка разъехалась
+     бы. Лепестки уходят под текст отрицательным z-index, а не порядком
+     слоёв (см. .hm-sakura ниже). */
+  .hm-lead > * {
+    position: static;
+  }
+
+  /* Панели макета на телефоне только мешают: их роль — держать текст на
+     фоне картинки, а в одну колонку текст и так лежит на тёмном фоне. */
+  .hm-panel-main,
+  .hm-panel-text {
+    display: none;
+  }
+
+  .hm-word {
+    width: min(100%, 320px);
+    height: auto;
+  }
+
+  .hm-since {
+    width: auto;
+    margin-top: 10px;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .hm-desc {
+    width: auto;
+    margin-top: 16px;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .hm-lead-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 26px;
+  }
+
+  .hm-btn {
+    position: static;
+    width: auto;
+    height: 48px;
+    padding: 0 26px;
+    font-size: 20px;
+  }
+
+  /* Полоса растягивается на всю ширину экрана, вылет за края убран. */
+  .hm-ticker {
+    width: 100vw;
+    height: 54px;
+    margin: 24px 0 0 -16px;
+  }
+
+  .hm-ticker-list li {
+    font-size: 22px;
+  }
+
+  .hm-ticker-list li::before {
+    width: 9px;
+    height: 9px;
+  }
+
+  /* Ряд карточек становится горизонтальным скроллом: пять карточек в
+     ширину телефона не влезают ни при каком масштабе. */
+  /* Прокрутки контейнера здесь больше нет: ряд стал бесконечной лентой
+     и на телефоне тоже тянется пальцем (js/home.js). */
+  .hm-cards {
+    height: auto;
+    margin: 24px -16px 0;
+    padding: 0 16px 16px;
+  }
+
+  .hm-cards-row {
+    position: static;
+    gap: 12px;
+  }
+
+  /* Размеры карточки и всего, что внутри, — макет, уменьшенный ровно в
+     1.42 раза (328.5 → 232). Пропорции сохранены, поэтому арт и текст
+     не разъезжаются относительно плашки. */
+  .hm-card {
+    width: 232px;
+    height: 286px;
+    border-radius: 17px;
+    scroll-snap-align: center;
+  }
+
+  .hm-card-body  { left: 13.6px; top: 18.4px; width: 205px; height: 248.6px; border-radius: 12px; }
+  .hm-card-art   { left: 27px; top: -7px; width: 170px; height: 170px; }
+  .hm-card-name  { left: 27px; top: 152px; font-size: 26px; line-height: 1.1; }
+  .hm-card-name--tight { font-size: 21px; }
+  .hm-card-rule  { left: 29px; top: 188.5px; width: 170px; }
+  .hm-card-note  { left: 27px; top: 186px; width: 180px; font-size: 14px; line-height: 1.25; }
+
+  /* Декор на телефоне не показываем: мокап телефона и стеклянные фигуры
+     рассчитаны на полотно 1443 и в узкой колонке превращаются в кашу. */
+  .hm-deco {
+    display: none;
+  }
+
+  /* Кроме лепестков — без них на телефоне не остаётся вообще никакого
+     движения: восемь из девяти анимированных слоёв это декор.
+     Байтов это не стоит: sakura.webp — <img> в разметке, браузер тянет
+     его и при display: none, то есть он и так уже загружен.
+
+     Координаты свои, а не масштабированные макетные: в макете лепестки
+     стоят по краям полотна 1443, а здесь колонка 375 — при пересчёте они
+     закрыли бы текст. Оба куста наполовину за экраном и лежат под
+     содержимым (z-index у соседей выше). */
+  .hm-sakura {
+    display: block;
+    position: absolute;
+    /* Отрицательный z-index: слои лида остаются static, стекинг-контекста
+       у них нет, и лепестки рисуются раньше текста в потоке. */
+    z-index: -1;
+    width: 230px;
+    height: 236px;
+    opacity: 0.75;
+  }
+  /* Куст повёрнут на 86.69deg вокруг своего левого верхнего угла, поэтому
+     left/top — это не левый край картинки: после поворота коробка уходит
+     влево примерно на свою высоту. Отсюда положительный left при том, что
+     видно из-за левого края экрана только край куста. */
+  .hm-sakura-l {
+    left: 124px;
+    top: 74px;
+  }
+  .hm-sakura-r {
+    left: auto;
+    right: -130px;
+    top: -30px;
+  }
+
+  .hm-faq {
+    padding: 28px 12px 32px;
+  }
+
+  .hm-faq-inner {
+    padding: 24px 16px 20px;
+    border-radius: 20px;
+  }
+
+  .hm-faq-head { margin-bottom: 24px; }
+  .hm-faq-head h2 { font-size: 24px; line-height: 1.1; }
+  .hm-faq-head p { margin-top: 10px; font-size: 13px; }
+
+  .hm-faq-q {
+    min-height: 44px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    font-size: 18px;
+    line-height: 1.25;
+    text-align: left;
+  }
+
+  .hm-faq-a {
+    padding: 10px 16px 2px;
+    font-size: 15px;
+  }
+  .hm-faq-a p + p { margin-top: 10px; }
+}

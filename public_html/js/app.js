@@ -42,7 +42,7 @@
       title: "MAKNEMY\nTIER LIST",
       date: "17.02.2026",
       autoSort: true,
-      filters: { fruits: true, mutations: true, perms: false, passes: true, skins: true },
+      filters: { configurators: true, fruits: true, perms: false, passes: true },
       ad: { text: "МЕСТО ДЛЯ ВАШЕЙ РЕКЛАМЫ — t.me/mksvtnc", image: "", link: "" },
       donate: { da: DONATE_DA, hub: DONATE_HUB, qr: DONATE_QR },
       credits: [
@@ -119,7 +119,7 @@
       const merged = Object.assign({}, d, data);
       merged.ad = Object.assign({}, d.ad, data.ad || {});
       merged.donate = Object.assign({}, d.donate, data.donate || {});
-      merged.filters = Object.assign({}, d.filters, data.filters || {});
+      merged.filters = normalizeFilters(data.filters, d.filters);
       merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
       if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
       if (!Array.isArray(merged.footer) || !merged.footer.length) merged.footer = d.footer;
@@ -374,9 +374,25 @@
     if (!box) return;
     box.addEventListener("click", e => {
       const btn = e.target.closest("[data-lang]");
+      if (!btn) return;
+      let next = btn.dataset.lang;
+      if (next === lang) {
+        // Узкий экран: в панели остаётся одна кнопка — та, что показывает
+        // текущий язык (правило в design-page.css прячет вторую). Нажатие
+        // по ней должно переключать, иначе кнопка мёртвая.
+        //
+        // Смотрим не на брейкпойнт, а на факт: отрисована ли вторая кнопка.
+        // Порогом владеет CSS, и дублировать его здесь значит однажды
+        // развести две цифры.
+        const other = Array.from(box.querySelectorAll("[data-lang]"))
+          .find(b => b.dataset.lang !== lang);
+        if (!other || other.getClientRects().length) return;  // пара видна — язык уже выбран
+        next = other.dataset.lang;
+      }
       // Перерисовываем: подписи, которые ставит JS (кнопка сохранения,
       // тултипы тиров, «＋ Предмет» внутри тира), живут не в разметке.
-      if (btn && btn.dataset.lang !== lang) { applyLang(btn.dataset.lang); render(); }
+      applyLang(next);
+      render();
     });
   })();
 
@@ -434,12 +450,32 @@
   }
 
   // Фрукты (f/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s/cr — хроматики идут со скинами)
+  // Тип предмета → категория фильтра. Категорий четыре плюс «Все»:
+  // «Скины» и «Мутации» слиты в «Конфигураторы», а воучеры заведены заранее
+  // в одну корзину с геймпассами — в данных их пока нет, но продуктово это
+  // одна категория, и при появлении типа "v" ничего править не придётся.
   function groupOf(type) {
     if (type === "p") return "perms";
-    if (type === "gp") return "passes";
-    if (type === "s" || type === "cr") return "skins";
-    if (type === "m") return "mutations";
+    if (type === "gp" || type === "v") return "passes";
+    if (type === "s" || type === "cr" || type === "m") return "configurators";
     return "fruits";
+  }
+
+  // Набор фильтров из сохранения приводим к текущему виду. Раньше «Скины» и
+  // «Мутации» были двумя категориями, теперь это одни «Конфигураторы»: в
+  // localStorage и в БД лежат состояния со старыми ключами, и без переноса
+  // объединённая категория молча пропала бы из виду (её ключа там нет, а
+  // значение по умолчанию перетёрло бы выбор пользователя).
+  function normalizeFilters(saved, defaults) {
+    const out = Object.assign({}, defaults, saved || {});
+    const s = saved || {};
+    if (s.configurators === undefined && (s.skins !== undefined || s.mutations !== undefined)) {
+      // Категория видна, если была видна хотя бы одна из двух прежних.
+      out.configurators = !!(s.skins || s.mutations);
+    }
+    delete out.skins;
+    delete out.mutations;
+    return out;
   }
 
   // ============================================================
@@ -1301,6 +1337,52 @@
     };
     paint();
     if (list.length > 2) railTimer = setInterval(paint, RAIL_ROTATE_MS);
+    syncRailTop();
+  }
+
+  // ---------- верхняя граница бортов ----------
+  //
+  // Борт прибит position: fixed и обязан быть виден на всём скролле — это то,
+  // что покупает рекламодатель (см. комментарий у .ptn-rail в styles.css).
+  // Но подниматься выше верхнего края тирлиста ему нельзя: там шапка и панель
+  // фильтров, и борт лез поверх них.
+  //
+  // Поэтому top считается здесь, а CSS читает его из --rail-top:
+  //   не выше RAIL_MIN_TOP — иначе на прокрученной странице борт уедет под
+  //                          липкую панель фильтров;
+  //   не выше края .stage  — собственно требование.
+  //
+  // Нижним краем борт при этом может свеситься за экран: на невысоком окне
+  // 600px под тирлист целиком не влезают. Это лечится первым же движением
+  // колеса — как только страница поехала, борт поднимается к RAIL_MIN_TOP и
+  // виден полностью. Поджимать его вверх на старте нельзя: он снова окажется
+  // поверх шапки, ровно то, от чего уходим.
+  const RAIL_MIN_TOP = 96;
+  let railTopRaf = 0;
+
+  function syncRailTop() {
+    railTopRaf = 0;
+    if (!railMQ || !railMQ.matches) return;
+    const stage = $("#stage");
+    if (!stage) return;
+    let top = Math.max(RAIL_MIN_TOP, stage.getBoundingClientRect().top);
+
+    // Нижняя граница: борт не заезжает на подвал. Как только подвал дошёл до
+    // нижнего края борта, борт перестаёт стоять на месте и едет вверх вместе
+    // со страницей — состав команды и слоган остаются открыты. Ограничение
+    // именно снизу, а не «спрятать борт»: реклама видна до последнего.
+    const foot = document.querySelector(".mk-foot");
+    const rail = document.querySelector(".ptn-rail:not([hidden])");
+    if (foot && rail) {
+      const h = rail.offsetHeight || 600;
+      top = Math.min(top, foot.getBoundingClientRect().top - h);
+    }
+    document.documentElement.style.setProperty("--rail-top", Math.round(top) + "px");
+  }
+
+  function queueRailTop() {
+    if (railTopRaf) return;
+    railTopRaf = requestAnimationFrame(syncRailTop);
   }
 
   // ---------- нижняя полоса на телефоне ----------
@@ -1564,6 +1646,12 @@
   //  CREDITS (команда тирлиста)
   // ============================================================
   function renderCredits() {
+    // Контейнера на странице тирлиста больше нет: в редизайне команду
+    // показывает подвал страницы (.mk-foot в index.php), а внутри постера
+    // строка дублировала бы его. Данные при этом живы — state.credits
+    // по-прежнему сохраняется и уезжает в экспорт/импорт JSON, так что
+    // вернуть строку обратно можно одним <section class="credits">.
+    if (!creditsEl) return;
     creditsEl.innerHTML = "";
     state.credits.forEach((cr, idx) => {
       const el = document.createElement("div");
@@ -1800,9 +1888,9 @@
   });
 
   // ============================================================
-  //  FILTERS (Фрукты / Мутации / Пермы / Пассы / Скины)
+  //  FILTERS (Конфигураторы / Фрукты / Пермы / Пассы)
   // ============================================================
-  const FILTER_KEYS = ["fruits", "mutations", "perms", "passes", "skins"];
+  const FILTER_KEYS = ["configurators", "fruits", "perms", "passes"];
   const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
   const filtersEl = $("#filters");
   // Подсветка чипов под текущие фильтры. Само скрытие предметов/тиров —
@@ -2064,7 +2152,7 @@
         state = Object.assign({}, d, data);
         state.ad = Object.assign({}, d.ad, data.ad || {});
         state.donate = Object.assign({}, d.donate, data.donate || {});
-        state.filters = Object.assign({}, d.filters, data.filters || {});
+        state.filters = normalizeFilters(data.filters, d.filters);
         if (!Array.isArray(state.credits) || !state.credits.length) state.credits = d.credits;
         if (!Array.isArray(state.footer) || !state.footer.length) state.footer = d.footer;
         normalizeTierLogos(state.tiers, true);
@@ -2807,7 +2895,7 @@
     const merged = Object.assign({}, d, data);
     merged.ad      = Object.assign({}, d.ad,      data.ad      || {});
     merged.donate  = Object.assign({}, d.donate,  data.donate  || {});
-    merged.filters = Object.assign({}, d.filters, data.filters || {});
+    merged.filters = normalizeFilters(data.filters, d.filters);
     merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
     if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
     if (!Array.isArray(merged.footer)  || !merged.footer.length)  merged.footer  = d.footer;
@@ -3104,6 +3192,12 @@
     if (railMQ.addEventListener) railMQ.addEventListener("change", onRailMQ);
     else if (railMQ.addListener) railMQ.addListener(onRailMQ);   // Safari < 14
   }
+  // Верхняя граница бортов пересчитывается на прокрутке и ресайзе. Слушатели
+  // ставятся всегда, а не по медиазапросу: syncRailTop() сам выходит, пока
+  // борта скрыты, а окно можно растянуть до порога и без перезагрузки.
+  window.addEventListener("scroll", queueRailTop, { passive: true });
+  window.addEventListener("resize", queueRailTop);
+  syncRailTop();
   if (dockMQ) {
     const onDockMQ = () => renderPromoDock();
     if (dockMQ.addEventListener) dockMQ.addEventListener("change", onDockMQ);
