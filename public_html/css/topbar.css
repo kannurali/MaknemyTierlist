@@ -1,0 +1,515 @@
+/* ===================================================================
+   Новая шапка сайта (редизайн из Figma: MAKNEMY → «шапка», node 244:7171).
+
+   Геометрия снята с макета шириной 1443px и выражена через --u: до 1443px
+   шапка масштабируется пропорционально ширине окна, выше — фиксируется на
+   значениях макета. Так пропорции (логотип / пилюли / аватар) не разъезжаются
+   ни на ноутбуке, ни на 4K, и не нужно держать десяток брейкпойнтов.
+
+   Отличий от макета два, оба сознательные:
+
+   1. Высота. В макете полоса 195px, и почти вся она — воздух вокруг пилюль.
+      Шапка липкая, то есть эти 195px отъедаются от экрана на всём протяжении
+      страницы. Оставили высоту содержимого плюс поля; воздух макета остаётся
+      на первом экране, но уже не ездит вместе с шапкой.
+   2. Плашка навигации обнимает содержимое и скруглена с обеих сторон, а
+      аватар лежит внутри неё. В макете плашка уходила за правый край, аватар
+      висел отдельно, и «профиль» читался как чужой элемент рядом с меню.
+
+   Подключается ПОСЛЕ base.css: скрывает старый бренд и .nav-seg в тулбаре —
+   их роль забрала эта шапка. Фильтры, язык и админские группы в тулбаре
+   остаются на месте.
+   =================================================================== */
+
+/* ===================== Шрифт навигации ===================== */
+/* В макете подписи набраны Bebas Neue. Свободной кириллической версии на
+   Google Fonts нет, поэтому подложен Oswald — тот же узкий гротеск с плоскими
+   окончаниями, и с кириллицей. Файлы лежат локально: сайт и так не ходит на
+   сторонние CDN, а шрифт с чужого домена — лишняя точка отказа.
+   Если появится лицензионный Bebas Neue Cyrillic — достаточно заменить
+   @font-face, разметку трогать не нужно. */
+@font-face {
+  font-family: "Oswald";
+  src: url("../assets/fonts/Oswald/oswald-cyrillic.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Oswald";
+  src: url("../assets/fonts/Oswald/oswald-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122;
+}
+
+/* Высота шапки нужна не только ей самой: под неё подстраиваются рекламные
+   борта ленты (news-design.css). Держим её одним значением на :root, чтобы
+   оба места не разъезжались.
+
+   --mk-top-h-stuck — высота после прокрутки. Наружу её не отдаём: борта
+   должны отступать от БОЛЬШЕЙ из двух высот, иначе при возврате наверх
+   шапка накрывала бы их на разницу. */
+:root {
+  --mk-top-h: calc(104 * min(1px, calc(100vw / 1443)));
+  --mk-top-h-stuck: calc(84 * min(1px, calc(100vw / 1443)));
+}
+
+.mk-top {
+  /* Единица макета. min() держит 1px как потолок: на широких экранах шапка
+     не раздувается вслед за окном, а остаётся ровно такой, как в Figma. */
+  --u: min(1px, calc(100vw / 1443));
+
+  /* Градиент кнопок. В макете ручки идут из правого-верхнего угла в
+     левый-нижний — в CSS это ~255deg (светлый край справа). */
+  --mk-grad: linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%);
+  /* Плашка навигации: в макете два чёрных слоя 42% и 20% друг на друге. */
+  --mk-bar-bg: rgba(0, 0, 0, 0.536);
+
+  /* Липкая: шапка — единственная навигация на всех страницах, и уезжать
+     из виду при прокрутке ей нельзя. */
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: calc(20 * var(--u));
+  height: var(--mk-top-h);
+  padding: 0 calc(41 * var(--u));
+  transition: height .22s ease;
+
+  /* Свёрнутая плашка уезжает за правый край и без обрезки растягивала
+     документ: страница получала горизонтальную прокрутку на всю её ширину.
+
+     clip, а не hidden: hidden делает шапку скролл-контейнером и заодно
+     режет по вертикали — тени плашки и логотипа и кольцо :focus-visible
+     обрубались по нижнему краю. Пара объявлений подряд — фолбэк: движки без
+     overflow: clip (Safari до 16) возьмут первую строку и обрежут в обе
+     стороны, что хуже, но не ломает вёрстку. */
+  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+/* Фон шапки — отдельным слоем, а не свойством .mk-top: картинку анимировать
+   нельзя, а гасить фон при прокрутке надо плавно, и гаснет opacity слоя.
+
+   В макете шапка стоит на той же картинке, что и страница, одним куском.
+   Поэтому здесь не свой кадр, а ровно тот же фон с той же геометрией, что
+   у body (см. design-page.css): пиксели совпадают, шва на границе нет.
+   В покое фон обязан быть непрозрачным — сквозь него просвечивали
+   рекламные борта ленты, которые по z-index должны быть под шапкой. */
+.mk-top::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: #05070d;
+  background-image: url("../assets/design/page-bg.webp");
+  background-repeat: no-repeat;
+  background-size: calc(1983 * var(--pu, calc(100vw / 1443))) auto;
+  background-position:
+    calc(-272 * var(--pu, calc(100vw / 1443)))
+    calc(-533 * var(--pu, calc(100vw / 1443)));
+
+  /* Нижняя линия из макета. Плотность вдвое меньше макетной: на тёмном
+     фоне страницы чёрная линия в 53% читалась как широкая граница, а не
+     как волосяной раздел. */
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.26);
+  transition: opacity .22s ease;
+}
+
+/* ===================== Прокрученное состояние ===================== */
+/* Класс вешает js/topbar.js, как только страница ушла из самого верха.
+
+   Смысл: липкая шапка не должна закрывать экран. В покое её фон совпадает
+   с фоном страницы и не виден вовсе, но стоит прокрутить — полоса застывает
+   и превращается в непрозрачный пояс поверх содержимого. Поэтому при
+   прокрутке гаснет фон, логотип уезжает за левый край, а плашка разделов —
+   за правый: от шапки остаётся один язычок, всё остальное снова становится
+   страницей. Вернуть меню — язычком «‹», и он же убирает его обратно.
+   Логотип возвращается сам, когда посетитель поднимается наверх.
+
+   Класс вешается ТОЛЬКО на широких экранах (см. js/topbar.js): на телефоне
+   шапка и так в полтора раза ниже, а прятать её там значит отнимать
+   единственную навигацию ради 60px экрана. */
+.mk-top.is-stuck { height: var(--mk-top-h-stuck); }
+.mk-top.is-stuck::before { opacity: 0; }
+
+/* Логотип уезжает за левый край. visibility, а не только opacity: иначе
+   уехавшая ссылка осталась бы кликабельной и в таб-порядке — Tab уводил бы
+   фокус на невидимый элемент, а клик мимо текста — с середины страницы на
+   главную. */
+.mk-top.is-stuck .mk-top-brand {
+  transform: translateX(calc(-100% - 41 * var(--u)));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Плашка разделов уезжает вправо целиком, вместе с аватаром: они один
+   блок. visibility, а не только opacity — иначе уехавшая плашка осталась
+   бы в таб-порядке, и Tab уводил бы фокус за край экрана. */
+.mk-top.is-stuck .mk-top-bar {
+  transform: translateX(calc(100% + 60 * var(--u)));
+  opacity: 0;
+  visibility: hidden;
+}
+.mk-top.is-stuck.is-nav-open .mk-top-bar {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+}
+/* Место под язычок: открытая плашка не должна наезжать на него. */
+.mk-top.is-stuck .mk-top-bar { margin-right: calc(52 * var(--u)); }
+
+/* ===================== Язычок ===================== */
+/* Абсолютный, а не в потоке: в покое он скрыт, и в потоке держал бы под
+   себя пустое место у правого края шапки. */
+.mk-top-toggle {
+  position: absolute;
+  right: calc(41 * var(--u));
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(41 * var(--u));
+  height: calc(41 * var(--u));
+  border: 0;
+  border-radius: 50%;
+  background: var(--mk-grad);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%) scale(.8);
+  box-shadow: 0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(0, 0, 0, 0.45);
+  transition: opacity .2s ease, transform .2s ease, visibility .2s, filter .15s;
+}
+.mk-top.is-stuck .mk-top-toggle {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) scale(1);
+}
+.mk-top-toggle svg {
+  width: calc(22 * var(--u));
+  height: calc(22 * var(--u));
+  display: block;
+  /* Стрелка одна на оба состояния: «‹» тянет плашку из-за края обратно,
+     после разворота «›» убирает её туда же. */
+  transition: transform .28s ease;
+}
+.mk-top.is-nav-open .mk-top-toggle svg { transform: rotate(180deg); }
+.mk-top-toggle:hover { filter: brightness(1.12); }
+.mk-top-toggle:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
+
+/* Без фона шапки открытая плашка лежит прямо на содержимом страницы —
+   тень отделяет её край от светлых кадров. */
+.mk-top.is-stuck .mk-top-bar {
+  box-shadow: 0 calc(6 * var(--u)) calc(22 * var(--u)) rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-top,
+  .mk-top::before,
+  .mk-top-bar,
+  .mk-top-toggle,
+  .mk-top-toggle svg,
+  .mk-top-brand { transition: none; }
+}
+
+/* ===================== Логотип ===================== */
+.mk-top-brand {
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  text-decoration: none;
+  flex: 0 0 auto;
+  /* visibility в списке намеренно: без неё переход обрывается мгновенно и
+     логотип пропадает, не доехав до края. */
+  transition: transform .28s ease, opacity .22s ease, visibility .28s;
+}
+.mk-top-mark {
+  width: calc(56 * var(--u));
+  height: calc(56 * var(--u));
+  display: block;
+}
+/* Надпись MAKNEMY набрана Akira Expanded — шрифт платный, в вебе его нет.
+   Поэтому берём её из макета кривыми: SVG с уже запечённым градиентом
+   белый → серый, масштабируется без потерь и не требует шрифта вообще.
+   255 вместо макетных 285: шапка стала ниже, и надпись во всю прежнюю
+   ширину рядом с уменьшенным знаком выглядела растянутой. */
+.mk-top-word {
+  width: calc(255 * var(--u));
+  height: auto;
+  display: block;
+}
+
+/* ===================== Плашка навигации ===================== */
+/* Разделы и профиль — один блок: плашка обнимает содержимое, скруглена с
+   обеих сторон и прижата вправо. Аватар лежит внутри неё, за волосяным
+   разделителем, а не отдельной кнопкой на фоне страницы. */
+.mk-top-bar {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  height: calc(57 * var(--u));
+  padding: 0 calc(8 * var(--u)) 0 calc(20 * var(--u));
+  background: var(--mk-bar-bg);
+  border-radius: 999px;
+  /* visibility в списке намеренно: без неё переход обрывается мгновенно и
+     плашка исчезает до конца отъезда. */
+  transition: box-shadow .22s ease, transform .28s ease, opacity .2s ease,
+              visibility .28s, margin-right .28s ease;
+}
+
+.mk-nav {
+  display: flex;
+  align-items: center;
+  gap: calc(16 * var(--u));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+/* ===================== Пилюля раздела ===================== */
+.mk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(9 * var(--u));
+  padding: calc(9 * var(--u)) calc(20 * var(--u));
+  border: 0;
+  border-radius: 999px;
+  background: var(--mk-grad);
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  /* В макете 20px по Bebas Neue. Oswald при том же кегле шире примерно на
+     четверть, и пилюли переставали влезать в плашку, поэтому 18px. */
+  font-size: calc(18 * var(--u));
+  line-height: 1;
+  text-transform: uppercase;
+
+  box-shadow:
+    0 calc(4.5 * var(--u)) calc(13.6 * var(--u)) rgba(37, 44, 97, 0.15),
+    0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.2);
+  transition: filter .15s, transform .08s, box-shadow .15s;
+}
+.mk-pill svg {
+  width: calc(16.3 * var(--u));
+  height: calc(16.3 * var(--u));
+  flex: 0 0 auto;
+}
+.mk-pill:hover {
+  filter: brightness(1.12);
+  box-shadow:
+    0 calc(6 * var(--u)) calc(18 * var(--u)) rgba(37, 44, 97, 0.28),
+    0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.28);
+}
+.mk-pill:active { transform: translateY(1px); }
+.mk-pill:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
+
+/* Текущий раздел. В макете все пилюли выглядят одинаково, поэтому активность
+   показываем кольцом, а не сменой заливки — иначе разъедется с макетом. */
+.mk-pill[aria-current="page"] {
+  box-shadow:
+    0 0 0 calc(1.5 * var(--u)) rgba(255, 255, 255, 0.42),
+    0 calc(4.5 * var(--u)) calc(13.6 * var(--u)) rgba(37, 44, 97, 0.15);
+}
+
+/* ===================== Разделы в разработке ===================== */
+/* «Трейдинг», «Калькулятор» и профиль на сайт пока не выкладываются. Кнопка
+   при этом остаётся полноценной намеренно: молчаливая мёртвая пилюля
+   читается как поломка, а по клику js/topbar.js показывает «В активной
+   разработке» — и посетитель понимает, что раздел есть, просто ещё закрыт.
+
+   Ни disabled, ни aria-disabled: и то и другое означает «не работает
+   вовсе» — с клавиатуры и через скринридер до объяснения было бы не
+   добраться. Приглушает вид сам data-soon, по которому работает скрипт. */
+.mk-pill[data-soon],
+.mk-avatar[data-soon] { opacity: .72; }
+.mk-pill[data-soon]:hover,
+.mk-avatar[data-soon]:hover { filter: brightness(1.05); }
+
+/* ===================== Аватар ===================== */
+/* Внутри плашки, за разделителем: профиль и разделы — один блок. */
+.mk-avatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: calc(41 * var(--u));
+  height: calc(41 * var(--u));
+  margin-left: calc(15 * var(--u));
+  border: 0;
+  border-radius: 50%;
+  background: var(--mk-grad);
+  color: #fff;
+  cursor: pointer;
+  transition: filter .15s, transform .08s;
+}
+/* Волосяной разделитель — псевдоэлементом слева, а не рамкой самой кнопки:
+   рамка на круглой кнопке стала бы дугой. */
+.mk-avatar::before {
+  content: "";
+  position: absolute;
+  left: calc(-8 * var(--u));
+  top: calc(-6 * var(--u));
+  height: calc(53 * var(--u));
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+.mk-avatar svg {
+  width: calc(30 * var(--u));
+  height: calc(30 * var(--u));
+  display: block;
+}
+.mk-avatar:hover { filter: brightness(1.12); }
+.mk-avatar:active { transform: translateY(1px); }
+.mk-avatar:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
+
+/* ===================== Плашка «В активной разработке» ===================== */
+/* Один узел на страницу, его создаёт js/topbar.js. role="status" +
+   aria-live: сообщение проговаривается скринридером, а не только видно. */
+.mk-soon {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--mk-top-h) + 10px);
+  z-index: 70;
+  transform: translate(-50%, -8px);
+  max-width: min(92vw, 420px);
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(6, 10, 22, 0.92);
+  color: #fff;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.mk-soon.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mk-soon { transition: none; }
+}
+
+/* ===================== Узкие экраны ===================== */
+/* Пропорциональное сжатие живёт до ~1000px: ниже подписи в пилюлях становятся
+   мельче 13px и читать их уже нельзя. Дальше — компактная раскладка с
+   фиксированными размерами, а не продолжение масштаба.
+
+   --mk-top-h тут переопределяется вместе с высотой: борта ленты и липкая
+   панель калькулятора считают отступ от неё, а формула с --u ниже 1000px
+   реальную высоту шапки уже не описывает. */
+@media (max-width: 1000px) {
+  :root {
+    --mk-top-h: 76px;
+    --mk-top-h-stuck: 62px;
+  }
+  .mk-top {
+    --u: 0.7px;
+    gap: 10px;
+    padding: 0 14px;
+  }
+  .mk-top-word { width: 168px; }
+  .mk-top-mark { width: 36px; height: 36px; }
+
+  .mk-top-bar {
+    height: 48px;
+    padding: 0 6px 0 12px;
+  }
+  .mk-nav {
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .mk-nav::-webkit-scrollbar { display: none; }
+
+  .mk-pill { padding: 8px 12px; font-size: 15px; gap: 6px; }
+  .mk-pill svg { width: 14px; height: 14px; }
+
+  .mk-avatar { width: 36px; height: 36px; margin-left: 13px; }
+  .mk-avatar svg { width: 24px; height: 24px; }
+  .mk-avatar::before { left: -7px; top: -6px; height: 44px; }
+
+  .mk-top.is-stuck .mk-top-bar {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    margin-right: 46px;
+    transform: translateX(calc(100% + 46px));
+  }
+  .mk-top.is-stuck.is-nav-open .mk-top-bar { transform: none; }
+  .mk-top-toggle { right: 14px; width: 36px; height: 36px; }
+  .mk-top-toggle svg { width: 20px; height: 20px; }
+}
+
+/* Логотипной надписи первой не хватает места — знак остаётся. */
+@media (max-width: 900px) {
+  .mk-top-word { display: none; }
+}
+
+/* Ниже ~760px пять подписей не помещаются даже без надписи: последняя пилюля
+   уезжала под аватар и выглядела обрезанной. Оставляем иконки — все пять
+   разделов видны целиком. */
+@media (max-width: 760px) {
+  :root {
+    --mk-top-h: 62px;
+    --mk-top-h-stuck: 54px;
+  }
+  .mk-top::before { background-image: url("../assets/design/page-bg-m.webp"); }
+  .mk-top-bar { height: 44px; padding: 0 5px 0 9px; }
+  .mk-pill { padding: 9px 10px; }
+  .mk-pill .mk-pill-text { display: none; }
+  .mk-pill svg { width: 16px; height: 16px; }
+  .mk-avatar { width: 32px; height: 32px; margin-left: 11px; }
+  .mk-avatar svg { width: 22px; height: 22px; }
+  .mk-avatar::before { left: -6px; top: -5px; height: 40px; }
+  .mk-soon { font-size: 15px; padding: 9px 16px; }
+  .mk-top.is-stuck .mk-top-bar {
+    margin-right: 42px;
+    transform: translateX(calc(100% + 42px));
+  }
+  .mk-top.is-stuck.is-nav-open .mk-top-bar { transform: none; }
+  .mk-top-toggle { width: 32px; height: 32px; }
+  .mk-top-toggle svg { width: 18px; height: 18px; }
+}
+
+/* На самых узких телефонах пять иконок, аватар и знак логотипа в строку уже
+   впритык — режем зазоры, а не прячем разделы. */
+@media (max-width: 400px) {
+  .mk-top { gap: 8px; padding: 0 10px; }
+  .mk-nav { gap: 5px; }
+  .mk-pill { padding: 9px 8px; }
+  .mk-top-bar { padding: 0 4px 0 7px; }
+  .mk-avatar { margin-left: 9px; }
+  .mk-avatar::before { left: -5px; }
+  .mk-top-toggle { right: 10px; }
+  .mk-top.is-stuck .mk-top-bar {
+    margin-right: 38px;
+    transform: translateX(calc(100% + 38px));
+  }
+  .mk-top.is-stuck.is-nav-open .mk-top-bar { transform: none; }
+}
+
+/* ===================== Стыковка со старым тулбаром ===================== */
+/* Бренд и пара «Тирлист / Новости» переехали в шапку выше — в тулбаре они
+   стали вторым набором тех же ссылок. Прячем, остальное (фильтры, язык,
+   админские группы) работает как работало. */
+.mk-top ~ .toolbar .tb-brand,
+.mk-top ~ .toolbar .nav-seg { display: none; }

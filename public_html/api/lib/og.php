@@ -104,6 +104,32 @@ function og_tierlist_summary($rawData, $rawRev): ?array {
 }
 
 // ---------------------------------------------------------------------------
+//  og:image тирлиста — общая точка входа для / (home.php) и /tierlist
+//  (index.php): корень сайта — самый шаримый адрес, и он обязан рекламировать
+//  ТУ ЖЕ живую картинку, что и тирлист, а не собственную копию этой логики.
+//  $summary — уже посчитанный og_tierlist_summary()/null, PDO сюда не
+//  попадает (как и во весь остальной файл, см. комментарий вверху) —
+//  вызывающая сторона сама делает SELECT и сама решает, что откат на null
+//  означает "статичный баннер".
+// ---------------------------------------------------------------------------
+function og_tierlist_image(?array $summary): array {
+    if ($summary === null) {
+        return [
+            'image'       => 'https://maknemytierlist.site/assets/og-image.jpg?v=2',
+            'imageWidth'  => 1920,
+            'imageHeight' => 1080,
+            'imageType'   => 'image/jpeg',
+        ];
+    }
+    return [
+        'image'       => 'https://maknemytierlist.site/api/og-tierlist.php?v=' . $summary['version'],
+        'imageWidth'  => 1200,
+        'imageHeight' => 630,
+        'imageType'   => 'image/png',
+    ];
+}
+
+// ---------------------------------------------------------------------------
 //  Новости: превью строится по строке САМОГО СВЕЖЕГО поста (ORDER BY
 //  published_at DESC, id DESC LIMIT 1 — тот же порядок, что и в лентe
 //  api/news.php). Версия — не rev (у новостей его нет и заводить его означает
