@@ -49,7 +49,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/topbar.css?v=4" />
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=24" />
-<link rel="stylesheet" href="css/calculator.css?v=4" />
+<link rel="stylesheet" href="css/calculator.css?v=5" />
 </head>
 <body>
 
