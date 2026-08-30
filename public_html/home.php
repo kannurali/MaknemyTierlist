@@ -86,7 +86,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=4" />
+<link rel="stylesheet" href="css/base.css?v=5" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />

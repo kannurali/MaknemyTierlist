@@ -449,15 +449,38 @@
     return "https://" + s.replace(/^\/+/, "");
   }
 
-  // Фрукты (f/пусто) · Мутации (m) · Пермы (p) · Пассы (gp) · Скины (s/cr — хроматики идут со скинами)
+  // Значки предмета лежат в двух наборах. Первые шесть достались от старого
+  // тирлиста растром (assets/badge-*.png), остальные пришли с новой легендой
+  // вектором (assets/design/legend/badge-*.svg) — те же файлы показаны в
+  // блоке «Помощь новичкам», поэтому значок на карточке и значок в легенде
+  // совпадают по определению, а не по договорённости.
+  //
+  // Список, а не проверка расширения на лету: незнакомый тип должен дать
+  // видимую битую картинку в админке, а не молча уехать в 404 у читателей.
+  const LEGACY_BADGES = ["f", "p", "s", "m", "gp", "cr"];
+
+  function badgeSrc(type) {
+    return LEGACY_BADGES.indexOf(type) >= 0
+      ? "assets/badge-" + type + ".png"
+      : "assets/design/legend/badge-" + type + ".svg";
+  }
+
   // Тип предмета → категория фильтра. Категорий четыре плюс «Все»:
-  // «Скины» и «Мутации» слиты в «Конфигураторы», а воучеры заведены заранее
-  // в одну корзину с геймпассами — в данных их пока нет, но продуктово это
-  // одна категория, и при появлении типа "v" ничего править не придётся.
+  //
+  //   Фрукты        f или пусто
+  //   Пермы         p
+  //   Пассы         gp, vh (ваучеры)
+  //   Конфигураторы s, m, cs, cm, ms, cr
+  //
+  // Ваучеры и пассы — одна корзина: продуктово это одно и то же, отдельным
+  // фильтром они дробили бы список на две почти пустые категории. Старый код
+  // "v" оставлен рядом с "vh": в сохранениях он мог успеть появиться, и
+  // выкидывать такой предмет во «Фрукты» нельзя.
   function groupOf(type) {
     if (type === "p") return "perms";
-    if (type === "gp" || type === "v") return "passes";
-    if (type === "s" || type === "cr" || type === "m") return "configurators";
+    if (type === "gp" || type === "vh" || type === "v") return "passes";
+    if (type === "s" || type === "m" || type === "cs" ||
+        type === "cm" || type === "ms" || type === "cr") return "configurators";
     return "fruits";
   }
 
@@ -794,7 +817,7 @@
     if (item.type) {
       const b = document.createElement("img");
       b.className = "tbadge";
-      b.src = "assets/badge-" + item.type + ".png";
+      b.src = badgeSrc(item.type);
       b.alt = item.type.toUpperCase();
       strip.appendChild(b);
     }
@@ -1961,7 +1984,7 @@
     $("#vValue").textContent = it.value || "—";
     const badge = $("#vBadge");
     if (it.type) {
-      badge.src = "assets/badge-" + it.type + ".png";
+      badge.src = badgeSrc(it.type);
       badge.alt = it.type.toUpperCase();
       badge.hidden = false;
     } else {

@@ -57,7 +57,7 @@
       "donate.qrCaption":       "Наведи камеру телефона",
 
       "filters.configurators":      "Конфигураторы",
-      "filters.configuratorsTitle": "Скины, хроматики и мутации",
+      "filters.configuratorsTitle": "Скины, мутации, конфигурации и хроматики",
       "filters.fruits":             "Фрукты",
       "filters.fruitsTitle":        "Обычные фрукты",
       "filters.perms":              "Пермы",
@@ -137,6 +137,12 @@
       "modal.catMutation":      "M · Мутация",
       "modal.catPass":          "GP · Пасс",
       "modal.catChromatic":     "CR · Хроматик",
+      // Значки, добавленные вместе с новой легендой. Подписи совпадают с
+      // легендой на странице — админ выбирает то же, что увидит читатель.
+      "modal.catConfigSkin":     "CS · Конфигурация скин",
+      "modal.catConfigMutation": "CM · Конфигурация мутация",
+      "modal.catMutationSkin":   "MS · Скины мутации",
+      "modal.catVoucher":        "VH · Ваучер",
       "modal.demand":           "Спрос",
       "modal.trend":            "Тренд",
       "modal.delete":           "Удалить",
@@ -354,7 +360,7 @@
       "donate.qrCaption":       "Point your phone camera here",
 
       "filters.configurators":      "Configurators",
-      "filters.configuratorsTitle": "Skins, chromatics and mutations",
+      "filters.configuratorsTitle": "Skins, mutations, configs and chromatics",
       "filters.fruits":             "Fruits",
       "filters.fruitsTitle":        "Regular fruits",
       "filters.perms":              "Perms",
@@ -434,6 +440,10 @@
       "modal.catMutation":      "M · Mutation",
       "modal.catPass":          "GP · Pass",
       "modal.catChromatic":     "CR · Chromatic",
+      "modal.catConfigSkin":     "CS · Config skin",
+      "modal.catConfigMutation": "CM · Config mutation",
+      "modal.catMutationSkin":   "MS · Mutation skins",
+      "modal.catVoucher":        "VH · Voucher",
       "modal.demand":           "Demand",
       "modal.trend":            "Trend",
       "modal.delete":           "Delete",
