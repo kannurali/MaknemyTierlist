@@ -378,6 +378,9 @@
       : -1;
     $("#tcCatalogStatus").textContent = "";
     $("#tcCatalogSearch").value = "";
+    // Отложенный кадр от прошлого открытия нарисовал бы сетку по уже
+    // стёртому запросу поверх свежей.
+    cancelQueuedRender();
     renderCatalogGrid("");
     $("#tcCatalogBackdrop").hidden = false;
     document.body.style.overflow = "hidden";
@@ -421,6 +424,7 @@
     catalogState.triggerEl = null;
     catalogState.slotIndex = -1;
     document.body.style.overflow = "";
+    cancelQueuedRender();
 
     const finish = () => {
       backdrop.hidden = true;
@@ -446,14 +450,67 @@
     setTimeout(finish, CATALOG_CLOSE_MS);
   }
 
+  // Поиск перестраивает сетку целиком — 113 карточек по пять узлов каждая.
+  // Без задержки слово из девяти букв давало девять полных перестроек
+  // подряд, и на телефоне ввод отставал от клавиатуры. Рисуем один раз,
+  // когда человек перестал печатать.
+  const SEARCH_DEBOUNCE_MS = 120;
+  let searchTimer = null;
+
+  function cancelQueuedRender() {
+    if (searchTimer !== null) { clearTimeout(searchTimer); searchTimer = null; }
+  }
+
+  function queueCatalogRender(query) {
+    cancelQueuedRender();
+    searchTimer = setTimeout(function () {
+      searchTimer = null;
+      renderCatalogGrid(query);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  // aria-modal="true" только обещает вспомогательным технологиям, что
+  // остального на странице нет — сам он ничего не удерживает. Без ловушки
+  // Tab из последней карточки уходил на пилюли шапки и слоты доски под
+  // затемнением: невидимые элементы, по которым не понять, где находишься,
+  // и вернуться в каталог можно было только наощупь.
+  const FOCUSABLE_SEL = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function catalogFocusables() {
+    const dialog = $("#tcCatalog");
+    if (!dialog) return [];
+    // Скрытое (display:none у пустой сетки, например) в обход не берём:
+    // фокус на элементе без коробки выглядит как пропавший фокус.
+    return [...dialog.querySelectorAll(FOCUSABLE_SEL)]
+      .filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement);
+  }
+
+  function trapTab(e) {
+    const dialog = $("#tcCatalog");
+    const items = catalogFocusables();
+    if (!dialog || !items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    const outside = !dialog.contains(active);
+    if (e.shiftKey) {
+      if (outside || active === first) { e.preventDefault(); last.focus(); }
+    } else if (outside || active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   function wireCatalog() {
-    $("#tcCatalogSearch").addEventListener("input", e => renderCatalogGrid(e.target.value));
+    $("#tcCatalogSearch").addEventListener("input", e => queueCatalogRender(e.target.value));
     $("#tcCatalogClose").addEventListener("click", closeCatalog);
     $("#tcCatalogBackdrop").addEventListener("click", e => {
       if (e.target === $("#tcCatalogBackdrop")) closeCatalog();
     });
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape" && catalogState.open) { closeCatalog(); }
+      if (!catalogState.open) return;
+      if (e.key === "Escape") { closeCatalog(); return; }
+      if (e.key === "Tab") { trapTab(e); }
     });
   }
 

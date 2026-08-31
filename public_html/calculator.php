@@ -316,7 +316,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
   <script src="js/i18n.js?v=25"></script>
   <script src="js/promo.js?v=2"></script>
-  <script src="js/calc.js?v=3"></script>
-  <script src="js/calculator-page.js?v=7"></script>
+  <script src="js/calc.js?v=4"></script>
+  <script src="js/calculator-page.js?v=8"></script>
 </body>
 </html>
