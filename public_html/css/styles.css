@@ -458,8 +458,10 @@
    предметы переупаковываются, а пустые тиры не отображаются. */
 
 /* ===================== Badges / dots / trends (shared) =====================
-   Оригинальные пиксельные иконки из макета (assets/badge-*.png, dot-*.png,
-   trend-*.png) — извлечены из nav-legend.png 1-в-1.
+   Точки и тренды — оригинальные пиксельные иконки из макета (dot-*.png,
+   trend-*.png), извлечены из nav-legend.png 1-в-1. Значки типов пришли
+   позже вектором (assets/design/legend/badge-*.svg) и лежат в одном наборе
+   с легендой.
 
    Теней здесь нет намеренно. Каждый filter: drop-shadow заставляет WebKit
    рисовать элемент в отдельную поверхность и размывать её альфу. На полном
@@ -484,8 +486,6 @@
 
 /* colour tokens — используются кнопками категорий в модалке */
 .t-f { --bc: var(--t-f); }
-.t-s { --bc: var(--t-s); }
-.t-m { --bc: var(--t-m); }
 .t-p { --bc: var(--t-p); }
 .t-gp { --bc: var(--t-gp); }
 .t-cr { --bc: var(--t-cr); }
@@ -1024,6 +1024,10 @@ body.ptn-locked { overflow: hidden; }
 .d-yellow { --dc: #fff200; }
 .d-orange { --dc: #ffa100; }
 .d-red { --dc: #ff0000; }
+/* «Оверпрайс» — единственная точка не одного цвета, а с переливом. Картинкой,
+   а не linear-gradient() в CSS: ровно тот же файл стоит на карточке предмета,
+   и легенда с карточкой не разъедутся при первой же правке оттенка. */
+.d-neon { --dc: url("../assets/dot-neon.png") center / cover no-repeat; }
 
 /* Значки трендов в макете разной формы и высоты («new» широкий и низкий,
    стрелки узкие и высокие), но выровнены по правому краю своей колонки. */
@@ -1127,7 +1131,6 @@ body.ptn-locked { overflow: hidden; }
 /* ===================== Модалка редактирования: иконка и переключатели ===================== */
 .icon-btn { background: none; border: none; color: #9fc2ee; font-size: 18px; cursor: pointer; }
 .icon-btn:hover { color: #fff; }
-.field .new-switch { flex-direction: row; }
 
 .icon-field { flex-direction: row; align-items: center; gap: 14px; }
 .icon-preview {
@@ -1155,8 +1158,11 @@ body.ptn-locked { overflow: hidden; }
 .seg .dot { width: 16px; height: 16px; position: static; }
 .seg .trend { position: static; width: 16px; }
 .seg .trend.tr-swap { width: 22px; }
+/* NEW в макете широкий и низкий (232x128): по общей ширине 16 px он вышел бы
+   высотой 9 px и потерялся бы рядом со стрелками. */
+.seg .trend.tr-new { width: 34px; }
 /* badge-coloured segment buttons keep readable text on dark */
-/* Категорий стало девять, и в одну строку они не помещаются — сегмент
+/* Категорий шесть плюс «—», и в одну строку они не помещаются — сегмент
    переносится. Подчёркивание цветом значка оставлено: по нему видно, какой
    именно значок получит предмет, ещё до сохранения. */
 .seg button[class*="t-"] {
