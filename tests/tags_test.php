@@ -140,8 +140,20 @@ test('фон ленты прибит к экрану, а не едет со ст
     $css = tag_read($PUB . '/css/news-design.css');
     assert_true((bool)preg_match('/\.news-bg::before \{[^}]*position: fixed;/s', $css),
         'слой фона должен быть прибит к экрану');
-    assert_true((bool)preg_match('/\.news-bg::before \{[^}]*cover/s', $css),
-        'cover — иначе на высоком экране снизу останется та же тёмная полоса');
+    // Геометрия та же, что у body на остальных страницах (design-page.css):
+    // иначе лента стоит на другом кадре фона, чем тирлист и главная.
+    assert_true((bool)preg_match('/\.news-bg::before \{[^}]*background-position: calc\(-272 \* var\(--pu\)\) calc\(-533 \* var\(--pu\)\);/s', $css),
+        'фон ленты должен стоять по макетной геометрии');
+    // cover остаётся запасным вариантом для узких высоких экранов, где
+    // макетной картинки не хватает по высоте.
+    assert_true((bool)preg_match('/@media \(max-aspect-ratio: 1443\/2703\) \{[^}]*\{[^}]*background-size: cover;/s', $css),
+        'на узком высоком экране нужен запасной cover');
+
+    // Фон body обязан быть прозрачным: у html свой непрозрачный фон, поэтому
+    // фон body не продвигается на канву и рисуется обычным слоем элемента —
+    // а слой с z-index: -1 уходит ПОД него, и страница остаётся чёрной.
+    assert_true((bool)preg_match('/\.news-bg \{ background: none; \}/', $css),
+        'заливка на body закрыла бы собой фиксированный слой');
     // Своя картинка в шапке повторяет макетную геометрию страницы и на
     // нижней границе шапки давала бы стык двух кадров одной картинки.
     assert_true(strpos($css, '.news-bg .mk-top::before { display: none; }') !== false,
@@ -188,6 +200,20 @@ test('пустые рекламные борта ленты скрыты, пок
 // Панели администратора вставляют свою навигацию сразу за <body>. Лента
 // дописала тегу класс, и точный поиск "<body>" промахивался молча: панель
 // открывалась без переходов между разделами.
+// Размеры полосы прокрутки сняты с макета «новостискролинг»: дорожка 18,
+// ползунок 29 (он шире дорожки и выступает за неё), радиус ползунка 12.
+test('полоса прокрутки повторяет макет', function () use ($PUB) {
+    $css = tag_read($PUB . '/css/design-page.css');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar \{[^}]*width: 29px;/s', $css),
+        'полосе нужны 29px — ширина ползунка из макета');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar-track \{[^}]*background-clip: padding-box;/s', $css),
+        'дорожка ужимается до макетных 18 прозрачными полями');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar-thumb \{[^}]*border-radius: 12px;/s', $css),
+        'радиус ползунка из макета');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar-thumb \{[^}]*linear-gradient\(180deg, #61b5e9, #2d4aed\)/s', $css),
+        'градиент ползунка из макета');
+});
+
 test('панели администратора находят body с атрибутами', function () use ($PUB) {
     foreach (['admin.php', 'admin-news.php'] as $f) {
         $s = tag_read($PUB . '/' . $f);

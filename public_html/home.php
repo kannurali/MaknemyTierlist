@@ -95,7 +95,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=25" />
+<link rel="stylesheet" href="css/design-page.css?v=26" />
 <link rel="stylesheet" href="css/home.css?v=13" />
 </head>
 <body>

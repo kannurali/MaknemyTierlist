@@ -134,7 +134,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=25" />
+<link rel="stylesheet" href="css/design-page.css?v=26" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
