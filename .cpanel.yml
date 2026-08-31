@@ -1,5 +1,5 @@
 ---
-# cPanel Git deployment for maknemytierlist.site
+# cPanel Git deployment for maknemy.com
 #
 # Only public_html/ is published. tests/, tools/, docs/ and the rest of the
 # repository stay out of the web root.

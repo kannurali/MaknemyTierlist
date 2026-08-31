@@ -129,7 +129,7 @@ function og_render_tierlist_png(array $summary, string $outPath): void {
     if ($summary['date'] !== '') {
         og_draw_text($canvas, OG_FONT_TEXT, 22, OG_COLOR_MUTED, 56, $h - 40, 'Обновлено ' . $summary['date']);
     }
-    og_draw_text_right_aligned($canvas, OG_FONT_TEXT, 22, OG_COLOR_MUTED, $w - 56, $h - 40, 'maknemytierlist.site');
+    og_draw_text_right_aligned($canvas, OG_FONT_TEXT, 22, OG_COLOR_MUTED, $w - 56, $h - 40, 'maknemy.com');
 
     // Пишем во временный файл и переименовываем, а не прямо в $outPath.
     // Первую ссылку на свежую версию обычно дёргают несколько краулеров

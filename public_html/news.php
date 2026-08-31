@@ -19,7 +19,7 @@ require_once __DIR__ . '/api/lib/og.php';
 // файлу. Так это уже сделано в index.php — см. tierlist_og_fallback() там.
 function news_og_fallback(): array {
     return [
-        'image'       => 'https://maknemytierlist.site/assets/og-image.jpg?v=2',
+        'image'       => 'https://maknemy.com/assets/og-image.jpg?v=2',
         'imageWidth'  => 1920,
         'imageHeight' => 1080,
         'imageType'   => 'image/jpeg',
@@ -38,7 +38,7 @@ function news_og_data(PDO $pdo): array {
 
     $meta = og_news_meta($summary);
     return [
-        'image'       => 'https://maknemytierlist.site/api/og-news.php?v=' . $summary['version'],
+        'image'       => 'https://maknemy.com/api/og-news.php?v=' . $summary['version'],
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/png',
@@ -103,7 +103,7 @@ function news_post_og_data(array $row): array {
 
     $meta = og_news_meta($summary);
     return [
-        'image'       => 'https://maknemytierlist.site/api/og-news.php?id=' . $id . '&v=' . $summary['version'],
+        'image'       => 'https://maknemy.com/api/og-news.php?id=' . $id . '&v=' . $summary['version'],
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/png',
@@ -163,7 +163,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 // бы двумя URL с формально разным содержимым og:*, но одним и тем же
 // canonical, что путает краулеров). У 404-случая свой персональный адрес
 // невалиден — канонизируем на общую ленту, туда же указывает и og:url.
-$canonicalUrl = 'https://maknemytierlist.site/news' . ($linkedPostId !== null ? '/' . $linkedPostId : '');
+$canonicalUrl = 'https://maknemy.com/news' . ($linkedPostId !== null ? '/' . $linkedPostId : '');
 // noindex на 404: сама лента ниже всё равно рисуется (см. комментарий выше),
 // но индексировать битый адрес как рабочую страницу незачем — 404 в статусе
 // это уже даёт понять большинству краулеров, noindex просто не оставляет
@@ -416,7 +416,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
        ДО news-page.js: он зовёт NX_PROTECT на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/news-page.js?v=19"></script>
+  <script src="js/news-page.js?v=20"></script>
 </body>
 </html>
 <?php endif; ?>

@@ -97,7 +97,7 @@ test('news_post_by_id returns the row for a real id, whichever post it is', func
 test("news_post_og_data derives the image URL's id and version from that post's own row", function () {
     $row = ['id' => 7, 'category' => 'game', 'title_ru' => 'Заголовок', 'body_ru' => 'Тело', 'image_url' => '', 'published_at' => 1000];
     $data = news_post_og_data($row);
-    assert_eq('https://maknemytierlist.site/api/og-news.php?id=7&v=71000', $data['image']);
+    assert_eq('https://maknemy.com/api/og-news.php?id=7&v=71000', $data['image']);
     assert_eq('Заголовок', $data['title']);
 });
 

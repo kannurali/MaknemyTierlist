@@ -115,14 +115,14 @@ function og_tierlist_summary($rawData, $rawRev): ?array {
 function og_tierlist_image(?array $summary): array {
     if ($summary === null) {
         return [
-            'image'       => 'https://maknemytierlist.site/assets/og-image.jpg?v=2',
+            'image'       => 'https://maknemy.com/assets/og-image.jpg?v=2',
             'imageWidth'  => 1920,
             'imageHeight' => 1080,
             'imageType'   => 'image/jpeg',
         ];
     }
     return [
-        'image'       => 'https://maknemytierlist.site/api/og-tierlist.php?v=' . $summary['version'],
+        'image'       => 'https://maknemy.com/api/og-tierlist.php?v=' . $summary['version'],
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/png',
