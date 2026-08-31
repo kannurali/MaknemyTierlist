@@ -83,6 +83,7 @@ test('в карте сайта есть оба адреса', function () use ($
     $map = read_file_or_fail($PUB . '/sitemap.xml');
     assert_true(strpos($map, '<loc>https://maknemy.com/</loc>') !== false, 'корень');
     assert_true(strpos($map, '<loc>https://maknemy.com/tierlist</loc>') !== false, '/tierlist');
+    assert_true(strpos($map, '<loc>https://maknemy.com/news</loc>') !== false, '/news');
 });
 
 // Ни одна страница не должна вести на тирлист по старому адресу: ссылка
