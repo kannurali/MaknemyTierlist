@@ -292,6 +292,10 @@
   width: calc(248 * var(--u));
   z-index: 1;
 }
+/* Пока рекламы нет, борта скрыты (атрибут hidden стоит в разметке, снимает
+   его renderNewsRails()). Правило нужно явно: у элемента задан display, а он
+   перебивает браузерный display: none для [hidden]. */
+.nw-rail-slot[hidden] { display: none; }
 
 .nw-rail {
   position: sticky;
