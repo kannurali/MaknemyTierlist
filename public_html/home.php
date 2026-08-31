@@ -2,39 +2,28 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/og.php';
 
-// Страница в остальном статична: ни списков, ни текста, собираемого из
-// базы, здесь нет. Исключение — og:image: корень сайта самый шаримый адрес
-// (в Telegram и Discord пересылают именно его, а не /tierlist), и он не
-// имеет права рекламировать замороженный баннер, пока тирлист под /tierlist
-// показывает живые данные. Картинка (только картинка — og:title,
-// og:description и canonical ниже остаются про сайт целиком, так и было
-// задумано) берётся из того же источника, что и og:image у index.php:
-// og_tierlist_image() в api/lib/og.php строит её по summary, а summary —
-// тот же og_tierlist_summary() над той же строкой tierlist, что читает
-// index.php. Второй копии этой логики нет нарочно — расхождение между
-// / и /tierlist иначе замечалось бы только когда кто-то уже прислал ссылку
-// с чужой картинкой.
+// Превью корня — фирменная карточка «MAKNEMY TIER LIST», та же самая, что у
+// /tierlist (og_brand_card() в api/lib/og.php). Корень — самый шаримый адрес,
+// в Telegram и Discord пересылают именно его, и выглядеть он должен так же
+// узнаваемо, как раздел, на который ведёт.
 //
-// Как и у index.php: любая ошибка (нет БД, кривой JSON, тиры ещё пустые)
-// откатывает картинку на статичный баннер — см. og_tierlist_image(null) /
-// og_tierlist_summary() в api/lib/og.php. Главная обязана открываться в
-// любом случае, битое превью — не повод для 500.
-$ogImage = og_tierlist_image(null);
+// Раньше здесь собиралась картинка по живой строке тирлиста — топ-5
+// предметов с ценами. Убрано вместе с таким же превью у /tierlist: ссылка
+// меняла вид от каждой правки цен, а узнаваемой карточки у проекта не было.
+//
+// Побочный эффект: главная больше не ходит в базу вообще. Вместе с запросом
+// ушёл и try/catch вокруг него — падать при отрисовке стало нечему, а
+// прежняя причина его существования (битое превью не должно ронять самую
+// шаримую страницу) закрыта тем, что превью теперь просто файл.
+//
+// og:title, og:description и canonical ниже остаются про сайт целиком —
+// так и было задумано, картинка тут единственное, что менялось.
+$ogImage = og_brand_card();
 
 // Cache-Control такой же, как у index.php и news.php: файл несёт номера
 // версий ?v= для css/js, и закешированная копия намертво прибила бы
 // посетителя к старому коду.
 header('Cache-Control: no-cache, must-revalidate');
-if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
-    try {
-        $pdo = db();
-        $row = $pdo->query('SELECT data, rev FROM tierlist WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
-        $summary = og_tierlist_summary($row['data'] ?? null, $row['rev'] ?? null);
-        $ogImage = og_tierlist_image($summary);
-    } catch (Throwable $e) {
-        error_log('home.php: og image fallback: ' . $e->getMessage());
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
