@@ -12,12 +12,22 @@ require_once __DIR__ . '/api/lib/og.php';
 // пустые) откатывает превью на статичный баннер — см. og_tierlist_summary()
 // в api/lib/og.php. Тирлист обязан открываться в любом случае, битое превью —
 // не повод для 500.
-// Картинка (og_tierlist_image()) — общая с home.php, см. api/lib/og.php:
-// корень сайта рекламирует ровно ту же живую превьюшку, что и /tierlist.
-// Здесь, в отличие от home.php, картинка идёт в комплекте со своими
-// title/description — тирлисту нужны оба, а не только картинка.
+// Картинка — фирменная карточка «MAKNEMY TIER LIST» (og_brand_card() в
+// api/lib/og.php), одна и та же при любых данных. Раньше здесь строилось
+// живое превью с топ-5 предметов и ценами, общее с home.php; заменено по
+// решению владельца проекта — ссылка на тирлист должна выглядеть одинаково
+// узнаваемо, а не меняться от каждого редактирования цен.
+//
+// Живое превью никуда не делось: og_tierlist_image() и генератор
+// api/og-tierlist.php остались на месте и продолжают обслуживать home.php.
+// Поэтому "/" и /tierlist теперь показывают РАЗНЫЕ картинки — это осознанно,
+// а не рассинхрон: прежний комментарий здесь предостерегал ровно от такого
+// расхождения, пока оно было случайным.
+//
+// title/description остаются живыми и здесь: они не картинка, в чате видны
+// текстом рядом с ней, и дата с топом предметов там к месту.
 function tierlist_og_fallback(): array {
-    return og_tierlist_image(null) + [
+    return og_brand_card() + [
         'title'       => 'Maknemy Tier List — трейд-ценности Blox Fruits',
         'description' => 'Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос и тренды цен.',
     ];
@@ -30,7 +40,7 @@ function tierlist_og_data(PDO $pdo): array {
 
     $meta = og_tierlist_meta($summary);
     $fallback = tierlist_og_fallback();
-    return og_tierlist_image($summary) + [
+    return og_brand_card() + [
         'title'       => $meta['title'],
         'description' => $meta['description'] !== '' ? $meta['description'] : $fallback['description'],
     ];

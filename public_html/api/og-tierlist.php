@@ -18,7 +18,7 @@ const OG_TIERLIST_CANVAS_W = 1200;
 const OG_TIERLIST_CANVAS_H = 630;
 
 // Возвращает путь к готовому PNG либо null — сигнал вызывающей стороне
-// откатиться на статичный assets/og-image.jpg. null получается в трёх
+// откатиться на статичный assets/og-card.jpg. null получается в трёх
 // принципиально разных случаях: (1) $rawVersion не прошёл валидацию —
 // см. og_build_cache_path(); (2) в тирлисте нет данных для превью — см.
 // og_tierlist_summary(); (3) запрошенная версия устарела (не совпадает с
@@ -169,6 +169,6 @@ if (!defined('TESTING')) {
     }
     // 302, а не 301: это временный сбой конкретного запроса (нет данных,
     // не удался рендер), а не постоянный переезд адреса.
-    header('Location: /assets/og-image.jpg?v=2', true, 302);
+    header('Location: /assets/og-card.jpg?v=1', true, 302);
     exit;
 }

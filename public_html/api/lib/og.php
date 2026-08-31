@@ -70,7 +70,7 @@ function og_truncate(string $text, int $maxLen): string {
 //  data — не JSON-объект, tiers пуст, у верхнего тира нет ни одного предмета
 //  с именем, либо rev не проходит og_parse_version(). Это и есть «решение об
 //  откате» — вызывающая сторона обязана в этом случае показать статичный
-//  assets/og-image.jpg, а не пустую/битую картинку.
+//  фирменную карточку (og_brand_card() ниже), а не пустую/битую картинку.
 // ---------------------------------------------------------------------------
 function og_tierlist_summary($rawData, $rawRev): ?array {
     if (!is_string($rawData) || $rawData === '') { return null; }
@@ -104,6 +104,25 @@ function og_tierlist_summary($rawData, $rawRev): ?array {
 }
 
 // ---------------------------------------------------------------------------
+//  Фирменная карточка — «MAKNEMY TIER LIST» на фоне постера. Одна на все
+//  случаи, когда превью не строится из живых данных, и на /tierlist, который
+//  показывает её всегда (см. tierlist_og_card() в index.php).
+//
+//  До неё в этой роли стоял assets/og-image.jpg — рекламная заглушка «ВАША
+//  РЕКЛАМА». Как превью сайта она рекламировала пустое место: человек в чате
+//  видел объявление вместо тирлиста. Реклама на превью убрана намеренно и
+//  возвращаться не должна.
+// ---------------------------------------------------------------------------
+function og_brand_card(): array {
+    return [
+        'image'       => 'https://maknemy.com/assets/og-card.jpg?v=1',
+        'imageWidth'  => 1200,
+        'imageHeight' => 630,
+        'imageType'   => 'image/jpeg',
+    ];
+}
+
+// ---------------------------------------------------------------------------
 //  og:image тирлиста — общая точка входа для / (home.php) и /tierlist
 //  (index.php): корень сайта — самый шаримый адрес, и он обязан рекламировать
 //  ТУ ЖЕ живую картинку, что и тирлист, а не собственную копию этой логики.
@@ -114,12 +133,7 @@ function og_tierlist_summary($rawData, $rawRev): ?array {
 // ---------------------------------------------------------------------------
 function og_tierlist_image(?array $summary): array {
     if ($summary === null) {
-        return [
-            'image'       => 'https://maknemy.com/assets/og-image.jpg?v=2',
-            'imageWidth'  => 1920,
-            'imageHeight' => 1080,
-            'imageType'   => 'image/jpeg',
-        ];
+        return og_brand_card();
     }
     return [
         'image'       => 'https://maknemy.com/api/og-tierlist.php?v=' . $summary['version'],
