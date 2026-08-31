@@ -134,18 +134,55 @@ test('groupOf раскладывает все девять типов по че�
 // заливка. Фон прибит к экрану — двигается только лента поверх него.
 test('фон ленты прибит к экрану, а не едет со страницей', function () use ($PUB) {
     $news = tag_read($PUB . '/news.php');
-    assert_true(strpos($news, '<body class="nw-body">') !== false,
+    assert_true(strpos($news, '<body class="news-bg">') !== false,
         'лента должна помечать body своим классом');
 
     $css = tag_read($PUB . '/css/news-design.css');
-    assert_true((bool)preg_match('/\.nw-body::before \{[^}]*position: fixed;/s', $css),
+    assert_true((bool)preg_match('/\.news-bg::before \{[^}]*position: fixed;/s', $css),
         'слой фона должен быть прибит к экрану');
-    assert_true((bool)preg_match('/\.nw-body::before \{[^}]*cover/s', $css),
+    assert_true((bool)preg_match('/\.news-bg::before \{[^}]*cover/s', $css),
         'cover — иначе на высоком экране снизу останется та же тёмная полоса');
     // Своя картинка в шапке повторяет макетную геометрию страницы и на
     // нижней границе шапки давала бы стык двух кадров одной картинки.
-    assert_true(strpos($css, '.nw-body .mk-top::before { display: none; }') !== false,
+    assert_true(strpos($css, '.news-bg .mk-top::before { display: none; }') !== false,
         'у шапки на ленте не должно быть своего фона');
+
+    // .nw-body в news.css — это ТЕЛО ПОСТА внутри карточки. Фон страницы,
+    // повешенный на такое имя, красил каждый пост непрозрачным чёрным вместо
+    // стекла карточки и разворачивал полноэкранный фиксированный слой на
+    // каждую карточку ленты.
+    assert_eq(0, preg_match('/^\s*\.nw-body(::|\s*\{)/m', $css),
+        'фон страницы не должен висеть на классе тела поста');
+});
+
+// --------------------------------------------------------------------------
+//  Рекламные борта ленты
+// --------------------------------------------------------------------------
+
+// Пока слот не куплен, борта скрыты. Раньше они оставались полосатыми
+// панелями «свободного места», и на живом сайте это читалось как поломка
+// вёрстки: две белые панели во всю высоту экрана по бокам ленты. Борта
+// тирлиста (.ptn-rail в styles.css) ведут себя ровно так же.
+test('пустые рекламные борта ленты скрыты, пока нет кампании', function () use ($PUB) {
+    $news = tag_read($PUB . '/news.php');
+    assert_eq(2, preg_match_all('/<div class="nw-rail-slot nw-rail-[lr]" aria-hidden="true" hidden>/', $news),
+        'оба борта должны стоять в разметке скрытыми');
+
+    // display у слота перебивает браузерный display: none для [hidden] —
+    // без явного правила скрытый борт всё равно занимал бы место.
+    $css = tag_read($PUB . '/css/news-design.css');
+    assert_true(strpos($css, '.nw-rail-slot[hidden] { display: none; }') !== false,
+        'нужно явное правило для [hidden]');
+
+    // Показывает борт только реальный креатив: hidden снимается там же, где
+    // в панель вставляется картинка, а не заранее по факту ответа API.
+    $js = tag_read($PUB . '/js/news-page.js');
+    assert_true(strpos($js, 'if (el.parentElement) el.parentElement.hidden = false;') !== false,
+        'борт открывается только под найденный креатив');
+    $from = strpos($js, 'function fillNewsRail');
+    $to   = strpos($js, 'el.parentElement.hidden = false', $from);
+    assert_true($from !== false && $to !== false && $to > $from,
+        'снятие hidden должно жить внутри fillNewsRail()');
 });
 
 // Панели администратора вставляют свою навигацию сразу за <body>. Лента
