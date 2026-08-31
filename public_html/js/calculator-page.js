@@ -206,9 +206,14 @@
 
       const diffAbs = Math.round(trade.diffAbs);
       const diffPct = Math.round(trade.diffPct * 10) / 10;
+      // Оба числа печатаются с одним и тем же минусом U+2212. Дефис, который
+      // Number отдаёт сам, заметно короче и выше плюса, и в строке вида
+      // «−116 400 (-88.2%)» разнобой видно глазом — а это самое крупное
+      // число на странице. Отсюда явный знак и Math.abs() у обоих.
       const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
-      const pctSign = diffPct > 0 ? "+" : "";
-      $("#tcVerdictNumber").textContent = sign + fmtNum(Math.abs(diffAbs)) + " (" + pctSign + diffPct + "%)";
+      const pctSign = diffPct > 0 ? "+" : (diffPct < 0 ? "−" : "");
+      $("#tcVerdictNumber").textContent =
+        sign + fmtNum(Math.abs(diffAbs)) + " (" + pctSign + Math.abs(diffPct) + "%)";
     }
 
     const noteEl = $("#tcDemandNote");
