@@ -30,13 +30,34 @@ test('parseValue reads a clean integer string, the shape every live item has', (
 test('parseValue accepts a numeric value and a decimal string', () => {
     assert.equal(parseValue(1234), 1234);
     assert.equal(parseValue('12.5'), 12.5);
-    assert.equal(parseValue('-3'), -3);
 });
 
 test('parseValue rejects junk instead of guessing', () => {
     for (const junk of ['12abc', '1,234', '', '   ', 'Infinity', 'NaN', '0x10', '1e10', null, undefined, {}, [], true]) {
         assert.equal(parseValue(junk), null, `expected null for ${JSON.stringify(junk)}`);
     }
+});
+
+// Регрессия. Минус раньше проходил, уходил в basis у computeTrade и
+// переворачивал знак diffPct — опечатка админа "-45000" показывала «вы в
+// минусе» тому, кто получает больше. Предмет не может стоить меньше нуля,
+// поэтому отрицательное значение — такой же мусор, как "12abc".
+test('parseValue rejects a negative value in both the string and the number branch', () => {
+    assert.equal(parseValue('-3'), null);
+    assert.equal(parseValue('-45000'), null);
+    assert.equal(parseValue('-0.5'), null);
+    assert.equal(parseValue(-3), null);
+    assert.equal(itemValue({ value: '-45000' }), 0);
+});
+
+test('a negative value cannot flip the verdict of a trade', () => {
+    // Слева опечатка "-45000", справа честные 45000. Пока минус парсился,
+    // basis выходил отрицательным и вердикт получался "lose" там, где
+    // человек получает больше. Теперь битый предмет стоит 0.
+    const trade = computeTrade([{ item: item('bad', -45000), count: 1 }], [{ item: item('ok', 45000), count: 1 }]);
+    assert.equal(trade.leftTotal, 0);
+    assert.equal(trade.rightTotal, 45000);
+    assert.equal(trade.verdict, 'win', 'сторона, получающая 45000 против 0, не может быть в минусе');
 });
 
 test('itemValue falls back to 0 for an unparsable value instead of poisoning the sum', () => {
