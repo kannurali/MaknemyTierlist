@@ -71,6 +71,20 @@ test('тирлист объявляет себя на /tierlist', function () us
         'canonical тирлиста');
     assert_true(strpos($idx, '<meta property="og:url" content="https://maknemy.com/tierlist" />') !== false,
         'og:url тирлиста');
+
+    // Превью /tierlist — фирменная карточка при любых данных, а не картинка,
+    // собранная по строке тирлиста. Решение владельца проекта: ссылка должна
+    // выглядеть одинаково узнаваемо, а не меняться от каждой правки цен.
+    // Проверка идёт по исходнику, поэтому ищется вызов, а не готовый адрес.
+    // Ищутся ровно две формы вызова, а не подстрока 'og_tierlist_image(':
+    // имя функции упомянуто в комментарии рядом (она осталась и обслуживает
+    // home.php), и проверка по подстроке ловила бы этот комментарий.
+    assert_true(strpos($idx, 'og_brand_card()') !== false,
+        'тирлист показывает фирменную карточку');
+    assert_true(strpos($idx, 'og_tierlist_image($summary)') === false
+        && strpos($idx, 'og_tierlist_image(null)') === false,
+        'и не собирает картинку из живых данных');
+    assert_true(is_file($PUB . '/assets/og-card.jpg'), 'файл карточки лежит в assets/');
 });
 
 test('главная объявляет себя на корне', function () use ($PUB) {

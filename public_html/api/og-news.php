@@ -146,6 +146,6 @@ if (!defined('TESTING')) {
     } catch (Throwable $e) {
         error_log('og-news.php: ' . $e->getMessage());
     }
-    header('Location: /assets/og-image.jpg?v=2', true, 302);
+    header('Location: /assets/og-card.jpg?v=1', true, 302);
     exit;
 }

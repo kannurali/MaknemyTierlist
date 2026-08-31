@@ -234,12 +234,16 @@ test('og_news_meta truncates a long body for the description', function () {
 //  summary — на сгенерированную превьюшку с версией rev в адресе.
 // --------------------------------------------------------------------------
 
-test('og_tierlist_image falls back to the static banner when summary is null', function () {
+// Запасная картинка — фирменная карточка, НЕ рекламная заглушка: адрес
+// проверяется буквально, потому что возврат к assets/og-image.jpg («ВАША
+// РЕКЛАМА») увидели бы только в чужом чате, куда уже прислали ссылку.
+test('og_tierlist_image falls back to the brand card when summary is null', function () {
     $img = og_tierlist_image(null);
-    assert_eq('https://maknemy.com/assets/og-image.jpg?v=2', $img['image']);
-    assert_eq(1920, $img['imageWidth']);
-    assert_eq(1080, $img['imageHeight']);
+    assert_eq('https://maknemy.com/assets/og-card.jpg?v=1', $img['image']);
+    assert_eq(1200, $img['imageWidth']);
+    assert_eq(630, $img['imageHeight']);
     assert_eq('image/jpeg', $img['imageType']);
+    assert_eq($img, og_brand_card(), 'откат — ровно та же карточка');
 });
 
 test('og_tierlist_image points at the generator with the summary version', function () {
