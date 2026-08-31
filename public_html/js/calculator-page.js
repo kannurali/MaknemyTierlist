@@ -245,9 +245,12 @@
   // отдельного шага «собрать ссылку». replaceState, а не pushState: смена
   // состава сторон не должна плодить историю переходов браузера.
   function syncUrl() {
+    // Путь берётся из location, а не зашивается литералом "/calculator":
+    // страница живёт и по /calculator.php (встроенный сервер .htaccess не
+    // читает), и перезапись адреса на несуществующий там путь теряла бы
+    // собранную сделку при перезагрузке.
     const query = CALC.encodeShareQuery(sides.left, sides.right);
-    const url = query ? ("/calculator?" + query) : "/calculator";
-    history.replaceState(null, "", url);
+    history.replaceState(null, "", location.pathname + (query ? "?" + query : ""));
   }
 
   // renderAll() — только перерисовка, без побочных эффектов на адресную
