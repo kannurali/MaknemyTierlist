@@ -50,13 +50,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
 <title>Maknemy — тирлист, цены и новости Blox Fruits | Макнеми</title>
 <meta name="description" content="Maknemy — актуальный тир-лист Blox Fruits от создателя Maknemy: трейд-ценности фруктов, свежие новости меты и постоянные розыгрыши. Работаем с 2024 года." />
-<link rel="canonical" href="https://maknemytierlist.site/" />
+<link rel="canonical" href="https://maknemy.com/" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Maknemy Tier List" />
 <meta property="og:locale" content="ru_RU" />
-<meta property="og:url" content="https://maknemytierlist.site/" />
+<meta property="og:url" content="https://maknemy.com/" />
 <meta property="og:title" content="Maknemy — тирлист, цены и новости Blox Fruits" />
 <meta property="og:description" content="Актуальный тир-лист Blox Fruits от создателя Maknemy. Следите за изменениями меты, ловите розыгрыши и всегда будьте в центре игровых новостей." />
 <meta property="og:image" content="<?= htmlspecialchars($ogImage['image'], ENT_QUOTES, 'UTF-8') ?>" />
@@ -71,7 +71,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   "@type": "WebSite",
   "name": "Maknemy Tier List",
   "alternateName": ["Макнеми тирлист", "Maknemy Tierlist", "Maknemy tier list Blox Fruits"],
-  "url": "https://maknemytierlist.site/",
+  "url": "https://maknemy.com/",
   "inLanguage": "ru",
   "description": "Тирлист трейд-ценностей Blox Fruits от Maknemy: фрукты, перманенты, геймпассы, скины и мутации.",
   "author": {
@@ -318,7 +318,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <button class="hm-faq-q" type="button" aria-expanded="false">Что можно найти в Maknemy Tierlist?</button>
           <div class="hm-faq-a">
             <p>Maknemy Tierlist помогает ориентироваться в экономике Blox Fruits. На сайте собраны оценки фруктов, перманентных фруктов, пассов, оружия, аксессуаров и конфигураций — бывших скинов и мутаций.</p>
-            <p>Проект также включает обновления цен, новости рынка и материалы, которые помогают игрокам лучше понимать происходящее в трейдах. Главная площадка проекта — сайт maknemytierlist.site.</p>
+            <p>Проект также включает обновления цен, новости рынка и материалы, которые помогают игрокам лучше понимать происходящее в трейдах. Главная площадка проекта — сайт maknemy.com.</p>
           </div>
         </li>
         <li class="hm-faq-item">

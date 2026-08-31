@@ -67,22 +67,22 @@ test('прямой /index.php уводится на /tierlist, и только �
 
 test('тирлист объявляет себя на /tierlist', function () use ($PUB) {
     $idx = read_file_or_fail($PUB . '/index.php');
-    assert_true(strpos($idx, '<link rel="canonical" href="https://maknemytierlist.site/tierlist" />') !== false,
+    assert_true(strpos($idx, '<link rel="canonical" href="https://maknemy.com/tierlist" />') !== false,
         'canonical тирлиста');
-    assert_true(strpos($idx, '<meta property="og:url" content="https://maknemytierlist.site/tierlist" />') !== false,
+    assert_true(strpos($idx, '<meta property="og:url" content="https://maknemy.com/tierlist" />') !== false,
         'og:url тирлиста');
 });
 
 test('главная объявляет себя на корне', function () use ($PUB) {
     $home = read_file_or_fail($PUB . '/home.php');
-    assert_true(strpos($home, '<link rel="canonical" href="https://maknemytierlist.site/" />') !== false,
+    assert_true(strpos($home, '<link rel="canonical" href="https://maknemy.com/" />') !== false,
         'canonical главной');
 });
 
 test('в карте сайта есть оба адреса', function () use ($PUB) {
     $map = read_file_or_fail($PUB . '/sitemap.xml');
-    assert_true(strpos($map, '<loc>https://maknemytierlist.site/</loc>') !== false, 'корень');
-    assert_true(strpos($map, '<loc>https://maknemytierlist.site/tierlist</loc>') !== false, '/tierlist');
+    assert_true(strpos($map, '<loc>https://maknemy.com/</loc>') !== false, 'корень');
+    assert_true(strpos($map, '<loc>https://maknemy.com/tierlist</loc>') !== false, '/tierlist');
 });
 
 // Ни одна страница не должна вести на тирлист по старому адресу: ссылка

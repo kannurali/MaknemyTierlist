@@ -2,9 +2,19 @@
 
 Target: Apache + PHP + MySQL shared host, replacing Firebase + Vercel.
 
-**Domain (registered 2026-07-27, expires 2027-07-27): `maknemytierlist.site`.**
-Hosting for it was not yet confirmed as of that date — a domain alone cannot
-serve PHP/MySQL, so verify a hosting plan exists before following these steps.
+**Domain: `maknemy.com`** (registered 2026-08-30, expires 2027-08-30).
+
+The site moved there on 2026-08-31 from `maknemytierlist.site` (registered
+2026-07-27, expires 2027-07-27). The old domain is deliberately kept alive and
+pointed at the same account: `public_html/.htaccess` answers every non-canonical
+host with a 301 to `https://maknemy.com`, which is what carries the accumulated
+search ranking over. Do not let it lapse before it expires, and keep its
+AutoSSL certificate renewing — an expired certificate on the old domain would
+show visitors a TLS warning instead of forwarding them.
+
+Both domains are attached to the SAME cPanel account and share one document
+root (`/home/maknemyt/public_html`), so there is no second copy of the site and
+nothing in the deploy paths changed with the move.
 
 A ready-to-upload bundle (site + migrated images + schema.sql + import.sql +
 a step-by-step Russian guide) is produced by staging `public_html/` together
@@ -45,8 +55,13 @@ reference — Vercel itself is retired and its build now fails, which is expecte
    - Run `tools/out/import.sql` in phpMyAdmin (loads the cleaned tierlist + the
      current likes count).
 
-6. **Domain + SSL.** Point the free domain at the host; enable SSL (cPanel →
-   SSL/TLS / AutoSSL). The site forces HTTPS via `.htaccess`.
+6. **Domain + SSL.** Point the domain at the host; enable SSL (cPanel →
+   SSL/TLS Status → Run AutoSSL). The site forces HTTPS via `.htaccess`.
+   An additional domain is attached through cPanel → Domains → Create A New
+   Domain with **"Share document root"** ticked, so it serves the existing
+   `public_html` instead of a new subfolder. `.htaccess` then 301s it to the
+   canonical host — change the hostname in that rule when the canonical domain
+   itself changes.
 
 ## After deploying the icon size cap (one-time)
 
@@ -126,7 +141,7 @@ push needs "Update from Remote" + "Deploy HEAD Commit" clicked by hand.
    disabled: it answers 503 and runs nothing.
 
 2. **GitHub → `kannurali/MaknemyTierlist` → Settings → Webhooks → Add webhook**
-   - Payload URL: `https://maknemytierlist.site/api/deploy.php`
+   - Payload URL: `https://maknemy.com/api/deploy.php`
    - Content type: `application/json`
    - Secret: the value from step 1
    - Events: "Just the push event"

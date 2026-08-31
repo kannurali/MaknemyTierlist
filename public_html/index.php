@@ -77,7 +77,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      что ищут и «Maknemy tier list», и «макнеми тирлист». -->
 <title>Maknemy Tier List — трейд-ценности Blox Fruits | Макнеми тирлист</title>
 <meta name="description" content="Maknemy Tier List — актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос, тренды роста и падения, обновляется вручную. Макнеми тирлист." />
-<link rel="canonical" href="https://maknemytierlist.site/tierlist" />
+<link rel="canonical" href="https://maknemy.com/tierlist" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 
 <!-- Превью-карточка при отправке ссылки в Telegram, Discord, ВК —
@@ -85,7 +85,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Maknemy Tier List" />
 <meta property="og:locale" content="ru_RU" />
-<meta property="og:url" content="https://maknemytierlist.site/tierlist" />
+<meta property="og:url" content="https://maknemy.com/tierlist" />
 <meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
@@ -105,7 +105,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   "@type": "WebSite",
   "name": "Maknemy Tier List",
   "alternateName": ["Макнеми тирлист", "Maknemy Tierlist", "Maknemy tier list Blox Fruits"],
-  "url": "https://maknemytierlist.site/",
+  "url": "https://maknemy.com/",
   "inLanguage": "ru",
   "description": "Тирлист трейд-ценностей Blox Fruits от Maknemy: фрукты, перманенты, геймпассы, скины и мутации.",
   "author": {

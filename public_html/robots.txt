@@ -21,4 +21,4 @@ Disallow: /images/
 # Медиакит на сайте не лежит вовсе — он в docs/, вне веб-корня.
 Disallow: /admin
 
-Sitemap: https://maknemytierlist.site/sitemap.xml
+Sitemap: https://maknemy.com/sitemap.xml

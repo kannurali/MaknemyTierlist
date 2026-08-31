@@ -546,7 +546,7 @@
   // textarea + document.execCommand("copy"), единственный API, который
   // работает синхронно из обработчика клика без него.
   async function copyPostLink(post, btn) {
-    const url = "https://maknemytierlist.site/news/" + post.id;
+    const url = "https://maknemy.com/news/" + post.id;
     let ok = false;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
