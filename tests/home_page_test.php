@@ -237,13 +237,37 @@ test('стили и скрипт главной подключены с номе
 // design-page.css отдаётся и тирлисту, и главной. Разъехавшиеся номера
 // означают, что после правки общего файла одна из страниц осталась на
 // закешированной версии.
-test('общий design-page.css подключён с одной версией на обеих страницах', function () use ($PUB) {
-    $home = read_file_or_fail($PUB . '/home.php');
-    $idx  = read_file_or_fail($PUB . '/index.php');
-    preg_match('/design-page\.css\?v=(\d+)/', $home, $a);
-    preg_match('/design-page\.css\?v=(\d+)/', $idx, $b);
-    assert_true(!empty($a[1]) && !empty($b[1]), 'обе страницы подключают design-page.css');
-    assert_eq($a[1], $b[1], 'версии design-page.css должны совпадать');
+test('общий design-page.css подключён с одной версией на всех страницах', function () use ($PUB) {
+    // Лента тоже берёт этот файл (тулбар и переключатель языка), и после
+    // правки общего CSS забытый номер оставил бы её на старом кэше.
+    $v = [];
+    foreach (['/home.php', '/index.php', '/news.php'] as $page) {
+        preg_match('/design-page\.css\?v=(\d+)/', read_file_or_fail($PUB . $page), $m);
+        assert_true(!empty($m[1]), $page . ' подключает design-page.css');
+        $v[$page] = $m[1];
+    }
+    assert_eq(1, count(array_unique($v)), 'версии design-page.css должны совпадать');
+});
+
+// Переключатель языка — пара RU|EN на ЛЮБОЙ ширине, по правке заказчика.
+// Раньше на телефоне вторая кнопка пряталась через :has(), и на ленте это
+// делало переключатель мёртвым: её обработчик (news-page.js) про схлопывание
+// не знал и включал тот же язык, который уже выбран.
+test('на телефоне язык переключается двумя кнопками, как на компьютере', function () use ($PUB) {
+    $css = read_file_or_fail($PUB . '/css/design-page.css');
+    assert_eq(0, preg_match('/\.lang-switch[^{]*\{[^}]*display: none;/s', $css),
+        'ни одна кнопка языка не прячется');
+    assert_eq(0, substr_count($css, '.lang-switch:has('), 'схлопывания пары быть не должно');
+    // Обе кнопки есть в разметке обеих страниц с переключателем.
+    foreach (['/index.php', '/news.php'] as $page) {
+        $html = read_file_or_fail($PUB . $page);
+        assert_eq(1, substr_count($html, 'data-lang="ru"'), $page . ' — кнопка RU');
+        assert_eq(1, substr_count($html, 'data-lang="en"'), $page . ' — кнопка EN');
+    }
+    // На ленте клик по кнопке обязан ставить её собственный язык.
+    $np = read_file_or_fail($PUB . '/js/news-page.js');
+    assert_true(strpos($np, 'b.addEventListener("click", () => applyLang(b.dataset.lang));') !== false,
+        'обработчик ленты на месте');
 });
 
 // --------------------------------------------------------------------------
@@ -505,7 +529,6 @@ test('геометрия карточки взята из макета', functio
     // Мастер-компонент 843×763 в единицах колонки (множитель 810/843).
     assert_true(strpos($css, 'width: calc(810 * var(--u));') !== false, 'ширина колонки');
     assert_true(strpos($css, 'border-radius: calc(23.06 * var(--u));') !== false, 'радиус карточки');
-    assert_true(strpos($css, 'height: calc(381.5 * var(--u));') !== false, 'высота картинки');
     assert_true(strpos($css, 'height: calc(64.4 * var(--u));') !== false, 'диаметр круглых кнопок');
     // Полосатые панели: 248×670, полосы под -45° толщиной 30 с шагом 78.
     assert_true(strpos($css, 'width: calc(248 * var(--u));') !== false, 'ширина панели');
@@ -515,6 +538,26 @@ test('геометрия карточки взята из макета', functio
 // --------------------------------------------------------------------------
 //  Боковые панели ленты — рекламные места, а не декор.
 // --------------------------------------------------------------------------
+
+// Рамка картинки из макета (713.9×381.5) больше не прибита к высоте. Кадр
+// выбирает админ в редакторе, и на сервер уезжает уже вырезанный кусок
+// (confirmCrop() в js/news-editor.js); вторая обрезка в CSS этот выбор
+// перечёркивала: баннер 1280×214 показывал среднюю треть по ширине.
+// Тест держит именно это: пропорция картинки — её собственная, то есть та,
+// что админ видел в превью.
+test('картинка поста не режется второй раз поверх кропа админа', function () use ($PUB) {
+    $css = read_file_or_fail($PUB . '/css/news-design.css');
+    assert_true((bool)preg_match('/\.nw-card \.nw-image \{\s*\n(.*?)\}/s', $css, $m), 'правило картинки на месте');
+    $rule = $m[1];
+    assert_true(strpos($rule, 'height: auto;') !== false, 'высота по пропорции');
+    assert_eq(0, preg_match('/height:\s*calc\(/', $rule), 'фиксированной высоты быть не должно');
+    assert_eq(0, preg_match('/object-fit/', $rule), 'object-fit больше не кадрирует');
+    // Сокращённый margin заодно обнулял боковые поля и убивал
+    // выравнивание (.nw-img-center / .nw-img-right в news.css — там auto).
+    assert_eq(0, preg_match('/margin:/', $rule), 'боковые поля не сбрасываются');
+    // Мобильный блок держал свою фиксированную высоту в 190px — та же болезнь.
+    assert_eq(0, substr_count($css, '.nw-card .nw-image { height: 190px;'), 'на телефоне тоже по пропорции');
+});
 
 test('борта ленты подключены к системе рекламы', function () use ($PUB) {
     $html = read_file_or_fail($PUB . '/news.php');
