@@ -180,6 +180,21 @@
     resultEl.dataset.verdict = bothEmpty ? "none" : trade.verdict;
     $("#tcVerdictBadge").dataset.verdict = bothEmpty ? "none" : trade.verdict;
 
+    // Боковые столбики: сторона в минусе красная, в плюсе синяя, при честном
+    // обмене обе зелёные. Порог берётся из того же computeTrade, что и вердикт
+    // под доской — иначе столбик показывал бы «в минусе» там, где надпись
+    // говорит «честная сделка».
+    //
+    // trade.verdict считается ОТ ЛЕВОЙ стороны: "lose" значит, что отдающий
+    // отдаёт больше, чем получает. Значит левый столбик повторяет вердикт как
+    // есть, а правый всегда противоположен ему.
+    const invert = v => v === "win" ? "lose" : v === "lose" ? "win" : v;
+    const gaugeL = bothEmpty ? "none" : trade.verdict;
+    const gaugeR = bothEmpty ? "none" : invert(trade.verdict);
+    const gl = $("#tcGaugeL"), gr = $("#tcGaugeR");
+    if (gl) { gl.dataset.state = gaugeL; }
+    if (gr) { gr.dataset.state = gaugeR; }
+
     if (bothEmpty) {
       $("#tcVerdictHeading").textContent = tx("calc.verdictPrompt");
       $("#tcVerdictNumber").textContent = "—"; // — placeholder, пока сторон нет

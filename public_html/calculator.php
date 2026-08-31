@@ -55,7 +55,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=27" />
-<link rel="stylesheet" href="css/calculator.css?v=8" />
+<link rel="stylesheet" href="css/calculator.css?v=9" />
 </head>
 <body>
 
@@ -175,6 +175,16 @@ header('Cache-Control: no-cache, must-revalidate');
           <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
         </div>
 
+        <!-- Столбики состояния по бокам доски. Левый показывает состояние
+             стороны «ВЫ», правый — «ВАМ»: сторона в минусе красная, в плюсе
+             синяя, при честном обмене обе зелёные. Порог честности тот же, что
+             у вердикта (CALC.THRESHOLD_PCT), иначе столбики спорили бы с
+             надписью под доской. aria-hidden: это дублирование вердикта
+             цветом, а сам вердикт уже объявляется через role="status". -->
+        <div class="tc-gauge tc-gauge-l" id="tcGaugeL" data-state="none" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+
         <div class="tc-panel">
           <div class="tc-sides">
             <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
@@ -227,6 +237,10 @@ header('Cache-Control: no-cache, must-revalidate');
               <div class="tc-meter-bar"><span class="tc-meter-bar-fill" data-role="bar"></span></div>
             </section>
           </div>
+        </div>
+
+        <div class="tc-gauge tc-gauge-r" id="tcGaugeR" data-state="none" aria-hidden="true">
+          <span></span><span></span><span></span>
         </div>
 
         <div class="tc-rail-slot tc-rail-slot-r" aria-hidden="true">
@@ -296,6 +310,6 @@ header('Cache-Control: no-cache, must-revalidate');
   <script src="js/i18n.js?v=23"></script>
   <script src="js/promo.js?v=2"></script>
   <script src="js/calc.js?v=2"></script>
-  <script src="js/calculator-page.js?v=5"></script>
+  <script src="js/calculator-page.js?v=7"></script>
 </body>
 </html>

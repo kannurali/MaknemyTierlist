@@ -852,3 +852,47 @@
   .tc-cat-backdrop.is-closing .tc-cat { transform: none; transition: none; }
   .tc-slot.is-just-added { box-shadow: 0 0 0 3px rgba(79, 214, 255, .5); }
 }
+
+/* ===================== Столбики состояния сторон =====================
+   Вертикальная полоса из трёх сегментов между бортом и доской: слева — состояние
+   стороны «ВЫ», справа — «ВАМ». Цвет берут те же токены, что и вердикт, чтобы
+   красный на столбике и «Вы в минусе» под доской не расходились оттенком. */
+.tc-gauge {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+.tc-gauge > span {
+  flex: 1 1 0;
+  border-radius: 999px;
+  background: rgba(120, 190, 255, .14);
+  transition: background 220ms ease, box-shadow 220ms ease;
+}
+/* Пусто — нейтральный столбик: сравнивать ещё нечего, и красный тут врал бы. */
+.tc-gauge[data-state="none"] > span { background: rgba(120, 190, 255, .14); }
+.tc-gauge[data-state="lose"] > span {
+  background: var(--tc-lose);
+  box-shadow: 0 0 12px rgba(255, 90, 90, .45);
+}
+.tc-gauge[data-state="win"] > span {
+  background: var(--tc-accent-a);
+  box-shadow: 0 0 12px rgba(97, 181, 233, .45);
+}
+.tc-gauge[data-state="fair"] > span {
+  background: var(--tc-win);
+  box-shadow: 0 0 12px rgba(53, 208, 127, .45);
+}
+
+/* Полосы читаются только когда стороны стоят рядом. Как только они
+   складываются в столбик (телефон), «слева/справа» теряет смысл — прячем,
+   вердикт под доской и так называет результат словами. */
+@media (max-width: 760px) {
+  .tc-gauge { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tc-gauge > span { transition: none; }
+}
