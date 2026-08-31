@@ -41,7 +41,13 @@
 }
 
 .tc-wrap {
-  width: min(760px, 100%);
+  /* 760 зажимало ВСЮ раскладку вместе с рекламными бортами: на экране 1280
+     доске оставалось 392 px, стороне 134, слоту 62 — в такой слот не влезало
+     ни название предмета («Eclipse Dragon (CHROMATIC)» просил 159 px при
+     видимых 48), ни ряд шкал (нужно 148, дано 134, из-за чего «Спрос»
+     вытеснялся из строки).
+     1000 = доска ~630 + два борта по 160 + два зазора по 24. */
+  width: min(1000px, 100%);
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -386,18 +392,28 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 10px;
   background: rgba(255, 255, 255, .04);
   border: 1px solid rgba(120, 190, 255, .14);
 }
 .tc-meter-label {
+  /* Подпись уступает место числу, а не наоборот: значение может вырасти до
+     «1 234 567», и тогда сжимать надо слово, а не цифры. Без этого длинное
+     значение выдавливало «Спрос» из строки — читалось как «12500С». */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
   color: #8fb0dc;
   text-transform: uppercase;
   letter-spacing: .5px;
 }
 .tc-meter-value {
+  /* Число не сжимается и не переносится ни при какой длине. */
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
   color: #fff;
