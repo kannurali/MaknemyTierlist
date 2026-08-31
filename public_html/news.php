@@ -212,7 +212,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=5" />
+<link rel="stylesheet" href="css/base.css?v=6" />
 <link rel="stylesheet" href="css/news.css?v=12" />
 <!-- Общая шапка сайта: та же, что на главной и тирлисте. Идёт после
      news.css — прячет старый бренд и .nav-seg в тулбаре, их роль забрала
@@ -405,7 +405,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=22"></script>
+  <script src="js/i18n.js?v=24"></script>
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
