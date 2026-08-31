@@ -581,6 +581,11 @@
   justify-content: center;
   padding: 24px;
   background: rgba(3, 6, 14, .78);
+  /* Появление и закрытие каталога. Длительность закрытия (180 мс) совпадает с
+     CATALOG_CLOSE_MS в js/calculator-page.js — разъехавшись, они дали бы либо
+     обрыв анимации, либо оверлей, застрявший поверх страницы. */
+  animation: tc-cat-in 180ms ease-out;
+  transition: opacity 180ms ease-in;
   backdrop-filter: blur(3px);
 }
 .tc-cat {
@@ -808,4 +813,42 @@
 
   .tc-cat-grid { grid-template-columns: repeat(2, 1fr); }
   .tc-cat { padding: 14px; gap: 10px; }
+}
+
+/* Закрытие: фон гаснет, панель чуть уезжает вниз и уменьшается. Разделено на
+   два элемента намеренно — панель должна двигаться, а не гаснуть вместе с
+   фоном, иначе взгляд не успевает проследить, куда делся каталог. */
+.tc-cat-backdrop.is-closing { opacity: 0; }
+.tc-cat-backdrop.is-closing .tc-cat {
+  transform: translateY(10px) scale(.97);
+  opacity: 0;
+  transition: transform 180ms ease-in, opacity 180ms ease-in;
+}
+@keyframes tc-cat-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tc-cat { animation: tc-cat-pop 180ms ease-out; }
+@keyframes tc-cat-pop {
+  from { transform: translateY(10px) scale(.97); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Слот, в который только что лёг предмет: короткая подсветка, чтобы взгляд
+   нашёл результат сам, без поиска глазами по доске. */
+.tc-slot.is-just-added { animation: tc-slot-added 900ms ease-out; }
+@keyframes tc-slot-added {
+  0%   { box-shadow: 0 0 0 0 rgba(79, 214, 255, .85), 0 0 22px rgba(79, 214, 255, .55); }
+  60%  { box-shadow: 0 0 0 3px rgba(79, 214, 255, .45), 0 0 18px rgba(79, 214, 255, .35); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 214, 255, 0), 0 0 0 rgba(79, 214, 255, 0); }
+}
+
+/* Уважаем системную настройку: без движения, но результат тот же — каталог
+   закрывается, слот остаётся подсвеченным ровно столько же. */
+@media (prefers-reduced-motion: reduce) {
+  .tc-cat-backdrop,
+  .tc-cat,
+  .tc-slot.is-just-added { animation: none; transition: none; }
+  .tc-cat-backdrop.is-closing .tc-cat { transform: none; transition: none; }
+  .tc-slot.is-just-added { box-shadow: 0 0 0 3px rgba(79, 214, 255, .5); }
 }

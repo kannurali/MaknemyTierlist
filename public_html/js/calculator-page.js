@@ -262,7 +262,7 @@
   //  диалог остаётся открытым — так удобнее заполнять сразу несколько
   //  слотов подряд. Закрывается крестиком, кликом по подложке или Escape.
   // ------------------------------------------------------------------------
-  const catalogState = { open: false, side: null, triggerEl: null };
+  const catalogState = { open: false, side: null, triggerEl: null, slotIndex: -1 };
 
   function norm(s) { return String(s || "").toLowerCase(); }
 
@@ -316,7 +316,10 @@
       $("#tcCatalogStatus").textContent = "";
       sides[side] = capSide(CALC.addToSide(sides[side], it));
       onSidesChanged();
-      renderCatalogGrid($("#tcCatalogSearch").value);
+      // Каталог закрывается сразу после удачного добавления: пока он оставался
+      // открытым, было не видно, попал предмет на доску или нет. Слот, куда он
+      // лёг, коротко подсвечивается — чтобы глаз сам нашёл результат.
+      closeCatalog({ side: side, addedId: it.id });
     });
 
     li.appendChild(btn);
@@ -342,6 +345,12 @@
     catalogState.open = true;
     catalogState.side = side;
     catalogState.triggerEl = triggerEl || null;
+    // Номер слота, а не ссылка на него: onSidesChanged() перерисовывает доску,
+    // и прежний элемент к моменту закрытия уже выброшен из документа — фокус
+    // на нём молча уходил на body, и человек с клавиатуры терял место.
+    catalogState.slotIndex = triggerEl
+      ? [...sideRoot(side).querySelectorAll(".tc-slot")].indexOf(triggerEl)
+      : -1;
     $("#tcCatalogStatus").textContent = "";
     $("#tcCatalogSearch").value = "";
     renderCatalogGrid("");
@@ -350,16 +359,66 @@
     $("#tcCatalogSearch").focus();
   }
 
-  function closeCatalog() {
+  // Длительность закрытия должна совпадать с переходом .tc-cat-backdrop в CSS.
+  // Держим её здесь одним числом, а не в двух местах: разъехавшись, они дали бы
+  // либо обрыв анимации на середине, либо застрявший поверх страницы оверлей.
+  const CATALOG_CLOSE_MS = 180;
+
+  function reducedMotion() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  // Короткая подсветка слота, в который только что лёг предмет. Ищем по id, а
+  // не по индексу: addToSide кладёт повтор в уже существующую строку, и индекс
+  // в этом случае не менялся бы вовсе.
+  function flashAddedSlot(side, addedId) {
+    if (!side || !addedId) return;
+    const idx = (sides[side] || []).findIndex(e => e && e.item && e.item.id === addedId);
+    if (idx < 0) return;
+    const slot = sideRoot(side).querySelectorAll(".tc-slot")[idx];
+    if (!slot) return;
+    slot.classList.remove("is-just-added");
+    // Перезапуск анимации: без чтения offsetWidth браузер склеит снятие и
+    // возврат класса в один кадр, и повторное добавление того же предмета
+    // не мигнёт.
+    void slot.offsetWidth;
+    slot.classList.add("is-just-added");
+    setTimeout(() => slot.classList.remove("is-just-added"), 900);
+  }
+
+  function closeCatalog(opts) {
     if (!catalogState.open) return;
     catalogState.open = false;
-    $("#tcCatalogBackdrop").hidden = true;
-    document.body.style.overflow = "";
-    const back = catalogState.side ? sideRoot(catalogState.side) : null;
-    (catalogState.triggerEl || (back && back.querySelector(".tc-slot"))
-    )?.focus();
+    const side = catalogState.side;
+    const backdrop = $("#tcCatalogBackdrop");
+    const slotIndex = catalogState.slotIndex;
     catalogState.side = null;
     catalogState.triggerEl = null;
+    catalogState.slotIndex = -1;
+    document.body.style.overflow = "";
+
+    const finish = () => {
+      backdrop.hidden = true;
+      backdrop.classList.remove("is-closing");
+      // Слот ищем заново в живом документе: доска уже перерисована.
+      const slots = side ? sideRoot(side).querySelectorAll(".tc-slot") : [];
+      // Если предмет добавлен — ведём фокус туда же, куда ушла подсветка, а не
+      // на слот, по которому кликнули. Предмет ложится первой свободной
+      // строкой, и она почти никогда не совпадает с нажатой клеткой: фокус и
+      // подсветка в разных местах заставляли бы искать результат дважды.
+      const addedIndex = (opts && opts.addedId)
+        ? (sides[side] || []).findIndex(e => e && e.item && e.item.id === opts.addedId)
+        : -1;
+      const target = (addedIndex >= 0 && slots[addedIndex])
+        || (slotIndex >= 0 && slots[slotIndex])
+        || slots[0];
+      if (target) { target.focus(); }
+      if (opts && opts.addedId) { flashAddedSlot(side, opts.addedId); }
+    };
+
+    if (reducedMotion()) { finish(); return; }
+    backdrop.classList.add("is-closing");
+    setTimeout(finish, CATALOG_CLOSE_MS);
   }
 
   function wireCatalog() {
