@@ -75,6 +75,19 @@ test('тирлист объявляет себя на /tierlist', function () us
 
 test('главная объявляет себя на корне', function () use ($PUB) {
     $home = read_file_or_fail($PUB . '/home.php');
+    // Превью главной — статичный фирменный экран, НЕ генерируемая картинка
+    // тирлиста: см. комментарий у $ogImage в home.php. Проверка держит это
+    // решение — иначе возврат к og_tierlist_image() прошёл бы незамеченным,
+    // а увидели бы его только в уже разосланной ссылке.
+    // Проверка идёт по ИСХОДНИКУ home.php, а не по отрисованной странице,
+    // поэтому ищется литерал из массива $ogImage, а не готовый content="…":
+    // в самом теге стоит echo, и готовой подстроки с адресом в файле нет.
+    assert_true(strpos($home, "'https://maknemy.com/assets/og-home.jpg?v=1'") !== false,
+        'og:image главной — статичная карточка');
+    assert_true(strpos($home, 'og-tierlist.php') === false,
+        'главная не тянет генерируемое превью тирлиста');
+    assert_true(is_file($PUB . '/assets/og-home.jpg'), 'файл карточки лежит в assets/');
+
     assert_true(strpos($home, '<link rel="canonical" href="https://maknemy.com/" />') !== false,
         'canonical главной');
 });
