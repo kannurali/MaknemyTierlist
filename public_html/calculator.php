@@ -55,7 +55,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=27" />
-<link rel="stylesheet" href="css/calculator.css?v=10" />
+<link rel="stylesheet" href="css/calculator.css?v=11" />
 </head>
 <body>
 
@@ -271,6 +271,14 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
 
     <!-- ============ Каталог предметов — отдельная панель поверх страницы ============ -->
+  </main>
+
+  <!-- Оверлей каталога лежит прямым потомком <body>, а НЕ внутри .tc-page.
+       У .tc-page есть position:relative и z-index:2 — это контекст наложения,
+       и внутри него z-index:80 у оверлея ничего не значил: весь блок целиком
+       оставался на уровне 2, ниже шапки с её 60. Поле поиска уходило под
+       шапку и было не видно, что набираешь. Подкручивать числа тут
+       бесполезно — надо стоять вне запирающего контейнера. -->
     <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
       <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
         <div class="tc-cat-head">
@@ -292,7 +300,6 @@ header('Cache-Control: no-cache, must-revalidate');
         <p class="tc-cat-footer" data-i18n="calc.catalogFooter">Используйте калькулятор с умом!</p>
       </div>
     </div>
-  </main>
 
   <!-- Подвал сайта — тот же, что на главной, тирлисте и в ленте. -->
   <footer class="mk-foot">
