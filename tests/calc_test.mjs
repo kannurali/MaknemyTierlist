@@ -1,6 +1,7 @@
 // Unit tests for the trade-calculator logic. Run: node --test tests/calc_test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -263,8 +264,8 @@ test('demandBucket boundaries sit at the midpoints between the four weights', ()
 // --------------------------------------------------------------------------
 
 test('badgeCodeFor maps every raw type value seen in production data', () => {
-    assert.equal(badgeCodeFor('f'), 'fv');
-    assert.equal(badgeCodeFor(''), 'fv');
+    assert.equal(badgeCodeFor('f'), 'fr');
+    assert.equal(badgeCodeFor(''), 'fr');
     assert.equal(badgeCodeFor('p'), 'pm');
     assert.equal(badgeCodeFor('s'), 'cs');
     assert.equal(badgeCodeFor('m'), 'cm');
@@ -279,10 +280,10 @@ test('badgeCodeFor passes through a legend code stored directly, case-insensitiv
 });
 
 test('badgeCodeFor falls back to the plain-fruit badge for junk instead of throwing', () => {
-    assert.equal(badgeCodeFor('nope'), 'fv');
-    assert.equal(badgeCodeFor(null), 'fv');
-    assert.equal(badgeCodeFor(undefined), 'fv');
-    assert.equal(badgeCodeFor(123), 'fv');
+    assert.equal(badgeCodeFor('nope'), 'fr');
+    assert.equal(badgeCodeFor(null), 'fr');
+    assert.equal(badgeCodeFor(undefined), 'fr');
+    assert.equal(badgeCodeFor(123), 'fr');
 });
 
 // --------------------------------------------------------------------------
@@ -364,4 +365,32 @@ test('a real URLSearchParams built from a hostile raw query string is still safe
     const params = new URLSearchParams('l=<script>%00&r=../../a:1;DROP TABLE');
     const restored = decodeShareQuery(params, catalog);
     assert.deepEqual(restored, { left: [], right: [] });
+});
+
+// Значки легенды переименовывались уже дважды (fv -> fr вместе с legend в
+// тирлисте), и калькулятор молча показывал пустой белый квадрат вместо значка
+// у всех фруктов: <img> с несуществующим src не роняет страницу и ничего не
+// пишет в консоль. Проверяем не список кодов, а НАЛИЧИЕ ФАЙЛОВ — иначе тест
+// зелёный ровно до того момента, когда его надо было бы завалить.
+test('каждому коду значка соответствует файл на диске', () => {
+    for (const code of CALC.BADGE_CODES) {
+        const rel = `../public_html/assets/design/legend/badge-${code}.svg`;
+        assert.doesNotThrow(
+            () => readFileSync(new URL(rel, import.meta.url)),
+            `нет файла значка: badge-${code}.svg`,
+        );
+    }
+});
+
+// Тип из данных тирлиста обязан попадать в существующий значок, а не в
+// дефолт: молчаливый откат к «фрукту» скрыл бы новый тип предмета.
+test('каждый тип из тирлиста даёт код с существующим файлом', () => {
+    for (const type of ['f', 'p', 's', 'm', 'gp', 'cr', 'v', '']) {
+        const code = CALC.badgeCodeFor(type);
+        assert.ok(CALC.BADGE_CODES.includes(code), `тип "${type}" дал код вне списка: ${code}`);
+        assert.doesNotThrow(
+            () => readFileSync(new URL(`../public_html/assets/design/legend/badge-${code}.svg`, import.meta.url)),
+            `тип "${type}" -> badge-${code}.svg, файла нет`,
+        );
+    }
 });

@@ -55,7 +55,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=27" />
-<link rel="stylesheet" href="css/calculator.css?v=9" />
+<link rel="stylesheet" href="css/calculator.css?v=10" />
 </head>
 <body>
 
@@ -309,7 +309,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
   <script src="js/i18n.js?v=25"></script>
   <script src="js/promo.js?v=2"></script>
-  <script src="js/calc.js?v=2"></script>
+  <script src="js/calc.js?v=3"></script>
   <script src="js/calculator-page.js?v=7"></script>
 </body>
 </html>

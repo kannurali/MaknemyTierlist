@@ -126,9 +126,9 @@
   // там же) в код легенды. "ms" (Скины мутации) и "vh" (Ваучер) в живых
   // данных пока не встречаются — value уже готов к ним на будущее.
   // ==========================================================================
-  var BADGE_CODES = ["fv", "cs", "cm", "ms", "pm", "gp", "cr", "vh"];
+  var BADGE_CODES = ["fr", "cs", "cm", "ms", "pm", "gp", "cr", "vh"];
   var RAW_TYPE_TO_BADGE = {
-    "": "fv", "f": "fv",
+    "": "fr", "f": "fr",
     "p": "pm",
     "s": "cs",
     "m": "cm",
@@ -142,7 +142,7 @@
   function badgeCodeFor(type) {
     var t = typeof type === "string" ? type.trim().toLowerCase() : "";
     if (BADGE_CODES.indexOf(t) >= 0) { return t; } // данные уже хранят код легенды напрямую
-    return Object.prototype.hasOwnProperty.call(RAW_TYPE_TO_BADGE, t) ? RAW_TYPE_TO_BADGE[t] : "fv";
+    return Object.prototype.hasOwnProperty.call(RAW_TYPE_TO_BADGE, t) ? RAW_TYPE_TO_BADGE[t] : "fr";
   }
 
   // ==========================================================================
