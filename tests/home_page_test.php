@@ -91,6 +91,17 @@ test('главная объявляет себя на корне', function () u
     $home = read_file_or_fail($PUB . '/home.php');
     assert_true(strpos($home, '<link rel="canonical" href="https://maknemy.com/" />') !== false,
         'canonical главной');
+
+    // Превью корня — та же фирменная карточка, что у /tierlist. Проверка
+    // держит именно совпадение: корень — самый шаримый адрес, и разъехаться
+    // с разделом, на который он ведёт, он не должен. Ищется вызов, а не
+    // готовый адрес: проверка идёт по исходнику, в теге стоит echo.
+    assert_true(strpos($home, 'og_brand_card()') !== false,
+        'главная показывает фирменную карточку');
+    assert_true(strpos($home, 'og_tierlist_image(') === false,
+        'и не собирает картинку из живых данных');
+    assert_true(strpos($home, 'db()') === false,
+        'и не ходит в базу ради превью');
 });
 
 test('в карте сайта есть оба адреса', function () use ($PUB) {

@@ -51,12 +51,20 @@ test('og_parse_version rejects empty string, whitespace and non-scalar input', f
 //  хостильный параметр не может выйти за пределы каталога.
 // --------------------------------------------------------------------------
 
+// Ревизия оформления (OG_ASSET_REV) — часть имени: без неё смена marks.png
+// или шрифта не перестраивала кэш, и превью новостей месяц отдавало прежний
+// логотип. Ожидание собирается из самой константы, чтобы её очередной подъём
+// не ронял тест; отдельная проверка ниже держит сам факт наличия ревизии в
+// имени — подстановка константы одна её не поймала бы, если бы имя перестало
+// её включать вовсе.
 test('og_build_cache_path builds the expected filename for a valid version', function () {
-    assert_eq('/img/og/tierlist-42.png', og_build_cache_path('/img/og', 'tierlist', '42'));
+    assert_eq('/img/og/tierlist-r' . OG_ASSET_REV . '-42.png', og_build_cache_path('/img/og', 'tierlist', '42'));
+    assert_true(strpos(og_cache_filename('tierlist', 42), '-r' . OG_ASSET_REV . '-') !== false,
+        'ревизия оформления входит в имя файла кэша');
 });
 
 test('og_build_cache_path strips a trailing slash from the directory', function () {
-    assert_eq('/img/og/news-7.png', og_build_cache_path('/img/og/', 'news', 7));
+    assert_eq('/img/og/news-r' . OG_ASSET_REV . '-7.png', og_build_cache_path('/img/og/', 'news', 7));
 });
 
 test('og_build_cache_path returns null for a non-digit version instead of building a path', function () {
