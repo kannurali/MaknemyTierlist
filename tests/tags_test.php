@@ -134,18 +134,25 @@ test('groupOf раскладывает все девять типов по че�
 // заливка. Фон прибит к экрану — двигается только лента поверх него.
 test('фон ленты прибит к экрану, а не едет со страницей', function () use ($PUB) {
     $news = tag_read($PUB . '/news.php');
-    assert_true(strpos($news, '<body class="nw-body">') !== false,
+    assert_true(strpos($news, '<body class="news-bg">') !== false,
         'лента должна помечать body своим классом');
 
     $css = tag_read($PUB . '/css/news-design.css');
-    assert_true((bool)preg_match('/\.nw-body::before \{[^}]*position: fixed;/s', $css),
+    assert_true((bool)preg_match('/\.news-bg::before \{[^}]*position: fixed;/s', $css),
         'слой фона должен быть прибит к экрану');
-    assert_true((bool)preg_match('/\.nw-body::before \{[^}]*cover/s', $css),
+    assert_true((bool)preg_match('/\.news-bg::before \{[^}]*cover/s', $css),
         'cover — иначе на высоком экране снизу останется та же тёмная полоса');
     // Своя картинка в шапке повторяет макетную геометрию страницы и на
     // нижней границе шапки давала бы стык двух кадров одной картинки.
-    assert_true(strpos($css, '.nw-body .mk-top::before { display: none; }') !== false,
+    assert_true(strpos($css, '.news-bg .mk-top::before { display: none; }') !== false,
         'у шапки на ленте не должно быть своего фона');
+
+    // .nw-body в news.css — это ТЕЛО ПОСТА внутри карточки. Фон страницы,
+    // повешенный на такое имя, красил каждый пост непрозрачным чёрным вместо
+    // стекла карточки и разворачивал полноэкранный фиксированный слой на
+    // каждую карточку ленты.
+    assert_eq(0, preg_match('/^\s*\.nw-body(::|\s*\{)/m', $css),
+        'фон страницы не должен висеть на классе тела поста');
 });
 
 // --------------------------------------------------------------------------

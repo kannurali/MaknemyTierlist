@@ -228,9 +228,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <!-- Фон страницы и подвал из редизайна. -->
 <link rel="stylesheet" href="css/design-page.css?v=25" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
-<link rel="stylesheet" href="css/news-design.css?v=11" />
+<link rel="stylesheet" href="css/news-design.css?v=12" />
 </head>
-<body class="nw-body">
+<body class="news-bg">
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
