@@ -144,7 +144,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=26" />
+<link rel="stylesheet" href="css/design-page.css?v=27" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -603,6 +603,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=63"></script>
+  <script src="js/app.js?v=64"></script>
 </body>
 </html>

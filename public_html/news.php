@@ -223,9 +223,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна. -->
-<link rel="stylesheet" href="css/design-page.css?v=26" />
+<link rel="stylesheet" href="css/design-page.css?v=27" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
-<link rel="stylesheet" href="css/news-design.css?v=13" />
+<link rel="stylesheet" href="css/news-design.css?v=14" />
 </head>
 <body class="news-bg">
   <header class="mk-top">
