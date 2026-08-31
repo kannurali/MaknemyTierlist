@@ -441,20 +441,22 @@
     return "https://" + s.replace(/^\/+/, "");
   }
 
-  // Значки предмета лежат в двух наборах. Первые шесть достались от старого
-  // тирлиста растром (assets/badge-*.png), остальные пришли с новой легендой
-  // вектором (assets/design/legend/badge-*.svg) — те же файлы показаны в
-  // блоке «Помощь новичкам», поэтому значок на карточке и значок в легенде
-  // совпадают по определению, а не по договорённости.
+  // Значок предмета — вектор из набора новой легенды
+  // (assets/design/legend/badge-*.svg). Те же файлы стоят в блоке «Помощь
+  // новичкам», поэтому значок на карточке и значок в легенде совпадают по
+  // определению, а не по договорённости. Растровые assets/badge-*.png от
+  // старого тирлиста больше не используются: они были по 25×24 px и в
+  // экспорте PNG растягивались втрое, а буквы на них — прежние (F вместо FR,
+  // P вместо PM), то есть карточка подписывалась не тем, что в легенде.
   //
-  // Список, а не проверка расширения на лету: незнакомый тип должен дать
-  // видимую битую картинку в админке, а не молча уехать в 404 у читателей.
-  const LEGACY_BADGES = ["f", "p", "s", "m", "gp", "cr"];
+  // Код типа в базе короче имени файла и старше его: "f" пишется значком FR,
+  // "p" — PM. Плюс типы, которых больше нет: скины и мутации стали
+  // конфигурациями (s → cs, m → cm), а "v" был ранним ваучером. Алиасы живут
+  // здесь, чтобы старое сохранение не давало читателю битую картинку.
+  const BADGE_FILE = { f: "fr", p: "pm", s: "cs", m: "cm", v: "vh" };
 
   function badgeSrc(type) {
-    return LEGACY_BADGES.indexOf(type) >= 0
-      ? "assets/badge-" + type + ".png"
-      : "assets/design/legend/badge-" + type + ".svg";
+    return "assets/design/legend/badge-" + (BADGE_FILE[type] || type) + ".svg";
   }
 
   // Тип предмета → категория фильтра. Категорий четыре плюс «Все»:
@@ -462,7 +464,7 @@
   //   Фрукты        f или пусто
   //   Пермы         p
   //   Пассы         gp, vh (ваучеры)
-  //   Конфигураторы s, m, cs, cm, ms, cr
+  //   Конфигураторы cs, cm, ms, cr (плюс снятые s и m)
   //
   // Ваучеры и пассы — одна корзина: продуктово это одно и то же, отдельным
   // фильтром они дробили бы список на две почти пустые категории. Старый код
@@ -1952,8 +1954,8 @@
     $("#mValue").value = it.value || "";
     $("#mDesc").value = it.desc || "";
     $("#mDescEn").value = it.descEn || "";
-    $("#mNew").checked = !!it.flag;
-    $("#mWip").checked = !!it.wip;
+    setFlag("flag", it.flag);
+    setFlag("wip", it.wip);
     $("#mIconPreview").src = it.icon || DEFAULT_ICON;
     setType(it.type || "f");
     setSeg("#mDemand", it.demand || "");
@@ -1992,26 +1994,45 @@
   $("#viewClose").addEventListener("click", closeViewModal);
   viewModal.addEventListener("click", e => { if (e.target === viewModal) closeViewModal(); });
 
+  // В сегменте тренда рядом со стрелками стоят кнопки-флаги («?» и NEW).
+  // Они помечены data-flag, значением сегмента не являются и переключаются
+  // сами по себе — иначе выбор стрелки гасил бы NEW, а нажатие NEW стирало бы
+  // тренд. Селектор :not([data-flag]) отделяет одно от другого в одном месте.
+  const SEG_VALUE = "button:not([data-flag])";
   function setSeg(sel, value) {
-    $(sel).querySelectorAll("button").forEach(b => {
+    $(sel).querySelectorAll(SEG_VALUE).forEach(b => {
       b.classList.toggle("active", (b.dataset.v || "") === value);
     });
   }
   function getSeg(sel) {
-    const a = $(sel).querySelector("button.active");
+    const a = $(sel).querySelector(SEG_VALUE + ".active");
     return a ? (a.dataset.v || "") : "";
   }
+  // Флаги предмета живут кнопками того же сегмента: горит — значок на карточке
+  // есть, не горит — нет.
+  const flagBtn = name => $(`#mTrend button[data-flag="${name}"]`);
+  function setFlag(name, on) { flagBtn(name).classList.toggle("active", !!on); }
+  function getFlag(name) { return flagBtn(name).classList.contains("active"); }
 
   // ----- Type: Regular/Permanent toggle (#mFruit) + optional category (#mType2) -----
-  const CATEGORIES = ["s", "m", "gp", "cr"];
+  // Все коды кнопок #mType2. Список отставал от разметки: конфигурации и
+  // ваучер в него не попали, и предмет с типом cs/cm/ms/vh открывался
+  // «Обычным фруктом» — тип молча терялся при первом же сохранении.
+  const CATEGORIES = ["cs", "cm", "ms", "cr", "gp", "vh"];
+  // Кнопок «S · Скин» и «M · Мутация» в модалке больше нет: скины и мутации
+  // стали конфигурациями. В базе предметы с этими типами остались, поэтому
+  // при открытии подсвечиваем их наследника — и сохранение переписывает тип
+  // на новый, по предмету за раз.
+  const LEGACY_CATEGORY = { s: "cs", m: "cm", v: "vh" };
   function setType(type) {
-    const isCat = CATEGORIES.includes(type);
+    const cat = LEGACY_CATEGORY[type] || type;
+    const isCat = CATEGORIES.includes(cat);
     $("#mFruit").querySelectorAll("button").forEach(b => b.classList.remove("active"));
     if (!isCat) {
-      const v = type === "p" ? "p" : "f"; // пусто/обычный → Обычный (F) по умолчанию
+      const v = type === "p" ? "p" : "f"; // пусто/обычный → Обычный (FR) по умолчанию
       $("#mFruit").querySelector(`button[data-v="${v}"]`).classList.add("active");
     }
-    setSeg("#mType2", isCat ? type : "");
+    setSeg("#mType2", isCat ? cat : "");
   }
   function getType() {
     const cat = getSeg("#mType2");
@@ -2044,7 +2065,9 @@
     $(sel).addEventListener("click", e => {
       const btn = e.target.closest("button");
       if (!btn) return;
-      $(sel).querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      // «?» и NEW — не тренд, а флаги: щелчок переключает только их самих.
+      if (btn.dataset.flag) { btn.classList.toggle("active"); return; }
+      $(sel).querySelectorAll(SEG_VALUE).forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
     });
   });
@@ -2069,8 +2092,8 @@
     it.value = $("#mValue").value.trim();
     it.desc = $("#mDesc").value.trim();
     it.descEn = $("#mDescEn").value.trim();
-    it.flag = $("#mNew").checked;
-    it.wip = $("#mWip").checked;
+    it.flag = getFlag("flag");
+    it.wip = getFlag("wip");
     it.icon = $("#mIconPreview").src;
     it.type = getType();
     it.demand = getSeg("#mDemand");

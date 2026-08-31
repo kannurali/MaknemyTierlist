@@ -134,8 +134,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=5" />
-<link rel="stylesheet" href="css/styles.css?v=49" />
+<link rel="stylesheet" href="css/base.css?v=6" />
+<link rel="stylesheet" href="css/styles.css?v=51" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -358,7 +358,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ НОВИЧКАМ</h2>
         <div class="legend-grid">
           <div class="legend-col lc-types">
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-fv.svg" alt="FV" /><span class="lgl" data-i18n="legend.fv">Фрукт</span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-fr.svg" alt="FR" /><span class="lgl" data-i18n="legend.fv">Фрукт</span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-cs.svg" alt="CS" /><span class="lgl" data-i18n="legend.cs">Конфигурация скин</span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-cm.svg" alt="CM" /><span class="lgl" data-i18n="legend.cm">Конфигурация мутация</span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-ms.svg" alt="MS" /><span class="lgl" data-i18n="legend.ms">Скины мутации</span></div>
@@ -373,6 +373,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
             <div class="lg"><span class="lgd d-yellow"></span><span class="lgl" data-i18n="legend.mid">Средне</span></div>
             <div class="lg"><span class="lgd d-orange"></span><span class="lgl" data-i18n="legend.low">Ниже среднего</span></div>
             <div class="lg"><span class="lgd d-red"></span><span class="lgl" data-i18n="legend.bad">Плохо</span></div>
+            <!-- Пятая точка — не уровень спроса, а предупреждение: цену задрали.
+                 Поэтому стоит последней и залита градиентом, а не одним цветом. -->
+            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
           </div>
 
           <div class="legend-col lc-trends">
@@ -463,24 +466,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <textarea id="mDescEn" rows="3" data-i18n-placeholder="modal.descEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
         </div>
         <div class="field">
-          <label class="switch new-switch" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)">
-            <input type="checkbox" id="mNew" />
-            <span class="track"><span class="thumb"></span></span>
-            <span class="switch-label" data-i18n="modal.new">Значок «NEW» (новый / изменён)</span>
-          </label>
-        </div>
-        <div class="field">
-          <label class="switch new-switch" data-i18n-title="modal.wipTitle" title="Показать значок «?» на предмете (цена под вопросом). Работает вместе с NEW">
-            <input type="checkbox" id="mWip" />
-            <span class="track"><span class="thumb"></span></span>
-            <span class="switch-label" data-i18n="modal.wip">Значок «?» (под вопросом)</span>
-          </label>
-        </div>
-        <div class="field">
           <label data-i18n="modal.fruitType">Тип фрукта</label>
           <div class="seg seg-toggle" id="mFruit">
-            <button data-v="f" class="active"><span data-i18n="modal.fruitPlain">Обычный</span> <small>F</small></button>
-            <button data-v="p"><span data-i18n="modal.fruitPerm">Перманент</span> <small>P</small></button>
+            <button data-v="f" class="active"><span data-i18n="modal.fruitPlain">Обычный</span> <small>FR</small></button>
+            <button data-v="p"><span data-i18n="modal.fruitPerm">Перманент</span> <small>PM</small></button>
           </div>
         </div>
         <div class="field">
@@ -492,13 +481,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
                см. badgeSrc() в js/app.js. -->
           <div class="seg" id="mType2">
             <button data-v="" class="active">—</button>
-            <button data-v="s" class="t-s" data-i18n="modal.catSkin">S · Скин</button>
-            <button data-v="m" class="t-m" data-i18n="modal.catMutation">M · Мутация</button>
             <button data-v="cs" class="t-cs" data-i18n="modal.catConfigSkin">CS · Конфигурация скин</button>
             <button data-v="cm" class="t-cm" data-i18n="modal.catConfigMutation">CM · Конфигурация мутация</button>
             <button data-v="ms" class="t-ms" data-i18n="modal.catMutationSkin">MS · Скины мутации</button>
             <button data-v="cr" class="t-cr" data-i18n="modal.catChromatic">CR · Хроматик</button>
-            <button data-v="gp" class="t-gp" data-i18n="modal.catPass">GP · Пасс</button>
+            <button data-v="gp" class="t-gp" data-i18n="modal.catPass">GP · Геймпасс</button>
             <button data-v="vh" class="t-vh" data-i18n="modal.catVoucher">VH · Ваучер</button>
           </div>
         </div>
@@ -510,15 +497,24 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
             <button data-v="yellow"><img class="dot" src="assets/dot-yellow.png" alt="" /></button>
             <button data-v="orange"><img class="dot" src="assets/dot-orange.png" alt="" /></button>
             <button data-v="red"><img class="dot" src="assets/dot-red.png" alt="" /></button>
+            <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
           </div>
         </div>
         <div class="field">
           <label data-i18n="modal.trend">Тренд</label>
+          <!-- Порядок и картинки те же, что в колонке трендов легенды: админ
+               жмёт ровно тот значок, который увидит читатель.
+               «?» и NEW тредом не являются — это самостоятельные флаги предмета
+               (wip и flag), они горят вместе со стрелкой и друг с другом.
+               Поэтому у них data-flag вместо data-v: обработчик переключает их
+               по отдельности, а не как один выбор из списка. -->
           <div class="seg" id="mTrend">
             <button data-v="" class="active">—</button>
-            <button data-v="up"><img class="trend" src="assets/trend-up.png" alt="" /></button>
-            <button data-v="swap"><img class="trend tr-swap" src="assets/trend-swap.png" alt="" /></button>
-            <button data-v="down"><img class="trend" src="assets/trend-down.png" alt="" /></button>
+            <button data-flag="wip" data-i18n-title="modal.wipTitle" title="Показать значок «?» на предмете (цена под вопросом). Работает вместе с NEW"><img class="trend tr-wip" src="assets/design/legend/trend-wip.svg" alt="?" /></button>
+            <button data-v="up" data-i18n-title="legend.up" title="Рост цены"><img class="trend" src="assets/design/legend/trend-up.svg" alt="" /></button>
+            <button data-v="swap" data-i18n-title="legend.swap" title="Перерассмотр цены"><img class="trend tr-swap" src="assets/design/legend/trend-swap.svg" alt="" /></button>
+            <button data-v="down" data-i18n-title="legend.down" title="Падение цены"><img class="trend" src="assets/design/legend/trend-down.svg" alt="" /></button>
+            <button data-flag="flag" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="NEW" /></button>
           </div>
         </div>
       </div>
@@ -599,7 +595,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=23"></script>
+  <script src="js/i18n.js?v=25"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
@@ -609,6 +605,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=64"></script>
+  <script src="js/app.js?v=66"></script>
 </body>
 </html>

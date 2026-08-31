@@ -307,7 +307,7 @@ header('Cache-Control: no-cache, must-revalidate');
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=23"></script>
+  <script src="js/i18n.js?v=25"></script>
   <script src="js/promo.js?v=2"></script>
   <script src="js/calc.js?v=2"></script>
   <script src="js/calculator-page.js?v=7"></script>
