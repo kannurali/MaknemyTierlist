@@ -294,7 +294,13 @@
         }
         counts[id] = Math.min(MAX_COUNT, counts[id] + n);
       }
-      return order.map(function (id) { return { item: catalogIndex[id], count: counts[id] }; });
+      // Потолок слотов соблюдает сам модуль, а не вызывающий: ссылка со
+      // ста предметами не должна давать сторону, которую доска физически не
+      // способна показать. Раньше обрезка жила только в capSide() страницы, и
+      // любой второй потребитель (тест, серверный рендер превью) считал бы
+      // сумму по предметам, которых на доске не видно.
+      return order.slice(0, MAX_SLOTS)
+        .map(function (id) { return { item: catalogIndex[id], count: counts[id] }; });
     } catch (_e) {
       return [];
     }

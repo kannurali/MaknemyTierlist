@@ -311,6 +311,19 @@ test('badgeCodeFor falls back to the plain-fruit badge for junk instead of throw
 //  Share-link round trip
 // --------------------------------------------------------------------------
 
+// Регрессия. decodeSide ограничен MAX_TOKENS = 200 и раньше ничего не знал
+// про MAX_SLOTS: обрезка жила только в capSide() страницы, и любой второй
+// потребитель (тест, серверный рендер превью) считал бы сумму по предметам,
+// которых на доске не видно.
+test('decodeSide caps a side at MAX_SLOTS, not at MAX_TOKENS', () => {
+    const many = {};
+    for (let i = 1; i <= 40; i++) { many['id' + i] = item('id' + i, 100); }
+    const raw = Object.keys(many).map(id => id + ':1').join(',');
+    const decoded = decodeSide(raw, many);
+    assert.equal(decoded.length, MAX_SLOTS);
+    assert.deepEqual(decoded.map(e => e.item.id), Object.keys(many).slice(0, MAX_SLOTS));
+});
+
 test('encodeSide then decodeSide restores the same items and counts', () => {
     const catalog = buildCatalogIndex([item('a', 100), item('b', 200)]);
     const side = [{ item: catalog.a, count: 3 }, { item: catalog.b, count: 1 }];
