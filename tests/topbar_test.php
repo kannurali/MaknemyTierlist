@@ -32,25 +32,32 @@ $PAGES = ['home.php', 'index.php', 'news.php'];
 //  Разделы в разработке
 // --------------------------------------------------------------------------
 
-// «Трейдинг», «Калькулятор» и профиль на сайт пока не выкладываются, и вести
-// на них шапка не должна ни с одной страницы. Это <button data-soon>, а не
-// мёртвый <span> и не href="#": кнопка кликается и по клику показывает
-// «В активной разработке» (js/topbar.js). Проверяем форму, а не только
-// атрибут: возврат к ссылке или к безответной пилюле прошёл бы незамеченным.
-test('«Калькулятор» и «Трейдинг» в шапке — кнопки data-soon, а не ссылки', function () use ($PUB, $PAGES) {
-    $shapes = [
-        'Калькулятор' => '0 0 19 19"[^>]*><path d="M5\.70001 8\.55001V13\.3',
-        'Трейдинг'    => '0 0 18 19"',
-    ];
+// «Трейдинг» и профиль на сайт пока не выложены, и вести на них шапка не
+// должна ни с одной страницы. Это <button data-soon>, а не мёртвый <span> и
+// не href="#": кнопка кликается и по клику показывает «В активной
+// разработке» (js/topbar.js). Проверяем форму, а не только атрибут: возврат
+// к ссылке или к безответной пилюле прошёл бы незамеченным.
+test('«Трейдинг» в шапке — кнопка data-soon, а не ссылка', function () use ($PUB, $PAGES) {
     foreach ($PAGES as $f) {
         $s = top_header($PUB, $f);
-        foreach ($shapes as $label => $icon) {
-            assert_true((bool)preg_match(
-                '/<button class="mk-pill" type="button" data-soon [^>]*>\s*<svg viewBox="' . $icon . '/',
-                $s), "$f: «{$label}» должен быть кнопкой data-soon");
-        }
-        assert_eq(0, preg_match('/href="\/calculator"/', $s),
-            "$f: из шапки не должно быть ссылки на /calculator");
+        assert_true((bool)preg_match(
+            '/<button class="mk-pill" type="button" data-soon [^>]*>\s*<svg viewBox="0 0 18 19"/',
+            $s), "$f: «Трейдинг» должен быть кнопкой data-soon");
+    }
+});
+
+// «Калькулятор» получил страницу (/calculator, см. tests/calculator_page_test.php)
+// и вышел из разработки: пилюля — рабочая ссылка на всех трёх страницах, той
+// же формы, что и раньше кнопка data-soon (только тег и атрибуты сменились).
+test('«Калькулятор» в шапке — рабочая ссылка на /calculator, а не кнопка data-soon', function () use ($PUB, $PAGES) {
+    foreach ($PAGES as $f) {
+        $s = top_header($PUB, $f);
+        assert_true((bool)preg_match(
+            '/<a class="mk-pill" href="\/calculator"[^>]*>\s*<svg viewBox="0 0 19 19"[^>]*><path d="M5\.70001 8\.55001V13\.3/',
+            $s), "$f: «Калькулятор» должен вести на /calculator");
+        assert_eq(0, preg_match(
+            '/<button class="mk-pill" type="button" data-soon [^>]*>\s*<svg viewBox="0 0 19 19"[^>]*><path d="M5\.70001 8\.55001V13\.3/',
+            $s), "$f: «Калькулятор» не должен оставаться кнопкой data-soon");
     }
 });
 
@@ -73,14 +80,15 @@ test('профиль — кнопка data-soon внутри плашки нав
 
 // Каждая кнопка data-soon обязана объяснять, почему не ведёт никуда: title
 // для мыши и ключ словаря, чтобы объяснение переводилось вместе с сайтом.
+// «Калькулятор» больше не в их числе — у него есть страница, см. тест выше.
 test('у каждой кнопки data-soon есть подпись и ключ перевода', function () use ($PUB, $PAGES) {
     $i18n = top_read($PUB . '/js/i18n.js');
     assert_true(strpos($i18n, '"topbar.soon"') !== false, 'ключ topbar.soon в словаре');
     foreach ($PAGES as $f) {
         $s = top_header($PUB, $f);
-        assert_eq(3, substr_count($s, 'data-soon'), "$f: трейдинг, калькулятор и профиль");
-        assert_eq(3, substr_count($s, 'data-i18n-title="topbar.soon"'), "$f: ключ на всех трёх");
-        assert_eq(3, substr_count($s, 'title="В активной разработке"'), "$f: подпись на всех трёх");
+        assert_eq(2, substr_count($s, 'data-soon'), "$f: трейдинг и профиль");
+        assert_eq(2, substr_count($s, 'data-i18n-title="topbar.soon"'), "$f: ключ на обоих");
+        assert_eq(2, substr_count($s, 'title="В активной разработке"'), "$f: подпись на обоих");
     }
 });
 

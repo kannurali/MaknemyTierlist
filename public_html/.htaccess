@@ -76,6 +76,27 @@ RewriteRule ^index\.php$ /tierlist [L,R=301]
 
 RewriteRule ^tierlist$ /index.php [L]
 
+# --------------------------- Калькулятор трейдов ---------------------------
+# Тот же приём, что у /tierlist выше: внутри calculator.php все пути
+# документ-относительные ("css/base.css", "js/calc.js", "assets/…"). На
+# /calculator база документа — корень, и они разрешаются как есть; на
+# /calculator/ база стала бы "/calculator/", и весь CSS с JS уехал бы в 404.
+# Поэтому слэш снимается внешним 301, а не внутренним рероутом: иначе в
+# адресной строке и в индексе поисковика остались бы два рабочих адреса с
+# одним содержимым.
+RewriteRule ^calculator/$ /calculator [L,R=301]
+
+# Прямой адрес файла — 301 на канонический /calculator, та же защита от
+# дубля, что у /index.php -> /tierlist выше. Условие на REDIRECT_STATUS
+# обязательно: без него внутренний рероут /calculator → /calculator.php
+# строкой ниже сам попал бы под это правило, и получился бы бесконечный
+# редирект. У внутренних рероутов REDIRECT_STATUS уже выставлен, у запроса из
+# браузера он пуст — по этому и различаем.
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^calculator\.php$ /calculator [L,R=301]
+
+RewriteRule ^calculator$ /calculator.php [L]
+
 # /news/ (со слэшем на конце) — 301 на канонический /news, а не на news.html.
 # Без этого правила ниже (^news/?$) молча принимает и /news, и /news/ как один
 # и тот же внутренний рероут на news.html — но это ВНУТРЕННИЙ рероут: адрес в
