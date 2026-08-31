@@ -228,7 +228,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <!-- Фон страницы и подвал из редизайна. -->
 <link rel="stylesheet" href="css/design-page.css?v=25" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
-<link rel="stylesheet" href="css/news-design.css?v=10" />
+<link rel="stylesheet" href="css/news-design.css?v=11" />
 </head>
 <body class="nw-body">
   <header class="mk-top">
@@ -334,18 +334,25 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     <div class="nw-lead">
 
       <!-- Рекламные борта по бокам колонки (Frame 55 / Frame 56 в макете).
-           Полоска — это вид незанятого места, а не декор: как только слот
-           "rail" купят, сюда встаёт креатив из /api/promo.php (отбор — тем
-           же модулем js/promo.js, что и на тирлисте, см. renderNewsRails()
-           в js/news-page.js). Поэтому пустой борт не прячется. -->
+           Пока слот "rail" не куплен, борта СКРЫТЫ: полосатая панель из
+           макета — это вид места в самом макете, а на живом сайте две
+           белые панели во всю высоту экрана читаются как поломка вёрстки,
+           а не как «здесь может быть ваша реклама». Ровно так же ведут
+           себя борта тирлиста (.ptn-rail в styles.css — display: none,
+           пока нет кампании).
+
+           hidden снимает renderNewsRails() в js/news-page.js, когда из
+           /api/promo.php приехал подходящий креатив. Атрибут стоит прямо в
+           разметке, а не ставится скриптом: иначе борта успевали мигнуть
+           полосками до ответа API. -->
       <!-- Два уровня не для красоты: внешняя колонка тянется на всю высоту
            ленты, а сама панель внутри неё липкая — так борт остаётся на
            виду всю прокрутку и при этом не вылезает за пределы ленты. -->
-      <div class="nw-rail-slot nw-rail-l" aria-hidden="true">
+      <div class="nw-rail-slot nw-rail-l" aria-hidden="true" hidden>
         <aside class="nw-rail" id="newsRailL"
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
-      <div class="nw-rail-slot nw-rail-r" aria-hidden="true">
+      <div class="nw-rail-slot nw-rail-r" aria-hidden="true" hidden>
         <aside class="nw-rail" id="newsRailR"
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
@@ -409,7 +416,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
        ДО news-page.js: он зовёт NX_PROTECT на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/news-page.js?v=18"></script>
+  <script src="js/news-page.js?v=19"></script>
 </body>
 </html>
 <?php endif; ?>
