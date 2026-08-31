@@ -124,8 +124,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=4" />
-<link rel="stylesheet" href="css/styles.css?v=48" />
+<link rel="stylesheet" href="css/base.css?v=5" />
+<link rel="stylesheet" href="css/styles.css?v=49" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -469,12 +469,21 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
         <div class="field">
           <label data-i18n="modal.category">Категория (необязательно)</label>
+          <!-- Значки предмета. Порядок тот же, что в легенде на странице
+               («Помощь новичкам»): админ выбирает то же самое, что потом
+               увидит читатель. Коды в data-v — это и есть тип предмета, он
+               уходит в БД как есть и подставляется в имя файла значка,
+               см. badgeSrc() в js/app.js. -->
           <div class="seg" id="mType2">
             <button data-v="" class="active">—</button>
             <button data-v="s" class="t-s" data-i18n="modal.catSkin">S · Скин</button>
             <button data-v="m" class="t-m" data-i18n="modal.catMutation">M · Мутация</button>
-            <button data-v="gp" class="t-gp" data-i18n="modal.catPass">GP · Пасс</button>
+            <button data-v="cs" class="t-cs" data-i18n="modal.catConfigSkin">CS · Конфигурация скин</button>
+            <button data-v="cm" class="t-cm" data-i18n="modal.catConfigMutation">CM · Конфигурация мутация</button>
+            <button data-v="ms" class="t-ms" data-i18n="modal.catMutationSkin">MS · Скины мутации</button>
             <button data-v="cr" class="t-cr" data-i18n="modal.catChromatic">CR · Хроматик</button>
+            <button data-v="gp" class="t-gp" data-i18n="modal.catPass">GP · Пасс</button>
+            <button data-v="vh" class="t-vh" data-i18n="modal.catVoucher">VH · Ваучер</button>
           </div>
         </div>
         <div class="field">
@@ -574,7 +583,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=21"></script>
+  <script src="js/i18n.js?v=22"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
@@ -584,6 +593,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=62"></script>
+  <script src="js/app.js?v=63"></script>
 </body>
 </html>
