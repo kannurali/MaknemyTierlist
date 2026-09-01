@@ -117,29 +117,29 @@ test('removing from an empty side does not throw', () => {
 });
 
 // --------------------------------------------------------------------------
-//  6-slot cap — the redesign's hard cap on distinct items per side
+//  4-slot cap — the mockup's 2x2 grid, same as the game's trade window
 // --------------------------------------------------------------------------
 
-test('MAX_SLOTS is 6, matching the 2x3 slot grid the page renders', () => {
-    assert.equal(MAX_SLOTS, 6);
+test('MAX_SLOTS is 4, matching the 2x2 slot grid the page renders', () => {
+    assert.equal(MAX_SLOTS, 4);
 });
 
 test('canAddToSide allows a new item while under the cap', () => {
     let side = [];
-    for (let i = 0; i < 5; i++) side = addToSide(side, item('i' + i, 100));
+    for (let i = 0; i < 3; i++) side = addToSide(side, item('i' + i, 100));
     assert.equal(canAddToSide(side, item('new', 100)), true);
 });
 
-test('canAddToSide refuses a 7th distinct item once all 6 slots are taken', () => {
+test('canAddToSide refuses a 5th distinct item once all 4 slots are taken', () => {
     let side = [];
-    for (let i = 0; i < 6; i++) side = addToSide(side, item('i' + i, 100));
-    assert.equal(side.length, 6);
-    assert.equal(canAddToSide(side, item('seventh', 100)), false);
+    for (let i = 0; i < 4; i++) side = addToSide(side, item('i' + i, 100));
+    assert.equal(side.length, 4);
+    assert.equal(canAddToSide(side, item('fifth', 100)), false);
 });
 
 test('canAddToSide still allows stacking a count on an item already occupying a slot at the cap', () => {
     let side = [];
-    for (let i = 0; i < 6; i++) side = addToSide(side, item('i' + i, 100));
+    for (let i = 0; i < 4; i++) side = addToSide(side, item('i' + i, 100));
     assert.equal(canAddToSide(side, item('i0', 100)), true); // same id — no new slot needed
 });
 
@@ -252,9 +252,33 @@ test('demandBalance is null for an empty side, not NaN', () => {
     assert.equal(demandBalance([]), null);
 });
 
+// Предмет без спроса не входит в среднее вовсе. На шкале 2..12 ноль лежит ниже
+// самого низкого уровня, и вес 0 утащил бы всю сторону в «плохо».
+test('items with no demand set are left out of the average, not counted as zero', () => {
+    const withDemand = { id: 'a', name: 'a', value: '100', type: 'f', demand: 'green' };
+    const without = { id: 'b', name: 'b', value: '100', type: 'f', demand: '' };
+    assert.equal(demandBalance([{ item: withDemand, count: 1 }, { item: without, count: 1 }]), 10);
+});
+
+test('a side where nobody has a demand set has no balance at all', () => {
+    const bare = { id: 'a', name: 'a', value: '100', type: 'f', demand: '' };
+    assert.equal(demandBalance([{ item: bare, count: 3 }]), null);
+    assert.equal(demandBucket(demandBalance([{ item: bare, count: 3 }])), null);
+});
+
+// Главное свойство шкалы: одна вещь на стороне показывает СВОЙ кружок, а не
+// усреднённый соседний. Ровно из-за этого пороги «строго выше», а не «не ниже».
+test('a single item shows its own demand dot, not an averaged one', () => {
+    for (const [demand, score] of [['neon', 12], ['green', 10], ['yellow', 8], ['orange', 5], ['red', 2]]) {
+        const one = [{ item: item('x', 100, demand), count: 1 }];
+        assert.equal(demandBalance(one), score, demand + ' весит ' + score);
+        assert.equal(demandBucket(demandBalance(one)), demand, demand + ' показывает свой кружок');
+    }
+});
+
 // --------------------------------------------------------------------------
 //  demandBucket — the side's aggregate demand meter, bucketed into the same
-//  four colours as the per-item demand dot
+//  five dots as the per-item demand marker (overprice included)
 // --------------------------------------------------------------------------
 
 test('demandBucket maps a null/non-finite balance to null, not a crash', () => {
@@ -264,19 +288,31 @@ test('demandBucket maps a null/non-finite balance to null, not a crash', () => {
 });
 
 test('demandBucket sorts pure demand scores into their own colour', () => {
-    assert.equal(demandBucket(2), 'green');
-    assert.equal(demandBucket(1), 'yellow');
-    assert.equal(demandBucket(-1), 'orange');
-    assert.equal(demandBucket(-2), 'red');
+    assert.equal(demandBucket(12), 'neon');
+    assert.equal(demandBucket(10), 'green');
+    assert.equal(demandBucket(8), 'yellow');
+    assert.equal(demandBucket(5), 'orange');
+    assert.equal(demandBucket(2), 'red');
 });
 
-test('demandBucket boundaries sit at the midpoints between the four weights', () => {
-    assert.equal(demandBucket(1.5), 'green');
-    assert.equal(demandBucket(1.49), 'yellow');
-    assert.equal(demandBucket(0), 'yellow');
-    assert.equal(demandBucket(-0.01), 'orange');
-    assert.equal(demandBucket(-1.5), 'orange');
-    assert.equal(demandBucket(-1.51), 'red');
+// Границы «строго выше»: балл, равный оценке уровня, принадлежит самому
+// уровню, а не соседнему сверху. Иначе одиночное «средне» (8) показывало бы
+// зелёный кружок «хорошо».
+test('demandBucket boundaries belong to the lower level, not the one above', () => {
+    assert.equal(demandBucket(10.01), 'neon');
+    assert.equal(demandBucket(8.01), 'green');
+    assert.equal(demandBucket(5.01), 'yellow');
+    assert.equal(demandBucket(2.01), 'orange');
+    assert.equal(demandBucket(1.99), 'red');
+});
+
+test('a mixed side lands between its items', () => {
+    const mixed = [
+        { item: item('a', 100, 'neon'), count: 1 },
+        { item: item('b', 100, 'red'), count: 1 },
+    ];
+    assert.equal(demandBalance(mixed), 7);   // (12 + 2) / 2
+    assert.equal(demandBucket(7), 'yellow');
 });
 
 // --------------------------------------------------------------------------

@@ -134,7 +134,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=6" />
+<link rel="stylesheet" href="css/base.css?v=7" />
 <link rel="stylesheet" href="css/styles.css?v=51" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
@@ -144,7 +144,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=27" />
+<link rel="stylesheet" href="css/design-page.css?v=28" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -369,13 +369,16 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </div>
 
           <div class="legend-col lc-demand">
+            <!-- Оверпрайс — верх шкалы, а не сноска в конце: за такой предмет
+                 переплачивают, значит отдать его легче всего. Порядок сверху
+                 вниз совпадает с оценками, по которым калькулятор считает
+                 спрос стороны (DEMAND_WEIGHT в js/calc.js): 12, 10, 8, 5, 2.
+                 Залит градиентом, а не одним цветом. -->
+            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
             <div class="lg"><span class="lgd d-green"></span><span class="lgl" data-i18n="legend.good">Хорошо</span></div>
             <div class="lg"><span class="lgd d-yellow"></span><span class="lgl" data-i18n="legend.mid">Средне</span></div>
             <div class="lg"><span class="lgd d-orange"></span><span class="lgl" data-i18n="legend.low">Ниже среднего</span></div>
             <div class="lg"><span class="lgd d-red"></span><span class="lgl" data-i18n="legend.bad">Плохо</span></div>
-            <!-- Пятая точка — не уровень спроса, а предупреждение: цену задрали.
-                 Поэтому стоит последней и залита градиентом, а не одним цветом. -->
-            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
           </div>
 
           <div class="legend-col lc-trends">
@@ -491,13 +494,15 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
         <div class="field">
           <label data-i18n="modal.demand">Спрос</label>
+          <!-- Порядок тот же, что в колонке спроса легенды: админ жмёт ровно
+               тот кружок, который увидит читатель. -->
           <div class="seg" id="mDemand">
             <button data-v="" class="active">—</button>
+            <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
             <button data-v="green"><img class="dot" src="assets/dot-green.png" alt="" /></button>
             <button data-v="yellow"><img class="dot" src="assets/dot-yellow.png" alt="" /></button>
             <button data-v="orange"><img class="dot" src="assets/dot-orange.png" alt="" /></button>
             <button data-v="red"><img class="dot" src="assets/dot-red.png" alt="" /></button>
-            <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
           </div>
         </div>
         <div class="field">
@@ -595,7 +600,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=25"></script>
+  <script src="js/i18n.js?v=27"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
