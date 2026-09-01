@@ -98,7 +98,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=28" />
-<link rel="stylesheet" href="css/home.css?v=13" />
+<link rel="stylesheet" href="css/home.css?v=14" />
 </head>
 <body>
 
@@ -258,14 +258,14 @@ header('Cache-Control: no-cache, must-revalidate');
           </a>
         </li>
         <li>
-          <div class="hm-card" aria-disabled="true" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+          <a class="hm-card" href="/calculator">
             <div class="hm-card-body"></div>
             <img class="hm-card-art" src="assets/design/home/card-prices.webp" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-ak">Цены</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note">сравнить цены в реальном времени уже не проблема!</p>
             <span class="hm-card-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          </div>
+          </a>
         </li>
         <li>
           <a class="hm-card" href="https://t.me/theMaknemy" target="_blank" rel="noopener">
