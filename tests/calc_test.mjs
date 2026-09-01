@@ -89,12 +89,28 @@ test('buildCatalogIndex is immune to prototype-pollution-shaped ids', () => {
 //  Side state transitions
 // --------------------------------------------------------------------------
 
-test('adding the same item twice shows a count instead of a duplicate row', () => {
+test('adding the same item twice takes two slots, not one row with a count', () => {
     const dragon = item('d1', 1000);
     let side = addToSide([], dragon);
     side = addToSide(side, dragon);
-    assert.equal(side.length, 1, 'one row, not two');
-    assert.equal(side[0].count, 2);
+    assert.equal(side.length, 2, 'two slots, not one row');
+    assert.deepEqual(side.map(e => e.item.id), ['d1', 'd1']);
+    assert.deepEqual(side.map(e => e.count), [1, 1], 'слот всегда весит единицу');
+});
+
+test('addToSide stops at the cap instead of overflowing the board', () => {
+    const dragon = item('d1', 1000);
+    let side = [];
+    for (let i = 0; i < 6; i++) side = addToSide(side, dragon);
+    assert.equal(side.length, MAX_SLOTS);
+});
+
+// count>1 приходит только из старых ссылок вида "id:3" — он разворачивается
+// в отдельные слоты, а не в строку со счётчиком.
+test('addToSide with a count spreads it over separate slots', () => {
+    const side = addToSide([], item('d1', 1000), 3);
+    assert.equal(side.length, 3);
+    assert.deepEqual(side.map(e => e.count), [1, 1, 1]);
 });
 
 test('adding a different item appends a new row', () => {
@@ -103,11 +119,13 @@ test('adding a different item appends a new row', () => {
     assert.equal(side.length, 2);
 });
 
-test('removing one instance decrements the count, and removes the row at zero', () => {
+// Снимается ОДИН слот, а не все копии разом: каждая копия теперь
+// самостоятельный слот, и убирать их скопом человек не просил.
+test('removing an item frees one slot and leaves its other copies alone', () => {
     const dragon = item('d1', 1000);
-    let side = addToSide(addToSide([], dragon), dragon); // count 2
+    let side = addToSide(addToSide([], dragon), dragon); // два слота
     side = removeOneFromSide(side, 'd1');
-    assert.equal(side[0].count, 1);
+    assert.equal(side.length, 1);
     side = removeOneFromSide(side, 'd1');
     assert.deepEqual(side, []);
 });
@@ -137,18 +155,23 @@ test('canAddToSide refuses a 5th distinct item once all 4 slots are taken', () =
     assert.equal(canAddToSide(side, item('fifth', 100)), false);
 });
 
-test('canAddToSide still allows stacking a count on an item already occupying a slot at the cap', () => {
+// Раньше повтор занятого предмета был бесплатным: он уходил в счётчик уже
+// существующей строки и слота не тратил. Теперь у него свой слот, и на
+// заполненной доске места ему нет — ровно как чужому предмету.
+test('canAddToSide refuses another copy of an item already on a full board', () => {
     let side = [];
     for (let i = 0; i < 4; i++) side = addToSide(side, item('i' + i, 100));
-    assert.equal(canAddToSide(side, item('i0', 100)), true); // same id — no new slot needed
+    assert.equal(canAddToSide(side, item('i0', 100)), false);
 });
 
 // --------------------------------------------------------------------------
 //  Totals
 // --------------------------------------------------------------------------
 
-test('sideTotal sums value times count', () => {
-    const side = [{ item: item('a', 1000), count: 2 }, { item: item('b', 500), count: 1 }];
+test('sideTotal sums the slots, and two copies of an item count twice', () => {
+    const twice = item('a', 1000);
+    const side = addToSide(addToSide(addToSide([], twice), twice), item('b', 500));
+    assert.equal(side.length, 3);
     assert.equal(sideTotal(side), 2500);
 });
 
@@ -360,29 +383,38 @@ test('decodeSide caps a side at MAX_SLOTS, not at MAX_TOKENS', () => {
     assert.deepEqual(decoded.map(e => e.item.id), Object.keys(many).slice(0, MAX_SLOTS));
 });
 
-test('encodeSide then decodeSide restores the same items and counts', () => {
+test('encodeSide then decodeSide restores the same slots in the same order', () => {
     const catalog = buildCatalogIndex([item('a', 100), item('b', 200)]);
-    const side = [{ item: catalog.a, count: 3 }, { item: catalog.b, count: 1 }];
+    const side = addToSide(addToSide(addToSide([], catalog.a), catalog.a), catalog.b);
     const encoded = encodeSide(side);
+    assert.equal(encoded, 'a:1,a:1,b:1', 'каждый слот — свой токен');
     const decoded = decodeSide(encoded, catalog);
-    assert.deepEqual(decoded.map(e => [e.item.id, e.count]), [['a', 3], ['b', 1]]);
+    assert.deepEqual(decoded.map(e => e.item.id), ['a', 'a', 'b']);
 });
 
 test('encodeShareQuery / decodeShareQuery round-trip through URLSearchParams like a real link', () => {
     const catalog = buildCatalogIndex([item('a', 100), item('b', 200), item('c', 300)]);
-    const left = [{ item: catalog.a, count: 2 }];
-    const right = [{ item: catalog.b, count: 1 }, { item: catalog.c, count: 5 }];
+    const left = addToSide(addToSide([], catalog.a), catalog.a);
+    const right = addToSide(addToSide([], catalog.b), catalog.c);
     const query = encodeShareQuery(left, right);
     const params = new URLSearchParams(query);
     const restored = decodeShareQuery(params, catalog);
-    assert.deepEqual(restored.left.map(e => [e.item.id, e.count]), [['a', 2]]);
-    assert.deepEqual(restored.right.map(e => [e.item.id, e.count]), [['b', 1], ['c', 5]]);
+    assert.deepEqual(restored.left.map(e => e.item.id), ['a', 'a']);
+    assert.deepEqual(restored.right.map(e => e.item.id), ['b', 'c']);
 });
 
-test('repeating the same id in a share token sums the counts instead of overwriting', () => {
+// Ссылки, разосланные до перехода на «слот — один предмет», несут счётчики.
+// Читаться они обязаны: "a:2" — это два слота, а не строка со счётчиком 2.
+test('an old link with a count expands into that many slots', () => {
+    const catalog = buildCatalogIndex([item('a', 100)]);
+    assert.deepEqual(decodeSide('a:2', catalog).map(e => e.item.id), ['a', 'a']);
+});
+
+test('counts across tokens add up as slots and stop at the cap', () => {
     const catalog = buildCatalogIndex([item('a', 100)]);
     const decoded = decodeSide('a:2,a:3', catalog);
-    assert.deepEqual(decoded.map(e => [e.item.id, e.count]), [['a', 5]]);
+    assert.equal(decoded.length, MAX_SLOTS, 'пять экземпляров не влезают в четыре слота');
+    assert.deepEqual(decoded.map(e => e.item.id), ['a', 'a', 'a', 'a']);
 });
 
 test('an out-of-range count is clamped, not rejected or overflowed', () => {
