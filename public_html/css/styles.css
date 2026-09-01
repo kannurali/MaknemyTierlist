@@ -368,13 +368,18 @@
   width: 1.27cqw; height: 1.27cqw;
   z-index: 3;
 }
-/* trend arrow — mirrors the dot on the left */
+/* trend arrow — mirrors the dot on the left. С картинками легенды все три
+   стрелки одной пропорции (27×32, 37×43, 27×32), поэтому ширина у них общая.
+   Но записать её надо и для «swap» отдельно: ниже по файлу лежит общее
+   правило .trend.tr-swap (2.2cqw) для легенды и модалки, у него та же
+   специфичность, и без этой строки оно перебивало бы ячейку — круглый значок
+   выходил вдвое шире стрелок и наезжал на цену. */
 .cell .trend {
   position: absolute; top: 3.98cqw; left: .1cqw;
   width: 1.27cqw;
   z-index: 3;
 }
-.cell .trend.tr-swap { width: 1.87cqw; }
+.cell .trend.tr-swap { width: 1.27cqw; }
 
 /* per-cell edit controls */
 .cell-edit {
@@ -400,7 +405,7 @@
    предмета налезал на NEW соседнего. */
 .cell-new {
   position: absolute; top: -.15cqw; left: .1cqw; z-index: 7;
-  width: 3.3cqw; height: auto;
+  width: 2.5cqw; height: auto;
   filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.75));
   pointer-events: none;
 }
@@ -410,7 +415,7 @@
    Включаются независимо: у предмета может быть и NEW, и «?» одновременно. */
 .cell-wip {
   position: absolute; top: -.2cqw; right: .1cqw; z-index: 7;
-  width: 1.75cqw; height: auto;
+  width: 1.2cqw; height: auto;
   filter: drop-shadow(0 .15cqw .3cqw rgba(0,0,0,.75));
   pointer-events: none;
 }
@@ -1379,7 +1384,6 @@ body.ptn-locked { overflow: hidden; }
   .cell .tbadge { height: 3.3cqw; }
   .cell .dot { width: 2.5cqw; height: 2.5cqw; }
   .cell .trend { width: 2.5cqw; }
-  .cell .trend.tr-swap { width: 3.7cqw; }
 
   /* плашки тиров */
   .tier-band { height: 8.4cqw; border-radius: 2.5cqw; }
