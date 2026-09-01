@@ -35,10 +35,20 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta property="og:url" content="https://maknemy.com/calculator" />
 <meta property="og:title" content="Калькулятор трейдов Blox Fruits" />
 <meta property="og:description" content="Соберите обе стороны сделки по ценам тирлиста Maknemy и узнайте, выгодна ли она." />
-<meta property="og:image" content="https://maknemy.com/assets/og-image.jpg?v=2" />
-<meta property="og:image:width" content="1920" />
-<meta property="og:image:height" content="1080" />
+<!-- Превью — карточка вердикта калькулятора: то, ради чего на страницу и
+     заходят. Снята с живой страницы (tools/make-og-calculator.mjs), а не
+     нарисована заново, иначе разъехалась бы с сайтом на первой же правке
+     calculator.css.
+
+     Прежде тут стоял assets/og-image.jpg — баннер «ВАША РЕКЛАМА». В чужом
+     чате по ссылке на калькулятор показывалось объявление вместо
+     калькулятора; на остальных страницах эту картинку из превью уже убрали
+     (см. og_brand_card() в api/lib/og.php), калькулятор оставался последним. -->
+<meta property="og:image" content="https://maknemy.com/assets/og-calculator.jpg?v=1" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 <meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:alt" content="Калькулятор трейдов Blox Fruits" />
 <meta name="twitter:card" content="summary_large_image" />
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
