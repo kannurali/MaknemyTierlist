@@ -88,7 +88,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=6" />
+<link rel="stylesheet" href="css/base.css?v=7" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -97,7 +97,7 @@ header('Cache-Control: no-cache, must-revalidate');
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=27" />
+<link rel="stylesheet" href="css/design-page.css?v=28" />
 <link rel="stylesheet" href="css/home.css?v=13" />
 </head>
 <body>
@@ -127,13 +127,14 @@ header('Cache-Control: no-cache, must-revalidate');
           </a>
         </li>
         <li>
-          <!-- «Трейдинг» и «Калькулятор» с сайта пока сняты, профиля тоже нет.
-               Это <button data-soon>, а не мёртвый <span> и не href="#":
-               кнопка кликается и по клику показывает «В активной разработке»
+          <!-- «Трейдинг» с сайта пока снят, профиля тоже нет. Это
+               <button data-soon>, а не мёртвый <span> и не href="#": кнопка
+               кликается и по клику показывает «В активной разработке»
                (js/topbar.js). Пилюля, которая молчит в ответ на клик,
                читается как поломка сайта, а якорь-пустышка только дописывает
                "#" в адресную строку. Вернуть раздел — заменить тег на <a>
-               с href и убрать data-soon.
+               с href и убрать data-soon (так уже сделано с «Калькулятором»
+               ниже — у него теперь есть страница).
 
                aria-disabled намеренно нет: кнопка отвечает на нажатие, а
                «disabled» в ARIA значит «не работает вовсе» — скринридер
@@ -145,10 +146,14 @@ header('Cache-Control: no-cache, must-revalidate');
           </button>
         </li>
         <li>
-          <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+          <!-- «Калькулятор» получил страницу — /calculator — и вышел из
+               «В активной разработке»: рабочая ссылка, как остальные пункты
+               меню. На самой странице /calculator эта же пилюля дополнительно
+               несёт aria-current="page" (см. calculator.php). -->
+          <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text">Калькулятор</span>
-          </button>
+          </a>
         </li>
         <li>
           <a class="mk-pill" href="/news">

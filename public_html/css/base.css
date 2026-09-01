@@ -197,24 +197,48 @@ body.protected img { -webkit-user-drag: none; }
 }
 .chip.all { border-style: dashed; }
 
-/* Переключатель языка — сегментированная пара RU|EN на тех же токенах, что и
-   чипы фильтров. Слитная пара, а не два отдельных чипа: это один выбор из
-   двух, и вид должен это показывать. */
-.lang-switch { gap: 0; }
+/* Переключатель языка — сегментированная пара RU|EN: один выбор из двух, и
+   вид должен это показывать. Дорожка — тёмная плашка макета, выбранная
+   половина — та же градиентная пилюля, что у кнопок шапки, «каталога» и
+   выбранного чипа фильтра.
+
+   Раньше половинки были двумя чипами со своими рамками: у активной справа
+   оставалось скругление, у соседней слева — прямой угол, и на стыке торчала
+   ступенька — пара читалась двумя разными кнопками, а не одним выбором.
+   Теперь рамка одна и общая (дорожка), а половинки внутри неё без границ. */
+.lang-switch {
+  display: inline-flex;
+  gap: 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.536);
+  box-shadow: inset 0 0 0 1px rgba(120, 190, 255, 0.16);
+}
 .lang-switch .chip {
-  padding: 6px 10px;
-  border-radius: 0;
-  min-width: 38px;
+  padding: 5px 14px;
+  min-width: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
   text-align: center;
+  color: #9fb6d8;
+  /* Тот же шрифт, что у остальных подписей редизайна. На тирлисте и в ленте
+     переключатель стоит в панели фильтров, и там кегль ему задаёт
+     .toolbar .chip (design-page.css) — заодно с соседними чипами. */
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.lang-switch .chip:first-child {
-  border-radius: 999px 0 0 999px;
-  border-right-width: 0;
+.lang-switch .chip.active {
+  color: #fff;
+  background: linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%);
+  /* Тень, а не кольцо: кольцо в 5px, как у чипа фильтра, вылезло бы за
+     дорожку — половинка ведь лежит внутри неё, а не сама по себе. */
+  box-shadow: 0 3px 10px rgba(37, 44, 97, .45);
 }
-.lang-switch .chip:last-child { border-radius: 0 999px 999px 0; }
-/* Активная половина должна перекрывать границу соседа, иначе на стыке
-   остаётся тусклая полоска. */
-.lang-switch .chip.active { border-right-width: 1px; margin-right: -1px; }
 .lang-switch .chip:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;

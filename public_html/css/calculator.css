@@ -1,0 +1,1487 @@
+/* ===================================================================
+   Калькулятор трейдов (/calculator) по макету Figma «калькулятор»
+   (MAKNEMY (Copy), node 127:303). Свой файл, свой префикс tc-.
+
+   Геометрия снята с макета один в один и разложена абсолютно внутри
+   фрейма «лид» (1443×1038 сразу под шапкой) — тот же приём и та же
+   единица --u, что на главной (home.css) и в ленте (news-design.css):
+   одна точка макета шириной 1443, с потолком в 1px, чтобы на широких
+   экранах страница не раздувалась вслед за окном.
+
+   Подключается ПОСЛЕ base.css, topbar.css и design-page.css: шапку, фон
+   страницы, подвал и полосу прокрутки берёт оттуда как есть.
+   =================================================================== */
+
+/* Каталог — модалка, и в разметке она СОСЕДНИЙ узел, а не часть .tc-page
+   (иначе её обрезали бы overflow и z-index страницы). Поэтому палитра
+   объявлена сразу на обоих корнях: пока она жила только на .tc-page, ни
+   var(--tc-grad), ни var(--tc-panel) внутри модалки не разрешались — пилюля
+   «каталог» и плашки названий оставались вовсе без заливки. */
+.tc-page,
+.tc-cat-backdrop {
+  /* Акцентный градиент макета — тот же, что на главной и в ленте. */
+  --tc-a: #61b5e9;
+  --tc-b: #2d4aed;
+  --tc-grad: linear-gradient(180deg, var(--tc-a), var(--tc-b));
+
+  /* Плашки макета: два чёрных слоя, 42% и 20% друг на друге (0.536), и
+     отдельно «стекло» 20% — им залиты сама доска и столбики состояния. */
+  --tc-panel: rgba(0, 0, 0, 0.536);
+  --tc-glass: rgba(0, 0, 0, 0.2);
+
+  /* Серый макета: незанятый сегмент столбика, обводка карточки вердикта,
+     точка спроса без данных. */
+  --tc-mute: #454545;
+  --tc-idle: #373737;
+
+  /* Цвета исходов сняты с компонент-сета «Frame 40» (столбики) и «Group 10»
+     (карточка вердикта): проигрыш — красный, выигрыш — зелёный, ничья —
+     бирюзовый. Раньше выигрыш и ничья стояли наоборот, и зелёный столбик
+     означал честную сделку, а бирюзовый — выгодную. */
+  --tc-win: #48ff00;
+  --tc-lose: #ff0000;
+  --tc-fair: #00e8f0;
+
+  /* Обводка карточки вердикта и заливка значка — одна и та же краска в
+     каждом состоянии (в макете это буквально один и тот же paint).
+     Сплошные цвета тоже записаны градиентом: карточка красит обводку
+     фоновым СЛОЕМ (background-image), а слоем цвет быть не может — в
+     многослойном background цвет допустим только последним, и всё
+     объявление с ним просто отбрасывалось. */
+  --tc-ring: linear-gradient(#454545, #454545);
+  --tc-ring-win: linear-gradient(137deg, #11fd00, #009703);
+  --tc-ring-lose: linear-gradient(137deg, #fd0000, #970000);
+  --tc-ring-fair: linear-gradient(#00e8f0, #00e8f0);
+
+  /* Плашки названий в каталоге: градиент на тип предмета (Rectangle 67
+     карточки каталога, 180°). */
+  --tc-plate-fr: linear-gradient(180deg, #6ced00, #098b00);
+  --tc-plate-cs: linear-gradient(180deg, #5e2581, #ee00ff);
+  --tc-plate-pm: linear-gradient(180deg, #ffcd00, #fb5c00);
+  --tc-plate-gp: linear-gradient(180deg, #a50021, #f70057);
+  --tc-plate-cm: linear-gradient(180deg, #fb0fdc, #fb3200);
+  --tc-plate-cr: linear-gradient(180deg, #00d4ff, #1500ff);
+  --tc-plate-ms: linear-gradient(180deg, #00ffd9, #ef00d3);
+  --tc-plate-vh: linear-gradient(180deg, #ff0004, rgba(0, 0, 0, 0.97));
+
+}
+
+.tc-page {
+  --u: min(1px, calc(100vw / 1443));
+
+  position: relative;
+  z-index: 2; /* поверх фонового изображения body, как .stage-wrap на тирлисте */
+  font-family: var(--ui);
+  color: #fff;
+}
+
+/* Скрыто визуально, доступно скринридеру. */
+.tc-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===================== Фрейм «лид» =====================
+   1443×1038 сразу под шапкой; всё внутри разложено абсолютно по
+   координатам макета. Фрейм центрируется: при --u = 1px он ровно
+   макетной ширины, и на экране шире 1443 остаётся посередине, а не
+   прижимается к левому краю. */
+.tc-frame {
+  position: relative;
+  width: calc(1443 * var(--u));
+  height: calc(1038 * var(--u));
+  margin: 0 auto;
+}
+
+/* ===================== Рекламные борта =====================
+   Слот "rail" — тот же документ /api/promo.php и тот же модуль
+   js/promo.js, что у тирлиста и ленты (renderRails() в
+   js/calculator-page.js). Панель 248×670 из макета: белая, с внутренней
+   градиентной обводкой 7 и диагональными полосами. Пока слот не куплен,
+   борт остаётся полосатой заглушкой, а не прячется: это и есть образ
+   свободного места, а не сломанный компонент. */
+.tc-rail-slot {
+  position: absolute;
+  top: calc(15 * var(--u));
+  width: calc(248 * var(--u));
+  height: calc(670 * var(--u));
+}
+.tc-rail-slot-l { left: calc(26 * var(--u)); }
+.tc-rail-slot-r { left: calc(1170 * var(--u)); }
+
+.tc-rail {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: calc(7 * var(--u));
+  box-sizing: border-box;
+  border-radius: calc(24 * var(--u));
+  /* Обводка в макете внутренняя (INSIDE) и градиентная — border с
+     градиентом CSS не умеет, поэтому градиент лежит фоном самой панели,
+     а поле в 7 точек открывает его ровно на толщину обводки. */
+  background: var(--tc-grad);
+  overflow: hidden;
+  pointer-events: none;
+}
+/* Белая подложка заглушки. */
+.tc-rail::before {
+  content: "";
+  position: absolute;
+  inset: calc(7 * var(--u));
+  border-radius: calc(17 * var(--u));
+  background: #fff;
+}
+/* Полосы: в макете это 30-точечные прямоугольники, повёрнутые на -45° с
+   шагом 78. Маска повторяет ровно эти числа — тот же приём, что у борта
+   ленты (.nw-rail::before в news-design.css). */
+.tc-rail::after {
+  content: "";
+  position: absolute;
+  inset: calc(7 * var(--u));
+  border-radius: calc(17 * var(--u));
+  background: linear-gradient(135deg, var(--tc-a), var(--tc-b));
+  -webkit-mask: repeating-linear-gradient(-45deg, #000 0 calc(30 * var(--u)), transparent calc(30 * var(--u)) calc(78 * var(--u)));
+  mask: repeating-linear-gradient(-45deg, #000 0 calc(30 * var(--u)), transparent calc(30 * var(--u)) calc(78 * var(--u)));
+}
+
+/* Занятый борт: полосок нет, картинка кампании заполняет панель. */
+.tc-rail.has-ad {
+  background: #05070d;
+  padding: 0;
+  pointer-events: auto;
+}
+.tc-rail.has-ad::before,
+.tc-rail.has-ad::after { display: none; }
+.tc-rail.has-link { cursor: pointer; }
+.tc-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* contain, а не cover: панель 248×670 — не пропорция обычного креатива,
+   и cover срезал бы рекламодателю верх и низ макета (тот же довод, что
+   у .nw-rail img в ленте). */
+.tc-rail img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: calc(24 * var(--u));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Плашка «РЕКЛАМА» и маркировка erid — те же классы, что рисует
+   js/promo.js для тирлиста и ленты; размеры под эту панель. */
+.tc-rail .ptn-chip,
+.tc-rail .ptn-erid {
+  position: absolute;
+  left: calc(10 * var(--u));
+  padding: calc(4 * var(--u)) calc(9 * var(--u));
+  border-radius: calc(6 * var(--u));
+  background: rgba(0, 0, 0, 0.6);
+  font-family: var(--ui);
+  font-size: calc(12 * var(--u));
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+}
+.tc-rail .ptn-chip { top: calc(10 * var(--u)); }
+.tc-rail .ptn-erid {
+  bottom: calc(10 * var(--u));
+  right: calc(10 * var(--u));
+  font-size: calc(11 * var(--u));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===================== Столбики состояния =====================
+   Две узкие стеклянные колонки по краям доски (28×665, «Frame 42/41» в
+   макете): левая показывает состояние стороны «ВЫ», правая — «ВАМ».
+   Пустая сделка — серые сегменты, как в макете; дальше цвет берут те же
+   токены, что и вердикт, чтобы столбик и надпись не расходились. */
+.tc-gauge {
+  position: absolute;
+  top: calc(28 * var(--u));
+  width: calc(28 * var(--u));
+  height: calc(665 * var(--u));
+  padding: calc(60 * var(--u)) calc(9 * var(--u)) calc(61 * var(--u));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: calc(26 * var(--u));
+  border-radius: calc(58 * var(--u));
+  background: var(--tc-glass);
+  backdrop-filter: blur(calc(3.5 * var(--u)));
+  -webkit-backdrop-filter: blur(calc(3.5 * var(--u)));
+}
+.tc-gauge-l { left: calc(297 * var(--u)); }
+.tc-gauge-r { left: calc(1119 * var(--u)); }
+
+.tc-gauge > span {
+  flex: 1 1 0;
+  border-radius: calc(58 * var(--u));
+  background: var(--tc-idle);
+  transition: background 220ms ease, box-shadow 220ms ease;
+}
+.tc-gauge[data-state="none"] > span { background: var(--tc-idle); }
+.tc-gauge[data-state="win"] > span {
+  background: var(--tc-win);
+  box-shadow: 0 0 calc(12 * var(--u)) rgba(72, 255, 0, 0.45);
+}
+.tc-gauge[data-state="fair"] > span {
+  background: var(--tc-fair);
+  box-shadow: 0 0 calc(12 * var(--u)) rgba(0, 232, 240, 0.45);
+}
+.tc-gauge[data-state="lose"] > span {
+  background: var(--tc-lose);
+  box-shadow: 0 0 calc(12 * var(--u)) rgba(255, 0, 0, 0.45);
+}
+
+/* ===================== Доска ===================== */
+/* «блок с калькулятором» — 743×668, стекло 20% с размытием 19.8. */
+.tc-board {
+  position: absolute;
+  left: calc(351 * var(--u));
+  top: calc(28 * var(--u));
+  width: calc(743 * var(--u));
+  height: calc(668 * var(--u));
+  border-radius: calc(21 * var(--u));
+  background: var(--tc-glass);
+  backdrop-filter: blur(calc(19.8 * var(--u)));
+  -webkit-backdrop-filter: blur(calc(19.8 * var(--u)));
+}
+.tc-board > * { position: absolute; }
+
+/* Обёртки нулевого размера. На макетной сетке они не занимают места, и
+   координаты детей остаются координатами доски — как если бы пилюли,
+   стрелки и итоговая строка лежали в доске напрямую. Нужны они только
+   телефону: там абсолютная раскладка разбирается в поток, и эти элементы
+   должны идти группами, а не вперемешку (см. медиазапрос в конце файла). */
+.tc-marks,
+.tc-total {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 0;
+}
+.tc-marks > *,
+.tc-total > * { position: absolute; }
+
+/* Заголовок. В макете он набран Akira Expanded — шрифт платный, и в вебе
+   его нет. Из двух своих дисплейных берём Proto Sans: при макетном кегле
+   Bootshaus набирает «СРАВНИТЬ ЦЕНЫ» в 227 точек вместо 423, то есть вдвое
+   уже макета, и заголовок переставал быть стеной из букв — а именно ширина
+   и есть главный признак Expanded. Proto Sans, наоборот, шире Akira (542),
+   поэтому набрана Bootshaus с разрядкой 0.03em — тем же приёмом и тем же
+   шрифтом, что Akira-надписи на главной (.hm-ak в home.css). Ширину строки
+   до макетных 423 точек не тянем: Bootshaus уже макетного, и растяжение
+   исказило бы толщину штрихов сильнее, чем расходится сама ширина. */
+.tc-hero {
+  left: 0;
+  top: calc(41 * var(--u));
+  width: 100%;
+  text-align: center;
+}
+.tc-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: calc(46.8 * var(--u));
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+.tc-subtitle {
+  margin: calc(11 * var(--u)) 0 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: calc(18.3 * var(--u));
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+
+/* ===================== Пилюли сторон, стрелки и «vs» ===================== */
+.tc-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(23 * var(--u));
+  padding: 0 calc(13 * var(--u));
+  border-radius: calc(36 * var(--u));
+  background: var(--tc-grad);
+  color: #fff;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  /* В макете Bebas Neue 17. Oswald при том же кегле шире примерно на
+     десятую — тот же расчёт, что у пилюль шапки (topbar.css). */
+  font-size: calc(15.5 * var(--u));
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tc-pill-l { left: calc(44 * var(--u)); top: calc(167 * var(--u)); }
+.tc-pill-r { left: calc(647 * var(--u)); top: calc(167 * var(--u)); }
+
+/* Стрелка-указатель из макета (Vector 3/4, 32×12, залита тем же
+   градиентом). Правая — та же фигура, отражённая. */
+.tc-arrow {
+  width: calc(32 * var(--u));
+  height: calc(12 * var(--u));
+  top: calc(169 * var(--u));
+}
+.tc-arrow-l { left: calc(97 * var(--u)); }
+.tc-arrow-r { left: calc(606 * var(--u)); transform: scaleX(-1); }
+.tc-arrow svg { display: block; width: 100%; height: 100%; }
+
+.tc-vs {
+  left: calc(358 * var(--u));
+  top: calc(166 * var(--u));
+  width: calc(27 * var(--u));
+  text-align: center;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: calc(22 * var(--u));
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* ===================== Сторона сделки ===================== */
+/* Панель слотов 314×314 и панель шкал 314×69 под ней — одна колонка
+   стороны. Обёртка нужна, чтобы JS находил обе части через
+   .tc-side[data-side] (см. sideRoot() в js/calculator-page.js). */
+.tc-side {
+  top: calc(202 * var(--u));
+  width: calc(314 * var(--u));
+  height: calc(390 * var(--u));
+}
+.tc-side[data-side="left"] { left: calc(44 * var(--u)); }
+.tc-side[data-side="right"] { left: calc(385 * var(--u)); }
+
+.tc-slots {
+  position: absolute;
+  left: 0; top: 0;
+  width: calc(314 * var(--u));
+  height: calc(314 * var(--u));
+  margin: 0;
+  padding: calc(25 * var(--u)) calc(27 * var(--u)) calc(25 * var(--u)) calc(23 * var(--u));
+  box-sizing: border-box;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, calc(124 * var(--u)));
+  grid-template-rows: repeat(2, calc(124 * var(--u)));
+  gap: calc(15 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: var(--tc-panel);
+}
+
+/* Слот предмета: 124×124, скругление 18, та же плашка, что у панели. */
+.tc-slot {
+  position: relative;
+  width: calc(124 * var(--u));
+  height: calc(124 * var(--u));
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(4 * var(--u));
+  padding: calc(6 * var(--u));
+  box-sizing: border-box;
+  border: 0;
+  border-radius: calc(18 * var(--u));
+  background: var(--tc-panel);
+  color: #eaf4ff;
+  font-family: var(--ui);
+  cursor: pointer;
+  overflow: hidden;
+  transition: background .15s, box-shadow .15s;
+}
+/* Пустой слот — просто тёмный квадрат, как в макете. Класс остаётся:
+   по нему обработчик .tc-slots отличает «открыть каталог» от «убрать
+   предмет» (см. wireSlots() в js/calculator-page.js). */
+.tc-slot.is-empty { color: rgba(255, 255, 255, 0.22); }
+.tc-slot:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.tc-slot-badge {
+  position: absolute;
+  top: calc(6 * var(--u)); left: calc(6 * var(--u));
+  height: calc(15 * var(--u));
+  width: auto;
+}
+.tc-slot-remove {
+  position: absolute;
+  top: calc(5 * var(--u)); right: calc(5 * var(--u));
+  width: calc(18 * var(--u)); height: calc(18 * var(--u));
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .55);
+  color: #ffb4ae;
+  font-size: calc(11 * var(--u));
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tc-slot-count {
+  position: absolute;
+  bottom: calc(5 * var(--u)); right: calc(5 * var(--u));
+  padding: calc(1 * var(--u)) calc(6 * var(--u));
+  border-radius: 999px;
+  background: rgba(97, 181, 233, .25);
+  color: #cdeeff;
+  font-size: calc(11 * var(--u));
+  font-weight: 700;
+}
+.tc-slot-icon {
+  width: calc(62 * var(--u));
+  height: calc(62 * var(--u));
+  object-fit: contain;
+}
+.tc-slot-name {
+  max-width: 100%;
+  padding: 0 calc(4 * var(--u));
+  font-size: calc(11 * var(--u));
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tc-slot-bottom {
+  display: flex;
+  align-items: center;
+  gap: calc(4 * var(--u));
+}
+.tc-slot-value {
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: #8fd6ff;
+}
+.tc-slot-dot { width: calc(9 * var(--u)); height: calc(9 * var(--u)); }
+
+/* ===================== Шкалы стороны ===================== */
+/* Панель 314×69 под слотами: полоса с указателем, «поинты» со значением
+   и «спрос» с точкой — координаты все из макета (Frame 46/47). */
+.tc-meters {
+  position: absolute;
+  left: 0;
+  top: calc(321 * var(--u));
+  width: calc(314 * var(--u));
+  height: calc(69 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: var(--tc-panel);
+}
+.tc-meters > * { position: absolute; }
+
+.tc-meter-bar {
+  left: calc(34 * var(--u));
+  top: calc(8 * var(--u));
+  width: calc(235 * var(--u));
+  height: calc(10 * var(--u));
+  border-radius: calc(43 * var(--u));
+  background: var(--tc-grad);
+}
+/* Указатель на полосе: доля стороны в сумме двух сторон. В макете он
+   стоит по центру — это и есть пустая сделка, 50/50. Двигает его JS
+   (renderMeters), меняя left. */
+.tc-meter-mark {
+  position: absolute;
+  left: 50%;
+  top: calc(1 * var(--u));
+  width: calc(9 * var(--u));
+  height: calc(9 * var(--u));
+  margin-left: calc(-4.5 * var(--u));
+  transition: left .25s ease;
+}
+.tc-meter-mark svg { display: block; width: 100%; height: 100%; }
+
+.tc-meter-icon {
+  top: calc(30 * var(--u));
+  width: calc(13 * var(--u));
+  height: calc(13 * var(--u));
+}
+.tc-meter-icon-points { left: calc(34 * var(--u)); }
+.tc-meter-icon-demand {
+  left: calc(223 * var(--u));
+  top: calc(33 * var(--u));
+  height: calc(8 * var(--u));
+}
+.tc-meter-icon svg { display: block; width: 100%; height: 100%; }
+
+.tc-meter-label,
+.tc-meter-value {
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: calc(13 * var(--u));
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+.tc-meter-label-points { left: calc(51 * var(--u)); top: calc(32 * var(--u)); }
+.tc-meter-value-points {
+  left: calc(51 * var(--u));
+  top: calc(49 * var(--u));
+  font-variant-numeric: tabular-nums;
+}
+.tc-meter-label-demand { left: calc(239 * var(--u)); top: calc(32 * var(--u)); }
+
+/* Точка агрегированного спроса стороны. Палитра — та же, что у demand-dot
+   по всему сайту (--d-green/yellow/orange/red из base.css); без данных —
+   серый макета. */
+.tc-demand-dot {
+  left: calc(239 * var(--u));
+  top: calc(49 * var(--u));
+  width: calc(10 * var(--u));
+  height: calc(10 * var(--u));
+  border-radius: 50%;
+  background: var(--tc-mute);
+}
+/* Оверпрайс залит градиентом, а не одним цветом, — берём ту же картинку,
+   что легенда тирлиста (.d-neon в styles.css), чтобы кружки совпадали. */
+.tc-demand-dot[data-demand="neon"]   { background: url("../assets/dot-neon.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="green"]  { background: var(--d-green); }
+.tc-demand-dot[data-demand="yellow"] { background: var(--d-yellow); }
+.tc-demand-dot[data-demand="orange"] { background: var(--d-orange); }
+.tc-demand-dot[data-demand="red"]    { background: var(--d-red); }
+
+/* ===================== Итог под доской ===================== */
+.tc-total-line {
+  left: calc(44 * var(--u));
+  top: calc(605 * var(--u));
+  width: calc(655 * var(--u));
+  height: calc(3 * var(--u));
+  border-radius: calc(24 * var(--u));
+  background: var(--tc-grad);
+}
+/* Знак равенства — две полосы 14.7×1.7 с просветом 0.9 между ними
+   (Frame 48 макета, 14.7×4.3 целиком). Полосы по 2 точки в блоке высотой
+   4 просвета не оставляли: они смыкались, и знак читался одной чертой. */
+.tc-total-eq {
+  left: calc(364 * var(--u));
+  top: calc(617 * var(--u));
+  width: calc(14.7 * var(--u));
+  height: calc(4.3 * var(--u));
+  background:
+    linear-gradient(#d9d9d9, #d9d9d9) 0 0 / 100% calc(1.7 * var(--u)) no-repeat,
+    linear-gradient(#d9d9d9, #d9d9d9) 0 100% / 100% calc(1.7 * var(--u)) no-repeat;
+}
+.tc-total-num {
+  left: 0;
+  top: calc(630 * var(--u));
+  width: 100%;
+  text-align: center;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-weight: 400;
+  font-size: calc(17.8 * var(--u));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+/* ===================== Вердикт ===================== */
+/* Группа 588×243: значок-смайл сверху и карточка 588×199 под ним. */
+.tc-result {
+  position: absolute;
+  left: calc(428 * var(--u));
+  top: calc(725 * var(--u));
+  width: calc(588 * var(--u));
+  height: calc(243 * var(--u));
+}
+.tc-result > * { position: absolute; }
+
+.tc-result-badge {
+  left: calc(250 * var(--u));
+  top: 0;
+  /* В макете значок лежит НАД карточкой (Frame 10 идёт после Frame 50).
+     В разметке он стоит раньше карточки, чтобы скринридер читал вердикт
+     сверху вниз, — поэтому порядок отрисовки задаётся явно. Без этого
+     обводка карточки в 9.8 точек накрывала смайлу нижнюю половину. */
+  z-index: 1;
+  width: calc(88 * var(--u));
+  height: calc(88 * var(--u));
+  border-radius: calc(16 * var(--u));
+  background: var(--tc-mute);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* viewBox совпадает со значком макета (134×134), поэтому координаты лиц
+   внутри — те же числа, что в Figma, без пересчёта. */
+.tc-result-badge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Лица нарисованы все четыре сразу, показывается одно. Так они остаются
+   разметкой, а не строкой в JS: правило «DOM-код не использует innerHTML»
+   держит и этот кусок тоже. */
+.tc-face { display: none; }
+.tc-result-badge[data-verdict="none"] .tc-face-none,
+.tc-result-badge[data-verdict="win"]  .tc-face-win,
+.tc-result-badge[data-verdict="lose"] .tc-face-lose,
+.tc-result-badge[data-verdict="fair"] .tc-face-fair { display: block; }
+
+/* Цвет вердикта — единственное место, где итог читается с одного взгляда,
+   без чтения чисел. data-verdict ставит JS (renderResult) и на секции, и
+   на самом значке; --tc-ring красит заодно обводку карточки. */
+#tcResult[data-verdict="win"]  { --tc-ring: var(--tc-ring-win); }
+#tcResult[data-verdict="lose"] { --tc-ring: var(--tc-ring-lose); }
+#tcResult[data-verdict="fair"] { --tc-ring: var(--tc-ring-fair); }
+.tc-result-badge { background: var(--tc-ring); }
+
+.tc-result-card {
+  left: 0;
+  top: calc(44 * var(--u));
+  width: calc(588 * var(--u));
+  height: calc(199 * var(--u));
+  box-sizing: border-box;
+  border-radius: calc(16 * var(--u));
+  background: var(--tc-panel);
+}
+/* Обводка в макете внешняя (OUTSIDE) и в двух состояниях из четырёх —
+   градиентная. Ни тень со spread, ни border градиент так не рисуют, а
+   сплошная подложка под карточкой просвечивала бы сквозь неё насквозь:
+   плашка залита чёрным всего на 53%, и красный с зелёным проступали
+   внутрь, заливая цветом всю карточку.
+   Поэтому обводка — отдельное кольцо: прямоугольник шире карточки на свою
+   толщину, у которого сердцевина вырезана маской по padding-box. Обе
+   границы маски скруглены сами собой — область отсечения фона следует
+   border-radius, — так что и внешний, и внутренний угол кольца совпадают
+   с макетом. */
+.tc-result-card::before {
+  content: "";
+  position: absolute;
+  inset: calc(-9.8 * var(--u));
+  box-sizing: border-box;
+  border: calc(9.8 * var(--u)) solid transparent;
+  border-radius: calc(25.8 * var(--u));
+  background: var(--tc-ring) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  z-index: -1;
+}
+.tc-result-card > * { position: absolute; }
+
+.tc-verdict-heading {
+  left: 0;
+  top: calc(48 * var(--u));
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: calc(55.6 * var(--u));
+  line-height: 1;
+  text-transform: uppercase;
+  /* Та же подмена Akira, что у заголовка доски. */
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+.tc-result-line {
+  left: calc(158 * var(--u));
+  top: calc(116 * var(--u));
+  width: calc(271 * var(--u));
+  height: calc(3.3 * var(--u));
+  border-radius: calc(2 * var(--u));
+  background: #fff;
+}
+.tc-verdict-state {
+  left: 0;
+  top: calc(128 * var(--u));
+  width: 100%;
+  text-align: center;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: calc(25.3 * var(--u));
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.tc-verdict-number {
+  left: 0;
+  top: calc(154 * var(--u));
+  width: 100%;
+  text-align: center;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-weight: 400;
+  font-size: calc(42.4 * var(--u));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+#tcResult[data-verdict="win"] .tc-verdict-state,
+#tcResult[data-verdict="win"] .tc-verdict-number { color: #d8ffe9; }
+#tcResult[data-verdict="lose"] .tc-verdict-state,
+#tcResult[data-verdict="lose"] .tc-verdict-number { color: #ffd9d6; }
+
+/* ===================== Служебная полоса под макетом =====================
+   Ни переключателя языка, ни кнопок, ни оговорки в макете нет — доска там
+   всегда пустая, делиться нечем и объяснять нечего. На сайте всё это
+   нужно, поэтому вынесено ПОД макетный фрейм отдельной полосой:
+   композиция макета остаётся нетронутой, а функции никуда не деваются. */
+.tc-extras {
+  width: calc(1443 * var(--u));
+  margin: 0 auto;
+  padding: calc(24 * var(--u)) calc(26 * var(--u)) calc(48 * var(--u));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(14 * var(--u));
+}
+.tc-lang { align-self: flex-end; }
+
+.tc-state {
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(20, 34, 62, .6);
+  border: 1px solid rgba(120, 190, 255, .2);
+  color: #cfe2ff;
+  font-size: 14px;
+  text-align: center;
+}
+.tc-demand-note {
+  margin: 0;
+  max-width: 56ch;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 220, 0, .35);
+  background: rgba(255, 220, 0, .08);
+  color: #ffe9a8;
+  font-size: 13px;
+}
+.tc-threshold,
+.tc-disclaimer {
+  margin: 0;
+  max-width: calc(760 * var(--u));
+  font-size: calc(13 * var(--u));
+  line-height: 1.5;
+  color: #8fa8cc;
+  text-align: center;
+}
+.tc-disclaimer { color: #6f88ad; }
+
+.tc-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tc-btn {
+  min-height: 44px;
+  padding: 10px 22px;
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  border: 1px solid rgba(120, 190, 255, .3);
+  border-radius: 999px;
+  background: rgba(40, 64, 110, .55);
+  cursor: pointer;
+  transition: filter .15s, background .15s, border-color .15s, transform .08s;
+}
+.tc-btn:active { transform: translateY(1px); }
+.tc-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.tc-btn-accent {
+  background: var(--tc-grad);
+  border-color: transparent;
+  box-shadow: 0 8px 22px rgba(45, 74, 237, .35);
+}
+.tc-btn-ghost { background: transparent; }
+
+/* ===================== Каталог — оверлей поверх страницы =====================
+   Своего кадра в макете у каталога нет (во всех состояниях доска там
+   пустая), поэтому он собран из тех же материалов: плашка 0.536, акцентный
+   градиент, Bebas-подписи. Размеры здесь в обычных px, а не в единицах
+   макета: это модальное окно поверх страницы, оно живёт по размеру экрана,
+   а не по сетке 1443. */
+.tc-cat-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 6, 14, .78);
+  /* Появление и закрытие каталога. Длительность закрытия (180 мс) совпадает с
+     CATALOG_CLOSE_MS в js/calculator-page.js — разъехавшись, они дали бы либо
+     обрыв анимации, либо оверлей, застрявший поверх страницы. */
+  animation: tc-cat-in 180ms ease-out;
+  transition: opacity 180ms ease-in;
+  backdrop-filter: blur(3px);
+}
+/* Каталог по «Frame 92» макета: панель 896×691, поле поиска светлой
+   пилюлей во всю ширину, круглая кнопка с лупой справа от него, пилюля
+   «каталог» отдельной строкой под ним, сетка карточек 4 в ряд и светлая
+   полоса прокрутки с градиентным ползунком. */
+.tc-cat {
+  width: min(896px, 100%);
+  max-height: min(691px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 29px;
+  padding: 43px 61px 20px;
+  box-sizing: border-box;
+  /* В макете панель и карточки залиты одной краской, но там она лежит на
+     белом холсте Figma и читается светло-серой. На тёмной странице обе
+     стали бы одинаково чёрными, и карточки пропали бы внутри панели —
+     поэтому панель светлее ровно настолько, чтобы граница читалась. */
+  background: rgba(255, 255, 255, .1);
+  border-radius: 24px;
+  /* Размытие подложки — то же «стекло», что у доски; рамки в макете нет,
+     панель отделяется от страницы затемнением оверлея. */
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+}
+
+/* Строка поиска: поле 728×35 и кнопка 35×35 с зазором 10 — ровно те же
+   числа, что в макете, доступная ширина панели (774) сходится. */
+.tc-cat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tc-cat-search {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tc-search-input {
+  width: 100%;
+  height: 35px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  font-family: var(--ui);
+  font-size: 15px;
+  /* Поле в макете светлое (#D9D9D9), поэтому и текст в нём тёмный: белый
+     на этой заливке не читался бы вовсе. */
+  color: #10141c;
+  background: #d9d9d9;
+  border: 0;
+  border-radius: 50px;
+}
+.tc-search-input::placeholder { color: #5c6474; }
+.tc-search-input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+/* Лупа в макете — не иконка внутри поля, а отдельный стеклянный кружок
+   справа. Поиск живой (строка фильтрует по вводу), поэтому это подпись к
+   полю, а не кнопка: кнопка, которая ничего не делает, хуже её отсутствия. */
+.tc-cat-search-btn {
+  flex: 0 0 auto;
+  width: 35px;
+  height: 35px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.tc-cat-search-icon {
+  width: 20px;
+  height: 20px;
+  color: #fff;
+}
+
+/* Вторая строка шапки: пилюля «каталог» слева, кнопка закрытия справа.
+   Кнопки закрытия в макете нет — но каталог модальный, и без видимого
+   выхода с телефона из него не выбраться (Esc там нажать нечем). */
+.tc-cat-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tc-cat .tc-pill {
+  position: static;
+  height: 39px;
+  padding: 0 32px;
+  border-radius: 999px;
+  font-size: 18px;
+}
+.tc-cat-close {
+  flex: 0 0 auto;
+  width: 35px; height: 35px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(0, 0, 0, .2);
+  color: #d8e4f5;
+  font-size: 15px;
+  cursor: pointer;
+}
+.tc-cat-close:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.tc-cat-status {
+  margin: 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: #ffb4ae;
+  text-align: center;
+}
+.tc-cat-status:empty { display: none; }
+
+/* Сетка: шаг колонки 190 при карточке 146 — просвет 44. Он не про воздух,
+   а про место: значок типа выходит за левый верхний угол карточки на 18 и
+   иначе лёг бы на соседнюю. */
+.tc-cat-grid {
+  margin: 0;
+  padding: 18px 0 0;
+  list-style: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  column-gap: 44px;
+  row-gap: 46px;
+}
+/* Полоса прокрутки макета: светлая дорожка 12 и градиентный ползунок 29,
+   который её перекрывает. Ползунок шире дорожки, поэтому ширина полосы
+   задана по ползунку, а дорожка нарисована фоном по центру. */
+.tc-cat-grid::-webkit-scrollbar { width: 29px; }
+.tc-cat-grid::-webkit-scrollbar-track {
+  background: linear-gradient(#d9d9d9, #d9d9d9) center / 12px 100% no-repeat;
+  border-radius: 34px;
+}
+.tc-cat-grid::-webkit-scrollbar-thumb {
+  background: var(--tc-grad);
+  border-radius: 12px;
+}
+/* Firefox не знает ::-webkit-scrollbar и красит полосу только двумя цветами.
+   Отдельный блок, а не пара свойств рядом: Chrome с версии 121 при наличии
+   scrollbar-width/scrollbar-color ИГНОРИРУЕТ ::-webkit-scrollbar целиком, и
+   вместо макетной полосы возвращалась обычная тонкая. */
+@supports not selector(::-webkit-scrollbar) {
+  .tc-cat-grid {
+    scrollbar-width: thin;
+    scrollbar-color: #4a7de0 #d9d9d9;
+  }
+}
+/* Настоящая ячейка грида — это <li> (карточка .tc-cat-card лежит внутри
+   него как <button>), поэтому min-width:0 нужен именно тут: без него
+   браузер держит ширину столбца по мин-контенту самого длинного name
+   где-то в списке (nowrap-текст), и на телефоне вторая колонка вылезала
+   за границы страницы, хотя у самой кнопки min-width уже был обнулён. */
+.tc-cat-grid > li {
+  min-width: 0;
+}
+.tc-cat-card {
+  position: relative;
+  /* Карточка — <button>, а кнопка по умолчанию сжимается под содержимое, а не
+     растягивается по ячейке сетки. Из-за этого её ширину задавала длина
+     названия: при ячейке 170 px карточка «Permanent Dragon (West + East)»
+     разрасталась до 208 и заезжала на соседний столбец, а высоты гуляли от
+     211 до 249 — плашки названий вставали на разных уровнях.
+     width/height по 100% прибивают карточку к ячейке, и тогда nowrap с
+     многоточием у .tc-cat-name наконец обрезает текст, а не раздвигает блок. */
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  /* Значок типа торчит за угол — карточке обрезать нечего. Скругление и
+     обрезку держит .tc-cat-inner. */
+  overflow: visible;
+}
+.tc-cat-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--tc-panel);
+  transition: box-shadow .15s;
+}
+.tc-cat-card:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.tc-cat-card.is-full .tc-cat-inner { opacity: .45; }
+.tc-cat-card.is-full { cursor: not-allowed; }
+
+/* Значок типа в стеклянном квадрате 47×47, вынесенный за угол карточки —
+   ровно как «Frame 73» в макете. Буквы берём из легенды тирлиста
+   (assets/design/legend/badge-*.svg): там уже тот же градиент по типу и
+   тёмная внешняя обводка, что нарисованы в макете. */
+.tc-cat-badge-box {
+  position: absolute;
+  top: -18px;
+  left: -18px;
+  width: 47px;
+  height: 47px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.tc-cat-badge {
+  height: 21px;
+  width: auto;
+  display: block;
+}
+/* Пропорция картинки взята из макета (146.3×118.7). Раньше здесь стоял
+   flex:1 с min-height:0 — в колонке без заданной высоты область схлопывалась
+   в ноль, и часть карточек оставалась вовсе без картинки. */
+.tc-cat-art {
+  flex: 0 0 auto;
+  aspect-ratio: 146.3 / 118.7;
+  /* min-height у флекс-элемента по умолчанию auto, то есть «не меньше
+     содержимого»: крупный значок предмета перебивал пропорцию и растягивал
+     карточку, из-за чего плашки названий вставали на разной высоте. */
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.tc-cat-icon {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+/* Плашка названия: сплошной градиент на тип во всю ширину карточки. Цвет
+   подставляет JS через --tc-plate. */
+.tc-cat-name {
+  flex: 0 0 auto;
+  min-height: 33px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  font-family: var(--display);
+  font-size: 13px;
+  line-height: 1.05;
+  letter-spacing: .02em;
+  text-align: center;
+  text-transform: uppercase;
+  overflow: hidden;
+  background: var(--tc-plate, var(--tc-grad));
+}
+.tc-cat-bottom {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px 10px;
+}
+.tc-cat-value {
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.tc-cat-dot { width: 18px; height: 18px; flex: 0 0 auto; }
+
+.tc-cat-footer {
+  margin: 0;
+  padding-top: 8px;
+  font-family: var(--display);
+  font-size: 19px;
+  letter-spacing: .5px;
+  text-align: center;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* Наведение — только там, где есть настоящий указатель мыши. На тач-экране
+   :hover залипает после тапа до следующего касания где-то ещё (тот же
+   принцип, что в home.css) — поэтому все правила наведения собраны здесь,
+   а не разбросаны по местам объявления самих элементов. */
+@media (hover: hover) {
+  .tc-slot.is-empty:hover { color: rgba(255, 255, 255, .45); background: rgba(0, 0, 0, .42); }
+  .tc-slot.is-filled:hover { box-shadow: inset 0 0 0 calc(2 * var(--u)) rgba(255, 90, 80, .45); }
+  .tc-btn:hover { background: rgba(60, 96, 160, .7); border-color: var(--cyan); }
+  .tc-btn-accent:hover { filter: brightness(1.1); background: var(--tc-grad); }
+  .tc-cat-close:hover { background: rgba(255, 90, 80, .28); color: #ffb4ae; }
+  .tc-cat-card:not(.is-full):hover .tc-cat-inner { box-shadow: inset 0 0 0 2px var(--cyan); }
+  .tc-rail.has-link:hover { filter: brightness(1.05); }
+}
+
+/* Закрытие: фон гаснет, панель чуть уезжает вниз и уменьшается. Разделено на
+   два элемента намеренно — панель должна двигаться, а не гаснуть вместе с
+   фоном, иначе взгляд не успевает проследить, куда делся каталог. */
+.tc-cat-backdrop.is-closing { opacity: 0; }
+.tc-cat-backdrop.is-closing .tc-cat {
+  transform: translateY(10px) scale(.97);
+  opacity: 0;
+  transition: transform 180ms ease-in, opacity 180ms ease-in;
+}
+@keyframes tc-cat-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tc-cat { animation: tc-cat-pop 180ms ease-out; }
+@keyframes tc-cat-pop {
+  from { transform: translateY(10px) scale(.97); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Слот, в который только что лёг предмет: короткая подсветка, чтобы взгляд
+   нашёл результат сам, без поиска глазами по доске. */
+.tc-slot.is-just-added { animation: tc-slot-added 900ms ease-out; }
+@keyframes tc-slot-added {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 232, 240, .85), 0 0 22px rgba(0, 232, 240, .55); }
+  60%  { box-shadow: 0 0 0 3px rgba(0, 232, 240, .45), 0 0 18px rgba(0, 232, 240, .35); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 232, 240, 0), 0 0 0 rgba(0, 232, 240, 0); }
+}
+
+/* Отключаем плавные переходы по явному запросу пользователя. */
+@media (prefers-reduced-motion: reduce) {
+  .tc-page * { transition: none !important; }
+  .tc-cat-backdrop,
+  .tc-cat,
+  .tc-slot.is-just-added { animation: none; transition: none; }
+  .tc-cat-backdrop.is-closing .tc-cat { transform: none; transition: none; }
+  .tc-slot.is-just-added { box-shadow: 0 0 0 3px rgba(0, 232, 240, .5); }
+}
+
+/* ===================== Телефон =====================
+   Макетная сетка 1443 рассчитана на полотно шириной с монитор: при
+   пересчёте на 375 доска ужалась бы до 193 точек, а слот — до 32, то есть
+   меньше минимальной цели касания. Поэтому ниже 900 абсолютная раскладка
+   разбирается в обычный поток: те же панели, те же цвета и подписи, но в
+   столбик и по ширине экрана. Борта и столбики состояния при этом уходят —
+   рядом с одной колонкой им места нет (тот же довод, что у .nw-rail-slot
+   в ленте). */
+@media (max-width: 900px) {
+  /* Единица макета возвращается к обычному пикселю. Иначе всё, что здесь
+     не переопределено явно (пилюли, подписи шкал, значки, скругления),
+     ужалось бы в четверть: --u на телефоне равна 375/1443 ≈ 0.26, и пилюля
+     «ВЫ» набиралась бы четырёхпиксельным кеглем. Размеры деталей из макета
+     (пилюля 23, значок 13, точка 10) на телефоне и так к месту — сетка
+     1443 нужна была только раскладке, а её здесь уже нет. */
+  .tc-page {
+    --u: 1px;
+    padding: 18px 12px 40px;
+  }
+
+  .tc-frame {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .tc-rail-slot,
+  .tc-gauge { display: none; }
+
+  .tc-board,
+  .tc-board > *,
+  .tc-marks > *,
+  .tc-total > *,
+  .tc-side > *,
+  .tc-result,
+  .tc-result > *,
+  .tc-result-card > * {
+    position: static;
+  }
+  .tc-marks,
+  .tc-total { width: 100%; height: auto; }
+
+  /* Стороны сделки стоят рядом, а не стопкой: на телефоне «вы» и «вам»
+     сравнивают глазом, а вертикальная стопка разносила их на экран друг
+     от друга — чтобы увидеть обе, приходилось прокручивать.
+
+     Сетка, а не флекс-колонка: заголовок, пилюли и итог тянутся на обе
+     колонки (grid-column: 1 / -1), а стороны занимают по одной. Разметка
+     при этом не меняется — те же пять детей доски, что на десктопе. */
+  .tc-board {
+    width: 100%;
+    height: auto;
+    padding: 18px 14px 20px;
+    box-sizing: border-box;
+    border-radius: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10px;
+    row-gap: 14px;
+    align-items: start;
+  }
+  .tc-hero,
+  .tc-marks,
+  .tc-total { grid-column: 1 / -1; }
+
+  .tc-hero { order: 1; }
+  /* 26, а не макетные 46.8: при 30 строка «СРАВНИТЬ ЦЕНЫ» уже не
+     помещается в 375 и переносится по слову. */
+  .tc-title { font-size: 26px; }
+  .tc-subtitle { font-size: 13px; margin-top: 8px; letter-spacing: 0.04em; }
+
+  /* Пилюли — подписи своих колонок: «вы» прижата к левому краю левой
+     колонки, «вам» — к правому краю правой, «vs» в просвете между ними.
+     Те же 1fr и 10px, что у доски, поэтому пилюля стоит ровно над своей
+     стороной. Стрелки макета указывали на конкретные панели; здесь их
+     роль взяла на себя привязка пилюли к колонке, поэтому их нет. */
+  .tc-marks {
+    order: 2;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 10px;
+  }
+  .tc-pill-l { justify-self: start; }
+  .tc-pill-r { justify-self: end; }
+  .tc-arrow { display: none; }
+  .tc-vs { width: auto; font-size: 18px; }
+
+  .tc-side {
+    order: 3;
+    position: relative;
+    /* Как и у панели шкал ниже: макетные left/top остались бы сдвигом
+       relative — сторона уезжала бы на 202 вниз и на 44 вправо, оставляя
+       под пилюлями пустое место ровно в этот сдвиг. */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tc-side[data-side="left"],
+  .tc-side[data-side="right"] { left: 0; }
+  .tc-side[data-side="left"]  { grid-column: 1; }
+  .tc-side[data-side="right"] { grid-column: 2; order: 4; }
+
+  /* Половина ширины экрана вместо целой: поля и просветы ужаты, иначе на
+     390 слот оказался бы меньше значка предмета. */
+  .tc-slots {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 8px;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+    gap: 8px;
+  }
+  .tc-slot {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    padding: 4px;
+    gap: 2px;
+    font-size: 22px;
+  }
+  .tc-slot-icon { width: 44%; height: auto; aspect-ratio: 1 / 1; }
+  .tc-slot-name { font-size: 9px; padding: 0 2px; }
+  .tc-slot-bottom { gap: 3px; }
+  .tc-slot-value { font-size: 10px; letter-spacing: 0.02em; }
+  .tc-slot-dot { width: 6px; height: 6px; }
+  .tc-slot-badge { height: 11px; top: 3px; left: 3px; }
+  .tc-slot-remove { width: 16px; height: 16px; font-size: 10px; top: 3px; right: 3px; }
+  .tc-slot-count { font-size: 9px; padding: 0 4px; bottom: 3px; right: 3px; }
+
+  /* Панель шкал — над сеткой, а не под ней: в узкой колонке итог стороны
+     читается вместе с её подписью.
+
+     Пропорции макета здесь не масштабируются. Колонка вдвое уже экрана, и
+     при честном пересчёте 314 макетных точек подписи «поинты» и «спрос»
+     получались кеглем меньше 8 — не текст, а грязь. Поэтому панель
+     пересобрана сеткой из тех же готовых частей: полоса, значок с
+     подписью, значение под ним. Смещение из макета (321 вниз от слотов)
+     обнуляется — relative сдвигает картинку, но место в потоке оставляет
+     на старом месте, и под слотами зияла бы дыра в высоту панели. */
+  .tc-meters {
+    position: relative;
+    top: 0;
+    left: 0;
+    order: -1;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 7px 9px 8px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      "bar bar bar bar"
+      "pi  pl  di  dl"
+      "pv  pv  dd  dd";
+    align-items: center;
+    column-gap: 4px;
+    row-gap: 5px;
+  }
+  .tc-meters > * { position: static; }
+  /* relative возвращается точечно: указатель доли внутри полосы остаётся
+     абсолютным и ездит по ней, как на десктопе (его двигает renderMeters). */
+  .tc-meter-bar {
+    position: relative;
+    /* Макетное left: 34 при relative перестаёт быть координатой и
+       становится сдвигом — полоса вылезала за правый край панели. */
+    left: 0;
+    top: 0;
+    grid-area: bar;
+    width: 100%;
+    height: 6px;
+    margin-bottom: 2px;
+  }
+  .tc-meter-mark { width: 8px; height: 8px; top: -1px; margin-left: -4px; }
+  .tc-meter-icon { width: 11px; height: 11px; }
+  .tc-meter-icon-points { grid-area: pi; }
+  .tc-meter-icon-demand { grid-area: di; height: 8px; }
+  .tc-meter-label { font-size: 9px; }
+  .tc-meter-label-points { grid-area: pl; }
+  .tc-meter-label-demand { grid-area: dl; }
+  .tc-meter-value-points { grid-area: pv; font-size: 13px; }
+  .tc-demand-dot { grid-area: dd; width: 9px; height: 9px; }
+
+  .tc-total { order: 5; }
+  /* display: block обязателен обоим. Оба — <span>, а .tc-total > * выше
+     вернул их в поток: инлайновому элементу ширина и высота не задаются,
+     и полоса со знаком равенства просто не рисовались — под доской
+     оставалось одно число. */
+  .tc-total-line {
+    display: block;
+    width: 100%;
+    height: 3px;
+  }
+  .tc-total-eq {
+    display: block;
+    width: 15px;
+    height: 4.3px;
+    margin: 10px auto 0;
+    background-size: 100% 1.7px, 100% 1.7px;
+  }
+  .tc-total-num { display: block; margin-top: 6px; font-size: 18px; }
+
+  .tc-result { width: 100%; height: auto; }
+  .tc-result-badge {
+    width: 66px; height: 66px;
+    margin: 0 auto -33px;
+    border-radius: 14px;
+    /* position: relative нужен ради z-index (значок обязан лежать поверх
+       обводки карточки), но вместе с ним оживает и макетное left: 250 из
+       десктопного правила — значок уезжал на 250px вправо и растягивал
+       документ до 478px при экране в 390. Смещение гасим явно. */
+    position: relative;
+    left: 0;
+    top: 0;
+    z-index: 1;
+  }
+  .tc-result-badge svg { width: 44px; height: 44px; }
+  .tc-result-card {
+    width: 100%;
+    height: auto;
+    padding: 44px 16px 18px;
+    text-align: center;
+  }
+  .tc-result-card::before { inset: -6px; border-width: 6px; border-radius: 22px; }
+  .tc-verdict-heading { font-size: 34px; }
+  .tc-result-line { width: 60%; height: 3px; margin: 12px auto; }
+  .tc-verdict-state { font-size: 20px; display: block; }
+  .tc-verdict-number { font-size: 30px; display: block; margin-top: 8px; }
+
+  .tc-extras { width: 100%; padding: 18px 0 0; }
+  .tc-lang { align-self: center; }
+  .tc-threshold,
+  .tc-disclaimer { font-size: 12px; max-width: none; }
+
+  .tc-cat-grid { grid-template-columns: repeat(2, 1fr); column-gap: 34px; row-gap: 34px; }
+  .tc-cat { padding: 16px; gap: 14px; }
+  .tc-cat-badge-box { width: 38px; height: 38px; top: -14px; left: -14px; }
+  .tc-cat-badge { height: 17px; }
+  .tc-cat .tc-pill { height: 32px; padding: 0 20px; font-size: 16px; }
+  .tc-cat-footer { font-size: 15px; }
+}
+
+/* ===================== Планшеты и большие телефоны =====================
+   Две колонки при 768 дают сторону в 353 точки — вдвое шире телефонной, и
+   телефонный кегль в ней теряется: подпись предмета в 9 точек внутри слота
+   в 165 читается как подпись к иконке, а не как имя. Тот же набор величин,
+   что выше, только под ширину колонки; раскладка не меняется. */
+@media (min-width: 560px) and (max-width: 900px) {
+  .tc-title { font-size: 34px; }
+  .tc-subtitle { font-size: 15px; }
+
+  .tc-slots { padding: 12px; gap: 12px; }
+  .tc-slot { border-radius: 16px; padding: 8px; gap: 4px; }
+  .tc-slot-name { font-size: 12px; padding: 0 4px; }
+  .tc-slot-value { font-size: 14px; }
+  .tc-slot-dot { width: 8px; height: 8px; }
+  .tc-slot-badge { height: 15px; top: 6px; left: 6px; }
+  .tc-slot-remove { width: 22px; height: 22px; font-size: 13px; top: 6px; right: 6px; }
+  .tc-slot-count { font-size: 12px; padding: 1px 6px; bottom: 6px; right: 6px; }
+
+  .tc-meters { padding: 9px 12px 11px; column-gap: 6px; row-gap: 7px; }
+  .tc-meter-bar { height: 8px; }
+  .tc-meter-mark { width: 10px; height: 10px; margin-left: -5px; }
+  .tc-meter-icon { width: 14px; height: 14px; }
+  .tc-meter-icon-demand { height: 10px; }
+  .tc-meter-label { font-size: 12px; }
+  .tc-meter-value-points { font-size: 17px; }
+  .tc-demand-dot { width: 11px; height: 11px; }
+}
+
+/* ===================== Узкие телефоны =====================
+   Ниже 360 половина ширины даёт слот в 53 точки: значок, имя и цена в него
+   уже не помещаются — имя обрезалось по высоте прямо посреди строки. Здесь
+   стороны снова встают стопкой; всё остальное (шкалы над сеткой, пилюли
+   подписями) остаётся как в двух колонках. */
+@media (max-width: 359px) {
+  .tc-board { grid-template-columns: 1fr; }
+  .tc-side[data-side="left"],
+  .tc-side[data-side="right"] { grid-column: 1; }
+
+  /* Колонок больше нет — пилюлям не над чем стоять, и они возвращаются
+     в одну строку с «vs» по центру доски. */
+  .tc-marks {
+    grid-template-columns: auto auto auto;
+    justify-content: center;
+    column-gap: 14px;
+  }
+  .tc-pill-l,
+  .tc-pill-r { justify-self: center; }
+
+  .tc-slots { padding: 12px; gap: 10px; }
+  .tc-slot { border-radius: 14px; padding: 6px; gap: 3px; }
+  .tc-slot-name { font-size: 11px; padding: 0 4px; }
+  .tc-slot-value { font-size: 12px; }
+  .tc-slot-dot { width: 8px; height: 8px; }
+  .tc-slot-badge { height: 13px; top: 5px; left: 5px; }
+  .tc-slot-remove { width: 18px; height: 18px; font-size: 11px; top: 5px; right: 5px; }
+  .tc-slot-count { font-size: 10px; padding: 1px 5px; bottom: 5px; right: 5px; }
+
+  .tc-meter-label { font-size: 11px; }
+  .tc-meter-value-points { font-size: 15px; }
+  .tc-meter-icon { width: 13px; height: 13px; }
+}

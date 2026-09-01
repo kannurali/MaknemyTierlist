@@ -134,7 +134,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=6" />
+<link rel="stylesheet" href="css/base.css?v=7" />
 <link rel="stylesheet" href="css/styles.css?v=51" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
@@ -144,7 +144,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=27" />
+<link rel="stylesheet" href="css/design-page.css?v=28" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -179,9 +179,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </button>
 
   <!-- ================= Шапка сайта (редизайн) ================= -->
-  <!-- «Трейдинг», «Калькулятор» и профиль есть в макете, но разделов под них
-       на сайте пока нет: они выложены кнопками data-soon и по нажатию
-       отвечают «В активной разработке» — см. комментарий у самих пилюль. -->
+  <!-- «Трейдинг» и профиль есть в макете, но разделов под них на сайте пока
+       нет: они выложены кнопками data-soon и по нажатию отвечают
+       «В активной разработке» — см. комментарий у самих пилюль.
+       «Калькулятор» из этого списка вышел — у него уже есть страница. -->
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
@@ -206,13 +207,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </a>
         </li>
         <li>
-          <!-- «Трейдинг» и «Калькулятор» с сайта пока сняты, профиля тоже нет.
-               Это <button data-soon>, а не мёртвый <span> и не href="#":
-               кнопка кликается и по клику показывает «В активной разработке»
+          <!-- «Трейдинг» с сайта пока снят, профиля тоже нет. Это
+               <button data-soon>, а не мёртвый <span> и не href="#": кнопка
+               кликается и по клику показывает «В активной разработке»
                (js/topbar.js). Пилюля, которая молчит в ответ на клик,
                читается как поломка сайта, а якорь-пустышка только дописывает
                "#" в адресную строку. Вернуть раздел — заменить тег на <a>
-               с href и убрать data-soon.
+               с href и убрать data-soon (так уже сделано с «Калькулятором»
+               ниже — у него теперь есть страница).
 
                aria-disabled намеренно нет: кнопка отвечает на нажатие, а
                «disabled» в ARIA значит «не работает вовсе» — скринридер
@@ -224,10 +226,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </button>
         </li>
         <li>
-          <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+          <!-- «Калькулятор» получил страницу — /calculator — и вышел из
+               «В активной разработке»: рабочая ссылка, как остальные пункты
+               меню. На самой странице /calculator эта же пилюля дополнительно
+               несёт aria-current="page" (см. calculator.php). -->
+          <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text">Калькулятор</span>
-          </button>
+          </a>
         </li>
         <li>
           <a class="mk-pill" href="/news">
@@ -363,13 +369,16 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </div>
 
           <div class="legend-col lc-demand">
+            <!-- Оверпрайс — верх шкалы, а не сноска в конце: за такой предмет
+                 переплачивают, значит отдать его легче всего. Порядок сверху
+                 вниз совпадает с оценками, по которым калькулятор считает
+                 спрос стороны (DEMAND_WEIGHT в js/calc.js): 12, 10, 8, 5, 2.
+                 Залит градиентом, а не одним цветом. -->
+            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
             <div class="lg"><span class="lgd d-green"></span><span class="lgl" data-i18n="legend.good">Хорошо</span></div>
             <div class="lg"><span class="lgd d-yellow"></span><span class="lgl" data-i18n="legend.mid">Средне</span></div>
             <div class="lg"><span class="lgd d-orange"></span><span class="lgl" data-i18n="legend.low">Ниже среднего</span></div>
             <div class="lg"><span class="lgd d-red"></span><span class="lgl" data-i18n="legend.bad">Плохо</span></div>
-            <!-- Пятая точка — не уровень спроса, а предупреждение: цену задрали.
-                 Поэтому стоит последней и залита градиентом, а не одним цветом. -->
-            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
           </div>
 
           <div class="legend-col lc-trends">
@@ -485,13 +494,15 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
         <div class="field">
           <label data-i18n="modal.demand">Спрос</label>
+          <!-- Порядок тот же, что в колонке спроса легенды: админ жмёт ровно
+               тот кружок, который увидит читатель. -->
           <div class="seg" id="mDemand">
             <button data-v="" class="active">—</button>
+            <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
             <button data-v="green"><img class="dot" src="assets/dot-green.png" alt="" /></button>
             <button data-v="yellow"><img class="dot" src="assets/dot-yellow.png" alt="" /></button>
             <button data-v="orange"><img class="dot" src="assets/dot-orange.png" alt="" /></button>
             <button data-v="red"><img class="dot" src="assets/dot-red.png" alt="" /></button>
-            <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
           </div>
         </div>
         <div class="field">
@@ -589,7 +600,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
-  <script src="js/i18n.js?v=24"></script>
+  <script src="js/i18n.js?v=27"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
