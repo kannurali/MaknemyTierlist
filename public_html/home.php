@@ -88,7 +88,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=6" />
+<link rel="stylesheet" href="css/base.css?v=7" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -97,7 +97,7 @@ header('Cache-Control: no-cache, must-revalidate');
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=27" />
+<link rel="stylesheet" href="css/design-page.css?v=28" />
 <link rel="stylesheet" href="css/home.css?v=13" />
 </head>
 <body>
