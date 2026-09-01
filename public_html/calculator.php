@@ -45,7 +45,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=5" />
+<link rel="stylesheet" href="css/base.css?v=7" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -54,8 +54,8 @@ header('Cache-Control: no-cache, must-revalidate');
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=27" />
-<link rel="stylesheet" href="css/calculator.css?v=11" />
+<link rel="stylesheet" href="css/design-page.css?v=28" />
+<link rel="stylesheet" href="css/calculator.css?v=15" />
 </head>
 <body>
 
@@ -144,123 +144,216 @@ header('Cache-Control: no-cache, must-revalidate');
     </button>
   </header>
 
+  <!-- Раскладка страницы — макет Figma «калькулятор» (node 127:303): фрейм
+       «лид» 1443×1038 сразу под шапкой, внутри всё стоит по макетным
+       координатам (см. css/calculator.css). Порядок элементов в разметке —
+       смысловой (доска, затем вердикт), позиции задаёт CSS. -->
   <main class="tc-page">
-    <div class="tc-wrap">
+    <div class="tc-frame">
 
-      <!-- Заголовок: крупный дисплейный H1 по макету + строка-подзаголовок. -->
-      <div class="tc-hero">
-        <div class="tc-hero-text">
+      <!-- Рекламные борта 248×670 по краям — реальные размещения слота "rail"
+           (renderRails() в js/calculator-page.js): тот же документ
+           /api/promo.php и тот же модуль js/promo.js, что у тирлиста и ленты.
+           Пока слот не куплен, борт остаётся тем, чем он и является в
+           макете, — полосатой заглушкой. -->
+      <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
+        <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+      </div>
+      <div class="tc-rail-slot tc-rail-slot-r" aria-hidden="true">
+        <aside class="tc-rail" id="tcRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+      </div>
+
+      <!-- Столбики состояния по бокам доски (в макете — «Frame 42/41»).
+           Левый показывает состояние стороны «ВЫ», правый — «ВАМ». Порог
+           честности тот же, что у вердикта (CALC.THRESHOLD_PCT), иначе
+           столбики спорили бы с надписью в карточке. aria-hidden: это
+           дублирование вердикта цветом, а сам вердикт уже объявляется
+           через role="status". -->
+      <div class="tc-gauge tc-gauge-l" id="tcGaugeL" data-state="none" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="tc-gauge tc-gauge-r" id="tcGaugeR" data-state="none" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- ================= Доска сравнения ================= -->
+      <div class="tc-board">
+
+        <div class="tc-hero">
           <h1 class="tc-title" data-i18n="calc.title">Сравнить цены</h1>
           <p class="tc-subtitle" data-i18n="calc.subtitle">Сравните цены фруктов в реальном времени!</p>
         </div>
-        <!-- Тот же компонент, что в тулбаре тирлиста/ленты (base.css: .lang-switch/.chip) —
-             своих стилей переключателю здесь заводить не нужно. -->
-        <div class="lang-switch tc-lang" id="langSwitch" role="group"
-             data-i18n-label="lang.switch" aria-label="Язык интерфейса">
-          <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
-          <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
-        </div>
-      </div>
 
-      <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
-
-      <!-- Три колонки: рекламный борт | панель сравнения | рекламный борт.
-           Борта — реальные размещения слота "rail" (см. renderRails() в
-           js/calculator-page.js) — тот же документ /api/promo.php и тот же
-           модуль js/promo.js, что у тирлиста (app.js) и ленты (news-page.js,
-           fillNewsRail()/renderNewsRails()). Пока слот не куплен, борт остаётся
-           тем, чем он и является в макете, — полосатой заглушкой (см. CSS). -->
-      <div class="tc-layout">
-        <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
-          <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
-        </div>
-
-        <!-- Столбики состояния по бокам доски. Левый показывает состояние
-             стороны «ВЫ», правый — «ВАМ»: сторона в минусе красная, в плюсе
-             синяя, при честном обмене обе зелёные. Порог честности тот же, что
-             у вердикта (CALC.THRESHOLD_PCT), иначе столбики спорили бы с
-             надписью под доской. aria-hidden: это дублирование вердикта
-             цветом, а сам вердикт уже объявляется через role="status". -->
-        <div class="tc-gauge tc-gauge-l" id="tcGaugeL" data-state="none" aria-hidden="true">
-          <span></span><span></span><span></span>
+        <!-- Пилюли сторон, стрелки-указатели и «vs» между ними. Обёртка не
+             занимает места на макетной сетке — она нужна телефону, где всё
+             это собирается в одну строку. -->
+        <div class="tc-marks" aria-hidden="true">
+          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill">ВЫ</span>
+          <span class="tc-arrow tc-arrow-l">
+            <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32.155 11.5353H0L14.5132 8.72569L12.1752 0L32.155 11.5353Z" fill="url(#tcArrowGrad)"/>
+              <defs>
+                <linearGradient id="tcArrowGrad" x1="16.0775" y1="0" x2="16.0775" y2="11.5353" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="tc-vs" data-i18n="calc.versus">VS</span>
+          <span class="tc-arrow tc-arrow-r">
+            <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32.155 11.5353H0L14.5132 8.72569L12.1752 0L32.155 11.5353Z" fill="url(#tcArrowGrad)"/>
+            </svg>
+          </span>
+          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill">ВАМ</span>
         </div>
 
-        <div class="tc-panel">
-          <div class="tc-sides">
-            <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
-              <!-- Полный смысл стороны остаётся доступным именем секции для
-                   скринридера; на глаз в макете — короткая пилюля «ВЫ». -->
-              <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-              <div class="tc-side-head">
-                <span class="tc-pill tc-pill-side" data-i18n="calc.givePill" aria-hidden="true">ВЫ</span>
-                <button type="button" class="tc-clear-side" title="Очистить: Вы отдаёте" aria-label="Очистить: Вы отдаёте">✕</button>
-              </div>
+        <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
+          <!-- Полный смысл стороны остаётся доступным именем секции для
+               скринридера; на глаз в макете — короткая пилюля «ВЫ». -->
+          <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
 
-              <ul class="tc-slots" data-side="left"></ul>
+          <ul class="tc-slots" data-side="left"></ul>
 
-              <div class="tc-meters">
-                <div class="tc-meter">
-                  <span class="tc-meter-label" data-i18n="calc.pointsLabel">Пойнты</span>
-                  <strong class="tc-meter-value" data-role="points">0</strong>
-                </div>
-                <div class="tc-meter">
-                  <span class="tc-meter-label" data-i18n="calc.demandLabel">Спрос</span>
-                  <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
-                </div>
-              </div>
-              <div class="tc-meter-bar"><span class="tc-meter-bar-fill" data-role="bar"></span></div>
-            </section>
-
-            <div class="tc-versus" aria-hidden="true">
-              <span data-i18n="calc.versus">VS</span>
-            </div>
-
-            <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
-              <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-              <div class="tc-side-head">
-                <span class="tc-pill tc-pill-side" data-i18n="calc.getPill" aria-hidden="true">ВАМ</span>
-                <button type="button" class="tc-clear-side" title="Очистить: Вы получаете" aria-label="Очистить: Вы получаете">✕</button>
-              </div>
-
-              <ul class="tc-slots" data-side="right"></ul>
-
-              <div class="tc-meters">
-                <div class="tc-meter">
-                  <span class="tc-meter-label" data-i18n="calc.pointsLabel">Пойнты</span>
-                  <strong class="tc-meter-value" data-role="points">0</strong>
-                </div>
-                <div class="tc-meter">
-                  <span class="tc-meter-label" data-i18n="calc.demandLabel">Спрос</span>
-                  <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
-                </div>
-              </div>
-              <div class="tc-meter-bar"><span class="tc-meter-bar-fill" data-role="bar"></span></div>
-            </section>
+          <div class="tc-meters">
+            <span class="tc-meter-bar">
+              <span class="tc-meter-mark" data-role="mark" aria-hidden="true">
+                <svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.418 5.067 4.054 2.702 1.689 5.067" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </span>
+            <span class="tc-meter-icon tc-meter-icon-points" aria-hidden="true">
+              <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.61375 3.54677L8.16057 2.64039C7.81725 1.95375 7.11546 1.52002 6.34778 1.52002H5.81285C5.04517 1.52002 4.34346 1.95359 4.00015 2.64022L3.54688 3.54677" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M5.06694 10.6405H4.29131C3.28269 10.6405 2.42757 9.89885 2.28493 8.90037L1.768 5.2819C1.63719 4.36617 2.34776 3.54688 3.27279 3.54688H8.88787C9.8129 3.54688 10.5235 4.36617 10.3927 5.28191L10.2455 6.31225" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M9.62704 9.12016C9.62704 9.95967 8.94648 10.6402 8.10698 10.6402C7.26747 10.6402 6.58691 9.95967 6.58691 9.12016C6.58691 8.28065 7.26747 7.6001 8.10698 7.6001C8.94648 7.6001 9.62704 8.28065 9.62704 9.12016Z" stroke="#fff" stroke-width="1.01337"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-points" data-i18n="calc.pointsLabel">Пойнты</span>
+            <strong class="tc-meter-value tc-meter-value-points" data-role="points">0</strong>
+            <span class="tc-meter-icon tc-meter-icon-demand" aria-hidden="true">
+              <svg viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0.5 6.6 4.34 2.03 7.1 5.32 11.15 0.51" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6.6 0.95 11.1 0.5 11.55 5.05" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-demand" data-i18n="calc.demandLabel">Спрос</span>
+            <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
           </div>
-        </div>
+        </section>
 
-        <div class="tc-gauge tc-gauge-r" id="tcGaugeR" data-state="none" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
+        <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
+          <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
 
-        <div class="tc-rail-slot tc-rail-slot-r" aria-hidden="true">
-          <aside class="tc-rail" id="tcRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+          <ul class="tc-slots" data-side="right"></ul>
+
+          <div class="tc-meters">
+            <span class="tc-meter-bar">
+              <span class="tc-meter-mark" data-role="mark" aria-hidden="true">
+                <svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.418 5.067 4.054 2.702 1.689 5.067" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </span>
+            <span class="tc-meter-icon tc-meter-icon-points" aria-hidden="true">
+              <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.61375 3.54677L8.16057 2.64039C7.81725 1.95375 7.11546 1.52002 6.34778 1.52002H5.81285C5.04517 1.52002 4.34346 1.95359 4.00015 2.64022L3.54688 3.54677" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M5.06694 10.6405H4.29131C3.28269 10.6405 2.42757 9.89885 2.28493 8.90037L1.768 5.2819C1.63719 4.36617 2.34776 3.54688 3.27279 3.54688H8.88787C9.8129 3.54688 10.5235 4.36617 10.3927 5.28191L10.2455 6.31225" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M9.62704 9.12016C9.62704 9.95967 8.94648 10.6402 8.10698 10.6402C7.26747 10.6402 6.58691 9.95967 6.58691 9.12016C6.58691 8.28065 7.26747 7.6001 8.10698 7.6001C8.94648 7.6001 9.62704 8.28065 9.62704 9.12016Z" stroke="#fff" stroke-width="1.01337"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-points" data-i18n="calc.pointsLabel">Пойнты</span>
+            <strong class="tc-meter-value tc-meter-value-points" data-role="points">0</strong>
+            <span class="tc-meter-icon tc-meter-icon-demand" aria-hidden="true">
+              <svg viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0.5 6.6 4.34 2.03 7.1 5.32 11.15 0.51" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6.6 0.95 11.1 0.5 11.55 5.05" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-demand" data-i18n="calc.demandLabel">Спрос</span>
+            <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
+          </div>
+        </section>
+
+        <!-- Итоговая строка под сторонами: полоса во всю доску, знак
+             равенства и разница в пойнтах. -->
+        <div class="tc-total">
+          <span class="tc-total-line" aria-hidden="true"></span>
+          <span class="tc-total-eq" aria-hidden="true"></span>
+          <strong class="tc-total-num" id="tcTotalNum">0</strong>
         </div>
       </div>
 
       <!-- role="status" + aria-live: разница и вердикт обязаны озвучиваться
-           скринридером при каждом изменении состава сторон (см. ТЗ). Одна
-           общая область, а не отдельная на каждый кусок — иначе смена сделки
-           звучала бы двумя-тремя отдельными, рассинхронизированными репликами. -->
+           скринридером при каждом изменении состава сторон. Одна общая
+           область, а не отдельная на каждый кусок — иначе смена сделки
+           звучала бы двумя-тремя рассинхронизированными репликами. -->
       <section class="tc-result" id="tcResult" role="status" aria-live="polite">
-        <span class="tc-result-badge" id="tcVerdictBadge" data-verdict="none" aria-hidden="true"></span>
-        <span class="tc-diff-label" data-i18n="calc.diffLabel">Разница</span>
-        <h2 class="tc-verdict-heading" id="tcVerdictHeading" data-i18n="calc.verdictPrompt">Проверим?</h2>
-        <strong class="tc-verdict-number" id="tcVerdictNumber">—</strong>
-        <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
-        <p class="tc-demand-note" id="tcDemandNote" hidden></p>
+        <span class="tc-result-badge" id="tcVerdictBadge" data-verdict="none" aria-hidden="true">
+          <!-- viewBox равен значку макета (Frame 51, 134×134), поэтому
+               координаты ниже — те же числа, что в Figma, без пересчёта.
+               Все четыре лица лежат в разметке, показывает одно CSS по
+               data-verdict: строить их в JS значило бы собирать SVG строкой. -->
+          <svg viewBox="0 0 134 134" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="67" cy="67" r="39.5" stroke="#fff" stroke-width="5"/>
+            <g class="tc-face tc-face-none">
+              <circle cx="50.5" cy="62.5" r="8.5" fill="#d9d9d9"/>
+              <circle cx="84.5" cy="62.5" r="8.5" fill="#d9d9d9"/>
+              <path d="M55.5 81.5C55.5 81.5 59.5 88 67 88C74.5 88 78.5 81.5 78.5 81.5"
+                    stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            </g>
+            <g class="tc-face tc-face-lose" stroke="#fff" stroke-width="5" stroke-linecap="round">
+              <path d="M75 63L88.5 66.69"/>
+              <path d="M45 66.66L58.52 63.03"/>
+              <path d="M57.03 87C57.03 87 55.98 79 66 79C76.02 79 74.97 87 74.97 87"/>
+            </g>
+            <g class="tc-face tc-face-win" stroke="#fff" stroke-width="5" stroke-linecap="round">
+              <path d="M45 66.62C45 66.62 46.5 62.53 50.5 61.46C54.5 60.39 58.52 62.99 58.52 62.99"/>
+              <path d="M87.97 66.48C87.97 66.48 86.53 62.55 82.68 61.52C78.84 60.49 74.97 62.99 74.97 62.99"/>
+              <path d="M74.97 78.96C74.97 78.96 76.02 86.96 66 86.96C55.98 86.96 57.03 78.96 57.03 78.96"/>
+            </g>
+            <g class="tc-face tc-face-fair" fill="#fff">
+              <rect x="47" y="59" width="7" height="7" rx="3.5"/>
+              <rect x="80" y="59" width="7" height="7" rx="3.5"/>
+              <rect x="47" y="71" width="40" height="7" rx="3.5"/>
+            </g>
+          </svg>
+        </span>
+        <div class="tc-result-card">
+          <h2 class="tc-verdict-heading" id="tcVerdictHeading" data-i18n="calc.verdictPrompt">Проверим?</h2>
+          <span class="tc-result-line" aria-hidden="true"></span>
+          <span class="tc-verdict-state" id="tcVerdictState"></span>
+          <strong class="tc-verdict-number" id="tcVerdictNumber">0%</strong>
+        </div>
       </section>
+    </div>
 
+    <!-- ============ Служебная полоса ============
+         Переключателя языка, кнопок и оговорок в макете нет: доска там
+         всегда пустая, делиться нечем и объяснять нечего. На сайте всё это
+         нужно, поэтому вынесено под макетный фрейм — композиция макета
+         остаётся нетронутой. -->
+    <div class="tc-extras">
+
+      <!-- Тот же компонент, что в тулбаре тирлиста/ленты (base.css:
+           .lang-switch/.chip) — своих стилей переключателю здесь заводить
+           не нужно. -->
+      <div class="lang-switch tc-lang" id="langSwitch" role="group"
+           data-i18n-label="lang.switch" aria-label="Язык интерфейса">
+        <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
+        <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
+      </div>
+
+      <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
+
+      <!-- Подсказка про спрос лежит рядом с вердиктом по смыслу, но не внутри
+           карточки: в макете у карточки фиксированная высота 199, и абзац
+           переменной длины ломал бы её. Своя aria-live — чтобы предупреждение
+           всё равно прозвучало, как когда оно жило внутри #tcResult. -->
+      <p class="tc-demand-note" id="tcDemandNote" role="status" aria-live="polite" hidden></p>
+
+      <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
       <p class="tc-disclaimer" data-i18n="calc.disclaimer">Значения — это оценка ценности по нашему тирлисту, а не игровое ограничение на обмен Blox Fruits. Решение — за вами.</p>
 
       <div class="tc-actions">
@@ -283,15 +376,22 @@ header('Cache-Control: no-cache, must-revalidate');
       <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
         <div class="tc-cat-head">
           <div class="tc-cat-search">
-            <svg class="tc-cat-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
-              <path d="M18 18L13.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
             <label class="tc-sr-only" for="tcCatalogSearch" data-i18n="calc.searchLabel">Поиск предмета</label>
             <input type="text" id="tcCatalogSearch" class="tc-search-input"
                    data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
                    autocomplete="off" spellcheck="false" />
           </div>
+          <!-- Лупа в макете стоит отдельным кружком справа от поля. Это
+               подпись к полю, а не кнопка: список фильтруется по вводу, и
+               нажимать тут нечего. -->
+          <span class="tc-cat-search-btn" aria-hidden="true">
+            <svg class="tc-cat-search-icon" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
+              <path d="M18 18L13.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </span>
+        </div>
+        <div class="tc-cat-sub">
           <span class="tc-pill" id="tcCatalogTitle" data-i18n="calc.catalogPill">Каталог</span>
           <button type="button" class="tc-cat-close" id="tcCatalogClose" data-i18n-label="calc.catalogClose" aria-label="Закрыть каталог">✕</button>
         </div>
@@ -314,9 +414,9 @@ header('Cache-Control: no-cache, must-revalidate');
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=25"></script>
+  <script src="js/i18n.js?v=27"></script>
   <script src="js/promo.js?v=2"></script>
-  <script src="js/calc.js?v=4"></script>
-  <script src="js/calculator-page.js?v=8"></script>
+  <script src="js/calc.js?v=6"></script>
+  <script src="js/calculator-page.js?v=13"></script>
 </body>
 </html>

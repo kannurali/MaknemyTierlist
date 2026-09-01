@@ -143,7 +143,10 @@
   // Цвет агрегированного спроса → уже переведённое название уровня. Те же
   // четыре слова, что и в легенде тирлиста (index.php: "Хорошо"/"Средне"/
   // "Ниже среднего"/"Плохо") — новых строк под них заводить незачем.
-  const DEMAND_LEVEL_KEY = { green: "legend.good", yellow: "legend.mid", orange: "legend.low", red: "legend.bad" };
+  const DEMAND_LEVEL_KEY = {
+    neon: "legend.neon", green: "legend.good", yellow: "legend.mid",
+    orange: "legend.low", red: "legend.bad"
+  };
 
   // ------------------------------------------------------------------------
   //  Шкалы стороны: «Пойнты» (сумма value — и ничего больше, отдельной
@@ -165,9 +168,12 @@
       ? tx("calc.demandAggregate", { level: tx(DEMAND_LEVEL_KEY[bucket]) })
       : tx("calc.demandUnknown"));
 
-    const max = Math.max(total, otherTotal, 1);
-    const pct = Math.max(0, Math.min(100, (total / max) * 100));
-    root.querySelector('[data-role="bar"]').style.width = pct + "%";
+    // Указатель на полосе: доля стороны в сумме двух сторон. Пустая сделка —
+    // ровно середина, как в макете: делить 0 на 0 нечем, а «ноль слева»
+    // читался бы как «эта сторона проигрывает», хотя сравнивать ещё нечего.
+    const sum = total + otherTotal;
+    const pct = sum > 0 ? Math.max(0, Math.min(100, (total / sum) * 100)) : 50;
+    root.querySelector('[data-role="mark"]').style.left = pct + "%";
   }
 
   // ------------------------------------------------------------------------
@@ -195,25 +201,41 @@
     if (gl) { gl.dataset.state = gaugeL; }
     if (gr) { gr.dataset.state = gaugeR; }
 
+    // Заголовок карточки называет исход: «ПРОВЕРИМ?» до сделки и
+    // «ВЫГОДНО» / «НЕ ВЫГОДНО» / «РАВНО» после — четыре варианта компонента
+    // «Group 10» в макете отличаются именно им, а не только цветом обводки.
+    // Строка под чертой поясняет исход словами, число под ней — процентом,
+    // а разницу в пойнтах показывает строка под доской.
+    const headingEl = $("#tcVerdictHeading");
+    const stateEl = $("#tcVerdictState");
+    const numberEl = $("#tcVerdictNumber");
+    const totalEl = $("#tcTotalNum");
+
     if (bothEmpty) {
-      $("#tcVerdictHeading").textContent = tx("calc.verdictPrompt");
-      $("#tcVerdictNumber").textContent = "—"; // — placeholder, пока сторон нет
+      headingEl.textContent = tx("calc.verdictPrompt");
+      stateEl.textContent = "";
+      numberEl.textContent = "0%";
+      totalEl.textContent = "0";
     } else {
       const verdictKey = trade.verdict === "win" ? "calc.verdictWin"
         : trade.verdict === "lose" ? "calc.verdictLose"
         : "calc.verdictFair";
-      $("#tcVerdictHeading").textContent = tx(verdictKey);
+      const titleKey = trade.verdict === "win" ? "calc.verdictWinTitle"
+        : trade.verdict === "lose" ? "calc.verdictLoseTitle"
+        : "calc.verdictFairTitle";
+      headingEl.textContent = tx(titleKey);
+      stateEl.textContent = tx(verdictKey);
 
       const diffAbs = Math.round(trade.diffAbs);
       const diffPct = Math.round(trade.diffPct * 10) / 10;
       // Оба числа печатаются с одним и тем же минусом U+2212. Дефис, который
       // Number отдаёт сам, заметно короче и выше плюса, и в строке вида
-      // «−116 400 (-88.2%)» разнобой видно глазом — а это самое крупное
-      // число на странице. Отсюда явный знак и Math.abs() у обоих.
+      // «−116 400» / «−88.2%» разнобой видно глазом — а это самые крупные
+      // числа на странице. Отсюда явный знак и Math.abs() у обоих.
       const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
       const pctSign = diffPct > 0 ? "+" : (diffPct < 0 ? "−" : "");
-      $("#tcVerdictNumber").textContent =
-        sign + fmtNum(Math.abs(diffAbs)) + " (" + pctSign + Math.abs(diffPct) + "%)";
+      numberEl.textContent = pctSign + Math.abs(diffPct) + "%";
+      totalEl.textContent = sign + fmtNum(Math.abs(diffAbs));
     }
 
     const noteEl = $("#tcDemandNote");
@@ -230,19 +252,6 @@
   // общий проход applyLang() подстановки не делает. Отдельная функция.
   function renderThreshold() {
     $("#tcThreshold").textContent = tx("calc.thresholdNote", { pct: CALC.THRESHOLD_PCT });
-  }
-
-  // Подпись кнопки очистки стороны зависит от названия стороны — подстановка,
-  // общий проход applyLang() её не делает (см. renderThreshold() выше).
-  function renderClearTitles() {
-    const giveTitle = tx("calc.clearSide", { side: tx("calc.giveLabel") });
-    const getTitle = tx("calc.clearSide", { side: tx("calc.getLabel") });
-    const leftBtn = sideRoot("left").querySelector(".tc-clear-side");
-    const rightBtn = sideRoot("right").querySelector(".tc-clear-side");
-    leftBtn.title = giveTitle;
-    leftBtn.setAttribute("aria-label", giveTitle);
-    rightBtn.title = getTitle;
-    rightBtn.setAttribute("aria-label", getTitle);
   }
 
   // Ссылка в адресной строке всегда отражает текущую сделку — это и есть
@@ -302,19 +311,28 @@
     btn.setAttribute("aria-label", tx("calc.addItem", { name: it.name || "" }));
 
     const code = CALC.badgeCodeFor(it.type);
-    btn.appendChild(badgeImg(it.type, "tc-cat-badge"));
 
+    // Скруглением и обрезкой заведует внутренняя обёртка, а не сама кнопка:
+    // значок типа в макете выходит за левый верхний угол карточки, и
+    // overflow:hidden на кнопке срезал бы его.
+    const inner = document.createElement("span");
+    inner.className = "tc-cat-inner";
+
+    const art = document.createElement("span");
+    art.className = "tc-cat-art";
     const icon = document.createElement("img");
     icon.className = "tc-cat-icon";
     icon.src = it.icon || "";
     icon.alt = "";
-    btn.appendChild(icon);
+    art.appendChild(icon);
+    inner.appendChild(art);
 
     const name = document.createElement("span");
     name.className = "tc-cat-name";
-    name.style.setProperty("--tc-badge-color", "var(--tc-badge-" + code + ")");
+    // Плашка названия залита градиентом своего типа (Rectangle 67 макета).
+    name.style.setProperty("--tc-plate", "var(--tc-plate-" + code + ")");
     name.textContent = it.name || "";
-    btn.appendChild(name);
+    inner.appendChild(name);
 
     const bottom = document.createElement("span");
     bottom.className = "tc-cat-bottom";
@@ -329,7 +347,14 @@
       dot.alt = "";
       bottom.appendChild(dot);
     }
-    btn.appendChild(bottom);
+    inner.appendChild(bottom);
+    btn.appendChild(inner);
+
+    // Значок типа последним: он лежит поверх карточки и за её углом.
+    const badgeBox = document.createElement("span");
+    badgeBox.className = "tc-cat-badge-box";
+    badgeBox.appendChild(badgeImg(it.type, "tc-cat-badge"));
+    btn.appendChild(badgeBox);
 
     btn.addEventListener("click", () => {
       const side = catalogState.side;
@@ -515,7 +540,7 @@
   }
 
   // ------------------------------------------------------------------------
-  //  Слоты и очистка стороны
+  //  Слоты
   // ------------------------------------------------------------------------
   function wireSlots(side) {
     const root = sideRoot(side);
@@ -528,11 +553,6 @@
         sides[side] = CALC.removeOneFromSide(sides[side], slot.dataset.id);
         onSidesChanged();
       }
-    });
-
-    root.querySelector(".tc-clear-side").addEventListener("click", () => {
-      sides[side] = CALC.clearSide();
-      onSidesChanged();
     });
   }
 
@@ -659,7 +679,6 @@
     });
 
     renderThreshold();
-    renderClearTitles();
     // Строки-подстановки (счётчик, слоты, вердикт, подсказка по спросу)
     // заново рисуются вместе со всей сделкой — их не покрывает общий проход
     // выше. renderAll(), не onSidesChanged(): состав сторон не менялся,
@@ -680,18 +699,107 @@
   })();
 
   // ------------------------------------------------------------------------
-  //  Загрузка каталога и восстановление сделки из ссылки
+  //  Загрузка каталога, опрос обновлений и восстановление сделки из ссылки
   // ------------------------------------------------------------------------
+  //  Цены калькулятора — это цены тирлиста: отдельной копии нет, каталог
+  //  собирается из того же /api/tierlist.php. Но одной загрузки при открытии
+  //  страницы мало: вкладку держат открытой часами, и правка цены в админке
+  //  доезжала бы до неё только после F5 — человек считал бы сделку по цифрам,
+  //  которых на сайте уже нет.
+  //
+  //  Опрос устроен как на тирлисте (js/app.js): раз в POLL_MS читаем
+  //  крошечный /api/state.php ({rev, likes, promoRev} — десятки байт), и
+  //  только когда rev изменился, качаем полный документ по
+  //  /api/tierlist.php?rev=<n>. Ответ на конкретный rev помечен immutable
+  //  (см. api/tierlist.php), поэтому повторный запрос с тем же rev до сервера
+  //  не доходит вовсе.
+  const API_STATE = "/api/state.php";
+  const API_TIERLIST = "/api/tierlist.php";
+  const POLL_MS = 30000;
+  let lastRev = null;
+  let pollTimer = null;
+
+  function applyTierlist(doc) {
+    catalog = CALC.flattenTierlist(doc);
+    catalogIndex = CALC.buildCatalogIndex(catalog);
+  }
+
+  // Сделка хранит сами предметы, а не только их id, поэтому после обновления
+  // каталога строки надо пересобрать: иначе на доске остались бы объекты со
+  // старой ценой, и итог разошёлся бы с тирлистом ровно на величину правки.
+  // Предмет, которого в новом каталоге больше нет, из сделки выпадает — так
+  // же, как при разборе входящей ссылки (decodeShareQuery в calc.js).
+  function remapSides() {
+    ["left", "right"].forEach(side => {
+      sides[side] = (sides[side] || [])
+        .map(e => {
+          const fresh = e && e.item && catalogIndex[e.item.id];
+          return fresh ? { item: fresh, count: e.count } : null;
+        })
+        .filter(Boolean);
+    });
+  }
+
+  async function fetchState() {
+    try {
+      const r = await fetch(API_STATE, { cache: "no-store" });
+      if (r.ok) { return await r.json(); }
+    } catch (e) { /* оффлайн — молча ждём следующего опроса */ }
+    return null;
+  }
+
+  // Без rev — обычный «дай текущее» (no-store). С rev — запрос за конкретной
+  // ревизией, и вот его уже можно кэшировать: содержимое ревизии неизменно.
+  async function fetchTierlist(rev) {
+    const hasRev = rev !== null && rev !== undefined && rev !== "";
+    const url = API_TIERLIST + (hasRev ? "?rev=" + encodeURIComponent(rev) : "");
+    const r = await fetch(url, { cache: hasRev ? "default" : "no-store" });
+    if (!r.ok) throw new Error("http " + r.status);
+    const d = await r.json();
+    if (!d || !d.tierlist) throw new Error("empty tierlist");
+    return d.tierlist;
+  }
+
+  async function poll() {
+    const st = await fetchState();
+    if (!st || typeof st.rev !== "number" || st.rev === lastRev) { return; }
+    try {
+      applyTierlist(await fetchTierlist(st.rev));
+      lastRev = st.rev;
+      remapSides();
+      // renderAll(), не onSidesChanged(): состав сделки не менялся — поменялись
+      // цены под ним, и переписывать адресную строку незачем.
+      renderAll();
+      // Открытый каталог показывает те же цены, что доска, — значит и он
+      // должен обновиться. Перерисовка редкая (только по смене rev), поэтому
+      // она не спорит с правилом «не перестраивать сетку на каждый символ».
+      if (catalogState.open) { renderCatalogGrid($("#tcCatalogSearch").value); }
+    } catch (e) {
+      console.warn("calculator: не удалось обновить тирлист", e);
+    }
+  }
+
+  function startPolling() {
+    if (pollTimer) { clearInterval(pollTimer); }
+    pollTimer = setInterval(poll, POLL_MS);
+    // Свежие цены сразу при возврате на вкладку, без ожидания интервала.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") { poll(); }
+    });
+  }
+
   async function load() {
     const stateEl = $("#tcState");
     stateEl.hidden = false;
     stateEl.textContent = tx("calc.loading");
     try {
-      const res = await fetch("/api/tierlist.php", { cache: "no-store" });
-      if (!res.ok) throw new Error("http " + res.status);
-      const data = await res.json();
-      catalog = CALC.flattenTierlist(data && data.tierlist);
-      catalogIndex = CALC.buildCatalogIndex(catalog);
+      // Сначала rev, потом документ по нему: так первая же загрузка попадает
+      // в тот же immutable-кэш, что и последующие опросы, и повторное открытие
+      // страницы не тянет тирлист заново.
+      const st = await fetchState();
+      const rev = st && typeof st.rev === "number" ? st.rev : null;
+      applyTierlist(await fetchTierlist(rev));
+      if (rev !== null) { lastRev = rev; }
       stateEl.hidden = true;
       stateEl.textContent = "";
 
@@ -705,6 +813,7 @@
       // renderAll(), не onSidesChanged(): адрес и так уже несёт ровно эту
       // сделку (мы её из него и прочитали) — переписывать нечего.
       renderAll();
+      startPolling();
     } catch (e) {
       console.warn("calculator: не удалось загрузить тирлист", e);
       stateEl.hidden = false;

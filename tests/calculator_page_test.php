@@ -182,18 +182,32 @@ test('все calc.* ключи, использованные в разметке
 
 test('интерактивные элементы калькулятора получают видимый focus-visible', function () use ($PUB) {
     $css = calc_read($PUB . '/css/calculator.css');
-    foreach (['.tc-search-input:focus-visible', '.tc-btn:focus-visible', '.tc-clear-side:focus-visible'] as $sel) {
+    foreach (['.tc-search-input:focus-visible', '.tc-btn:focus-visible', '.tc-slot:focus-visible'] as $sel) {
         assert_true(strpos($css, $sel) !== false, "нет правила $sel");
     }
     assert_true(strpos($css, '@media (prefers-reduced-motion: reduce)') !== false,
         'должен быть блок prefers-reduced-motion');
 });
 
-test('кнопки-иконки (очистить сторону) несут aria-label, а не только глиф', function () use ($PUB) {
+test('иконочная кнопка каталога несёт aria-label, а не только глиф', function () use ($PUB) {
     $calc = calc_read($PUB . '/calculator.php');
-    assert_eq(2, substr_count($calc, 'class="tc-clear-side"'), 'две кнопки очистки стороны');
-    assert_true((bool)preg_match('/class="tc-clear-side" title="[^"]+" aria-label="[^"]+"/', $calc),
-        'у кнопки очистки должны быть и title, и aria-label');
+    assert_true((bool)preg_match('/class="tc-cat-close"[^>]*aria-label="[^"]+"/', $calc),
+        'у кнопки закрытия каталога должен быть aria-label');
+});
+
+// Доска повторяет макет: в нём сделка всегда пустая и на панелях нет ни
+// «+» в слоте, ни крестика очистки стороны. Очистить всё можно кнопкой в
+// служебной полосе, убрать один предмет — крестиком на самом слоте
+// (.tc-slot-remove, его рисует JS уже занятому слоту).
+test('на доске нет органов управления, которых нет в макете', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    $css  = calc_read($PUB . '/css/calculator.css');
+    $js   = calc_read($PUB . '/js/calculator-page.js');
+    assert_eq(0, substr_count($calc, 'tc-clear-side'), 'крестика очистки стороны в разметке быть не должно');
+    assert_eq(0, substr_count($css, 'tc-clear-side'), 'правил .tc-clear-side в CSS быть не должно');
+    assert_eq(0, substr_count($js, 'tc-clear-side'), 'обработчика .tc-clear-side в JS быть не должно');
+    assert_true(strpos($css, '.tc-slot.is-empty::before') === false,
+        'пустой слот в макете без «+»');
 });
 
 test('вердикт и разница объявлены как живая область для скринридера', function () use ($PUB) {
@@ -220,6 +234,111 @@ test('calc.js не трогает DOM и экспортируется как CAL
     assert_eq(0, preg_match('/\bdocument\.|\bwindow\.(?!CALC)/', $js), 'calc.js должен быть свободен от DOM');
     assert_true(strpos($js, 'root.CALC = api;') !== false, 'модуль должен экспортироваться как CALC');
     assert_true(strpos($js, 'module.exports = api;') !== false, 'модуль должен быть доступен из node (require)');
+});
+
+// --------------------------------------------------------------------------
+//  Состояния исхода: цвета и лица сняты с компонент-сетов макета «Frame 40»
+//  (столбики) и «Group 10» (карточка вердикта).
+// --------------------------------------------------------------------------
+
+test('цвета исхода совпадают с макетом', function () use ($PUB) {
+    $css = calc_read($PUB . '/css/calculator.css');
+    assert_true(strpos($css, '--tc-win: #48ff00;') !== false, 'выигрыш зелёный');
+    assert_true(strpos($css, '--tc-lose: #ff0000;') !== false, 'проигрыш красный');
+    assert_true(strpos($css, '--tc-fair: #00e8f0;') !== false, 'ничья бирюзовая');
+    // Выигрыш и ничья однажды стояли наоборот: зелёный означал честную
+    // сделку, бирюзовый — выгодную. Привязку столбика к токену держим тестом.
+    foreach (['win' => '--tc-win', 'fair' => '--tc-fair', 'lose' => '--tc-lose'] as $state => $token) {
+        $re = '/\.tc-gauge\[data-state="' . $state . '"\] > span \{\s*background: var\(' . preg_quote($token, '/') . '\)/u';
+        assert_true((bool)preg_match($re, $css), "столбик в состоянии $state берёт $token");
+    }
+});
+
+test('у значка вердикта своё лицо на каждое состояние', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    $css  = calc_read($PUB . '/css/calculator.css');
+    foreach (['none', 'win', 'lose', 'fair'] as $state) {
+        assert_true(strpos($calc, 'tc-face tc-face-' . $state) !== false, "в разметке есть лицо $state");
+        $re = '/\.tc-result-badge\[data-verdict="' . $state . '"\]\s+\.tc-face-' . $state . '\b/u';
+        assert_true((bool)preg_match($re, $css), "CSS показывает лицо $state");
+    }
+    assert_true(strpos($css, '.tc-face { display: none; }') !== false, 'остальные лица скрыты');
+});
+
+test('заголовок карточки вердикта переведён на оба языка', function () use ($PUB) {
+    $i18n = calc_read($PUB . '/js/i18n.js');
+    $js   = calc_read($PUB . '/js/calculator-page.js');
+    foreach (['calc.verdictWinTitle', 'calc.verdictFairTitle', 'calc.verdictLoseTitle'] as $key) {
+        assert_eq(2, substr_count($i18n, '"' . $key . '"'), "ключ $key должен быть и в ru, и в en");
+        assert_true(strpos($js, $key) !== false, "renderResult должен использовать $key");
+    }
+});
+
+test('каталог красит плашку названия градиентом своего типа', function () use ($PUB) {
+    $css = calc_read($PUB . '/css/calculator.css');
+    $js  = calc_read($PUB . '/js/calculator-page.js');
+    foreach (['fr', 'cs', 'cm', 'ms', 'pm', 'gp', 'cr', 'vh'] as $code) {
+        assert_true(strpos($css, '--tc-plate-' . $code . ':') !== false, "нет градиента типа $code");
+    }
+    assert_true(strpos($js, '"var(--tc-plate-" + code + ")"') !== false,
+        'JS должен подставлять градиент типа в плашку');
+});
+
+test('палитра объявлена и для каталога: он лежит вне .tc-page', function () use ($PUB) {
+    $css  = calc_read($PUB . '/css/calculator.css');
+    $calc = calc_read($PUB . '/calculator.php');
+    // Модалка — соседний узел main, а не его потомок. Пока токены жили
+    // только на .tc-page, var(--tc-grad) и var(--tc-panel) внутри неё не
+    // разрешались, и пилюля с плашками оставались без заливки.
+    $mainEnd = strpos($calc, '</main>');
+    $modal   = strpos($calc, 'class="tc-cat-backdrop"');
+    assert_true($mainEnd !== false && $modal !== false && $modal > $mainEnd,
+        'каталог должен лежать после </main> — если это изменилось, правило ниже можно упростить');
+    assert_true((bool)preg_match('/\.tc-page,\s*\.tc-cat-backdrop \{/u', $css),
+        'палитра должна объявляться и на .tc-cat-backdrop');
+});
+
+// Переключатель языка живёт в base.css и одинаков на калькуляторе, тирлисте
+// и в ленте. Половинки когда-то скруглялись каждая сама — у активной справа
+// оставалось скругление, у соседней слева был прямой угол, и на стыке торчала
+// ступенька: пара читалась двумя кнопками вместо одного выбора.
+test('переключатель языка — один сегментированный контрол, а не два чипа', function () use ($PUB) {
+    $css = calc_read($PUB . '/css/base.css');
+    assert_true((bool)preg_match('/\.lang-switch \{[^}]*border-radius: 999px;[^}]*background: rgba\(0, 0, 0, 0\.536\)/su', $css),
+        'у пары должна быть общая дорожка');
+    assert_true(strpos($css, '.lang-switch .chip:first-child') === false,
+        'половинки не должны скруглять свои внешние углы сами');
+    assert_true(strpos($css, '.lang-switch .chip:last-child') === false,
+        'половинки не должны скруглять свои внешние углы сами');
+    assert_true((bool)preg_match('/\.lang-switch \.chip\.active \{[^}]*linear-gradient\(255deg/su', $css),
+        'выбранная половина — та же градиентная пилюля, что у кнопок шапки');
+
+    $dp = calc_read($PUB . '/css/design-page.css');
+    assert_true(strpos($dp, '.toolbar .lang-switch { order: 1; margin-left: auto; }') !== false,
+        'в панели фильтров между половинками не должно быть просвета');
+});
+
+// Цены калькулятора — это цены тирлиста: отдельной копии нет, каталог собран
+// из того же /api/tierlist.php. Открытая вкладка обязана их догонять, иначе
+// правка в админке доезжала бы до неё только после F5.
+test('калькулятор догоняет цены тирлиста, а не читает их один раз', function () use ($PUB) {
+    $js = calc_read($PUB . '/js/calculator-page.js');
+    assert_true(strpos($js, '/api/state.php') !== false,
+        'опрос должен идти через дешёвый /api/state.php');
+    assert_true(strpos($js, 'setInterval(poll, POLL_MS)') !== false,
+        'опрос должен быть по таймеру');
+    assert_true(strpos($js, 'visibilitychange') !== false,
+        'и сразу при возврате на вкладку, без ожидания интервала');
+    // Полный документ — только по смене rev, иначе опрос перестал бы быть
+    // дешёвым и тянул бы весь тирлист каждые полминуты.
+    assert_true(strpos($js, 'st.rev === lastRev') !== false,
+        'без смены rev тирлист не перекачивается');
+    assert_true(strpos($js, '"?rev=" + encodeURIComponent(rev)') !== false,
+        'документ запрашивается по конкретной ревизии — её ответ immutable');
+    // Сделка хранит сами предметы, а не только их id: без пересборки на доске
+    // остались бы объекты со старой ценой.
+    assert_true(strpos($js, 'function remapSides()') !== false,
+        'после обновления каталога строки сделки надо пересобрать');
 });
 
 run_tests();
