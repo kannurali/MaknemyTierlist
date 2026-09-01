@@ -616,7 +616,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
        /api/state.php. См. комментарий у $nxRev в начале файла. -->
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=27"></script>
+  <script src="js/i18n.js?v=28"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при

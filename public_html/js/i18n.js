@@ -360,7 +360,6 @@
       "calc.shareFailed":       "Не удалось скопировать ссылку",
       "calc.clearAll":          "Очистить всё",
       "calc.confirmClearAll":   "Очистить обе стороны сделки?",
-      "calc.itemCount":         "×{count}",
       "calc.loadError":         "Не удалось загрузить тирлист. Попробуйте обновить страницу.",
       "calc.loading":           "Загружаем тирлист…"
 
@@ -695,7 +694,6 @@
       "calc.shareFailed":       "Could not copy the link",
       "calc.clearAll":          "Clear everything",
       "calc.confirmClearAll":   "Clear both sides of the trade?",
-      "calc.itemCount":         "×{count}",
       "calc.loadError":         "Could not load the tier list. Try reloading the page.",
       "calc.loading":           "Loading the tier list…"
 

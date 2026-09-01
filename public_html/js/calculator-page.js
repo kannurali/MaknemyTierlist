@@ -37,7 +37,8 @@
   let catalogIndex = {};  // id -> предмет
   const sides = { left: [], right: [] };
 
-  // Слот доски == позиция в entries. Защитный потолок нужен и здесь, не
+  // Слот доски == позиция в entries, и в нём ровно ОДИН предмет: два
+  // одинаковых занимают два слота. Защитный потолок нужен и здесь, не
   // только в интерактивном добавлении: старая/враждебная ссылка-«поделиться»
   // могла закодировать больше шести предметов, и без обрезки на восстановлении
   // доска нарисовала бы седьмой слот, которого в разметке физически нет.
@@ -116,13 +117,6 @@
       bottom.appendChild(dot);
     }
     btn.appendChild(bottom);
-
-    if (entry.count > 1) {
-      const count = document.createElement("span");
-      count.className = "tc-slot-count";
-      count.textContent = tx("calc.itemCount", { count: entry.count });
-      btn.appendChild(count);
-    }
 
     return btn;
   }
@@ -421,12 +415,16 @@
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  // Короткая подсветка слота, в который только что лёг предмет. Ищем по id, а
-  // не по индексу: addToSide кладёт повтор в уже существующую строку, и индекс
-  // в этом случае не менялся бы вовсе.
+  // Короткая подсветка слота, в который только что лёг предмет. Ищем ПОСЛЕДНИЙ
+  // слот с этим id, а не первый: добавленный экземпляр всегда встаёт в конец,
+  // и при втором таком же предмете подсветился бы старый слот, а не новый.
   function flashAddedSlot(side, addedId) {
     if (!side || !addedId) return;
-    const idx = (sides[side] || []).findIndex(e => e && e.item && e.item.id === addedId);
+    const list = sides[side] || [];
+    let idx = -1;
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i] && list[i].item && list[i].item.id === addedId) { idx = i; break; }
+    }
     if (idx < 0) return;
     const slot = sideRoot(side).querySelectorAll(".tc-slot")[idx];
     if (!slot) return;

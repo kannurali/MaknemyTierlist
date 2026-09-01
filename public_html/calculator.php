@@ -35,10 +35,20 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta property="og:url" content="https://maknemy.com/calculator" />
 <meta property="og:title" content="Калькулятор трейдов Blox Fruits" />
 <meta property="og:description" content="Соберите обе стороны сделки по ценам тирлиста Maknemy и узнайте, выгодна ли она." />
-<meta property="og:image" content="https://maknemy.com/assets/og-image.jpg?v=2" />
-<meta property="og:image:width" content="1920" />
-<meta property="og:image:height" content="1080" />
+<!-- Превью — карточка вердикта калькулятора: то, ради чего на страницу и
+     заходят. Снята с живой страницы (tools/make-og-calculator.mjs), а не
+     нарисована заново, иначе разъехалась бы с сайтом на первой же правке
+     calculator.css.
+
+     Прежде тут стоял assets/og-image.jpg — баннер «ВАША РЕКЛАМА». В чужом
+     чате по ссылке на калькулятор показывалось объявление вместо
+     калькулятора; на остальных страницах эту картинку из превью уже убрали
+     (см. og_brand_card() в api/lib/og.php), калькулятор оставался последним. -->
+<meta property="og:image" content="https://maknemy.com/assets/og-calculator.jpg?v=1" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 <meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:alt" content="Калькулятор трейдов Blox Fruits" />
 <meta name="twitter:card" content="summary_large_image" />
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -55,7 +65,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=28" />
-<link rel="stylesheet" href="css/calculator.css?v=15" />
+<link rel="stylesheet" href="css/calculator.css?v=16" />
 </head>
 <body>
 
@@ -414,9 +424,9 @@ header('Cache-Control: no-cache, must-revalidate');
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=27"></script>
+  <script src="js/i18n.js?v=28"></script>
   <script src="js/promo.js?v=2"></script>
-  <script src="js/calc.js?v=6"></script>
-  <script src="js/calculator-page.js?v=13"></script>
+  <script src="js/calc.js?v=7"></script>
+  <script src="js/calculator-page.js?v=14"></script>
 </body>
 </html>

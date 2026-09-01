@@ -341,4 +341,32 @@ test('калькулятор догоняет цены тирлиста, а не
         'после обновления каталога строки сделки надо пересобрать');
 });
 
+// Превью ссылки. На остальных страницах баннер «ВАША РЕКЛАМА» из превью уже
+// убран (og_brand_card в api/lib/og.php); калькулятор оставался последним, кто
+// на него ссылался, — и в чужом чате по ссылке на калькулятор показывалось
+// объявление вместо калькулятора.
+test('превью калькулятора — карточка вердикта, а не рекламный баннер', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    assert_true(strpos($calc, 'content="https://maknemy.com/assets/og-calculator.jpg?v=1"') !== false,
+        'og:image должен вести на превью калькулятора');
+    // Комментарии вырезаны: старый адрес назван в одном из них как раз затем,
+    // чтобы его сюда не вернули, и сам по себе он ничего не ломает.
+    $markup = preg_replace('/<!--.*?-->/s', '', $calc);
+    assert_eq(0, substr_count($markup, 'assets/og-image.jpg'),
+        'баннер «ВАША РЕКЛАМА» в превью возвращаться не должен');
+
+    // Размеры в мета-тегах и размеры файла обязаны совпадать: соцсети рисуют
+    // рамку по тегам ещё до загрузки картинки, и расхождение видно рывком.
+    $path = $PUB . '/assets/og-calculator.jpg';
+    assert_true(is_file($path), 'нет assets/og-calculator.jpg');
+    $size = getimagesize($path);
+    assert_eq(1200, $size[0], 'ширина файла');
+    assert_eq(630, $size[1], 'высота файла');
+    assert_eq('image/jpeg', $size['mime'], 'формат файла');
+    assert_true(strpos($calc, '<meta property="og:image:width" content="1200" />') !== false,
+        'og:image:width должен совпадать с файлом');
+    assert_true(strpos($calc, '<meta property="og:image:height" content="630" />') !== false,
+        'og:image:height должен совпадать с файлом');
+});
+
 run_tests();

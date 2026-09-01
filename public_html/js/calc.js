@@ -80,53 +80,58 @@
   // единица count: один и тот же предмет, добавленный второй раз,
   // увеличивает count в своей же строке и нового слота не занимает.
   // Значит "мест не осталось" — это ровно entries.length === MAX_SLOTS.
+  //
+  // Слот вмещает ОДИН предмет: два одинаковых занимают два слота, а не одну
+  // строку со счётчиком. Поэтому count у строки всегда единица, и складывать
+  // его при подсчётах незачем. В токене ссылки count всё ещё разбирается —
+  // но только чтобы развернуть старые ссылки вида "id:3" в три слота
+  // (см. decodeSide).
   var MAX_SLOTS = 4;
 
-  // Можно ли добавить item в entries без превышения потолка слотов.
-  // true и тогда, когда предмет уже есть на стороне (в этом случае add
-  // просто увеличит существующую строку, слот не тратится) — интерфейс
-  // обязан звать эту проверку ПЕРЕД addToSide, чтобы отличить «седьмой
-  // слот» (нужно отказать и объяснить почему) от «второй экземпляр уже
-  // занятого» (обычное действие).
+  // Есть ли ещё свободный слот. Повтор уже занятого предмета больше не
+  // бесплатный: второй экземпляр занимает свой слот, как любой другой
+  // предмет, — поэтому item здесь ни на что не влияет и остался в подписи
+  // только ради вызывающих (интерфейс зовёт проверку ПЕРЕД addToSide, чтобы
+  // отличить «мест нет» от обычного добавления).
   function canAddToSide(entries, item, maxSlots) {
     var max = typeof maxSlots === "number" ? maxSlots : MAX_SLOTS;
-    var list = entries || [];
-    if (item && list.some(function (e) { return e.item && e.item.id === item.id; })) { return true; }
-    return list.length < max;
+    return (entries || []).length < max;
   }
 
-  function addToSide(entries, item, count) {
-    var add = count > 0 ? count : 1;
-    var found = false;
-    var next = (entries || []).map(function (e) {
-      if (e.item && item && e.item.id === item.id) {
-        found = true;
-        return { item: e.item, count: e.count + add };
-      }
-      return e;
-    });
-    if (!found && item) { next.push({ item: item, count: add }); }
+  // Кладёт предмет в отдельный слот. count>1 — это count отдельных слотов
+  // подряд, а не одна строка со счётчиком: столько, сколько поместится.
+  // Лишнее молча отбрасывается — потолок слотов держит сам модуль (см. тот же
+  // довод у decodeSide ниже).
+  function addToSide(entries, item, count, maxSlots) {
+    var max = typeof maxSlots === "number" ? maxSlots : MAX_SLOTS;
+    var next = (entries || []).slice();
+    if (!item) { return next; }
+    var add = count > 0 ? Math.round(count) : 1;
+    for (var i = 0; i < add && next.length < max; i++) {
+      next.push({ item: item, count: 1 });
+    }
     return next;
   }
 
-  // Убирает один экземпляр предмета; при count===1 строка исчезает целиком.
+  // Убирает ОДИН слот с этим предметом — первый попавшийся. Остальные его
+  // копии остаются на доске: каждая из них теперь самостоятельный слот, и
+  // снимать их скопом по нажатию на один — не то, чего ждёт человек.
   function removeOneFromSide(entries, id) {
     var next = [];
+    var removed = false;
     (entries || []).forEach(function (e) {
-      if (e.item && e.item.id === id) {
-        if (e.count > 1) { next.push({ item: e.item, count: e.count - 1 }); }
-      } else {
-        next.push(e);
-      }
+      if (!removed && e.item && e.item.id === id) { removed = true; return; }
+      next.push(e);
     });
     return next;
   }
 
   function clearSide() { return []; }
 
+  // Слот — один предмет, поэтому сумма стороны это просто сумма её слотов.
   function sideTotal(entries) {
     return (entries || []).reduce(function (sum, e) {
-      return sum + itemValue(e.item) * e.count;
+      return sum + itemValue(e.item);
     }, 0);
   }
 
@@ -183,8 +188,8 @@
     (entries || []).forEach(function (e) {
       var demand = e.item && e.item.demand;
       if (!Object.prototype.hasOwnProperty.call(DEMAND_WEIGHT, demand)) { return; }
-      counted += e.count;
-      weighted += DEMAND_WEIGHT[demand] * e.count;
+      counted += 1;
+      weighted += DEMAND_WEIGHT[demand];
     });
     if (counted === 0) { return null; }
     return weighted / counted;
@@ -267,8 +272,12 @@
   //  Ссылка «поделиться» — компактное кодирование двух сторон в URL
   // ==========================================================================
   // Токен — "id:count". id — из каталога (тот же id, что и в БД), count —
-  // 1..999 (Math.round + зажатие: дробные и отрицательные значения в состоянии
-  // калькулятора появиться не могут, но кодер не должен полагаться на это).
+  // 1..999.
+  //
+  // Кодер теперь всегда пишет ":1": слот вмещает один предмет, и два
+  // одинаковых дают два токена подряд, а не один со счётчиком. Формат при
+  // этом не менялся — старые ссылки со счётчиком читаются как прежде,
+  // разворачиваясь в отдельные слоты (см. decodeSide).
   var ID_TOKEN_RE = /^([A-Za-z0-9_-]{1,64}):([1-9]\d{0,2})$/;
   // Предохранители от враждебного параметра: не разбирать строку неограниченной
   // длины и не создавать неограниченно много токенов из одной ссылки.
@@ -278,47 +287,46 @@
 
   function encodeSide(entries) {
     return (entries || [])
-      .filter(function (e) { return e && e.item && e.item.id && e.count > 0; })
-      .map(function (e) {
-        var count = Math.min(MAX_COUNT, Math.max(1, Math.round(e.count)));
-        return String(e.item.id) + ":" + String(count);
-      })
+      .filter(function (e) { return e && e.item && e.item.id; })
+      .slice(0, MAX_SLOTS)
+      .map(function (e) { return String(e.item.id) + ":1"; })
       .join(",");
   }
 
   // Строгий разбор одной стороны. Ничего не бросает: любой ввод, который не
   // укладывается в формат "id:count,id:count,…" c id из каталога, просто не
-  // добавляет соответствующую строку в результат — вплоть до пустого массива
-  // на полностью враждебной строке. Одинаковый id несколько раз в строке —
-  // счётчики суммируются (и зажимаются потолком), а не перезаписывают друг
-  // друга.
+  // добавляет соответствующий слот в результат — вплоть до пустого массива на
+  // полностью враждебной строке.
+  //
+  // Счётчик в токене разворачивается в слоты: "id:3" — это три слота подряд,
+  // а не одна строка со счётчиком 3. Так читаются ссылки, разосланные до
+  // перехода на «слот — один предмет». Один и тот же id несколькими токенами
+  // тоже даёт несколько слотов: схлопывать их больше не во что.
+  //
+  // Потолок слотов соблюдает сам модуль, а не вызывающий: ссылка со ста
+  // предметами не должна давать сторону, которую доска физически не способна
+  // показать. Раньше обрезка жила только в capSide() страницы, и любой второй
+  // потребитель (тест, серверный рендер превью) считал бы сумму по предметам,
+  // которых на доске не видно.
   function decodeSide(raw, catalogIndex) {
     try {
       if (typeof raw !== "string" || raw === "") { return []; }
       if (raw.length > MAX_RAW_LEN) { return []; }
       var tokens = raw.split(",").slice(0, MAX_TOKENS);
-      var order = [];
-      var counts = Object.create(null);
-      for (var i = 0; i < tokens.length; i++) {
+      var slots = [];
+      for (var i = 0; i < tokens.length && slots.length < MAX_SLOTS; i++) {
         var m = ID_TOKEN_RE.exec(tokens[i]);
         if (!m) { continue; }
         var id = m[1];
         if (!catalogIndex || !Object.prototype.hasOwnProperty.call(catalogIndex, id)) { continue; }
         var n = parseInt(m[2], 10);
         if (!Number.isFinite(n) || n < 1) { continue; }
-        if (!Object.prototype.hasOwnProperty.call(counts, id)) {
-          counts[id] = 0;
-          order.push(id);
+        n = Math.min(MAX_COUNT, n);
+        for (var k = 0; k < n && slots.length < MAX_SLOTS; k++) {
+          slots.push({ item: catalogIndex[id], count: 1 });
         }
-        counts[id] = Math.min(MAX_COUNT, counts[id] + n);
       }
-      // Потолок слотов соблюдает сам модуль, а не вызывающий: ссылка со
-      // ста предметами не должна давать сторону, которую доска физически не
-      // способна показать. Раньше обрезка жила только в capSide() страницы, и
-      // любой второй потребитель (тест, серверный рендер превью) считал бы
-      // сумму по предметам, которых на доске не видно.
-      return order.slice(0, MAX_SLOTS)
-        .map(function (id) { return { item: catalogIndex[id], count: counts[id] }; });
+      return slots;
     } catch (_e) {
       return [];
     }
