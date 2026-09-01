@@ -33,8 +33,19 @@ function tierlist_og_fallback(): array {
     ];
 }
 
+// Ревизия тирлиста, отданная странице вместе с разметкой. Нужна не превью,
+// а самой странице: с ней js/app.js идёт сразу за данными по
+// /api/tierlist.php?rev=<n>, минуя /api/state.php. Раньше до первого предмета
+// было два запроса подряд — сначала крошечный state, потом сам тирлист, — и
+// всё это время на экране висел каркас. Ответ на конкретную ревизию помечен
+// immutable, поэтому у вернувшегося посетителя он берётся из кэша браузера.
+// null — БД недоступна или пуста: страница просто работает как раньше.
+$nxRev = null;
+
 function tierlist_og_data(PDO $pdo): array {
+    global $nxRev;
     $row = $pdo->query('SELECT data, rev FROM tierlist WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+    if (isset($row['rev']) && is_numeric($row['rev'])) { $nxRev = (int)$row['rev']; }
     $summary = og_tierlist_summary($row['data'] ?? null, $row['rev'] ?? null);
     if ($summary === null) { return tierlist_og_fallback(); }
 
@@ -135,7 +146,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="stylesheet" href="css/base.css?v=7" />
-<link rel="stylesheet" href="css/styles.css?v=51" />
+<link rel="stylesheet" href="css/styles.css?v=52" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -600,6 +611,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
+<?php if ($nxRev !== null): ?>
+  <!-- Ревизия для js/app.js: первый запрос идёт сразу за данными, а не за
+       /api/state.php. См. комментарий у $nxRev в начале файла. -->
+  <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
+<?php endif; ?>
   <script src="js/i18n.js?v=27"></script>
   <script src="js/content.js?v=1"></script>
   <script src="js/tiers.js?v=1"></script>
@@ -610,6 +626,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=66"></script>
+  <script src="js/app.js?v=67"></script>
 </body>
 </html>

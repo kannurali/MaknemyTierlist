@@ -92,8 +92,27 @@
     };
   }
 
+  // Каркас на время загрузки. Те же плашки тиров с логотипами и та же шапка,
+  // но БЕЗ выдуманных предметов, без «ВАША РЕКЛАМА» и без даты.
+  //
+  // Раньше зритель на месте данных видел defaultState() целиком — фальшивый
+  // тирлист из предметов «Item» по выдуманным ценам и два рекламных
+  // плейсхолдера. Причём каждый заход, а не только первый: applyServer()
+  // localStorage не пишет, и в него попадают лишь правки админа.
+  //
+  // Сам defaultState() никуда не делся — он остаётся шаблоном для админа
+  // («сбросить к шаблону» и первичное наполнение пустой базы), просто зритель
+  // его больше не видит.
+  function bootState() {
+    const d = defaultState();
+    d.date = "";
+    d.ad = { text: "", image: "", link: "" };
+    d.tiers = d.tiers.map(t => Object.assign({}, t, { items: [] }));
+    return d;
+  }
+
   // ---------- State ----------
-  let state = load() || defaultState();
+  let state = load() || bootState();
   let isAdmin = false;
   let dirty = false;   // есть несохранённые правки админа
   let saving = false;  // идёт публикация на сервер
@@ -582,6 +601,13 @@
       const flat = [];
       state.tiers.forEach(tier => { for (const it of visibleItemsOf(tier)) flat.push(it); });
       blocks = [];
+      // Предметов нет вовсе — рисуем плашки тиров пустыми. Это состояние
+      // видит каждый посетитель, пока едут данные (см. bootState() выше):
+      // без плашек страница коротка, а с приходом данных вырастает разом на
+      // десяток рядов и уводит вниз всё, что человек в этот момент читал.
+      if (!flat.length) {
+        state.tiers.forEach((tier, ti) => blocks.push({ tier, ti, items: [] }));
+      }
       for (let i = 0; i < flat.length; i += blockSize) {
         const bi = blocks.length;
         const tier = state.tiers[Math.min(bi, state.tiers.length - 1)];
@@ -768,11 +794,16 @@
       d.alt = "";
       cell.appendChild(d);
     }
-    // trend — слева от иконки
+    // trend — слева от иконки. Картинка ровно та же, что в колонке трендов
+    // легенды (assets/design/legend/): ячейка брала старый набор
+    // assets/trend-*.png, который при редизайне легенды переросли. Заметнее
+    // всего расходился «перерассмотр цены»: в легенде это круглые стрелки
+    // 37×43, а в ячейке — старая широкая и плоская фигура 60×34, и на
+    // предмете она читалась смазанным пятном, а не значком из легенды.
     if (item.trend) {
       const tr = document.createElement("img");
       tr.className = "trend" + (item.trend === "swap" ? " tr-swap" : "");
-      tr.src = "assets/trend-" + item.trend + ".png";
+      tr.src = "assets/design/legend/trend-" + item.trend + ".svg";
       tr.alt = "";
       cell.appendChild(tr);
     }
@@ -823,7 +854,7 @@
     if (item.flag) {
       const nb = document.createElement("img");
       nb.className = "cell-new";
-      nb.src = "assets/poster/trend-new.png";
+      nb.src = "assets/design/legend/trend-new.png";
       nb.alt = "NEW";
       cell.appendChild(nb);
     }
@@ -833,7 +864,7 @@
     if (item.wip) {
       const wb = document.createElement("img");
       wb.className = "cell-wip";
-      wb.src = "assets/poster/trend-wip.png";
+      wb.src = "assets/design/legend/trend-wip.svg";
       wb.alt = "?";
       wb.title = tx("cell.wipTitle");
       cell.appendChild(wb);
@@ -3104,7 +3135,19 @@
     return false;
   }
 
+  // Ревизия, которую страница отдала вместе с разметкой (window.NX_REV в
+  // index.php). Первый заход благодаря ей идёт сразу за данными, минуя
+  // /api/state.php: раньше до первого предмета было два запроса подряд —
+  // сначала крошечный state, потом сам тирлист, — и каркас висел на экране
+  // всё это время. Дальше опрос работает как раньше, по своему таймеру.
+  let bootRev = (typeof window.NX_REV === "number" && isFinite(window.NX_REV)) ? window.NX_REV : null;
+
   async function fetchSnapshot() {
+    if (bootRev !== null && !haveFullData) {
+      const rev = bootRev;
+      bootRev = null;
+      if (await fetchFull(rev)) { haveFullData = true; lastRev = rev; }
+    }
     const st = await fetchState();
     if (st && typeof st.likes === "number") { likeCount = Math.max(0, st.likes); renderLike(); }
 

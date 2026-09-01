@@ -360,4 +360,58 @@ test('панели администратора находят body с атри�
     }
 });
 
+// --------------------------------------------------------------------------
+//  Значки тренда в ячейке и каркас на время загрузки
+// --------------------------------------------------------------------------
+
+// Ячейка брала старый набор assets/trend-*.png, который при редизайне легенды
+// переросли. Заметнее всего расходился «перерассмотр цены»: в легенде это
+// круглые стрелки 37×43, а в старом наборе — широкая плоская фигура 60×34, и
+// на предмете она читалась смазанным пятном вместо значка из легенды.
+test('значки тренда в ячейке — те же картинки, что в легенде', function () use ($PUB) {
+    $js = tag_read($PUB . '/js/app.js');
+    assert_true(strpos($js, '"assets/design/legend/trend-" + item.trend + ".svg"') !== false,
+        'стрелка тренда должна браться из легенды');
+    assert_true(strpos($js, 'assets/design/legend/trend-new.png') !== false, 'NEW — из легенды');
+    assert_true(strpos($js, 'assets/design/legend/trend-wip.svg') !== false, '«?» — из легенды');
+    // Комментарии вырезаны: старый путь назван в одном из них как раз затем,
+    // чтобы его сюда не вернули.
+    $code = preg_replace('~//[^
+]*~', '', $js);
+    assert_eq(0, substr_count($code, '"assets/trend-'), 'старый набор assets/trend-*.png не для ячейки');
+    assert_eq(0, substr_count($code, 'assets/poster/trend-'), 'постерный набор тоже не для ячейки');
+    foreach (['up', 'down', 'swap'] as $t) {
+        assert_true(is_file($PUB . '/assets/design/legend/trend-' . $t . '.svg'), "нет trend-$t.svg");
+    }
+
+    // Ниже по файлу лежит общее .trend.tr-swap для легенды и модалки той же
+    // специфичности. Без своей строки у ячейки оно перебивало бы её, и круглый
+    // значок выходил вдвое шире стрелок, наезжая на цену.
+    $css = tag_read($PUB . '/css/styles.css');
+    assert_true(strpos($css, '.cell .trend.tr-swap { width: 1.27cqw; }') !== false,
+        'ячейке нужна своя ширина swap');
+});
+
+// Пока едут данные, зритель видел defaultState() целиком — фальшивый тирлист
+// из предметов «Item» по выдуманным ценам. Каждый заход, а не только первый:
+// applyServer() в localStorage не пишет, туда попадают лишь правки админа.
+test('пока едут данные, зритель не видит демо-шаблон', function () use ($PUB) {
+    $js = tag_read($PUB . '/js/app.js');
+    assert_true(strpos($js, 'function bootState()') !== false,
+        'нужен каркас на время загрузки');
+    assert_true(strpos($js, 'let state = load() || bootState();') !== false,
+        'стартовать надо с каркаса, а не с demo-шаблона');
+    // defaultState никуда не девается — он остаётся шаблоном для админа.
+    assert_true(strpos($js, 'function defaultState()') !== false,
+        'шаблон админа должен остаться на месте');
+
+    // Ревизия в разметке: первый запрос идёт сразу за данными, минуя
+    // /api/state.php, а его ответ помечен immutable и берётся из кэша.
+    assert_true(strpos($js, 'window.NX_REV') !== false,
+        'app.js должен читать ревизию из разметки');
+    $idx = tag_read($PUB . '/index.php');
+    assert_true(strpos($idx, 'window.NX_REV = <?= (int)$nxRev ?>;') !== false,
+        'страница должна отдавать ревизию тирлиста');
+});
+
 run_tests();
