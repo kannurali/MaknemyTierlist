@@ -147,7 +147,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="stylesheet" href="css/base.css?v=7" />
-<link rel="stylesheet" href="css/styles.css?v=52" />
+<link rel="stylesheet" href="css/styles.css?v=53" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
 <link rel="stylesheet" href="css/topbar.css?v=7" />
@@ -156,7 +156,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=28" />
+<link rel="stylesheet" href="css/design-page.css?v=29" />
 
 <!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
      api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
@@ -470,6 +470,27 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <label data-i18n="modal.descEn">Описание · EN (необязательно)</label>
           <textarea id="mDescEn" rows="3" data-i18n-placeholder="modal.descEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
         </div>
+        <!-- Условия передачи предмета: отдельный блок в карточке просмотра, а
+             не хвост описания. Пусто — блока в карточке нет. -->
+        <div class="field">
+          <label data-i18n="modal.terms">Условия · RU (необязательно)</label>
+          <textarea id="mTerms" rows="3" data-i18n-placeholder="modal.termsPlaceholder" placeholder="Что нужно, чтобы предмет вообще можно было передать"></textarea>
+        </div>
+        <div class="field">
+          <label data-i18n="modal.termsEn">Условия · EN (необязательно)</label>
+          <textarea id="mTermsEn" rows="3" data-i18n-placeholder="modal.termsEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
+        </div>
+        <!-- Метка — короткая плашка рядом с ценой (LIMITED, EVENT, OG…).
+             Свободный текст: список таких пометок меняется быстрее, чем
+             успевал бы обновляться жёсткий набор кнопок. -->
+        <div class="field">
+          <label data-i18n="modal.tag">Метка · RU (необязательно)</label>
+          <input type="text" id="mTag" maxlength="24" data-i18n-placeholder="modal.tagPlaceholder" placeholder="Напр. LIMITED" />
+        </div>
+        <div class="field">
+          <label data-i18n="modal.tagEn">Метка · EN (необязательно)</label>
+          <input type="text" id="mTagEn" maxlength="24" data-i18n-placeholder="modal.tagEnPlaceholder" placeholder="Английская версия. Пусто — покажется русская." />
+        </div>
         <div class="field">
           <label data-i18n="modal.fruitType">Тип фрукта</label>
           <div class="seg seg-toggle" id="mFruit">
@@ -533,17 +554,50 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <!-- ============ Item VIEW modal (для всех — клик по предмету) ============ -->
+  <!-- Разметка снята с макета (Figma «MAKNEMY (Copy)», компонент Frame 121):
+       стеклянная шапка с названием, иконка в градиентной плитке, разделитель,
+       широкая плашка типа с подписью, ряд из цены и метки, и две окантованные
+       панели — «Описание» и «Условия». Панель условий и плашка метки скрыты,
+       пока поля пустые: у большинства предметов их не будет, и пустая рамка
+       занимала бы полкарточки ни за чем. -->
   <div class="modal-backdrop" id="viewModal" hidden>
     <div class="modal vmodal">
-      <button class="icon-btn vmodal-close" id="viewClose" data-i18n-title="modal.close" title="Закрыть">✕</button>
+      <div class="vmodal-head">
+        <div class="vmodal-name" id="vName"></div>
+        <button class="icon-btn vmodal-close" id="viewClose" data-i18n-title="modal.close" title="Закрыть">✕</button>
+      </div>
       <div class="vmodal-body">
         <div class="vmodal-icon"><img id="vIcon" alt="" /></div>
-        <div class="vmodal-name" id="vName"></div>
-        <div class="vmodal-price">
-          <span class="vmodal-price-val" id="vValue"></span>
-          <img class="tbadge" id="vBadge" alt="" hidden />
+        <div class="vmodal-rule"></div>
+        <div class="vmodal-pill vmodal-kind" id="vKind">
+          <span class="vmodal-pill-main" id="vKindMain"></span>
+          <span class="vmodal-pill-sub" id="vKindSub"></span>
         </div>
-        <div class="vmodal-desc" id="vDesc"></div>
+        <div class="vmodal-pills">
+          <div class="vmodal-pill"><span class="vmodal-pill-main" id="vValue"></span></div>
+          <div class="vmodal-pill" id="vTagPill" hidden><span class="vmodal-pill-main" id="vTag"></span></div>
+        </div>
+        <section class="vmodal-panel">
+          <div class="vmodal-panel-title" data-i18n="view.descTitle">ОПИСАНИЕ</div>
+          <div class="vmodal-panel-text" id="vDesc"></div>
+        </section>
+        <section class="vmodal-panel" id="vTermsPanel" hidden>
+          <!-- Знак внимания из макета: треугольник со скруглёнными углами, из
+               которого вырезан восклицательный знак. Инлайновый SVG, а не файл
+               в assets — фигура одна, цвет берёт от текста панели, и лишнего
+               запроса при открытии карточки не будет. -->
+          <svg class="vmodal-panel-icon" viewBox="0 0 69 61" aria-hidden="true" focusable="false">
+            <mask id="vTermsWarn" maskUnits="userSpaceOnUse" x="0" y="0" width="69" height="61">
+              <rect width="69" height="61" fill="#fff" />
+              <rect x="31" y="17" width="7" height="22" rx="3.5" fill="#000" />
+              <circle cx="34.5" cy="47" r="4" fill="#000" />
+            </mask>
+            <path d="M34.5 6 L63.5 55.5 L5.5 55.5 Z" fill="currentColor" stroke="currentColor"
+                  stroke-width="7" stroke-linejoin="round" mask="url(#vTermsWarn)" />
+          </svg>
+          <div class="vmodal-panel-title" data-i18n="view.termsTitle">УСЛОВИЯ</div>
+          <div class="vmodal-panel-text" id="vTerms"></div>
+        </section>
       </div>
     </div>
   </div>
@@ -607,8 +661,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
        /api/state.php. См. комментарий у $nxRev в начале файла. -->
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=28"></script>
-  <script src="js/content.js?v=1"></script>
+  <script src="js/i18n.js?v=29"></script>
+  <script src="js/content.js?v=2"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
        первом render(). Файл намеренно не называется js/ads.js — это имя
@@ -617,6 +671,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=67"></script>
+  <script src="js/app.js?v=68"></script>
 </body>
 </html>

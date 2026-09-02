@@ -36,7 +36,8 @@
   function defaultState() {
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
-      desc: "", descEn: "", flag: false, wip: false,
+      desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "",
+      flag: false, wip: false,
     });
     return {
       title: "MAKNEMY\nTIER LIST",
@@ -361,7 +362,13 @@
   // Читает текущий lang в момент вызова, поэтому описания обновляются при
   // переключении языка (initLangSwitch дёргает render).
   const content = (typeof CONTENT !== "undefined") ? CONTENT : null;
-  const descFor = it => content ? content.descFor(it, lang) : String((it && it.desc) || "").trim();
+  // base — имя русского поля предмета; английское лежит под base + "En".
+  // Фолбэк на месте и без content.js: файл подключается отдельным <script>,
+  // и без него карточка должна показать хотя бы русский текст.
+  const textFor = (it, base) => content
+    ? content.textFor(it, base, lang)
+    : String((it && it[base]) || "").trim();
+  const descFor = it => textFor(it, "desc");
 
   function applyLang(next) {
     if (!i18n) return;      // оставляем разметку как есть
@@ -1890,7 +1897,10 @@
   function addItem(tid) {
     const t = findTier(tid);
     if (!t) return;
-    const item = { id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "", desc: "", descEn: "", flag: true, wip: false };
+    const item = {
+      id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "",
+      desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "", flag: true, wip: false,
+    };
     t.items.push(item);
     save(); render();
     openModal(item.id);
@@ -1985,6 +1995,10 @@
     $("#mValue").value = it.value || "";
     $("#mDesc").value = it.desc || "";
     $("#mDescEn").value = it.descEn || "";
+    $("#mTerms").value = it.terms || "";
+    $("#mTermsEn").value = it.termsEn || "";
+    $("#mTag").value = it.tag || "";
+    $("#mTagEn").value = it.tagEn || "";
     setFlag("flag", it.flag);
     setFlag("wip", it.wip);
     $("#mIconPreview").src = it.icon || DEFAULT_ICON;
@@ -1997,8 +2011,29 @@
   function closeModal() { modal.hidden = true; editingId = null; }
 
   // ----- Окно ПРОСМОТРА предмета (для всех посетителей) -----
-  // Показывает иконку, название, цену и описание. Открывается кликом по
-  // предмету в обычном режиме (без редактирования).
+  // Показывает иконку, название, тип, цену, метку, описание и условия.
+  // Открывается кликом по предмету в обычном режиме (без редактирования).
+  //
+  // Тип в макете подписан двумя строками — крупным разрядом («КОНФИГУРАЦИЯ»)
+  // и уточнением под ним («скин»). В данных это по-прежнему один код, поэтому
+  // разбивка живёт таблицей здесь, а сами слова — в i18n.js: их переводить.
+  // Уточнения нет — вторая строка не рисуется вовсе, плашка ужимается.
+  // Снятые коды s/m/v оставлены рядом с новыми: в старых сохранениях они
+  // встречаются, и без них у такого предмета плашка осталась бы пустой.
+  const KIND_LABEL = {
+    f:  ["view.kindFruit",     ""],
+    p:  ["view.kindFruit",     "view.kindSubPerm"],
+    cs: ["view.kindConfig",    "view.kindSubSkin"],
+    cm: ["view.kindConfig",    "view.kindSubMutation"],
+    ms: ["view.kindMutation",  "view.kindSubSkin"],
+    cr: ["view.kindChromatic", ""],
+    gp: ["view.kindPass",      ""],
+    vh: ["view.kindVoucher",   ""],
+    s:  ["view.kindConfig",    "view.kindSubSkin"],
+    m:  ["view.kindConfig",    "view.kindSubMutation"],
+    v:  ["view.kindVoucher",   ""],
+  };
+
   const viewModal = $("#viewModal");
   function openViewModal(iid) {
     const found = findItem(iid);
@@ -2007,18 +2042,28 @@
     $("#vIcon").src = it.icon || DEFAULT_ICON;
     $("#vName").textContent = (it.name || "").trim() || tx("view.noName");
     $("#vValue").textContent = it.value || "—";
-    const badge = $("#vBadge");
-    if (it.type) {
-      badge.src = badgeSrc(it.type);
-      badge.alt = it.type.toUpperCase();
-      badge.hidden = false;
-    } else {
-      badge.hidden = true;
-    }
+
+    const [mainKey, subKey] = KIND_LABEL[it.type] || KIND_LABEL.f;
+    $("#vKindMain").textContent = tx(mainKey);
+    const subEl = $("#vKindSub");
+    subEl.textContent = subKey ? tx(subKey) : "";
+    subEl.hidden = !subKey;
+
+    // Метка и условия есть далеко не у каждого предмета: пустое поле прячет
+    // плашку и панель целиком, а не оставляет рамку с пустотой внутри.
+    const tag = textFor(it, "tag");
+    $("#vTag").textContent = tag;
+    $("#vTagPill").hidden = !tag;
+
     const ds = descFor(it);
     const descEl = $("#vDesc");
     descEl.textContent = ds || tx("view.noDesc");
     descEl.classList.toggle("empty", !ds);
+
+    const terms = textFor(it, "terms");
+    $("#vTerms").textContent = terms;
+    $("#vTermsPanel").hidden = !terms;
+
     viewModal.hidden = false;
   }
   function closeViewModal() { viewModal.hidden = true; }
@@ -2123,6 +2168,10 @@
     it.value = $("#mValue").value.trim();
     it.desc = $("#mDesc").value.trim();
     it.descEn = $("#mDescEn").value.trim();
+    it.terms = $("#mTerms").value.trim();
+    it.termsEn = $("#mTermsEn").value.trim();
+    it.tag = $("#mTag").value.trim();
+    it.tagEn = $("#mTagEn").value.trim();
     it.flag = getFlag("flag");
     it.wip = getFlag("wip");
     it.icon = $("#mIconPreview").src;

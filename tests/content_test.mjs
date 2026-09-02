@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const CONTENT = require('../public_html/js/content.js');
 
-const { descFor } = CONTENT;
+const { descFor, textFor } = CONTENT;
 
 test('descFor returns the language-specific text when both exist', () => {
     const item = { desc: 'Русское описание', descEn: 'English description' };
@@ -51,4 +51,35 @@ test('descFor treats an unknown language like the primary (Russian)', () => {
 test('descFor returns empty string for a missing item', () => {
     assert.equal(descFor(null, 'en'), '');
     assert.equal(descFor(undefined, 'ru'), '');
+});
+
+// textFor is the general rule descFor is a special case of: the same
+// language fallback over any base/baseEn pair on the item (terms, tag).
+test('textFor picks the language variant of an arbitrary field', () => {
+    const item = { terms: 'Нужен использованный клинок', termsEn: 'Requires a used blade' };
+    assert.equal(textFor(item, 'terms', 'ru'), 'Нужен использованный клинок');
+    assert.equal(textFor(item, 'terms', 'en'), 'Requires a used blade');
+});
+
+test('textFor falls back to the other language for any field', () => {
+    assert.equal(textFor({ tag: 'LIMITED' }, 'tag', 'en'), 'LIMITED');
+    assert.equal(textFor({ tagEn: 'LIMITED' }, 'tag', 'ru'), 'LIMITED');
+});
+
+test('textFor returns empty string for a field the item does not have', () => {
+    // Items saved before terms/tag existed carry neither key.
+    assert.equal(textFor({ desc: 'старый предмет' }, 'terms', 'ru'), '');
+    assert.equal(textFor({ desc: 'старый предмет' }, 'tag', 'en'), '');
+});
+
+test('textFor trims and tolerates a missing item or base', () => {
+    assert.equal(textFor({ tag: '  LIMITED  ' }, 'tag', 'ru'), 'LIMITED');
+    assert.equal(textFor(null, 'tag', 'ru'), '');
+    assert.equal(textFor({ tag: 'LIMITED' }, '', 'ru'), '');
+});
+
+test('descFor is textFor over the desc field', () => {
+    const item = { desc: 'основной', descEn: 'secondary' };
+    assert.equal(descFor(item, 'en'), textFor(item, 'desc', 'en'));
+    assert.equal(descFor(item, 'ru'), textFor(item, 'desc', 'ru'));
 });

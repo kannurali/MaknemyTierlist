@@ -224,7 +224,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна. -->
-<link rel="stylesheet" href="css/design-page.css?v=28" />
+<link rel="stylesheet" href="css/design-page.css?v=29" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
 <link rel="stylesheet" href="css/news-design.css?v=14" />
 <!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
@@ -414,7 +414,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=28"></script>
+  <script src="js/i18n.js?v=29"></script>
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
