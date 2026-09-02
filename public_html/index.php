@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/og.php';
+require_once __DIR__ . '/api/lib/metrika.php';
 
 // Превью-карточка ссылки (og:image/title/description) собирается из живого
 // тирлиста ДО отдачи <head> — краулеры (Telegram, Discord, VK) не исполняют
@@ -157,19 +158,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
 <link rel="stylesheet" href="css/design-page.css?v=28" />
 
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=111127188', 'ym');
-
-    ym(111127188, 'init', {ssr:true, webvisor:true, trackHash:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/111127188" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
+<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
+     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<?php echo metrika_counter_html(); ?>
 </head>
 <body>
   <!-- Кнопки входа здесь больше нет: админка живёт на отдельном адресе /admin,

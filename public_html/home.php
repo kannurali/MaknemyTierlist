@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/api/_bootstrap.php';
+require_once __DIR__ . '/api/lib/metrika.php';
 
 // Превью корня — свой первый экран: логотип, «Работаем с 2024 года»,
 // описание проекта и кнопки. У /tierlist своя карточка (og_brand_card() в
@@ -99,6 +100,9 @@ header('Cache-Control: no-cache, must-revalidate');
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=28" />
 <link rel="stylesheet" href="css/home.css?v=14" />
+<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
+     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<?php echo metrika_counter_html(); ?>
 </head>
 <body>
 
