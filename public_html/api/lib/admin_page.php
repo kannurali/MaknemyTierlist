@@ -9,6 +9,7 @@
 // byte of the editor is written to the response.
 
 require_once __DIR__ . '/../_bootstrap.php';
+require_once __DIR__ . '/metrika.php';
 
 // Admin pages are per-session and must never sit in a proxy or a bfcache.
 function admin_page_headers(): void {
@@ -65,7 +66,13 @@ function admin_render_public_page(string $file): ?string {
         return null;
     }
     $html = ob_get_clean();
-    return ($html === false || trim($html) === '') ? null : $html;
+    if ($html === false || trim($html) === '') { return null; }
+    // Счётчик Метрики снимается здесь, а не в вызывающих admin*.php: раньше
+    // он вырезался только в admin.php, и появление второй админ-страницы
+    // (/admin/news) молча вернуло бы клики редактора в статистику сайта.
+    // Здесь это свойство всей конструкции «админка исполняет публичную
+    // страницу», а не привычка отдельного файла.
+    return metrika_strip($html);
 }
 
 // Top bar shared by every panel. $active is 'tier', 'news' or 'promo'.

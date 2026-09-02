@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/og.php';
+require_once __DIR__ . '/api/lib/metrika.php';
 
 // Превью-карточка ссылки (og:image/title/description) собирается из самого
 // свежего поста ДО отдачи <head> — краулеры (Telegram, Discord, VK) не
@@ -226,6 +227,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="stylesheet" href="css/design-page.css?v=28" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
 <link rel="stylesheet" href="css/news-design.css?v=14" />
+<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
+     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<?php echo metrika_counter_html(); ?>
 </head>
 <body class="news-bg">
   <header class="mk-top">

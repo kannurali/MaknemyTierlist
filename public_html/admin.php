@@ -40,14 +40,6 @@ $html = preg_replace(
     1
 );
 
-// Метрика. Свои же клики и вебвизор в статистике сайта — мусор.
-$html = preg_replace(
-    '~<!-- Yandex\.Metrika counter -->.*?<!-- /Yandex\.Metrika counter -->~su',
-    '<!-- Метрика вырезана: админку в статистику сайта не считаем. -->',
-    $html,
-    1
-);
-
 $html = str_replace(
     '</head>',
     '<link rel="stylesheet" href="/css/admin-shell.css?v=1" />' . "\n</head>",
