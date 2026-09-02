@@ -369,4 +369,25 @@ test('превью калькулятора — карточка вердикт�
         'og:image:height должен совпадать с файлом');
 });
 
+// Полос прокрутки на сайте две: страничная (design-page.css, правило по html)
+// и внутренняя у сетки каталога. Обе сняты с одного макета и ужаты в одинаковых
+// пропорциях. Разъедутся — на одной странице окажутся ползунки разной толщины,
+// а заметить это можно только открыв каталог. Тест держит их одним числом.
+test('ползунок каталога такой же ширины, как страничный', function () use ($PUB) {
+    $calc = calc_read($PUB . '/css/calculator.css');
+    $page = calc_read($PUB . '/css/design-page.css');
+
+    assert_true((bool)preg_match('/\.tc-cat-grid::-webkit-scrollbar \{ width: (\d+)px;/', $calc, $a),
+        'у сетки каталога должна быть своя ширина полосы');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar \{[^}]*width: (\d+)px;/s', $page, $b),
+        'у страницы должна быть своя ширина полосы');
+    assert_eq($b[1], $a[1], 'ширина ползунка одна на обе полосы');
+
+    assert_true((bool)preg_match('/\.tc-cat-grid::-webkit-scrollbar-thumb \{[^}]*border-radius: (\d+)px;/s', $calc, $c),
+        'у ползунка каталога должен быть радиус');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar-thumb \{[^}]*border-radius: (\d+)px;/s', $page, $d),
+        'у страничного ползунка должен быть радиус');
+    assert_eq($d[1], $c[1], 'радиус ползунка один на обе полосы');
+});
+
 run_tests();

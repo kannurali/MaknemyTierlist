@@ -65,7 +65,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=29" />
-<link rel="stylesheet" href="css/calculator.css?v=16" />
+<link rel="stylesheet" href="css/calculator.css?v=17" />
 </head>
 <body>
 
