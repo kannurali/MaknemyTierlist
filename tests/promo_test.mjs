@@ -14,7 +14,8 @@ const {
     safeHref, dayBoundsMsk, inWindow, eligible,
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
-    normalizeDoc, migrateLegacyAd
+    normalizeDoc, migrateLegacyAd,
+    HOUSE_TG, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -452,6 +453,73 @@ test('normalizeDoc survives anything the network or localStorage can hand it', (
 
 test('normalizeDoc exposes the slot list the rest of the code shares', () => {
     assert.deepEqual(SLOTS, ['strip', 'rail', 'dock', 'popup']);
+});
+
+// -------------------------------------------------- popupPick / HOUSE_TG
+
+// Собственное объявление о телеграм-канале — то, что видит посетитель, пока
+// окно не выкуплено. Оно показывается на трёх страницах сразу, поэтому его
+// форма и частота проверяются здесь, а не в разметке каждой из них.
+
+test('HOUSE_TG is a popup-only campaign pointing at the project channel', () => {
+    assert.deepEqual(HOUSE_TG.slots, ['popup']);
+    assert.equal(HOUSE_TG.enabled, true);
+    assert.equal(safeHref(HOUSE_TG.href), 'https://t.me/theMaknemy');
+    assert.ok(PROMO.creativeFor(HOUSE_TG, 'popup'), 'a popup creative must ship with it');
+    // Раз в сутки: заказано владельцем. maxPerWeek должен пускать все семь
+    // показов, иначе «раз в сутки» кончалось бы на третьем дне недели.
+    assert.equal(HOUSE_TG.popup.capHours, 24);
+    assert.ok(HOUSE_TG.popup.maxPerWeek >= 7);
+    // Маркировка erid для рекламы собственного ресурса не нужна.
+    assert.equal(HOUSE_TG.erid, '');
+    // Текст берётся из словаря, а не запечён строкой: своё объявление обязано
+    // говорить на языке интерфейса.
+    assert.ok(HOUSE_TG.textKey && HOUSE_TG.ctaKey);
+});
+
+test('popupPick prefers a paid campaign over the house ad', () => {
+    const doc = { campaigns: [{
+        id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
+        creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
+    }] };
+    assert.equal(popupPick(doc, {}, Date.now(), 0.5).id, 'c_paid');
+});
+
+test('popupPick falls back to the house ad when nothing is sold', () => {
+    assert.equal(popupPick({ campaigns: [] }, {}, Date.now(), 0.5).id, HOUSE_TG.id);
+    assert.equal(popupPick(null, {}, Date.now(), 0.5).id, HOUSE_TG.id);
+});
+
+test('popupPick falls back to the house ad once the paid one is capped today', () => {
+    const now = Date.now();
+    const doc = { campaigns: [{
+        id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
+        creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
+    }] };
+    const seen = recordPopupShown({}, 'c_paid', now);
+    assert.equal(popupPick(doc, seen, now + HOUR, 0.5).id, HOUSE_TG.id);
+    // А через сутки платная кампания снова забирает место.
+    assert.equal(popupPick(doc, seen, now + 25 * HOUR, 0.5).id, 'c_paid');
+});
+
+test('popupPick shows the house ad once a day and not twice', () => {
+    const now = Date.now();
+    const seen = recordPopupShown({}, HOUSE_TG.id, now);
+    assert.equal(popupPick({ campaigns: [] }, seen, now + 23 * HOUR, 0.5), null);
+    assert.equal(popupPick({ campaigns: [] }, seen, now + 25 * HOUR, 0.5).id, HOUSE_TG.id);
+});
+
+test('popupPick keeps the house ad running all week, not three days', () => {
+    // Значение по умолчанию maxPerWeek = 3 остановило бы своё объявление на
+    // четвёртые сутки — «раз в день» превратилось бы в «трижды в неделю».
+    let seen = {};
+    const now = Date.now();
+    for (let day = 0; day < 7; day++) {
+        const at = now + day * DAY;
+        const pick = popupPick({ campaigns: [] }, seen, at, 0.5);
+        assert.equal(pick && pick.id, HOUSE_TG.id, `день ${day + 1} должен показать объявление`);
+        seen = recordPopupShown(seen, HOUSE_TG.id, at);
+    }
 });
 
 // -------------------------------------------------------- migrateLegacyAd

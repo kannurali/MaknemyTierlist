@@ -223,6 +223,11 @@
       "promo.popLabel":         "Рекламное сообщение",
       "promo.close":            "Закрыть рекламу",
       "promo.cta":              "Перейти",
+      // Собственное объявление о телеграм-канале (PROMO.HOUSE_TG в
+      // js/promo.js). У платной кампании текст приходит от рекламодателя и
+      // не переводится, у своей — обязан говорить на языке интерфейса.
+      "promo.houseTgText":      "Свежие цены, розыгрыши и новости Blox Fruits — в нашем телеграм-канале",
+      "promo.houseTgCta":       "Открыть канал",
 
       "footer.addLinkBtn":      "＋ ссылка",
       "footer.urlPrompt":       "Ссылка (URL). Можно без https:// — подставится сам:",
@@ -582,6 +587,8 @@
       "promo.popLabel":         "Advertisement",
       "promo.close":            "Close the ad",
       "promo.cta":              "Open",
+      "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
+      "promo.houseTgCta":       "Open the channel",
 
       "footer.addLinkBtn":      "＋ link",
       "footer.urlPrompt":       "Link (URL). You can omit https:// — it is added automatically:",

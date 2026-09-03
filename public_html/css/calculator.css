@@ -717,7 +717,7 @@
 #tcResult[data-verdict="lose"] .tc-verdict-number { color: #ffd9d6; }
 
 /* ===================== Служебная полоса под макетом =====================
-   Ни переключателя языка, ни кнопок, ни оговорки в макете нет — доска там
+   Ни кнопок, ни оговорки в макете нет — доска там
    всегда пустая, делиться нечем и объяснять нечего. На сайте всё это
    нужно, поэтому вынесено ПОД макетный фрейм отдельной полосой:
    композиция макета остаётся нетронутой, а функции никуда не деваются. */
@@ -731,7 +731,6 @@
   align-items: center;
   gap: calc(14 * var(--u));
 }
-.tc-lang { align-self: flex-end; }
 
 .tc-state {
   margin: 0;
@@ -1406,7 +1405,6 @@
   .tc-verdict-number { font-size: 30px; display: block; margin-top: 8px; }
 
   .tc-extras { width: 100%; padding: 18px 0 0; }
-  .tc-lang { align-self: center; }
   .tc-threshold,
   .tc-disclaimer { font-size: 12px; max-width: none; }
 

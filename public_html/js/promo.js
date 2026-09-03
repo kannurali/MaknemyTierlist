@@ -440,6 +440,66 @@
     return normalizeDoc({ campaigns: [camp] }).campaigns[0] || null;
   }
 
+
+  // ==========================================================================
+  //  Собственное объявление: телеграм-канал проекта
+  // ==========================================================================
+
+  // Окно, которое видит посетитель, пока слот "popup" не выкуплен. Живёт
+  // здесь, а не в трёх страницах по копии: тирлист, лента и калькулятор
+  // обязаны показывать одно и то же объявление с одним и тем же id — счётчик
+  // показов в localStorage ведётся ПО id, и вторая копия под другим именем
+  // означала бы «раз в сутки» отдельно на каждой странице, то есть трижды.
+  //
+  // Форма обычной кампании, поэтому её рисуют те же функции, что и платную:
+  // отдельной ветки рендера нет ни в app.js, ни в js/promo-popup.js.
+  //
+  // Заглушки слотов strip/rail/dock («ВАША РЕКЛАМА») тут нет намеренно: у неё
+  // задача противоположная — продать место, и попапом она бы только злила.
+  // Здесь объявление настоящее, со своим предложением.
+  //
+  // capHours 24 + maxPerWeek 7 — «раз в сутки» в чистом виде. У платных
+  // кампаний по умолчанию 3 показа в неделю (POPUP_DEFAULTS): чужую рекламу
+  // мы ограничиваем сильнее, чем свою.
+  var HOUSE_TG = {
+    id: "house-tg",
+    name: "house-tg",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "",
+    end: "",
+    href: "https://t.me/theMaknemy",
+    // Заголовок и подпись кнопки — КЛЮЧИ словаря, а не готовые строки:
+    // текст платной кампании приходит от рекламодателя и не переводится, а
+    // своё объявление обязано говорить на языке интерфейса. Рендер сначала
+    // смотрит на *Key, и только потом на text/cta.
+    text: "",
+    cta: "",
+    textKey: "promo.houseTgText",
+    ctaKey: "promo.houseTgCta",
+    // Маркировка erid тут не нужна по закону: это реклама собственного
+    // ресурса на самом ресурсе, а не размещение рекламодателя.
+    erid: "",
+    slots: ["popup"],
+    creatives: {
+      popup: { src: "/assets/promo/house-tg-popup.webp", w: 800, h: 800, anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
+  // Что показать в окне: купленная кампания, если такая сейчас идёт, иначе
+  // собственное объявление. Одна функция на три страницы — иначе они
+  // разойдутся в том, когда именно всплывает своя реклама.
+  function popupPick(doc, seen, nowMs, rnd) {
+    var paid = eligible(doc, "popup", nowMs).filter(function (c) {
+      return shouldShowPopup(c, seen, nowMs);
+    });
+    if (paid.length) { return pickWeighted(paid, rnd); }
+    return shouldShowPopup(HOUSE_TG, seen, nowMs) ? HOUSE_TG : null;
+  }
+
   var api = {
     SLOTS: SLOTS,
     MAX_STRIP_SLIDES: MAX_STRIP_SLIDES,
@@ -453,6 +513,8 @@
     pickWeighted: pickWeighted,
     orderForCarousel: orderForCarousel,
     shouldShowPopup: shouldShowPopup,
+    HOUSE_TG: HOUSE_TG,
+    popupPick: popupPick,
     recordPopupShown: recordPopupShown,
     recordPopupClicked: recordPopupClicked,
     normalizeDoc: normalizeDoc,

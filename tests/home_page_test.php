@@ -579,11 +579,102 @@ test('борта ленты подключены к системе реклам�
 
 // Версия общего модуля обязана совпадать: иначе браузер держит в кеше две
 // копии одного файла, и страницы разъезжаются по поведению рекламы.
-test('promo.js подключён одной версией на обеих страницах', function () use ($PUB) {
-    preg_match('/promo\.js\?v=(\d+)/', read_file_or_fail($PUB . '/news.php'), $a);
-    preg_match('/promo\.js\?v=(\d+)/', read_file_or_fail($PUB . '/index.php'), $b);
-    assert_true(!empty($a[1]) && !empty($b[1]), 'обе страницы подключают promo.js');
-    assert_eq($a[1], $b[1], 'версии promo.js должны совпадать');
+test('promo.js подключён одной версией на всех страницах с рекламой', function () use ($PUB) {
+    $seen = [];
+    foreach (['index.php', 'news.php', 'calculator.php'] as $f) {
+        preg_match('/promo\.js\?v=(\d+)/', read_file_or_fail($PUB . '/' . $f), $m);
+        assert_true(!empty($m[1]), "$f: страница подключает promo.js");
+        $seen[] = $m[1] ?? '';
+    }
+    assert_eq(1, count(array_unique($seen)), 'версии promo.js должны совпадать');
+});
+
+// Нижняя рекламная полоса на телефоне (слот "dock"). На тирлисте она была с
+// самого начала, лента и калькулятор жили только с боковыми бортами — а на
+// телефоне борта скрыты вместе с декором, и рекламы там не было вовсе.
+// Модуль показа общий на две страницы: три независимых механизма — ровно то,
+// от чего вся система промо уходит.
+test('нижняя полоса рекламы подключена на ленте и в калькуляторе', function () use ($PUB) {
+    $mod = read_file_or_fail($PUB . '/js/promo-dock.js');
+    assert_true(strpos($mod, 'promo.eligible(promo.normalizeDoc(doc), "dock"') !== false,
+        'слот dock из общей системы отбора');
+    assert_true(strpos($mod, 'erid: ') !== false, 'маркировку рекламы выкидывать нельзя');
+    // Порог обязан совпадать с медиазапросом: выше него полоса не строится
+    // вовсе, и правило без своей пары в JS ничего не показывает.
+    assert_true(strpos($mod, '(max-width: 640px)') !== false, 'порог телефона в JS');
+    $css = read_file_or_fail($PUB . '/css/promo-dock.css');
+    assert_true(strpos($css, '@media (max-width: 640px)') !== false, 'тот же порог в CSS');
+    assert_true(strpos($css, 'body.has-promo-dock') !== false,
+        'под полосу должно отводиться место, иначе она закрывает подвал');
+
+    foreach (['news.php', 'calculator.php'] as $f) {
+        $html = read_file_or_fail($PUB . '/' . $f);
+        assert_true(strpos($html, 'id="promoDock"') !== false, "$f: разметка полосы");
+        assert_true(strpos($html, 'js/promo-dock.js') !== false, "$f: модуль полосы");
+        assert_true(strpos($html, 'css/promo-dock.css') !== false, "$f: стили полосы");
+        // hidden в разметке, а не выставляется скриптом: иначе пустая тёмная
+        // полоса мигает поверх экрана до ответа /api/promo.php.
+        assert_true((bool)preg_match('/id="promoDock"[^>]*hidden/', $html),
+            "$f: полоса скрыта до реального креатива");
+    }
+    // Оба вызова идут из того же запроса, что и борта: документ один.
+    foreach (['js/news-page.js', 'js/calculator-page.js'] as $f) {
+        $js = read_file_or_fail($PUB . '/' . $f);
+        assert_true(strpos($js, 'NX_PROMO_DOCK.render(dock, doc)') !== false,
+            "$f: полоса рисуется тем же документом, что и борта");
+    }
+});
+
+// Рекламное окно (слот "popup"). Раньше оно было только на тирлисте и только
+// под купленную кампанию: пока место не продано, окно молчало. Теперь у него
+// есть собственное объявление о телеграм-канале, и показывается оно на всех
+// страницах, кроме главной.
+test('рекламное окно есть на тирлисте, ленте и калькуляторе', function () use ($PUB) {
+    foreach (['index.php', 'news.php', 'calculator.php'] as $f) {
+        $html = read_file_or_fail($PUB . '/' . $f);
+        assert_true((bool)preg_match('/id="promoPop"[^>]*hidden/', $html),
+            "$f: окно есть в разметке и скрыто до показа");
+        assert_true(strpos($html, 'id="promoPopCta"') !== false, "$f: кнопка перехода");
+        assert_true(strpos($html, 'id="promoPopClose"') !== false, "$f: кнопка закрытия");
+        // role/aria-modal — окно перехватывает фокус, и скринридер обязан
+        // объявить его диалогом, а не куском страницы.
+        assert_true((bool)preg_match('/id="promoPop"[^>]*role="dialog"/', $html), "$f: role=dialog");
+    }
+
+    // Лента и калькулятор берут общий модуль; у тирлиста окно живёт в app.js.
+    foreach (['news.php', 'calculator.php'] as $f) {
+        $html = read_file_or_fail($PUB . '/' . $f);
+        assert_true(strpos($html, 'js/promo-popup.js') !== false, "$f: модуль окна");
+        assert_true(strpos($html, 'css/promo-popup.css') !== false, "$f: стили окна");
+    }
+
+    // Главная — единственная страница без рекламы вовсе.
+    $home = read_file_or_fail($PUB . '/home.php');
+    assert_true(strpos($home, 'id="promoPop"') === false, 'на главной окна быть не должно');
+    assert_true(strpos($home, 'js/promo.js') === false, 'на главной нет и модуля рекламы');
+});
+
+// Объявление о канале — не демо-данные: файл лежит в репозитории и уезжает
+// на сайт. Размер держим в тех же рамках, что и креатив рекламодателя
+// (CREATIVE_SPECS['popup'] в api/lib/images.php), иначе своё объявление
+// весило бы больше, чем мы разрешаем платному.
+test('креатив собственного объявления лежит в репозитории и влезает в лимит', function () use ($PUB) {
+    $path = $PUB . '/assets/promo/house-tg-popup.webp';
+    assert_true(is_file($path), 'файл креатива должен быть в репозитории');
+    assert_true(filesize($path) <= 400000, 'креатив не должен превышать лимит слота popup');
+
+    // Путь из js/promo.js обязан указывать ровно на этот файл.
+    $js = read_file_or_fail($PUB . '/js/promo.js');
+    assert_true(strpos($js, '/assets/promo/house-tg-popup.webp') !== false,
+        'js/promo.js должен ссылаться на этот креатив');
+
+    // Отбор общий: все три страницы обязаны звать popupPick, иначе окно на
+    // одной из них снова замолчит, пока место не продано.
+    assert_true(strpos($js, 'function popupPick') !== false, 'общий отбор кампании для окна');
+    assert_true(strpos(read_file_or_fail($PUB . '/js/app.js'), 'promo.popupPick(') !== false,
+        'тирлист должен брать кампанию тем же отбором');
+    assert_true(strpos(read_file_or_fail($PUB . '/js/promo-popup.js'), 'popupPick(') !== false,
+        'лента и калькулятор — тем же');
 });
 
 // --------------------------------------------------------------------------
@@ -631,10 +722,10 @@ test('шапка липкая, и её высота живёт одним зна
     assert_true((bool)preg_match('/\.toolbar \{[^}]*position: static;/s', $dp),
         'панель фильтров не липкая');
     $nd = read_file_or_fail($PUB . '/css/news-design.css');
-    // Борт опущен ещё на высоту строки переключателя языка: она тоже
-    // липкая и прижата вправо, иначе накрывала бы правый борт.
-    assert_true(strpos($nd, 'top: calc(var(--mk-top-h, 0px) + 16px + 55px);') !== false,
-        'рекламный борт прилипает под шапкой и строкой языка');
+    // Борт липнет сразу под шапкой: строки с переключателем языка между
+    // ними больше нет — он уехал в саму шапку.
+    assert_true(strpos($nd, 'top: calc(var(--mk-top-h, 0px) + 16px);') !== false,
+        'рекламный борт прилипает под шапкой');
 });
 
 // overflow: hidden создаёт скролл-контейнер и ломает position: sticky у
@@ -646,15 +737,20 @@ test('полотно ленты обрезано clip, а не hidden', function
     assert_eq(0, preg_match('/\.nw-page \{[^}]*overflow: hidden;/s', $css), 'hidden сломает липкие борта');
 });
 
-// Тулбар лежит СНАРУЖИ .nw-page, где объявлена --u. calc с этой переменной
-// там невалиден, и весь margin молча обнулялся: переключатель языка
-// прилипал к линии под шапкой и срезался правым краем окна.
-test('отступы тулбара ленты не зависят от --u', function () use ($PUB) {
+// От тулбара на ленте оставался один переключатель языка (бренд и
+// дублирующее меню прятал topbar.css, фильтры убраны по редизайну). Он
+// переехал в шапку, и полосы под шапкой на ленте больше нет вовсе —
+// вместе с ней ушёл и запас в 55px, который борт держал под неё.
+test('на ленте нет полосы под шапкой, и борт поднят вплотную к ней', function () use ($PUB) {
     $css = read_file_or_fail($PUB . '/css/news-design.css');
-    assert_true((bool)preg_match('/\.mk-top ~ \.toolbar \{[^}]*margin: 18px 42px 0;/s', $css),
-        'отступы должны быть в пикселях');
-    assert_eq(0, preg_match('/\.mk-top ~ \.toolbar \{[^}]*margin:[^;]*var\(--u\)/s', $css),
-        '--u снаружи .nw-page не определена');
+    assert_true(strpos($css, '.mk-top ~ .toolbar') === false,
+        'правил тулбара на ленте быть не должно');
+    $markup = read_file_or_fail($PUB . '/news.php');
+    $markup = preg_replace('/<!--.*?-->/s', '', $markup);
+    assert_eq(0, preg_match('/<div[^>]*class="toolbar"/', $markup),
+        'разметки тулбара на ленте быть не должно');
+    assert_true(strpos($css, 'top: calc(var(--mk-top-h, 0px) + 16px);') !== false,
+        'борт прилипает сразу под шапкой');
 });
 
 // --------------------------------------------------------------------------

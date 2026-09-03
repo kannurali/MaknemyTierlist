@@ -680,26 +680,42 @@
     return true;
   }
 
-  function renderNewsRails() {
+  // Один запрос на оба размещения: борта по бокам (слот "rail", виден на
+  // компьютере) и нижняя полоса (слот "dock", видна на телефоне). Документ
+  // /api/promo.php один и тот же, и тянуть его дважды незачем.
+  function renderNewsPromo() {
     const promo = window.PROMO;
     const left = document.getElementById("newsRailL");
     const right = document.getElementById("newsRailR");
-    if (!promo || !left || !right) return;
+    const dock = document.getElementById("promoDock");
+    if (!promo) return;
 
+    // Реклама не должна ронять ленту: не пришёл документ — борта просто
+    // остаются скрытыми, лента работает как обычно. Отсюда .catch перед
+    // разбором, а не после: с null дальше по цепочке умеют работать и
+    // полоса, и окно (у окна есть своё объявление на случай, когда
+    // купленных кампаний нет вовсе).
     fetch(PROMO_API, { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
+      .catch(() => null)
       .then(doc => {
-        if (!doc) return;
+        // Нижняя полоса — общий модуль с калькулятором (js/promo-dock.js):
+        // он сам решает, строить ли её на этой ширине экрана, и сам меряет
+        // высоту под нижнее поле страницы.
+        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc);
+
+        // Окно — тот же общий модуль (js/promo-popup.js). Админу рекламы
+        // не показываем: он пришёл работать с лентой, а не смотреть её.
+        if (window.NX_PROMO_POPUP) window.NX_PROMO_POPUP.mount({ doc, isAdmin });
+
+        if (!doc || !left || !right) return;
         const list = promo.eligible(promo.normalizeDoc(doc), "rail", Date.now());
         if (!list.length) return;              // не куплено — борта не показываем
         fillNewsRail(left, list[0]);
         // Один рекламодатель занимает оба борта: одинокий борт с одной
         // стороны ленты выглядит перекосом вёрстки, а не размещением.
         fillNewsRail(right, list[1] || list[0]);
-      })
-      // Реклама не должна ронять ленту: не пришёл документ — борта просто
-      // остаются скрытыми, лента работает как обычно.
-      .catch(() => {});
+      });
   }
 
   NX_PROTECT.applyClass(isAdmin);
@@ -707,7 +723,7 @@
 
   applyLang(lang);
   load();
-  renderNewsRails();
+  renderNewsPromo();
 
   // Шов для редактора (js/news-editor.js, грузится только на /admin/news).
   // Отдаётся ровно пять вещей, а не весь модуль: редактору нужно нарисовать

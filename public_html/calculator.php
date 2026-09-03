@@ -55,17 +55,23 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=7" />
+<link rel="stylesheet" href="css/base.css?v=8" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
-<link rel="stylesheet" href="css/topbar.css?v=7" />
+<link rel="stylesheet" href="css/topbar.css?v=8" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=29" />
-<link rel="stylesheet" href="css/calculator.css?v=17" />
+<link rel="stylesheet" href="css/design-page.css?v=30" />
+<link rel="stylesheet" href="css/calculator.css?v=18" />
+<!-- Нижняя рекламная полоса на телефоне: слот "dock", тот же документ
+     /api/promo.php, что у бортов по бокам доски. -->
+<link rel="stylesheet" href="css/promo-dock.css?v=1" />
+<!-- Рекламное окно: слот "popup", раз в сутки. Пока место не выкуплено,
+     показывает собственное объявление о телеграм-канале. -->
+<link rel="stylesheet" href="css/promo-popup.css?v=1" />
 </head>
 <body>
 
@@ -75,6 +81,16 @@ header('Cache-Control: no-cache, must-revalidate');
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
+
+    <!-- Язык интерфейса. Стоит в самой шапке, а не под макетным фреймом:
+         шапка общая для всех страниц, значит и переключатель обязан быть в
+         одном месте везде. При прокрутке уезжает влево вместе с логотипом
+         (.mk-top.is-stuck .mk-top-lang в topbar.css). -->
+    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
+         data-i18n-label="lang.switch" aria-label="Язык интерфейса">
+      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
+      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
+    </div>
 
     <!-- Разделы и профиль лежат в одной плашке: аватар — последний элемент
          .mk-top-bar, за волосяным разделителем (см. topbar.css). Отдельной
@@ -132,6 +148,20 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
       </ul>
 
+      <!-- Чат. Появился в макете шапки (Figma, нода 244:7171): такой же
+           круг с градиентом, что и профиль, слева от него. Раздела ещё нет,
+           поэтому кнопка помечена data-soon и по клику отвечает «В активной
+           разработке» — как «Трейдинг» и профиль. Вернуть раздел = убрать
+           data-soon и заменить тег на <a href>.
+
+           Волосяной разделитель между разделами и парой круглых кнопок
+           теперь рисует она (.mk-chat::before в topbar.css): в макете чат
+           стоит первым из пары, и разделитель у профиля оказался бы
+           посреди неё. -->
+      <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+        <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
+      </button>
+
       <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
       </button>
@@ -162,7 +192,7 @@ header('Cache-Control: no-cache, must-revalidate');
     <div class="tc-frame">
 
       <!-- Рекламные борта 248×670 по краям — реальные размещения слота "rail"
-           (renderRails() в js/calculator-page.js): тот же документ
+           (renderPromo() в js/calculator-page.js): тот же документ
            /api/promo.php и тот же модуль js/promo.js, что у тирлиста и ленты.
            Пока слот не куплен, борт остаётся тем, чем он и является в
            макете, — полосатой заглушкой. -->
@@ -340,20 +370,11 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
 
     <!-- ============ Служебная полоса ============
-         Переключателя языка, кнопок и оговорок в макете нет: доска там
-         всегда пустая, делиться нечем и объяснять нечего. На сайте всё это
-         нужно, поэтому вынесено под макетный фрейм — композиция макета
-         остаётся нетронутой. -->
+         Кнопок и оговорок в макете нет: доска там всегда пустая, делиться
+         нечем и объяснять нечего. На сайте всё это нужно, поэтому вынесено
+         под макетный фрейм — композиция макета остаётся нетронутой.
+         Переключатель языка отсюда уехал в общую шапку сайта. -->
     <div class="tc-extras">
-
-      <!-- Тот же компонент, что в тулбаре тирлиста/ленты (base.css:
-           .lang-switch/.chip) — своих стилей переключателю здесь заводить
-           не нужно. -->
-      <div class="lang-switch tc-lang" id="langSwitch" role="group"
-           data-i18n-label="lang.switch" aria-label="Язык интерфейса">
-        <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
-        <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
-      </div>
 
       <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
 
@@ -424,9 +445,63 @@ header('Cache-Control: no-cache, must-revalidate');
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=29"></script>
-  <script src="js/promo.js?v=2"></script>
+
+  <!-- ====== Нижняя рекламная полоса (только телефоны) ======
+       Горизонтальная пара к боковым бортам: на телефоне борта скрыты
+       вместе с остальным декором, и место «сбоку от контента» там — низ
+       экрана. Слот "dock" в /api/promo.php, тот же документ, что у бортов.
+
+       Прямой потомок <body> намеренно: полоса прибита position: fixed, а
+       любой предок с transform или container-type перехватил бы это на
+       себя, и она прилипла бы к колонке, а не к экрану.
+
+       hidden снимает js/promo-dock.js, когда приехал реальный креатив:
+       пустая тёмная полоса поверх нижней трети телефона читается как
+       поломка вёрстки, а не как свободное место. -->
+  <div class="ptn-dock" id="promoDock" hidden
+       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
+
+  <!-- ====== Рекламное окно ======
+       Всплывает через ~12 секунд после захода и не чаще раза в сутки
+       (частоту задаёт сама кампания, см. capHours в js/promo.js). Пока
+       слот "popup" не выкуплен, здесь показывается собственное
+       объявление о телеграм-канале проекта — PROMO.HOUSE_TG.
+
+       Разметка лежит в странице, а не собирается в JS: applyLang()
+       проходит по [data-i18n*] при каждой смене языка, и статическая
+       разметка получает перевод бесплатно.
+
+       Прямой потомок <body>: окно прибито position: fixed, и предок с
+       transform или container-type перехватил бы это на себя. -->
+  <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
+       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       aria-labelledby="promoPopTitle">
+    <div class="ptn-pop-card">
+      <button class="ptn-pop-close" id="promoPopClose" type="button"
+              data-i18n-label="promo.close" data-i18n-title="promo.close"
+              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+      <!-- alt пустой намеренно: доступное имя несёт само окно
+           (data-i18n-label выше), и подпись на картинке дублировала бы
+           его вторым «Реклама» подряд. -->
+      <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" /></div>
+      <!-- Текст и подпись кнопки платной кампании приходят от
+           рекламодателя и не переводятся; у своего объявления вместо них
+           ключи словаря — js/promo-popup.js вешает на узел data-i18n. -->
+      <div class="ptn-pop-title" id="promoPopTitle"></div>
+      <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
+      <!-- Токен маркировки. Заполняет js/promo-popup.js; без него узел скрыт. -->
+      <span class="ptn-erid" id="promoPopErid" hidden></span>
+    </div>
+  </div>
+
+  <script src="js/i18n.js?v=30"></script>
+  <script src="js/promo.js?v=3"></script>
+  <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
+  <script src="js/promo-dock.js?v=1"></script>
+  <!-- Рекламное окно — общий модуль с лентой новостей. -->
+  <script src="js/promo-popup.js?v=1"></script>
   <script src="js/calc.js?v=7"></script>
-  <script src="js/calculator-page.js?v=14"></script>
+  <script src="js/calculator-page.js?v=15"></script>
 </body>
 </html>

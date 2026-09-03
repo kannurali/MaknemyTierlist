@@ -1,0 +1,93 @@
+/* ===================================================================
+   Нижняя рекламная полоса на телефоне (слот "dock").
+
+   Горизонтальная пара к боковым бортам: на телефоне бортов нет — они
+   спрятаны вместе с остальным декором, — и место «сбоку от контента» там
+   это низ экрана. Полоса приклеена к нему и видна на всём скролле, ровно
+   это рекламодатель и покупает.
+
+   Такая же полоса давно работает на тирлисте, но её правила лежат в
+   styles.css вперемешку с геометрией сцены (padding у .stage-wrap,
+   разводка .like-fab / .donate-fab по углам). Тащить весь тот файл в
+   ленту и калькулятор нельзя, поэтому здесь отдельные правила под те же
+   классы: разметку и JS страницы делят, а вёрстку каждый макет держит
+   свою. Тирлист этот файл не подключает и продолжает жить на styles.css.
+
+   Подключается ПОСЛЕ base.css: берёт оттуда --panel-edge, --cyan и --ui.
+
+   Порог 640px — тот же, что у тирлиста (styles.css) и у dockMQ в
+   js/promo-dock.js. Три места обязаны совпадать: выше порога JS полосу
+   вообще не строит, и правило без него бесполезно.
+   =================================================================== */
+
+.ptn-dock { display: none; }
+
+@media (max-width: 640px) {
+  .ptn-dock:not([hidden]) {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 55;
+    padding: 6px 8px;
+    /* Системная зона снизу iPhone: без запаса полоса уезжает под
+       индикатор Home, и нижняя треть креатива не видна вовсе. */
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(5, 9, 26, .94);
+    border-top: 1px solid var(--panel-edge);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, .45);
+    line-height: 0;
+  }
+  .ptn-dock.has-link { cursor: pointer; }
+  .ptn-dock:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+  .ptn-dock-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* Потолок на случай, если рекламодатель прислал макет выше нормы:
+       полоса во весь экран — это уже не полоса, а перекрытие страницы. */
+    max-height: 22vh;
+    object-fit: contain;
+    border-radius: 8px;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* Плашка «РЕКЛАМА» и маркировка erid — те же классы, что рисует
+     js/promo-dock.js, вид тот же, что у бортов ленты и калькулятора. */
+  .ptn-dock .ptn-chip,
+  .ptn-dock .ptn-erid {
+    position: absolute;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    font-family: var(--ui);
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .ptn-dock .ptn-chip { top: 4px; left: 6px; z-index: 1; }
+  /* Токен идёт ВВЕРХ справа, а не вниз: снизу у полосы отступ под
+     системную зону iPhone, и подпись уехала бы в неё. */
+  .ptn-dock .ptn-erid {
+    top: 4px; right: 6px;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* Клики не ловит — нажатие принадлежит самому баннеру. */
+    pointer-events: none;
+  }
+
+  /* Под полосу отводим место в конце страницы, иначе она навсегда
+     закрывает подвал. Высоту меряет JS и кладёт в --ptn-dock-h: она
+     зависит от пропорций присланного макета, захардкодить её нельзя.
+
+     Отступ на <body>, а не на колонке страницы: подвал .mk-foot лежит
+     на том же уровне, и любой внутренний контейнер закрыл бы только
+     свой кусок. */
+  body.has-promo-dock {
+    padding-bottom: calc(var(--ptn-dock-h, 90px) + 12px);
+  }
+}

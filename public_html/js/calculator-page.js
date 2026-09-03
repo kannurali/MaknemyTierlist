@@ -582,7 +582,7 @@
   // ------------------------------------------------------------------------
   //  Рекламные борта — слот "rail", тот же документ /api/promo.php и тот же
   //  модуль js/promo.js, что у тирлиста (app.js) и ленты (news-page.js,
-  //  fillNewsRail()/renderNewsRails()). Своей логики отбора кампании здесь
+  //  fillNewsRail()/renderNewsPromo()). Своей логики отбора кампании здесь
   //  нет умышленно: третий independent-механизм показа рекламы — это ровно
   //  тот способ рассинхронизировать три страницы, которого ТЗ требует
   //  избежать.
@@ -634,26 +634,45 @@
     return true;
   }
 
-  function renderRails() {
+  // Один запрос на оба размещения: борта по бокам доски (слот "rail", видны
+  // на компьютере) и нижняя полоса (слот "dock", видна на телефоне, где
+  // борта скрыты вместе с макетным фреймом). Документ /api/promo.php один и
+  // тот же, тянуть его дважды незачем.
+  function renderPromo() {
     const promo = window.PROMO;
     const left = document.getElementById("tcRailL");
     const right = document.getElementById("tcRailR");
-    if (!promo || !left || !right) return;
+    const dock = document.getElementById("promoDock");
+    if (!promo) return;
 
+    // Реклама не должна ронять калькулятор: не пришёл документ — борта
+    // остаются полосатыми. Отсюда .catch перед разбором, а не после: с null
+    // дальше по цепочке умеют работать и полоса, и окно (у окна есть своё
+    // объявление на случай, когда купленных кампаний нет вовсе).
     fetch(PROMO_API, { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
+      .catch(() => null)
       .then(doc => {
-        if (!doc) return;
+        // Нижняя полоса — общий модуль с лентой (js/promo-dock.js): он сам
+        // решает, строить ли её на этой ширине экрана, и сам меряет высоту
+        // под нижнее поле страницы.
+        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc);
+
+        // Окно — тот же общий модуль (js/promo-popup.js). busy() держит его
+        // закрытым, пока открыт каталог: человек ищет предмет, и накрывать
+        // поиск рекламой нельзя.
+        if (window.NX_PROMO_POPUP) {
+          window.NX_PROMO_POPUP.mount({ doc, busy: () => catalogState.open });
+        }
+
+        if (!doc || !left || !right) return;
         const list = promo.eligible(promo.normalizeDoc(doc), "rail", Date.now());
         if (!list.length) return; // не куплено — борт остаётся полосатой заглушкой
         fillRail(left, list[0]);
         // Один рекламодатель занимает оба борта: пустой второй борт рядом с
         // заполненным читается как поломка, а не как свободное место.
         fillRail(right, list[1] || list[0]);
-      })
-      // Реклама не должна ронять калькулятор: не пришёл документ — борта
-      // остаются полосатыми.
-      .catch(() => {});
+      });
   }
 
   // ------------------------------------------------------------------------
@@ -825,5 +844,5 @@
   wireActions();
   applyLang(); // без аргумента — язык уже выбран выше, localStorage лишний раз не трогаем
   load();
-  renderRails();
+  renderPromo();
 })();

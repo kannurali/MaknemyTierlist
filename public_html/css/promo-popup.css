@@ -1,0 +1,127 @@
+/* ===================================================================
+   Рекламное окно (слот "popup") для ленты и калькулятора.
+
+   Такое же окно давно работает на тирлисте, но его правила лежат в
+   styles.css вперемешку с геометрией сцены, а тот файл на этих двух
+   страницах не подключён. Поэтому здесь свои правила под те же классы:
+   разметку и JS страницы делят с тирлистом, вёрстку каждый макет держит
+   свою. Тирлист этот файл не подключает и продолжает жить на styles.css.
+
+   Подключается ПОСЛЕ base.css: берёт оттуда --panel-edge, --cyan,
+   --display и оформление кнопки .btn.primary.
+
+   z-index 90 — из свободной полосы 61-99: выше шапки (60) и нижней
+   рекламной полосы (55), ниже настоящих модалок. Окно человек не просил
+   открывать, поэтому оно обязано проигрывать тому, что он открыл сам.
+
+   Подложка НЕ анимируется. Прозрачный слой во весь экран — ровно тот
+   случай, из-за которого в проекте запрещены opacity < 1 и blend-режимы
+   на больших элементах: WebKit заводит под них отдельный буфер в десятки
+   мегабайт и роняет вкладку. Двигаем только карточку.
+   =================================================================== */
+
+.ptn-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 7, 20, .72);
+  touch-action: none;          /* iOS протаскивает скролл сквозь overflow: hidden */
+}
+
+.ptn-pop-card {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 18px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-edge);
+  background: linear-gradient(180deg, #16294f, #0a1430);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+  animation: ptnPopIn .16s ease-out;
+}
+@keyframes ptnPopIn { from { transform: translateY(8px); } to { transform: none; } }
+
+/* Плашка «РЕКЛАМА» и токен маркировки. На тирлисте у этих классов есть
+   общее описание в styles.css; здесь его нет, поэтому оба узла описаны
+   целиком, а не одними поправками к размеру. */
+.ptn-pop-card .ptn-chip {
+  position: absolute; top: 7px; left: 7px;
+  z-index: 1;
+  font-family: var(--display);
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  padding: 3px 10px 1px;
+  border-radius: 7px;
+  color: #0a1226;
+  background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
+}
+.ptn-pop-card .ptn-erid {
+  align-self: flex-end;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1.8;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: rgba(226, 240, 255, .82);
+  background: rgba(5, 9, 26, .6);
+  /* Клики не ловит — нажатие принадлежит кнопке и самому окну. */
+  pointer-events: none;
+}
+
+.ptn-pop-close {
+  position: absolute; top: 6px; right: 6px;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-edge);
+  background: rgba(10, 22, 52, .8);
+  color: #cfe9ff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.ptn-pop-media { width: 100%; line-height: 0; }
+.ptn-pop-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 52vh;
+  object-fit: contain;
+  border-radius: 10px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ptn-pop-title {
+  font-family: var(--display);
+  font-size: 19px;
+  line-height: 1.25;
+  color: #fff;
+  text-align: center;
+}
+.ptn-pop-cta { width: 100%; text-align: center; }
+
+.ptn-pop-close:focus-visible,
+.ptn-pop-cta:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* Блокировка прокрутки фона, пока окно открыто. */
+body.ptn-locked { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ptn-pop-card { animation: none; }
+}

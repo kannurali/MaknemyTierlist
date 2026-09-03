@@ -145,17 +145,17 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=7" />
+<link rel="stylesheet" href="css/base.css?v=8" />
 <link rel="stylesheet" href="css/styles.css?v=53" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
-<link rel="stylesheet" href="css/topbar.css?v=7" />
+<link rel="stylesheet" href="css/topbar.css?v=8" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=29" />
+<link rel="stylesheet" href="css/design-page.css?v=30" />
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
@@ -199,6 +199,19 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
+
+    <!-- Язык интерфейса. Стоит в самой шапке, а не в полосе под ней: шапка
+         общая для всех страниц, значит и переключатель обязан быть в одном
+         месте везде. При прокрутке уезжает влево вместе с логотипом
+         (.mk-top.is-stuck .mk-top-lang в topbar.css).
+
+         Содержимое тирлиста (названия, реклама, титры) идёт из БД и не
+         переводится — переключатель влияет только на интерфейс. -->
+    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
+         data-i18n-label="lang.switch" aria-label="Язык интерфейса">
+      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
+      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
+    </div>
 
     <!-- Разделы и профиль лежат в одной плашке: аватар — последний элемент
          .mk-top-bar, за волосяным разделителем (см. topbar.css). Отдельной
@@ -254,6 +267,20 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </li>
       </ul>
 
+      <!-- Чат. Появился в макете шапки (Figma, нода 244:7171): такой же
+           круг с градиентом, что и профиль, слева от него. Раздела ещё нет,
+           поэтому кнопка помечена data-soon и по клику отвечает «В активной
+           разработке» — как «Трейдинг» и профиль. Вернуть раздел = убрать
+           data-soon и заменить тег на <a href>.
+
+           Волосяной разделитель между разделами и парой круглых кнопок
+           теперь рисует она (.mk-chat::before в topbar.css): в макете чат
+           стоит первым из пары, и разделитель у профиля оказался бы
+           посреди неё. -->
+      <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+        <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
+      </button>
+
       <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
       </button>
@@ -300,13 +327,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <button class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="Показать всё">Все</button>
     </div>
 
-    <!-- Язык интерфейса. Содержимое тирлиста (названия, реклама, титры) идёт
-         из БД и не переводится — переключатель влияет только на интерфейс. -->
-    <div class="tb-group lang-switch" id="langSwitch" role="group"
-         data-i18n-label="lang.switch" aria-label="Язык интерфейса">
-      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
-      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
-    </div>
+    <!-- Переключатель языка переехал в шапку (.mk-top-lang в topbar.css):
+         он общий для всех страниц, и в полосе фильтров ему делать нечего. -->
 
     <!-- Переключатели — только для админа -->
     <div class="tb-group" id="tbToggles" hidden>
@@ -670,16 +692,16 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
        /api/state.php. См. комментарий у $nxRev в начале файла. -->
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=29"></script>
+  <script src="js/i18n.js?v=30"></script>
   <script src="js/content.js?v=2"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
-  <script src="js/promo.js?v=2"></script>
+  <script src="js/promo.js?v=3"></script>
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=68"></script>
+  <script src="js/app.js?v=69"></script>
 </body>
 </html>
