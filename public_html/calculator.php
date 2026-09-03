@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/api/_bootstrap.php';
+require_once __DIR__ . '/api/lib/metrika.php';
 
 // Страница статичная (данные тирлиста запрашивает клиент через
 // GET /api/tierlist.php, см. js/calculator-page.js) — ни превью, собираемого
@@ -72,6 +73,9 @@ header('Cache-Control: no-cache, must-revalidate');
 <!-- Рекламное окно: слот "popup", раз в сутки. Пока место не выкуплено,
      показывает собственное объявление о телеграм-канале. -->
 <link rel="stylesheet" href="css/promo-popup.css?v=1" />
+<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
+     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<?php echo metrika_counter_html(); ?>
 </head>
 <body>
 
