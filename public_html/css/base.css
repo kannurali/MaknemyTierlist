@@ -222,9 +222,9 @@ body.protected img { -webkit-user-drag: none; }
   background: none;
   text-align: center;
   color: #9fb6d8;
-  /* Тот же шрифт, что у остальных подписей редизайна. На тирлисте и в ленте
-     переключатель стоит в панели фильтров, и там кегль ему задаёт
-     .toolbar .chip (design-page.css) — заодно с соседними чипами. */
+  /* Тот же шрифт, что у остальных подписей редизайна. Кегль и поля под
+     шапку переопределяет .mk-top-lang .chip (topbar.css): переключатель
+     живёт в шапке и масштабируется вместе с логотипом и пилюлями. */
   font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
   font-size: 15px;
   font-weight: 400;

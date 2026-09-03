@@ -717,7 +717,7 @@
 #tcResult[data-verdict="lose"] .tc-verdict-number { color: #ffd9d6; }
 
 /* ===================== Служебная полоса под макетом =====================
-   Ни переключателя языка, ни кнопок, ни оговорки в макете нет — доска там
+   Ни кнопок, ни оговорки в макете нет — доска там
    всегда пустая, делиться нечем и объяснять нечего. На сайте всё это
    нужно, поэтому вынесено ПОД макетный фрейм отдельной полосой:
    композиция макета остаётся нетронутой, а функции никуда не деваются. */
@@ -731,7 +731,6 @@
   align-items: center;
   gap: calc(14 * var(--u));
 }
-.tc-lang { align-self: flex-end; }
 
 .tc-state {
   margin: 0;
@@ -948,15 +947,20 @@
 }
 /* Полоса прокрутки макета: светлая дорожка 12 и градиентный ползунок 29,
    который её перекрывает. Ползунок шире дорожки, поэтому ширина полосы
-   задана по ползунку, а дорожка нарисована фоном по центру. */
-.tc-cat-grid::-webkit-scrollbar { width: 29px; }
+   задана по ползунку, а дорожка нарисована фоном по центру.
+
+   Ужата в тех же пропорциях, что и полоса всей страницы (design-page.css):
+   ползунок 29 → 16, дорожка 12 → 7, радиусы 12 → 7 и 34 → 19. Макетные 29
+   на странице читались слишком грубо, и две полосы разной толщины рядом
+   смотрелись бы разнобоем — правим их вместе. */
+.tc-cat-grid::-webkit-scrollbar { width: 16px; }
 .tc-cat-grid::-webkit-scrollbar-track {
-  background: linear-gradient(#d9d9d9, #d9d9d9) center / 12px 100% no-repeat;
-  border-radius: 34px;
+  background: linear-gradient(#d9d9d9, #d9d9d9) center / 7px 100% no-repeat;
+  border-radius: 19px;
 }
 .tc-cat-grid::-webkit-scrollbar-thumb {
   background: var(--tc-grad);
-  border-radius: 12px;
+  border-radius: 7px;
 }
 /* Firefox не знает ::-webkit-scrollbar и красит полосу только двумя цветами.
    Отдельный блок, а не пара свойств рядом: Chrome с версии 121 при наличии
@@ -1401,7 +1405,6 @@
   .tc-verdict-number { font-size: 30px; display: block; margin-top: 8px; }
 
   .tc-extras { width: 100%; padding: 18px 0 0; }
-  .tc-lang { align-self: center; }
   .tc-threshold,
   .tc-disclaimer { font-size: 12px; max-width: none; }
 

@@ -27,6 +27,9 @@ function top_header(string $pub, string $file): string {
 }
 
 $PAGES = ['home.php', 'index.php', 'news.php'];
+// Калькулятор появился позже и несёт ту же шапку. В $PAGES его нет, чтобы не
+// переписывать проверки, написанные до него; новые смотрят все четыре копии.
+$PAGES4 = ['home.php', 'index.php', 'news.php', 'calculator.php'];
 
 // --------------------------------------------------------------------------
 //  Разделы в разработке
@@ -86,9 +89,9 @@ test('у каждой кнопки data-soon есть подпись и ключ
     assert_true(strpos($i18n, '"topbar.soon"') !== false, 'ключ topbar.soon в словаре');
     foreach ($PAGES as $f) {
         $s = top_header($PUB, $f);
-        assert_eq(2, substr_count($s, 'data-soon'), "$f: трейдинг и профиль");
-        assert_eq(2, substr_count($s, 'data-i18n-title="topbar.soon"'), "$f: ключ на обоих");
-        assert_eq(2, substr_count($s, 'title="В активной разработке"'), "$f: подпись на обоих");
+        assert_eq(3, substr_count($s, 'data-soon'), "$f: трейдинг, чат и профиль");
+        assert_eq(3, substr_count($s, 'data-i18n-title="topbar.soon"'), "$f: ключ на всех трёх");
+        assert_eq(3, substr_count($s, 'title="В активной разработке"'), "$f: подпись на всех трёх");
     }
 });
 
@@ -131,8 +134,8 @@ test('шапка липкая, и её высота живёт одним зна
     assert_true(strpos($css, '--mk-top-h:') !== false, 'высота вынесена в переменную');
     assert_true(strpos($css, 'height: var(--mk-top-h);') !== false, 'шапка берёт высоту оттуда же');
     $nd = top_read($PUB . '/css/news-design.css');
-    assert_true(strpos($nd, 'top: calc(var(--mk-top-h, 0px) + 16px + 55px);') !== false,
-        'рекламный борт прилипает под шапкой и строкой языка');
+    assert_true(strpos($nd, 'top: calc(var(--mk-top-h, 0px) + 16px);') !== false,
+        'рекламный борт прилипает под шапкой');
 });
 
 // Прокрученная шапка убирает плашку разделов за край — язычок остаётся
@@ -186,6 +189,66 @@ test('на узких экранах шапка не сворачивается'
     // перезагрузки страницы.
     assert_true(strpos($js, 'WIDE.addEventListener("change", sync)') !== false,
         'смена режима должна пересчитываться на лету');
+});
+
+// Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же
+// круг с градиентом, что и профиль, слева от него. Раздела ещё нет, поэтому
+// она такая же «в разработке», как «Трейдинг» и профиль.
+test('чат — кнопка data-soon рядом с профилем, а не ссылка', function () use ($PUB, $PAGES4) {
+    foreach ($PAGES4 as $f) {
+        $s = top_header($PUB, $f);
+        assert_true((bool)preg_match(
+            '/<button class="mk-chat" type="button" aria-label="Чат" data-soon /', $s),
+            "$f: чат должен быть кнопкой data-soon");
+        // Порядок из макета: чат стоит ПЕРЕД профилем, оба внутри плашки.
+        $bar  = strpos($s, '<nav class="mk-top-bar"');
+        $chat = strpos($s, '<button class="mk-chat"');
+        $av   = strpos($s, '<button class="mk-avatar"');
+        $end  = strpos($s, '</nav>', $bar === false ? 0 : $bar);
+        assert_true($bar !== false && $chat !== false && $bar < $chat && $chat < $av && $av < $end,
+            "$f: чат должен лежать в .mk-top-bar перед профилем");
+    }
+
+    $css = top_read($PUB . '/css/topbar.css');
+    // Волосяной разделитель отделяет разделы от пары круглых кнопок. С
+    // приходом чата он обязан переехать на него: у профиля он оказался бы
+    // посреди пары.
+    assert_true(strpos($css, '.mk-chat::before') !== false,
+        'разделитель рисует кнопка чата');
+    assert_eq(0, preg_match('/\.mk-avatar::before \{/', $css),
+        'у профиля своего разделителя быть не должно');
+});
+
+// --------------------------------------------------------------------------
+//  Переключатель языка
+// --------------------------------------------------------------------------
+
+// RU|EN стоял на каждой странице по-своему: в тулбаре тирлиста и ленты, в
+// .tc-extras калькулятора. Три места расходились при каждой правке, а на
+// прокрученной странице полоса с переключателем оставалась висеть над
+// содержимым, хотя шапка над ней уже свернулась. Теперь он в самой шапке —
+// один компонент на три страницы, и уезжает вместе с логотипом.
+//
+// Главной в списке нет намеренно: сайт на ней только по-русски, словарь
+// js/i18n.js туда не подключён, и переключать там нечего.
+test('переключатель языка живёт в шапке, а не в полосе под ней', function () use ($PUB) {
+    foreach (['index.php', 'news.php', 'calculator.php'] as $f) {
+        $head = top_header($PUB, $f);
+        assert_true((bool)preg_match('/<div class="mk-top-lang lang-switch" id="langSwitch"/', $head),
+            "$f: переключатель должен стоять внутри шапки");
+        // Обе половинки видны всегда: из одной кнопки не понять, какие языки
+        // вообще есть (см. историю правок в design-page.css).
+        assert_true((bool)preg_match('/data-lang="ru"/', $head), "$f: половинка RU");
+        assert_true((bool)preg_match('/data-lang="en"/', $head), "$f: половинка EN");
+        // Второй копии остаться не должно: обработчики ищут #langSwitch по id,
+        // и вторая пара молча перестала бы работать.
+        $page = preg_replace('/<!--.*?-->/s', '', top_read($PUB . '/' . $f));
+        assert_eq(1, substr_count($page, 'id="langSwitch"'), "$f: переключатель один на страницу");
+    }
+
+    $css = top_read($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-top\.is-stuck \.mk-top-lang \{[^}]*visibility: hidden;/s', $css),
+        'при прокрутке переключатель уезжает и уходит из таб-порядка');
 });
 
 // --------------------------------------------------------------------------

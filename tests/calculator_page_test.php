@@ -313,9 +313,21 @@ test('переключатель языка — один сегментиров�
     assert_true((bool)preg_match('/\.lang-switch \.chip\.active \{[^}]*linear-gradient\(255deg/su', $css),
         'выбранная половина — та же градиентная пилюля, что у кнопок шапки');
 
+    // Место переключателя — общая шапка сайта, а не полоса под ней:
+    // раньше он стоял на каждой странице по-своему (в тулбаре тирлиста и
+    // ленты, в .tc-extras калькулятора), и три места разъезжались при
+    // каждой правке. Разметку держит тест topbar_test.php, здесь — стили.
+    $tb = calc_read($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-top-lang \{/u', $tb),
+        'у переключателя в шапке должна быть своя геометрия');
+    assert_true(strpos($tb, '.mk-top.is-stuck .mk-top-lang') !== false,
+        'при прокрутке переключатель уезжает вместе с логотипом');
+
+    // Старое место обязано исчезнуть целиком: правило, оставшееся без
+    // разметки, — это следующий разработчик, который правит мёртвый CSS.
     $dp = calc_read($PUB . '/css/design-page.css');
-    assert_true(strpos($dp, '.toolbar .lang-switch { order: 1; margin-left: auto; }') !== false,
-        'в панели фильтров между половинками не должно быть просвета');
+    assert_true(strpos($dp, '.toolbar .lang-switch') === false,
+        'правил переключателя в панели фильтров больше быть не должно');
 });
 
 // Цены калькулятора — это цены тирлиста: отдельной копии нет, каталог собран
@@ -367,6 +379,27 @@ test('превью калькулятора — карточка вердикт�
         'og:image:width должен совпадать с файлом');
     assert_true(strpos($calc, '<meta property="og:image:height" content="630" />') !== false,
         'og:image:height должен совпадать с файлом');
+});
+
+// Полос прокрутки на сайте две: страничная (design-page.css, правило по html)
+// и внутренняя у сетки каталога. Обе сняты с одного макета и ужаты в одинаковых
+// пропорциях. Разъедутся — на одной странице окажутся ползунки разной толщины,
+// а заметить это можно только открыв каталог. Тест держит их одним числом.
+test('ползунок каталога такой же ширины, как страничный', function () use ($PUB) {
+    $calc = calc_read($PUB . '/css/calculator.css');
+    $page = calc_read($PUB . '/css/design-page.css');
+
+    assert_true((bool)preg_match('/\.tc-cat-grid::-webkit-scrollbar \{ width: (\d+)px;/', $calc, $a),
+        'у сетки каталога должна быть своя ширина полосы');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar \{[^}]*width: (\d+)px;/s', $page, $b),
+        'у страницы должна быть своя ширина полосы');
+    assert_eq($b[1], $a[1], 'ширина ползунка одна на обе полосы');
+
+    assert_true((bool)preg_match('/\.tc-cat-grid::-webkit-scrollbar-thumb \{[^}]*border-radius: (\d+)px;/s', $calc, $c),
+        'у ползунка каталога должен быть радиус');
+    assert_true((bool)preg_match('/html::-webkit-scrollbar-thumb \{[^}]*border-radius: (\d+)px;/s', $page, $d),
+        'у страничного ползунка должен быть радиус');
+    assert_eq($d[1], $c[1], 'радиус ползунка один на обе полосы');
 });
 
 run_tests();

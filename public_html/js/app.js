@@ -1580,9 +1580,12 @@
     // сгорит на человеке, который открыл сайт в фоне и ничего не увидел.
     if (document.visibilityState !== "visible") return;
     const now = Date.now();
-    const list = promo.eligible(promoDoc, "popup", now)
-      .filter(c => promo.shouldShowPopup(c, readSeen(), now));
-    const camp = promo.pickWeighted(list, Math.random());
+    // Отбор общий с лентой и калькулятором (PROMO.popupPick в js/promo.js):
+    // сначала купленная кампания, а если такой сейчас нет — собственное
+    // объявление о телеграм-канале. Раньше здесь была своя пара строк, и
+    // окно на тирлисте молчало, пока место не выкуплено, — три страницы
+    // вели себя по-разному.
+    const camp = promo.popupPick(promoDoc, readSeen(), now, Math.random());
     if (!camp) return;
     popupTimer = setTimeout(() => tryOpenPromoPopup(camp), camp.popup.delayMs);
   }
@@ -1618,10 +1621,14 @@
 
     const pop = $("#promoPop");
     $("#promoPopImg").src = src;
-    $("#promoPopTitle").textContent = camp.text || "";
+    // Текст платной кампании приходит от рекламодателя и не переводится.
+    // У собственного объявления вместо строк лежат ключи словаря — тогда
+    // узел помечается data-i18n, и applyLang() переведёт его при смене
+    // языка, не перестраивая окно.
+    setPromoCopy($("#promoPopTitle"), camp.textKey, camp.text, null);
     const cta = $("#promoPopCta");
     const url = promo.safeHref(camp.href);
-    cta.textContent = camp.cta || tx("promo.cta");
+    setPromoCopy(cta, camp.ctaKey, camp.cta, "promo.cta");
     cta.hidden = !url;
     if (url) cta.href = url;
 
@@ -1644,6 +1651,16 @@
     });
     document.addEventListener("keydown", onPopupKey, true);
     setTimeout(() => { const b = $("#promoPopClose"); if (b) b.focus(); }, 20);
+  }
+
+  function setPromoCopy(el, key, text, fallbackKey) {
+    if (key) {
+      el.setAttribute("data-i18n", key);
+      el.textContent = tx(key);
+      return;
+    }
+    el.removeAttribute("data-i18n");
+    el.textContent = text || (fallbackKey ? tx(fallbackKey) : "");
   }
 
   function closePromoPopup() {
