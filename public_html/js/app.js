@@ -934,19 +934,11 @@
   //
   // Макеты лежат в репозитории (assets/promo/), а не в базе: заглушка должна
   // работать на чистой установке, где ещё ни одной кампании не заводили.
-  const PROMO_HOUSE_HREF = "https://t.me/mksvtnc";
-  const promoHouse = {
-    id: "house", name: "house", advertiser: "", enabled: true, weight: 1,
-    start: "", end: "", href: PROMO_HOUSE_HREF, text: "", cta: "", erid: "",
-    slots: ["strip", "rail", "dock"],
-    creatives: {
-      strip: { src: "assets/promo/placeholder-strip.webp", w: 1200, h: 300, anim: false, poster: "" },
-      rail:  { src: "assets/promo/placeholder-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
-      dock:  { src: "assets/promo/placeholder-dock.webp",  w: 640,  h: 200, anim: false, poster: "" }
-    },
-    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
-    notes: ""
-  };
+  // Объект переехал в js/promo.js (PROMO.HOUSE_SLOT): ту же заглушку теперь
+  // показывают лента и калькулятор, и три страницы обязаны брать её из
+  // одного места — иначе они разойдутся и по картинке, и по id, по которому
+  // ведётся счёт показов.
+  const promoHouse = promo ? promo.HOUSE_SLOT : null;
 
   // Заглушка вместо пустоты — но не вместо того, что владелец поставил сам.
   // Старый одиночный баннер (state.ad) живёт ровно в этом месте, и подменять
@@ -966,8 +958,9 @@
   function renderPromoBlock() {
     const list = stripOrder();
     if (list.length) return renderPromoStrip(list);
-    if (legacyAdEmpty() && !stage.classList.contains("editing")) {
-      return renderPromoStrip([promoHouse]);
+    // promo && — заглушка приходит из js/promo.js, и без него её нет.
+    if (promo && legacyAdEmpty() && !stage.classList.contains("editing")) {
+      return renderPromoStrip([promoHouse]);   // promoHouse без promo не бывает
     }
     return renderLegacyAd();
   }

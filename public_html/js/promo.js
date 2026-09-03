@@ -489,6 +489,42 @@
     notes: ""
   };
 
+  // Заглушка свободного места — «ВАША РЕКЛАМА». Показывается в бортах и в
+  // нижней полосе, пока слот не выкуплен: место, которое видно, можно
+  // продать, а спрятанное — нельзя.
+  //
+  // Живёт здесь, а не в каждой странице по копии, ровно по той же причине,
+  // что и HOUSE_TG: счётчики и отбор идут ПО id, и вторая копия под другим
+  // именем означала бы разное поведение на трёх страницах.
+  //
+  // Попапа у неё нет намеренно: окно «ВАША РЕКЛАМА» поверх сайта каждому
+  // посетителю раздражает, а продать место не помогает — для окна есть своё
+  // объявление, HOUSE_TG.
+  //
+  // Макеты лежат в репозитории (assets/promo/), а не в базе: заглушка должна
+  // работать на чистой установке, где ещё ни одной кампании не заводили.
+  var HOUSE_SLOT = {
+    id: "house",
+    name: "house",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "",
+    end: "",
+    href: "https://t.me/mksvtnc",
+    text: "",
+    cta: "",
+    erid: "",
+    slots: ["strip", "rail", "dock"],
+    creatives: {
+      strip: { src: "/assets/promo/placeholder-strip.webp", w: 1200, h: 300, anim: false, poster: "" },
+      rail:  { src: "/assets/promo/placeholder-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/placeholder-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
+    notes: ""
+  };
+
   // Что показать в окне: купленная кампания, если такая сейчас идёт, иначе
   // собственное объявление. Одна функция на три страницы — иначе они
   // разойдутся в том, когда именно всплывает своя реклама.
@@ -514,6 +550,7 @@
     orderForCarousel: orderForCarousel,
     shouldShowPopup: shouldShowPopup,
     HOUSE_TG: HOUSE_TG,
+    HOUSE_SLOT: HOUSE_SLOT,
     popupPick: popupPick,
     recordPopupShown: recordPopupShown,
     recordPopupClicked: recordPopupClicked,

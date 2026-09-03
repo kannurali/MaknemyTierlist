@@ -226,7 +226,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <!-- Фон страницы и подвал из редизайна. -->
 <link rel="stylesheet" href="css/design-page.css?v=30" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
-<link rel="stylesheet" href="css/news-design.css?v=15" />
+<link rel="stylesheet" href="css/news-design.css?v=16" />
 <!-- Нижняя рекламная полоса на телефоне: слот "dock", тот же документ
      /api/promo.php, что у бортов по бокам ленты. -->
 <link rel="stylesheet" href="css/promo-dock.css?v=1" />
@@ -356,25 +356,22 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     <div class="nw-lead">
 
       <!-- Рекламные борта по бокам колонки (Frame 55 / Frame 56 в макете).
-           Пока слот "rail" не куплен, борта СКРЫТЫ: полосатая панель из
-           макета — это вид места в самом макете, а на живом сайте две
-           белые панели во всю высоту экрана читаются как поломка вёрстки,
-           а не как «здесь может быть ваша реклама». Ровно так же ведут
-           себя борта тирлиста (.ptn-rail в styles.css — display: none,
-           пока нет кампании).
+           Полосатая панель — это образ СВОБОДНОГО места, и стоит она
+           всегда, куплен слот "rail" или нет: место, которое видно, можно
+           продать, а спрятанное — нельзя. Так же ведут себя борта
+           калькулятора (.tc-rail в calculator.css).
 
-           hidden снимает renderNewsPromo() в js/news-page.js, когда из
-           /api/promo.php приехал подходящий креатив. Атрибут стоит прямо в
-           разметке, а не ставится скриптом: иначе борта успевали мигнуть
-           полосками до ответа API. -->
+           Когда из /api/promo.php приезжает креатив, renderNewsPromo() в
+           js/news-page.js вешает на борт класс has-ad, и полоски уступают
+           картинке кампании. -->
       <!-- Два уровня не для красоты: внешняя колонка тянется на всю высоту
            ленты, а сама панель внутри неё липкая — так борт остаётся на
            виду всю прокрутку и при этом не вылезает за пределы ленты. -->
-      <div class="nw-rail-slot nw-rail-l" aria-hidden="true" hidden>
+      <div class="nw-rail-slot nw-rail-l" aria-hidden="true">
         <aside class="nw-rail" id="newsRailL"
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
-      <div class="nw-rail-slot nw-rail-r" aria-hidden="true" hidden>
+      <div class="nw-rail-slot nw-rail-r" aria-hidden="true">
         <aside class="nw-rail" id="newsRailR"
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
@@ -485,9 +482,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
-  <script src="js/promo.js?v=3"></script>
+  <script src="js/promo.js?v=4"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с калькулятором. -->
-  <script src="js/promo-dock.js?v=1"></script>
+  <script src="js/promo-dock.js?v=2"></script>
   <!-- Рекламное окно — общий модуль с калькулятором. -->
   <script src="js/promo-popup.js?v=1"></script>
   <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
