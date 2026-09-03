@@ -15,7 +15,7 @@ const {
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, popupPick
+    HOUSE_TG, HOUSE_SLOT, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -475,6 +475,27 @@ test('HOUSE_TG is a popup-only campaign pointing at the project channel', () => 
     // Текст берётся из словаря, а не запечён строкой: своё объявление обязано
     // говорить на языке интерфейса.
     assert.ok(HOUSE_TG.textKey && HOUSE_TG.ctaKey);
+});
+
+// Заглушка свободного места. Её показывают борта и нижняя полоса на всех
+// трёх страницах, поэтому объект обязан быть один — по его id ведётся счёт,
+// и вторая копия под другим именем развела бы страницы.
+test('HOUSE_SLOT fills the banner slots but never the popup', () => {
+    assert.deepEqual(HOUSE_SLOT.slots, ['strip', 'rail', 'dock']);
+    assert.equal(HOUSE_SLOT.enabled, true);
+    for (const slot of HOUSE_SLOT.slots) {
+        const cre = PROMO.creativeFor(HOUSE_SLOT, slot);
+        assert.ok(cre, `у слота ${slot} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/'),
+            'макеты лежат в репозитории, а не в базе: заглушка обязана работать на чистой установке');
+    }
+    // Попапа у неё нет намеренно: окно «ВАША РЕКЛАМА» каждому посетителю
+    // раздражает, а продать место не помогает — для окна есть HOUSE_TG.
+    assert.equal(PROMO.creativeFor(HOUSE_SLOT, 'popup'), null);
+    assert.equal(popupPick({ campaigns: [] }, {}, Date.now(), 0.5).id, HOUSE_TG.id);
+    // Два своих объявления обязаны различаться по id, иначе счётчик показов
+    // одного гасил бы другое.
+    assert.notEqual(HOUSE_SLOT.id, HOUSE_TG.id);
 });
 
 test('popupPick prefers a paid campaign over the house ad', () => {

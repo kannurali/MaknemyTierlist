@@ -689,10 +689,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
        первом render(). Файл намеренно не называется js/ads.js — это имя
        режут сетевые фильтры блокировщиков. -->
-  <script src="js/promo.js?v=3"></script>
+  <script src="js/promo.js?v=4"></script>
   <!-- Защита контента от копирования — общая с лентой новостей.
        ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=69"></script>
+  <script src="js/app.js?v=70"></script>
 </body>
 </html>

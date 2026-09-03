@@ -617,6 +617,23 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true((bool)preg_match('/id="promoDock"[^>]*hidden/', $html),
             "$f: полоса скрыта до реального креатива");
     }
+
+    // Без кампании в полосе стоит заглушка «ВАША РЕКЛАМА» — та же, что у
+    // бортов и что на тирлисте. Прятать свободное место нельзя: продать
+    // можно только то, что видно.
+    assert_true(strpos($mod, 'promo.HOUSE_SLOT') !== false,
+        'без кампании полоса показывает общую заглушку');
+    // Заглушка одна на три страницы: тирлист берёт её оттуда же, а не
+    // держит свою копию — иначе разъедутся и картинка, и id, по которому
+    // ведётся счёт показов.
+    assert_true(strpos(read_file_or_fail($PUB . '/js/app.js'), 'promo.HOUSE_SLOT') !== false,
+        'тирлист берёт заглушку из общего модуля');
+    $promo = read_file_or_fail($PUB . '/js/promo.js');
+    assert_true(strpos($promo, 'var HOUSE_SLOT') !== false, 'заглушка объявлена в js/promo.js');
+    foreach (['strip', 'rail', 'dock'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/placeholder-' . $slot . '.webp'),
+            "макет заглушки для слота $slot должен лежать в репозитории");
+    }
     // Оба вызова идут из того же запроса, что и борта: документ один.
     foreach (['js/news-page.js', 'js/calculator-page.js'] as $f) {
         $js = read_file_or_fail($PUB . '/' . $f);

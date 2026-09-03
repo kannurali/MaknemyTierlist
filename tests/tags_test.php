@@ -352,30 +352,37 @@ test('фон ленты прибит к экрану, а не едет со ст
 //  Рекламные борта ленты
 // --------------------------------------------------------------------------
 
-// Пока слот не куплен, борта скрыты. Раньше они оставались полосатыми
-// панелями «свободного места», и на живом сайте это читалось как поломка
-// вёрстки: две белые панели во всю высоту экрана по бокам ленты. Борта
-// тирлиста (.ptn-rail в styles.css) ведут себя ровно так же.
-test('пустые рекламные борта ленты скрыты, пока нет кампании', function () use ($PUB) {
+// Борта ленты стоят полосатой заглушкой и без кампании — по решению
+// владельца: место, которое видно, можно продать, а спрятанное нельзя.
+// Так же ведут себя борта калькулятора (.tc-rail в calculator.css) и борта
+// тирлиста (там заглушку рисует картинкой PROMO.HOUSE_SLOT).
+test('рекламные борта ленты стоят и без кампании', function () use ($PUB) {
     $news = tag_read($PUB . '/news.php');
-    assert_eq(2, preg_match_all('/<div class="nw-rail-slot nw-rail-[lr]" aria-hidden="true" hidden>/', $news),
-        'оба борта должны стоять в разметке скрытыми');
+    assert_eq(2, preg_match_all('/<div class="nw-rail-slot nw-rail-[lr]" aria-hidden="true">/', $news),
+        'оба борта должны стоять в разметке видимыми');
+    assert_eq(0, preg_match_all('/<div class="nw-rail-slot[^>]*\shidden>/', $news),
+        'hidden в разметке бортов быть не должно');
 
-    // display у слота перебивает браузерный display: none для [hidden] —
-    // без явного правила скрытый борт всё равно занимал бы место.
+    // Полоски рисует ::before самого борта — это и есть образ свободного
+    // места. Без него на странице оказались бы две пустые белые панели.
     $css = tag_read($PUB . '/css/news-design.css');
+    assert_true((bool)preg_match('/\.nw-rail::before \{[^}]*repeating-linear-gradient/s', $css),
+        'заглушка свободного места — полоски у .nw-rail::before');
+    // display у слота перебивает браузерный display: none для [hidden], и
+    // правило остаётся рабочим выключателем, даже если атрибут вернут.
     assert_true(strpos($css, '.nw-rail-slot[hidden] { display: none; }') !== false,
         'нужно явное правило для [hidden]');
 
-    // Показывает борт только реальный креатив: hidden снимается там же, где
-    // в панель вставляется картинка, а не заранее по факту ответа API.
+    // Купленный креатив гасит полоски классом has-ad, а не подменяет панель.
     $js = tag_read($PUB . '/js/news-page.js');
-    assert_true(strpos($js, 'if (el.parentElement) el.parentElement.hidden = false;') !== false,
-        'борт открывается только под найденный креатив');
     $from = strpos($js, 'function fillNewsRail');
-    $to   = strpos($js, 'el.parentElement.hidden = false', $from);
+    $to   = strpos($js, 'classList.add("has-ad")', $from === false ? 0 : $from);
     assert_true($from !== false && $to !== false && $to > $from,
-        'снятие hidden должно жить внутри fillNewsRail()');
+        'креатив должен помечать борт классом has-ad внутри fillNewsRail()');
+    assert_true((bool)preg_match('/\.nw-rail\.has-ad::before,?\s*
+?\.?[^{]*\{[^}]*display: none/s', $css)
+        || strpos($css, '.nw-rail.has-ad::before { display: none; }') !== false,
+        'под креативом полоски гаснут');
 });
 
 // Панели администратора вставляют свою навигацию сразу за <body>. Лента

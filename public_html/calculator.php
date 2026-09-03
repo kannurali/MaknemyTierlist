@@ -66,7 +66,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=3" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=30" />
-<link rel="stylesheet" href="css/calculator.css?v=18" />
+<link rel="stylesheet" href="css/calculator.css?v=19" />
 <!-- Нижняя рекламная полоса на телефоне: слот "dock", тот же документ
      /api/promo.php, что у бортов по бокам доски. -->
 <link rel="stylesheet" href="css/promo-dock.css?v=1" />
@@ -500,9 +500,9 @@ header('Cache-Control: no-cache, must-revalidate');
   </div>
 
   <script src="js/i18n.js?v=30"></script>
-  <script src="js/promo.js?v=3"></script>
+  <script src="js/promo.js?v=4"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
-  <script src="js/promo-dock.js?v=1"></script>
+  <script src="js/promo-dock.js?v=2"></script>
   <!-- Рекламное окно — общий модуль с лентой новостей. -->
   <script src="js/promo-popup.js?v=1"></script>
   <script src="js/calc.js?v=7"></script>
