@@ -150,7 +150,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/styles.css?v=53" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
-<link rel="stylesheet" href="css/topbar.css?v=8" />
+<link rel="stylesheet" href="css/topbar.css?v=9" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->

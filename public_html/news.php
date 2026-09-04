@@ -218,7 +218,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <!-- Общая шапка сайта: та же, что на главной и тирлисте. Идёт после
      news.css — прячет старый бренд и .nav-seg в тулбаре, их роль забрала
      она сама. -->
-<link rel="stylesheet" href="css/topbar.css?v=8" />
+<link rel="stylesheet" href="css/topbar.css?v=9" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->

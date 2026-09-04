@@ -92,7 +92,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/base.css?v=8" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
-<link rel="stylesheet" href="css/topbar.css?v=8" />
+<link rel="stylesheet" href="css/topbar.css?v=9" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
