@@ -478,19 +478,19 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=30"></script>
+  <script src="js/i18n.js?v=31"></script>
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
-  <script src="js/promo.js?v=4"></script>
+  <script src="js/promo.js?v=5"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с калькулятором. -->
-  <script src="js/promo-dock.js?v=2"></script>
+  <script src="js/promo-dock.js?v=3"></script>
   <!-- Рекламное окно — общий модуль с калькулятором. -->
   <script src="js/promo-popup.js?v=1"></script>
   <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
        ДО news-page.js: он зовёт NX_PROTECT на старте. -->
   <script src="js/protect.js?v=1"></script>
-  <script src="js/news-page.js?v=21"></script>
+  <script src="js/news-page.js?v=22"></script>
 </body>
 </html>
 <?php endif; ?>

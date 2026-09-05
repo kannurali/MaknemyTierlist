@@ -708,9 +708,16 @@
         // не показываем: он пришёл работать с лентой, а не смотреть её.
         if (window.NX_PROMO_POPUP) window.NX_PROMO_POPUP.mount({ doc, isAdmin });
 
-        if (!doc || !left || !right) return;
-        const list = promo.eligible(promo.normalizeDoc(doc), "rail", Date.now());
-        if (!list.length) return;              // не куплено — борта не показываем
+        if (!left || !right) return;
+        // Документ мог не приехать (doc === null) — борта от этого не
+        // пустеют: своё объявление лежит в js/promo.js, а не в базе.
+        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now()) : [];
+        // Не куплено — борт занимает своё объявление (идущий розыгрыш).
+        // Когда своего нет, борта остаются полосатыми: заглушка «ВАША
+        // РЕКЛАМА» нарисована здесь стилями, а не картинкой.
+        const house = promo.houseFor("rail", Date.now());
+        const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+        if (!list.length) return;
         fillNewsRail(left, list[0]);
         // Один рекламодатель занимает оба борта: одинокий борт с одной
         // стороны ленты выглядит перекосом вёрстки, а не размещением.

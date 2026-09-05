@@ -72,10 +72,14 @@
 
     var narrow = MQ ? MQ.matches : false;
     var list = narrow ? promo.eligible(promo.normalizeDoc(doc), "dock", Date.now()) : [];
-    // Не куплено — стоит заглушка «ВАША РЕКЛАМА», та же, что у тирлиста
-    // (PROMO.HOUSE_SLOT). Прятать свободное место нельзя: продать можно
-    // только то, что видно.
-    if (narrow && !list.length) { list = [promo.HOUSE_SLOT]; }
+    // Не куплено — стоит своё объявление, то же, что у тирлиста
+    // (PROMO.houseFor): идущий розыгрыш, а когда он кончится — заглушка
+    // «ВАША РЕКЛАМА». Прятать свободное место нельзя: продать можно только
+    // то, что видно.
+    if (narrow && !list.length) {
+      var house = promo.houseFor("dock", Date.now());
+      if (house) { list = [house]; }
+    }
     if (!list.length) { teardown(el); return false; }
 
     var camp = promo.pickWeighted(list, Math.random());

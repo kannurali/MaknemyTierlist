@@ -934,11 +934,12 @@
   //
   // Макеты лежат в репозитории (assets/promo/), а не в базе: заглушка должна
   // работать на чистой установке, где ещё ни одной кампании не заводили.
-  // Объект переехал в js/promo.js (PROMO.HOUSE_SLOT): ту же заглушку теперь
+  // Объект переехал в js/promo.js (PROMO.houseFor): ту же заглушку теперь
   // показывают лента и калькулятор, и три страницы обязаны брать её из
   // одного места — иначе они разойдутся и по картинке, и по id, по которому
-  // ведётся счёт показов.
-  const promoHouse = promo ? promo.HOUSE_SLOT : null;
+  // ведётся счёт показов. Свободное место занимает идущий розыгрыш
+  // (PROMO.HOUSE_GIVEAWAY), а когда он кончится — снова «ВАША РЕКЛАМА».
+  const houseFor = slot => (promo ? promo.houseFor(slot, Date.now()) : null);
 
   // Заглушка вместо пустоты — но не вместо того, что владелец поставил сам.
   // Старый одиночный баннер (state.ad) живёт ровно в этом месте, и подменять
@@ -955,12 +956,34 @@
     return !String(ad.image || "").trim() && !String(ad.link || "").trim();
   }
 
+  // Отдельный случай: в баннере тир-листа стоит РОВНО ТА ЖЕ кампания, что и
+  // в нашем объявлении — ссылка ведёт на тот же адрес. Тогда показать надо
+  // объявление, а не баннер: картинка внутри state.ad проходит через
+  // walk_state_images() и живёт под потолком 256 px (api/lib/images.php), а
+  // макет кампании лежит в assets/promo целиком. Один и тот же розыгрыш,
+  // разница только в качестве картинки.
+  //
+  // Сравниваем именно ссылки: любой ДРУГОЙ баннер владельца остаётся на
+  // месте — подменять его нельзя, там может стоять оплаченное размещение.
+  function legacySameAs(camp) {
+    const link = normalizeHref((state && state.ad && state.ad.link) || "", "");
+    const href = promo ? promo.safeHref(camp && camp.href) : "";
+    return !!link && !!href && link.replace(/\/+$/, "") === href.replace(/\/+$/, "");
+  }
+
   function renderPromoBlock() {
     const list = stripOrder();
     if (list.length) return renderPromoStrip(list);
-    // promo && — заглушка приходит из js/promo.js, и без него её нет.
-    if (promo && legacyAdEmpty() && !stage.classList.contains("editing")) {
-      return renderPromoStrip([promoHouse]);   // promoHouse без promo не бывает
+    // promo && — объявление приходит из js/promo.js, и без него его нет.
+    if (promo && !stage.classList.contains("editing")) {
+      const house = houseFor("strip");
+      // Заглушкой «ВАША РЕКЛАМА» баннер владельца не подменяем никогда —
+      // только пустое место (id сверяем именно поэтому). Своей кампанией —
+      // ещё и когда владелец сам поставил её же.
+      const sellable = house && house.id === promo.HOUSE_SLOT.id;
+      if (house && (legacyAdEmpty() || (!sellable && legacySameAs(house)))) {
+        return renderPromoStrip([house]);
+      }
     }
     return renderLegacyAd();
   }
@@ -1366,9 +1389,13 @@
     // телефоне это лишние сотни килобайт ради того, что никто не увидит.
     const wide = railMQ ? railMQ.matches : false;
     let list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now()) : [];
-    // Купленных бортов нет — стоит заглушка. Своего баннера у этого места
-    // никогда не было, подменять нечего.
-    if (wide && promo && !list.length) list = [promoHouse];
+    // Купленных бортов нет — стоит своё объявление (розыгрыш, пока он идёт,
+    // иначе заглушка). Своего баннера у этого места никогда не было,
+    // подменять нечего.
+    if (wide && promo && !list.length) {
+      const house = houseFor("rail");
+      if (house) list = [house];
+    }
     if (!list.length) {
       [left, right].forEach(el => { el.hidden = true; el.innerHTML = ""; });
       return;
@@ -1447,8 +1474,11 @@
     if (!dock) return;
     const wide = dockMQ ? dockMQ.matches : false;
     let list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now()) : [];
-    // Как и у бортов: не куплено — стоит заглушка.
-    if (wide && promo && !list.length) list = [promoHouse];
+    // Как и у бортов: не куплено — стоит своё объявление.
+    if (wide && promo && !list.length) {
+      const house = houseFor("dock");
+      if (house) list = [house];
+    }
 
     dock.innerHTML = "";
     if (!list.length) {

@@ -665,9 +665,15 @@
           window.NX_PROMO_POPUP.mount({ doc, busy: () => catalogState.open });
         }
 
-        if (!doc || !left || !right) return;
-        const list = promo.eligible(promo.normalizeDoc(doc), "rail", Date.now());
-        if (!list.length) return; // не куплено — борт остаётся полосатой заглушкой
+        if (!left || !right) return;
+        // Документ мог не приехать (doc === null) — борта от этого не
+        // пустеют: своё объявление лежит в js/promo.js, а не в базе.
+        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now()) : [];
+        // Не куплено — борт занимает своё объявление (идущий розыгрыш).
+        // Своего нет — борт остаётся полосатой заглушкой из макета.
+        const house = promo.houseFor("rail", Date.now());
+        const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+        if (!list.length) return;
         fillRail(left, list[0]);
         // Один рекламодатель занимает оба борта: пустой второй борт рядом с
         // заполненным читается как поломка, а не как свободное место.

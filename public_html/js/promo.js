@@ -525,6 +525,68 @@
     notes: ""
   };
 
+  // Собственный розыгрыш — единственная кампания, которая занимает СРАЗУ ВСЕ
+  // свободные места: и ленту, и борта, и полосу, и окно. Приз разыгрывается
+  // в телеграм-канале проекта (t.me/theMaknemy/5302), и пока он идёт, пустое
+  // место выгоднее отдать ему, чем надписи «здесь может быть ваша реклама».
+  //
+  // Живёт в коде, а не в базе, по тем же причинам, что HOUSE_TG и
+  // HOUSE_SLOT: макеты лежат в репозитории, объявление обязано работать на
+  // чистой установке, а счётчик показов окна ведётся по id — вторая копия
+  // под другим именем означала бы «раз в сутки» отдельно на каждой странице.
+  //
+  // Как выключить, когда розыгрыш кончится: enabled: false (или проставить
+  // end — дату последнего дня по МСК). Места сами вернутся к заглушке
+  // «ВАША РЕКЛАМА», а окно — к объявлению о канале.
+  //
+  // Тексты окна — КЛЮЧИ словаря, как у HOUSE_TG: своё объявление обязано
+  // говорить на языке интерфейса. В сами макеты запечён русский, потому что
+  // и розыгрыш идёт в русскоязычном канале.
+  var HOUSE_GIVEAWAY = {
+    id: "house-giveaway-magnet",
+    name: "house-giveaway-magnet",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "",
+    end: "",
+    href: "https://t.me/theMaknemy/5302",
+    text: "",
+    cta: "",
+    textKey: "promo.giveawayText",
+    ctaKey: "promo.giveawayCta",
+    // Реклама собственного ресурса на самом ресурсе — маркировка не нужна.
+    erid: "",
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip: { src: "/assets/promo/giveaway-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/giveaway-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/giveaway-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/giveaway-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+    },
+    // Как у HOUSE_TG: своё объявление показываем раз в сутки все семь дней,
+    // а не три раза в неделю, как чужое.
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
+  // Чем занять место, за которое никто не заплатил. Порядок один на все
+  // страницы и все слоты, иначе тирлист, лента и калькулятор разойдутся в
+  // том, что стоит в свободном борте:
+  //   1) идущий розыгрыш — он приносит подписчиков;
+  //   2) для окна — объявление о канале (у заглушки окна нет намеренно);
+  //   3) заглушка «ВАША РЕКЛАМА» — место, которое видно, можно продать.
+  // Купленную кампанию эта функция не выбирает вообще: платное всегда
+  // разбирается раньше, у своих вызывающих.
+  function houseFor(slot, nowMs) {
+    var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
+    if (HOUSE_GIVEAWAY.enabled && inWindow(HOUSE_GIVEAWAY, now) && creativeFor(HOUSE_GIVEAWAY, slot)) {
+      return HOUSE_GIVEAWAY;
+    }
+    if (slot === "popup") { return HOUSE_TG; }
+    return creativeFor(HOUSE_SLOT, slot) ? HOUSE_SLOT : null;
+  }
+
   // Что показать в окне: купленная кампания, если такая сейчас идёт, иначе
   // собственное объявление. Одна функция на три страницы — иначе они
   // разойдутся в том, когда именно всплывает своя реклама.
@@ -533,7 +595,8 @@
       return shouldShowPopup(c, seen, nowMs);
     });
     if (paid.length) { return pickWeighted(paid, rnd); }
-    return shouldShowPopup(HOUSE_TG, seen, nowMs) ? HOUSE_TG : null;
+    var house = houseFor("popup", nowMs);
+    return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
 
   var api = {
@@ -551,6 +614,8 @@
     shouldShowPopup: shouldShowPopup,
     HOUSE_TG: HOUSE_TG,
     HOUSE_SLOT: HOUSE_SLOT,
+    HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
+    houseFor: houseFor,
     popupPick: popupPick,
     recordPopupShown: recordPopupShown,
     recordPopupClicked: recordPopupClicked,

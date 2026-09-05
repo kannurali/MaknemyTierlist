@@ -499,13 +499,13 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=30"></script>
-  <script src="js/promo.js?v=4"></script>
+  <script src="js/i18n.js?v=31"></script>
+  <script src="js/promo.js?v=5"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
-  <script src="js/promo-dock.js?v=2"></script>
+  <script src="js/promo-dock.js?v=3"></script>
   <!-- Рекламное окно — общий модуль с лентой новостей. -->
   <script src="js/promo-popup.js?v=1"></script>
   <script src="js/calc.js?v=7"></script>
-  <script src="js/calculator-page.js?v=15"></script>
+  <script src="js/calculator-page.js?v=16"></script>
 </body>
 </html>

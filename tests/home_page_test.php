@@ -618,21 +618,35 @@ test('нижняя полоса рекламы подключена на лен�
             "$f: полоса скрыта до реального креатива");
     }
 
-    // Без кампании в полосе стоит заглушка «ВАША РЕКЛАМА» — та же, что у
-    // бортов и что на тирлисте. Прятать свободное место нельзя: продать
-    // можно только то, что видно.
-    assert_true(strpos($mod, 'promo.HOUSE_SLOT') !== false,
-        'без кампании полоса показывает общую заглушку');
-    // Заглушка одна на три страницы: тирлист берёт её оттуда же, а не
-    // держит свою копию — иначе разъедутся и картинка, и id, по которому
-    // ведётся счёт показов.
-    assert_true(strpos(read_file_or_fail($PUB . '/js/app.js'), 'promo.HOUSE_SLOT') !== false,
-        'тирлист берёт заглушку из общего модуля');
+    // Без кампании место занимает своё объявление: идущий розыгрыш, а когда
+    // он кончится — заглушка «ВАША РЕКЛАМА». Выбирает одна функция
+    // PROMO.houseFor(): прятать свободное место нельзя, продать можно только
+    // то, что видно.
+    assert_true(strpos($mod, 'promo.houseFor(') !== false,
+        'без кампании полоса показывает общее объявление');
+    // Выбор один на три страницы: тирлист берёт его оттуда же, а не держит
+    // свою копию — иначе разъедутся и картинка, и id, по которому ведётся
+    // счёт показов.
+    assert_true(strpos(read_file_or_fail($PUB . '/js/app.js'), 'promo.houseFor(') !== false,
+        'тирлист берёт объявление из общего модуля');
+    foreach (['js/news-page.js', 'js/calculator-page.js'] as $f) {
+        assert_true(strpos(read_file_or_fail($PUB . '/' . $f), 'promo.houseFor(') !== false,
+            "$f: борта берут объявление из общего модуля");
+    }
     $promo = read_file_or_fail($PUB . '/js/promo.js');
     assert_true(strpos($promo, 'var HOUSE_SLOT') !== false, 'заглушка объявлена в js/promo.js');
+    assert_true(strpos($promo, 'function houseFor') !== false, 'общий выбор объявлен в js/promo.js');
     foreach (['strip', 'rail', 'dock'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/placeholder-' . $slot . '.webp'),
             "макет заглушки для слота $slot должен лежать в репозитории");
+    }
+    // Макеты розыгрыша лежат в репозитории по той же причине, что и
+    // заглушки: объявление обязано работать на чистой установке, где ни
+    // одной кампании ещё не заводили.
+    assert_true(strpos($promo, 'var HOUSE_GIVEAWAY') !== false, 'розыгрыш объявлен в js/promo.js');
+    foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/giveaway-' . $slot . '.webp'),
+            "макет розыгрыша для слота $slot должен лежать в репозитории");
     }
     // Оба вызова идут из того же запроса, что и борта: документ один.
     foreach (['js/news-page.js', 'js/calculator-page.js'] as $f) {

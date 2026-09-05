@@ -15,7 +15,7 @@ const {
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, HOUSE_SLOT, popupPick
+    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, houseFor, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -492,7 +492,8 @@ test('HOUSE_SLOT fills the banner slots but never the popup', () => {
     // Попапа у неё нет намеренно: окно «ВАША РЕКЛАМА» каждому посетителю
     // раздражает, а продать место не помогает — для окна есть HOUSE_TG.
     assert.equal(PROMO.creativeFor(HOUSE_SLOT, 'popup'), null);
-    assert.equal(popupPick({ campaigns: [] }, {}, Date.now(), 0.5).id, HOUSE_TG.id);
+    assert.equal(popupPick({ campaigns: [] }, {}, Date.now(), 0.5).id,
+        houseFor('popup', Date.now()).id);
     // Два своих объявления обязаны различаться по id, иначе счётчик показов
     // одного гасил бы другое.
     assert.notEqual(HOUSE_SLOT.id, HOUSE_TG.id);
@@ -507,8 +508,9 @@ test('popupPick prefers a paid campaign over the house ad', () => {
 });
 
 test('popupPick falls back to the house ad when nothing is sold', () => {
-    assert.equal(popupPick({ campaigns: [] }, {}, Date.now(), 0.5).id, HOUSE_TG.id);
-    assert.equal(popupPick(null, {}, Date.now(), 0.5).id, HOUSE_TG.id);
+    const own = houseFor('popup', Date.now()).id;
+    assert.equal(popupPick({ campaigns: [] }, {}, Date.now(), 0.5).id, own);
+    assert.equal(popupPick(null, {}, Date.now(), 0.5).id, own);
 });
 
 test('popupPick falls back to the house ad once the paid one is capped today', () => {
@@ -518,16 +520,17 @@ test('popupPick falls back to the house ad once the paid one is capped today', (
         creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
     }] };
     const seen = recordPopupShown({}, 'c_paid', now);
-    assert.equal(popupPick(doc, seen, now + HOUR, 0.5).id, HOUSE_TG.id);
+    assert.equal(popupPick(doc, seen, now + HOUR, 0.5).id, houseFor('popup', now).id);
     // А через сутки платная кампания снова забирает место.
     assert.equal(popupPick(doc, seen, now + 25 * HOUR, 0.5).id, 'c_paid');
 });
 
 test('popupPick shows the house ad once a day and not twice', () => {
     const now = Date.now();
-    const seen = recordPopupShown({}, HOUSE_TG.id, now);
+    const own = houseFor('popup', now).id;
+    const seen = recordPopupShown({}, own, now);
     assert.equal(popupPick({ campaigns: [] }, seen, now + 23 * HOUR, 0.5), null);
-    assert.equal(popupPick({ campaigns: [] }, seen, now + 25 * HOUR, 0.5).id, HOUSE_TG.id);
+    assert.equal(popupPick({ campaigns: [] }, seen, now + 25 * HOUR, 0.5).id, own);
 });
 
 test('popupPick keeps the house ad running all week, not three days', () => {
@@ -535,12 +538,80 @@ test('popupPick keeps the house ad running all week, not three days', () => {
     // четвёртые сутки — «раз в день» превратилось бы в «трижды в неделю».
     let seen = {};
     const now = Date.now();
+    const own = houseFor('popup', now).id;
     for (let day = 0; day < 7; day++) {
         const at = now + day * DAY;
         const pick = popupPick({ campaigns: [] }, seen, at, 0.5);
-        assert.equal(pick && pick.id, HOUSE_TG.id, `день ${day + 1} должен показать объявление`);
-        seen = recordPopupShown(seen, HOUSE_TG.id, at);
+        assert.equal(pick && pick.id, own, `день ${day + 1} должен показать объявление`);
+        seen = recordPopupShown(seen, own, at);
     }
+});
+
+// ------------------------------------------------ houseFor / HOUSE_GIVEAWAY
+
+// Собственный розыгрыш занимает все свободные места сразу. Тесты держат три
+// вещи: он реально покрывает каждый слот, платная кампания всё равно
+// сильнее, и выключается он одним флагом — иначе снять его с сайта после
+// конкурса будет нечем.
+
+test('HOUSE_GIVEAWAY ships a creative for every slot', () => {
+    assert.deepEqual(HOUSE_GIVEAWAY.slots, ['strip', 'rail', 'dock', 'popup']);
+    assert.equal(HOUSE_GIVEAWAY.enabled, true);
+    assert.equal(safeHref(HOUSE_GIVEAWAY.href), 'https://t.me/theMaknemy/5302');
+    for (const slot of SLOTS) {
+        const cre = PROMO.creativeFor(HOUSE_GIVEAWAY, slot);
+        assert.ok(cre, `у слота ${slot} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/'),
+            'макеты лежат в репозитории: объявление обязано работать на чистой установке');
+    }
+    // Текст окна — ключи словаря: своё объявление говорит на языке интерфейса.
+    assert.ok(HOUSE_GIVEAWAY.textKey && HOUSE_GIVEAWAY.ctaKey);
+    // Раз в сутки все семь дней, как у объявления о канале.
+    assert.equal(HOUSE_GIVEAWAY.popup.capHours, 24);
+    assert.ok(HOUSE_GIVEAWAY.popup.maxPerWeek >= 7);
+    // Свои объявления обязаны различаться по id: счёт показов идёт по нему.
+    assert.notEqual(HOUSE_GIVEAWAY.id, HOUSE_TG.id);
+    assert.notEqual(HOUSE_GIVEAWAY.id, HOUSE_SLOT.id);
+});
+
+test('houseFor gives the giveaway every free slot while it runs', () => {
+    const now = Date.now();
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, now).id, HOUSE_GIVEAWAY.id, `слот ${slot}`);
+    }
+});
+
+test('houseFor falls back to the placeholder and the channel ad once it is off', () => {
+    const now = Date.now();
+    HOUSE_GIVEAWAY.enabled = false;
+    try {
+        assert.equal(houseFor('strip', now).id, HOUSE_SLOT.id);
+        assert.equal(houseFor('rail', now).id, HOUSE_SLOT.id);
+        assert.equal(houseFor('dock', now).id, HOUSE_SLOT.id);
+        // У заглушки окна нет намеренно — там объявление о канале.
+        assert.equal(houseFor('popup', now).id, HOUSE_TG.id);
+    } finally {
+        HOUSE_GIVEAWAY.enabled = true;
+    }
+});
+
+test('houseFor respects the end date, so the giveaway drops out by itself', () => {
+    const now = Date.parse('2026-09-05T12:00:00Z');
+    HOUSE_GIVEAWAY.end = '2026-09-04';
+    try {
+        assert.equal(houseFor('strip', now).id, HOUSE_SLOT.id);
+        assert.equal(houseFor('popup', now).id, HOUSE_TG.id);
+    } finally {
+        HOUSE_GIVEAWAY.end = '';
+    }
+});
+
+test('a paid campaign still beats the giveaway in the popup', () => {
+    const doc = { campaigns: [{
+        id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
+        creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
+    }] };
+    assert.equal(popupPick(doc, {}, Date.now(), 0.5).id, 'c_paid');
 });
 
 // -------------------------------------------------------- migrateLegacyAd

@@ -228,6 +228,11 @@
       // не переводится, у своей — обязан говорить на языке интерфейса.
       "promo.houseTgText":      "Свежие цены, розыгрыши и новости Blox Fruits — в нашем телеграм-канале",
       "promo.houseTgCta":       "Открыть канал",
+      // Собственный розыгрыш (PROMO.HOUSE_GIVEAWAY). Когда он кончится,
+      // кампания выключается в js/promo.js, а эти строки остаются под
+      // следующий: переписать текст дешевле, чем заводить ключи заново.
+      "promo.giveawayText":     "Розыгрыш 5 permanent Magnet: 5 победителей в честь Update 30",
+      "promo.giveawayCta":      "Участвовать",
 
       "footer.addLinkBtn":      "＋ ссылка",
       "footer.urlPrompt":       "Ссылка (URL). Можно без https:// — подставится сам:",
@@ -589,6 +594,8 @@
       "promo.cta":              "Open",
       "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
       "promo.houseTgCta":       "Open the channel",
+      "promo.giveawayText":     "Giveaway: 5 permanent Magnet, 5 winners for Update 30",
+      "promo.giveawayCta":      "Enter the giveaway",
 
       "footer.addLinkBtn":      "＋ link",
       "footer.urlPrompt":       "Link (URL). You can omit https:// — it is added automatically:",
