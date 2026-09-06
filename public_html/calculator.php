@@ -499,8 +499,8 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=31"></script>
-  <script src="js/promo.js?v=5"></script>
+  <script src="js/i18n.js?v=32"></script>
+  <script src="js/promo.js?v=6"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
   <script src="js/promo-dock.js?v=3"></script>
   <!-- Рекламное окно — общий модуль с лентой новостей. -->
