@@ -1,4 +1,4 @@
-"""Креативы кампании «Розыгрыш 5 permanent Magnet» под все рекламные слоты.
+"""Креативы кампании «Розыгрыш: 5 permanent Magnet + 50 Chromatic Box».
 
     python tools/make-giveaway-creatives.py                 # все варианты в out/
     python tools/make-giveaway-creatives.py --variant neon --out public_html/assets/promo
@@ -9,8 +9,13 @@
 Размеры берутся из CREATIVE_SPECS в api/lib/images.php: файл, который не влез
 в потолок слота, сервер либо ужмёт (still), либо отвергнет (анимация).
 
-Исходники — tools/art/giveaway-magnet.webp и giveaway-robot.webp: арт предмета
-Magnet и робота Update 30, обрезанные по альфе.
+Исходники — tools/art/giveaway-magnet.webp, giveaway-chromatic.webp и
+giveaway-robot.webp: арт предмета Magnet, сундук Chromatic (в самом арте уже
+нарисован золотой значок «x50») и робот Update 30, обрезанные по альфе.
+
+Призов теперь два, и это главное требование к макету: оба должны читаться за
+секунду. Отсюда золотой значок «×5» у магнита — в арте сундука такой значок
+уже есть, и без пары предметы выглядели бы неравноправно.
 
 Нужен Pillow.
 """
@@ -42,11 +47,20 @@ GOLD = (255, 220, 0)
 GRAD_A = (97, 181, 233)
 GRAD_B = (45, 74, 237)
 
+# Золото значка «x50» из арта сундука — им же рисуем «×5» у магнита, иначе
+# два приза выглядят нарисованными в разных играх.
+GOLD_HI = (253, 232, 63)
+GOLD_LO = (247, 176, 24)
+GOLD_INK = (46, 14, 7)
+
 # Тексты. Русский — как у объявления, которое уже стоит в тир-листе.
 T_HEAD = "РОЗЫГРЫШ"
-T_PRIZE = "5 × PERMANENT MAGNET"
-T_PRIZE_2 = ["5 ×", "PERMANENT", "MAGNET"]
-T_WINNERS = "5 ПОБЕДИТЕЛЕЙ"
+T_HEAD_BIG = "МЕГА-РОЗЫГРЫШ"
+T_PRIZE_A = "5 PERMANENT MAGNET"
+T_PRIZE_B = "50 CHROMATIC BOX"
+T_PRIZE_A2 = ["5 PERMANENT", "MAGNET"]
+T_PRIZE_B2 = ["50 CHROMATIC", "BOX"]
+T_PRIZES = "2 ПРИЗА"
 T_CTA = "УЧАСТВОВАТЬ · @THEMAKNEMY"
 T_TG = "@THEMAKNEMY"
 T_UPD = "В ЧЕСТЬ UPDATE 30"
@@ -157,6 +171,24 @@ def text_grad(img, xy, text, f, grad, anchor="mm", stroke=0, stroke_fill=None):
     img.paste(grad, (0, 0), mask)
 
 
+def gold_num(img, xy, text, px, anchor="mm"):
+    """Число в стиле игрового значка: золотой градиент, тёмный контур, тень.
+
+    Ровно так в арте сундука нарисовано «x50»; значок магнита рисуем сами,
+    иначе один приз выглядит помеченным, а второй — нет.
+    """
+    f = font(px)
+    stroke = max(2, round(px * 0.075))
+    sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(sh).text((xy[0] + px * 0.05, xy[1] + px * 0.09), text, font=f,
+                            fill=(0, 0, 0, 190), anchor=anchor, stroke_width=stroke,
+                            stroke_fill=(0, 0, 0, 190))
+    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(2, px // 14))))
+    ImageDraw.Draw(img).text(xy, text, font=f, fill=GOLD_INK + (255,), anchor=anchor,
+                             stroke_width=stroke, stroke_fill=GOLD_INK + (255,))
+    text_grad(img, xy, text, f, vgrad(img.width, img.height, GOLD_HI, GOLD_LO), anchor=anchor)
+
+
 def art(name):
     return Image.open(ART / name).convert("RGBA")
 
@@ -189,6 +221,15 @@ def chip(img, box, text, f, bg_grad=None, bg=None, fg=(10, 18, 38), radius=None)
     img.paste(fillimg, (0, 0), mask)
     ImageDraw.Draw(img).text(((x0 + x1) / 2, (y0 + y1) / 2 - (y1 - y0) * 0.06), text,
                              font=f, fill=fg + (255,), anchor="mm")
+
+
+def panel(img, box, radius, fill=(11, 20, 44, 168), outline=None, width=2):
+    """Стеклянная карточка под предмет — граница между двумя призами."""
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    d.rounded_rectangle(box, radius=radius, fill=fill,
+                        outline=(outline + (190,)) if outline else None, width=width)
+    img.alpha_composite(layer)
 
 
 def tg_glyph(size):
@@ -256,62 +297,87 @@ def frame(img, colour, pad, radius, width):
 
 
 # ===========================================================================
-#  Вариант 1 — «НЕОН»: палитра сайта, приз справа, заголовок слева.
+#  Вариант 1 — «ДУЭТ»: два приза равными карточками, у каждого свой значок.
 # ===========================================================================
 
-def neon(slot, w, h):
+def duo(slot, w, h):
     img = bg_neon(w, h)
     d = ImageDraw.Draw(img)
     magnet = art("giveaway-magnet.webp")
-    robot = art("giveaway-robot.webp")
+    chest = art("giveaway-chromatic.webp")
 
     if slot in ("strip", "dock"):
         big = slot == "strip"
-        pad = 22 if big else 14
+        pad = 18 if big else 11
         frame(img, CYAN, pad, 18 if big else 12, 3 if big else 2)
 
-        m = scaled(magnet, h=int(h * (1.02 if big else 0.96)))
-        r = scaled(robot, h=int(h * (0.70 if big else 0.62)))
-        drop(img, r, w - r.width - pad - 6, h - r.height - pad - 4)
-        drop(img, m, w - m.width - int(w * (0.15 if big else 0.19)), int(h * 0.01))
-
-        left = int(w * 0.055)
-        colw = int(w * (0.60 if big else 0.56)) - left
-        f_top = font(int(h * (0.105 if big else 0.11)))
-        d.text((left, int(h * 0.17)), T_UPD, font=f_top, fill=CYAN + (255,), anchor="lm")
-        f_head = fit(d, T_HEAD, colw, int(h * 0.42))
-        text_glow(img, (left, int(h * 0.47)), T_HEAD, f_head, INK, CYAN, max(6, h // 22), anchor="lm")
+        # Левая колонка — заголовок, правая — две карточки с призами.
+        left = int(w * 0.045)
+        colw = int(w * 0.275)
+        d.text((left, int(h * 0.20)), T_UPD, font=fit(d, T_UPD, colw, int(h * 0.115)),
+               fill=CYAN + (255,), anchor="lm")
+        text_glow(img, (left, int(h * 0.48)), T_HEAD, fit(d, T_HEAD, colw, int(h * 0.34)),
+                  INK, CYAN, max(5, h // 24), anchor="lm")
         d = ImageDraw.Draw(img)
-        f_prize = fit(d, T_PRIZE, colw, int(h * 0.17))
-        grad = hgrad(w, h, CYAN, MK)
-        text_grad(img, (left, int(h * 0.72)), T_PRIZE, f_prize, grad, anchor="lm")
-        d = ImageDraw.Draw(img)
-        f_cta = font(int(h * (0.093 if big else 0.10)))
-        cw = d.textlength(T_CTA, font=f_cta)
-        chip(img, [left, int(h * 0.82), left + cw + int(h * 0.22), int(h * 0.96)], T_CTA, f_cta,
+        # Плашка не имеет права заехать под карточки: подпись ужимаем до
+        # колонки, а на узком доке от неё остаётся только адрес канала.
+        cta = T_CTA if big else T_TG
+        f_cta = fit(d, cta, colw - int(h * 0.24), int(h * 0.11))
+        cw = d.textlength(cta, font=f_cta)
+        chip(img, [left, int(h * 0.70), left + cw + int(h * 0.22), int(h * 0.87)], cta, f_cta,
              bg_grad=dgrad(w, h, GRAD_A, GRAD_B), fg=INK)
+
+        # Две карточки одинаковой ширины: приз слева от «+», приз справа.
+        cx0 = int(w * 0.365)
+        gap = int(w * 0.055)
+        cardw = (w - cx0 - int(w * 0.032) - gap) // 2
+        cardh = int(h * 0.80)
+        top = (h - cardh) // 2
+        for i, (im, name, num, tint) in enumerate((
+                (magnet, "PERMANENT MAGNET", "×5", CYAN),
+                (chest, "CHROMATIC BOX", None, MK))):
+            x0 = cx0 + i * (cardw + gap)
+            panel(img, [x0, top, x0 + cardw, top + cardh], radius=int(h * 0.07), outline=tint)
+            a = scaled(im, h=int(cardh * 0.64))
+            if a.width > cardw - 24:
+                a = scaled(a, w=cardw - 24)
+            drop(img, a, x0 + (cardw - a.width) // 2, top + int(cardh * 0.05))
+            if num:
+                gold_num(img, (x0 + cardw - int(cardw * 0.17), top + int(cardh * 0.56)),
+                         num, int(cardh * 0.26))
+            d = ImageDraw.Draw(img)
+            d.text((x0 + cardw / 2, top + int(cardh * 0.86)), name,
+                   font=fit(d, name, cardw - 20, int(h * 0.12)), fill=INK + (255,), anchor="mm")
+        d = ImageDraw.Draw(img)
+        gold_num(img, (cx0 + cardw + gap / 2, h / 2), "+", int(h * 0.21))
         return img
 
     if slot == "rail":
         frame(img, CYAN, 12, 14, 3)
-        d.text((w / 2, 54), T_UPD, font=fit(d, T_UPD, w - 46, 30), fill=CYAN + (255,), anchor="mm")
-        f_head = fit(d, T_HEAD, w - 40, 74)
-        text_glow(img, (w / 2, 118), T_HEAD, f_head, INK, CYAN, 12, anchor="mm")
-        m = scaled(magnet, w=int(w * 0.98))
-        drop(img, m, (w - m.width) // 2, 168)
+        d.text((w / 2, 52), T_UPD, font=fit(d, T_UPD, w - 46, 30), fill=CYAN + (255,), anchor="mm")
+        text_glow(img, (w / 2, 116), T_HEAD, fit(d, T_HEAD, w - 40, 76), INK, CYAN, 12, anchor="mm")
         d = ImageDraw.Draw(img)
-        y = 168 + m.height + 14
-        grad = vgrad(w, h, CYAN, MK)
-        for i, line in enumerate(["5 ШТУК", "PERMANENT", "MAGNET"]):
-            f = fit(d, line, w - 44, 78)
-            text_grad(img, (w / 2, y + i * 74), line, f, grad, anchor="mm")
-        d = ImageDraw.Draw(img)
-        y += 3 * 74 + 6
-        d.text((w / 2, y), T_WINNERS, font=fit(d, T_WINNERS, w - 46, 40), fill=INK + (255,), anchor="mm")
-        rb = scaled(robot, w=int(w * 0.86))
-        drop(img, rb, (w - rb.width) // 2, y + 34)
-        g = tg_glyph(58)
-        img.alpha_composite(g, ((w - 58) // 2, h - 150))
+        d.text((w / 2, 176), T_PRIZES, font=fit(d, T_PRIZES, w - 90, 46), fill=MK + (255,), anchor="mm")
+
+        y = 214
+        cardh = 366
+        for im, name, num, tint in ((magnet, "PERMANENT MAGNET", "×5", CYAN),
+                                    (chest, "CHROMATIC BOX", None, MK)):
+            panel(img, [16, y, w - 16, y + cardh], radius=22, outline=tint)
+            a = scaled(im, w=int(w * 0.80))
+            if a.height > cardh * 0.68:
+                a = scaled(a, h=int(cardh * 0.68))
+            drop(img, a, (w - a.width) // 2, y + 20)
+            if num:
+                gold_num(img, (w - 62, y + int(cardh * 0.60)), num, 96)
+            d = ImageDraw.Draw(img)
+            for i, line in enumerate(name.split(" ")):
+                d.text((w / 2, y + cardh - 74 + i * 40), line,
+                       font=fit(d, line, w - 40, 40), fill=INK + (255,), anchor="mm")
+            y += cardh + 22
+
+        g = tg_glyph(56)
+        img.alpha_composite(g, ((w - 56) // 2, h - 148))
         d = ImageDraw.Draw(img)
         d.text((w / 2, h - 66), T_TG, font=fit(d, T_TG, w - 40, 40), fill=INK + (255,), anchor="mm")
         d.text((w / 2, h - 32), "УЧАСТВОВАТЬ", font=fit(d, "УЧАСТВОВАТЬ", w - 60, 30),
@@ -320,92 +386,118 @@ def neon(slot, w, h):
 
     # popup 800×800
     frame(img, CYAN, 20, 32, 3)
-    d.text((w / 2, 74), T_UPD, font=font(34), fill=CYAN + (255,), anchor="mm")
-    text_glow(img, (w / 2, 150), T_HEAD, fit(d, T_HEAD, w - 130, 126), INK, CYAN, 16, anchor="mm")
+    d.text((w / 2, 70), T_UPD, font=font(34), fill=CYAN + (255,), anchor="mm")
+    text_glow(img, (w / 2, 146), T_HEAD, fit(d, T_HEAD, w - 130, 122), INK, CYAN, 16, anchor="mm")
     d = ImageDraw.Draw(img)
-    m = scaled(magnet, h=330)
-    r = scaled(robot, h=250)
-    drop(img, r, w - r.width - 40, 250)
-    drop(img, m, 28, 214)
+    d.text((w / 2, 214), T_PRIZES, font=font(44), fill=MK + (255,), anchor="mm")
+
+    cardw, cardh, top = 336, 348, 248
+    for i, (im, name, num, tint) in enumerate(((magnet, "PERMANENT MAGNET", "×5", CYAN),
+                                               (chest, "CHROMATIC BOX", None, MK))):
+        x0 = 42 + i * (cardw + 44)
+        panel(img, [x0, top, x0 + cardw, top + cardh], radius=28, outline=tint)
+        a = scaled(im, w=int(cardw * 0.86))
+        if a.height > cardh * 0.66:
+            a = scaled(a, h=int(cardh * 0.66))
+        drop(img, a, x0 + (cardw - a.width) // 2, top + 18)
+        if num:
+            gold_num(img, (x0 + cardw - 58, top + int(cardh * 0.60)), num, 98)
+        d = ImageDraw.Draw(img)
+        for j, line in enumerate(name.split(" ")):
+            d.text((x0 + cardw / 2, top + cardh - 78 + j * 42), line,
+                   font=fit(d, line, cardw - 30, 44), fill=INK + (255,), anchor="mm")
     d = ImageDraw.Draw(img)
-    grad = hgrad(w, h, CYAN, MK)
-    text_grad(img, (w / 2, 594), T_PRIZE, fit(d, T_PRIZE, w - 90, 72), grad, anchor="mm")
+    gold_num(img, (w / 2, top + cardh * 0.44), "+", 92)
+
     d = ImageDraw.Draw(img)
-    d.text((w / 2, 654), T_WINNERS, font=font(40), fill=INK + (255,), anchor="mm")
     f_cta = font(38)
     cw = d.textlength(T_TG, font=f_cta)
-    chip(img, [(w - cw) / 2 - 104, 700, (w + cw) / 2 + 44, 762], T_TG, f_cta,
+    chip(img, [(w - cw) / 2 - 104, 664, (w + cw) / 2 + 44, 726], T_TG, f_cta,
          bg_grad=dgrad(w, h, GRAD_A, GRAD_B), fg=INK)
-    g = tg_glyph(46)
-    img.alpha_composite(g, (int((w - cw) / 2 - 90), 708))
+    img.alpha_composite(tg_glyph(46), (int((w - cw) / 2 - 90), 672))
+    d.text((w / 2, 756), "УЧАСТВОВАТЬ", font=font(32), fill=CYAN + (255,), anchor="mm")
     return img
 
 
 # ===========================================================================
-#  Вариант 2 — «БИЛЕТ»: контрастный, гигантская пятёрка, подарок.
+#  Вариант 2 — «БИЛЕТ»: золотой корешок, числа призов вместо картинки-героя.
 # ===========================================================================
 
 def ticket(slot, w, h):
     img = bg_ticket(w, h)
     d = ImageDraw.Draw(img)
     magnet = art("giveaway-magnet.webp")
+    chest = art("giveaway-chromatic.webp")
 
     if slot in ("strip", "dock"):
         big = slot == "strip"
-        # Левый блок «×5» на жёлтом поле, скошенный, как корешок билета.
-        band_w = int(w * 0.26)
+        # Левый корешок билета: сумма призов одним числом, как номинал.
+        band_w = int(w * 0.245)
         band = Image.new("RGBA", img.size, (0, 0, 0, 0))
         ImageDraw.Draw(band).polygon([(0, 0), (band_w, 0), (band_w - int(h * 0.22), h), (0, h)],
                                      fill=GOLD + (255,))
         img.alpha_composite(band)
         d = ImageDraw.Draw(img)
-        f5 = font(int(h * 0.78))
-        d.text((band_w * 0.46, h * 0.54), "5", font=f5, fill=(18, 14, 40, 255), anchor="mm")
-        d.text((band_w * 0.46, h * 0.86), "ПРИЗОВ", font=fit(d, "ПРИЗОВ", band_w * 0.78, int(h * 0.12)),
+        d.text((band_w * 0.40, h * 0.36), "5+50", font=fit(d, "5+50", band_w * 0.76, int(h * 0.44)),
+               fill=(18, 14, 40, 255), anchor="mm")
+        d.text((band_w * 0.40, h * 0.74), "ПРИЗОВ", font=fit(d, "ПРИЗОВ", band_w * 0.62, int(h * 0.17)),
                fill=(18, 14, 40, 255), anchor="mm")
 
-        m = scaled(magnet, h=int(h * (1.02 if big else 0.94)))
-        drop(img, m, w - m.width - int(w * 0.015), int(h * (-0.02 if big else 0.03)))
+        c = scaled(chest, h=int(h * 0.66))
+        drop(img, c, w - c.width - int(w * 0.014), int(h * 0.30))
+        m = scaled(magnet, h=int(h * (0.70 if big else 0.62)))
+        drop(img, m, w - c.width - m.width + int(w * (0.038 if big else 0.075)), int(h * 0.06))
+        gold_num(img, (w - c.width - int(w * 0.020), int(h * 0.62)), "×5", int(h * 0.19))
 
-        left = band_w + int(w * 0.035)
-        colw = int(w * (0.68 if big else 0.63)) - left
-        f_head = fit(d, T_HEAD, colw, int(h * 0.40))
-        text_glow(img, (left, int(h * 0.31)), T_HEAD, f_head, INK, (255, 60, 170), max(5, h // 26),
-                  anchor="lm")
+        left = band_w + int(w * 0.028)
+        colw = int(w * 0.36)
         d = ImageDraw.Draw(img)
-        f_prize = fit(d, "PERMANENT MAGNET", colw, int(h * 0.20))
-        d.text((left, int(h * 0.60)), "PERMANENT MAGNET", font=f_prize, fill=GOLD + (255,), anchor="lm")
-        f_cta = font(int(h * 0.11))
-        cw = d.textlength(T_CTA, font=f_cta)
-        chip(img, [left, int(h * 0.74), left + cw + int(h * 0.24), int(h * 0.92)], T_CTA, f_cta,
+        text_glow(img, (left, int(h * 0.26)), T_HEAD, fit(d, T_HEAD, colw, int(h * 0.36)),
+                  INK, (255, 60, 170), max(5, h // 26), anchor="lm")
+        d = ImageDraw.Draw(img)
+        d.text((left, int(h * 0.52)), T_PRIZE_A, font=fit(d, T_PRIZE_A, colw, int(h * 0.17)),
+               fill=GOLD + (255,), anchor="lm")
+        d.text((left, int(h * 0.68)), T_PRIZE_B, font=fit(d, T_PRIZE_B, colw, int(h * 0.17)),
+               fill=GOLD + (255,), anchor="lm")
+        cta = T_CTA if big else T_TG
+        f_cta = fit(d, cta, colw - int(h * 0.24), int(h * 0.11))
+        cw = d.textlength(cta, font=f_cta)
+        chip(img, [left, int(h * 0.80), left + cw + int(h * 0.24), int(h * 0.96)], cta, f_cta,
              bg=INK, fg=(18, 14, 40))
         return img
 
     if slot == "rail":
-        band_h = 300
+        band_h = 336
         band = Image.new("RGBA", img.size, (0, 0, 0, 0))
         ImageDraw.Draw(band).polygon([(0, 0), (w, 0), (w, band_h), (0, band_h - 46)], fill=GOLD + (255,))
         img.alpha_composite(band)
         d = ImageDraw.Draw(img)
-        d.text((w / 2, 120), "5", font=font(230), fill=(18, 14, 40, 255), anchor="mm")
-        d.text((w / 2, 244), "ПРИЗОВ", font=fit(d, "ПРИЗОВ", w - 60, 58), fill=(18, 14, 40, 255), anchor="mm")
+        d.text((w / 2, 90), "5 + 50", font=fit(d, "5 + 50", w - 40, 150), fill=(18, 14, 40, 255), anchor="mm")
+        d.text((w / 2, 200), "ПРИЗОВ", font=fit(d, "ПРИЗОВ", w - 60, 62), fill=(18, 14, 40, 255), anchor="mm")
+        d.text((w / 2, 268), T_UPD, font=fit(d, T_UPD, w - 50, 34), fill=(56, 42, 14, 255), anchor="mm")
 
-        f_head = fit(d, T_HEAD, w - 34, 78)
-        text_glow(img, (w / 2, 366), T_HEAD, f_head, INK, (255, 60, 170), 12, anchor="mm")
+        text_glow(img, (w / 2, 402), T_HEAD, fit(d, T_HEAD, w - 34, 78), INK, (255, 60, 170), 12, anchor="mm")
         d = ImageDraw.Draw(img)
-        m = scaled(magnet, w=int(w * 1.02))
-        drop(img, m, (w - m.width) // 2, 420)
-        d = ImageDraw.Draw(img)
-        y = 420 + m.height + 10
-        for i, line in enumerate(["PERMANENT", "MAGNET"]):
-            d.text((w / 2, y + i * 66), line, font=fit(d, line, w - 40, 68), fill=GOLD + (255,), anchor="mm")
-        y += 150
-        gift = gift_mark(120)
-        img.alpha_composite(gift, ((w - 120) // 2, y))
-        d = ImageDraw.Draw(img)
-        d.text((w / 2, y + 168), T_WINNERS, font=fit(d, T_WINNERS, w - 40, 42), fill=INK + (255,), anchor="mm")
-        f_cta = font(38)
-        chip(img, [22, h - 96, w - 22, h - 34], T_TG, f_cta, bg=INK, fg=(18, 14, 40), radius=14)
+
+        # Вертикальный бюджет: два предмета с подписями и плашка внизу.
+        # 1200 px хватает ровно, если каждый предмет не выше 230.
+        y = 426
+        for im, lines, num, art_h in ((magnet, T_PRIZE_A2, "×5", 230),
+                                      (chest, T_PRIZE_B2, None, 210)):
+            a = scaled(im, w=int(w * 0.90))
+            if a.height > art_h:
+                a = scaled(a, h=art_h)
+            drop(img, a, (w - a.width) // 2, y)
+            if num:
+                gold_num(img, (w - 52, y + int(a.height * 0.80)), num, 80)
+            d = ImageDraw.Draw(img)
+            yy = y + a.height + 18
+            for i, line in enumerate(lines):
+                d.text((w / 2, yy + i * 42), line, font=fit(d, line, w - 30, 44),
+                       fill=GOLD + (255,), anchor="mm")
+            y = yy + len(lines) * 42 + 20
+
+        chip(img, [22, h - 128, w - 22, h - 58], T_TG, font(38), bg=INK, fg=(18, 14, 40), radius=14)
         return img
 
     # popup
@@ -413,108 +505,126 @@ def ticket(slot, w, h):
     ImageDraw.Draw(band).polygon([(0, 0), (w, 0), (w, 196), (0, 244)], fill=GOLD + (255,))
     img.alpha_composite(band)
     d = ImageDraw.Draw(img)
-    d.text((150, 108), "5", font=font(210), fill=(18, 14, 40, 255), anchor="mm")
-    d.text((470, 78), "ПРИЗОВ", font=fit(d, "ПРИЗОВ", 400, 92), fill=(18, 14, 40, 255), anchor="mm")
-    d.text((470, 156), "УЧАСТВУЙ", font=fit(d, "УЧАСТВУЙ", 400, 62), fill=(48, 36, 12, 255), anchor="mm")
+    d.text((236, 104), "5 + 50", font=font(150), fill=(18, 14, 40, 255), anchor="mm")
+    d.text((582, 78), "ПРИЗОВ", font=fit(d, "ПРИЗОВ", 340, 92), fill=(18, 14, 40, 255), anchor="mm")
+    d.text((582, 156), "УЧАСТВУЙ", font=fit(d, "УЧАСТВУЙ", 340, 62), fill=(48, 36, 12, 255), anchor="mm")
 
-    f_head = fit(d, T_HEAD, w - 120, 122)
-    text_glow(img, (w / 2, 320), T_HEAD, f_head, INK, (255, 60, 170), 16, anchor="mm")
+    text_glow(img, (w / 2, 318), T_HEAD, fit(d, T_HEAD, w - 120, 122), INK, (255, 60, 170), 16, anchor="mm")
     d = ImageDraw.Draw(img)
-    m = scaled(magnet, h=272)
-    drop(img, m, (w - m.width) // 2, 372)
+    m = scaled(magnet, h=232)
+    c = scaled(chest, h=214)
+    drop(img, m, 44, 388)
+    drop(img, c, w - c.width - 34, 402)
+    gold_num(img, (m.width + 28, 566), "×5", 92)
     d = ImageDraw.Draw(img)
-    d.text((w / 2, 672), "PERMANENT MAGNET", font=fit(d, "PERMANENT MAGNET", w - 110, 78),
-           fill=GOLD + (255,), anchor="mm")
-    f_cta = font(40)
-    chip(img, [140, 714, w - 140, 776], T_TG, f_cta, bg=INK, fg=(18, 14, 40), radius=16)
+    gold_num(img, (w / 2, 486), "+", 84)
+    d = ImageDraw.Draw(img)
+    d.text((w / 2, 656), T_PRIZE_A, font=fit(d, T_PRIZE_A, w - 110, 62), fill=GOLD + (255,), anchor="mm")
+    d.text((w / 2, 706), T_PRIZE_B, font=fit(d, T_PRIZE_B, w - 110, 62), fill=GOLD + (255,), anchor="mm")
+    chip(img, [140, 736, w - 140, 782], T_TG, font(34), bg=INK, fg=(18, 14, 40), radius=14)
     return img
 
 
 # ===========================================================================
-#  Вариант 3 — «БОСС»: кинематографичный постер с роботом Update 30.
+#  Вариант 3 — «БОСС»: развитие того, что стоит на сайте, плюс второй приз.
 # ===========================================================================
 
 def boss(slot, w, h):
     img = bg_boss(w, h)
     d = ImageDraw.Draw(img)
     magnet = art("giveaway-magnet.webp")
+    chest = art("giveaway-chromatic.webp")
     robot = art("giveaway-robot.webp")
 
     if slot in ("strip", "dock"):
         big = slot == "strip"
-        r = scaled(robot, h=int(h * 1.10))
-        drop(img, r, int(w * 0.45), int(-h * 0.07))
-        m = scaled(magnet, h=int(h * 0.84))
-        drop(img, m, w - m.width - int(w * 0.015), int(h * 0.11))
+        r = scaled(robot, h=int(h * 0.94))
+        drop(img, r, int(w * 0.42), int(h * 0.04))
+        c = scaled(chest, h=int(h * 0.60))
+        drop(img, c, w - c.width - int(w * 0.012), int(h * 0.36))
+        m = scaled(magnet, h=int(h * 0.62))
+        drop(img, m, w - c.width - m.width + int(w * 0.040), int(h * 0.02))
+        gold_num(img, (w - c.width - int(w * 0.018), int(h * 0.28)), "×5", int(h * 0.23))
 
         # Затемнение слева, чтобы текст лёг на арт.
         veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        ImageDraw.Draw(veil).rectangle([0, 0, int(w * 0.50), h], fill=(4, 8, 22, 224))
+        ImageDraw.Draw(veil).rectangle([0, 0, int(w * 0.47), h], fill=(4, 8, 22, 226))
         img.alpha_composite(veil.filter(ImageFilter.GaussianBlur(w // 26)))
 
         left = int(w * 0.045)
-        colw = int(w * 0.42)
+        colw = int(w * 0.40)
         d = ImageDraw.Draw(img)
-        f_head = fit(d, "МЕГА-РОЗЫГРЫШ", colw, int(h * 0.24))
-        d.text((left, int(h * 0.18)), "МЕГА-РОЗЫГРЫШ", font=f_head, fill=CYAN + (255,), anchor="lm")
-        f_prize = fit(d, "5 PERMANENT", colw, int(h * 0.34))
-        text_glow(img, (left, int(h * 0.45)), "5 PERMANENT", f_prize, INK, CYAN, max(5, h // 26), anchor="lm")
+        d.text((left, int(h * 0.15)), T_HEAD_BIG, font=fit(d, T_HEAD_BIG, colw, int(h * 0.20)),
+               fill=CYAN + (255,), anchor="lm")
+        text_glow(img, (left, int(h * 0.42)), T_PRIZE_A, fit(d, T_PRIZE_A, colw, int(h * 0.26)),
+                  INK, CYAN, max(4, h // 30), anchor="lm")
         d = ImageDraw.Draw(img)
-        f_prize2 = fit(d, "MAGNET", colw, int(h * 0.34))
-        text_glow(img, (left, int(h * 0.72)), "MAGNET", f_prize2, INK, MK, max(5, h // 26), anchor="lm")
+        text_glow(img, (left, int(h * 0.68)), T_PRIZE_B, fit(d, T_PRIZE_B, colw, int(h * 0.26)),
+                  INK, MK, max(4, h // 30), anchor="lm")
         d = ImageDraw.Draw(img)
-        f_cta = font(int(h * 0.10))
-        d.text((left, int(h * 0.93)), T_CTA, font=f_cta, fill=MUTED + (255,), anchor="lm")
+        d.text((left, int(h * 0.90)), T_CTA, font=fit(d, T_CTA, colw, int(h * 0.10)),
+               fill=MUTED + (255,), anchor="lm")
         return img
 
     if slot == "rail":
-        r = scaled(robot, w=int(w * 1.24))
-        drop(img, r, (w - r.width) // 2, 300)
-        m = scaled(magnet, w=int(w * 0.9))
-        drop(img, m, (w - m.width) // 2, 640)
+        # Предметы идут каскадом и заканчиваются выше 940 — ниже начинается
+        # нижняя вуаль с названием второго приза, и наезжать на неё нельзя.
+        r = scaled(robot, w=int(w * 1.10))
+        drop(img, r, (w - r.width) // 2, 240)
+        m = scaled(magnet, w=int(w * 0.72))
+        drop(img, m, 4, 520)
+        gold_num(img, (w - 74, 612), "×5", 78)
+        c = scaled(chest, w=int(w * 0.84))
+        drop(img, c, w - int(w * 0.84) - 4, 660)
+
         veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        ImageDraw.Draw(veil).rectangle([0, 0, w, 300], fill=(4, 8, 22, 190))
-        ImageDraw.Draw(veil).rectangle([0, h - 300, w, h], fill=(4, 8, 22, 190))
+        ImageDraw.Draw(veil).rectangle([0, 0, w, 268], fill=(4, 8, 22, 190))
+        ImageDraw.Draw(veil).rectangle([0, h - 268, w, h], fill=(4, 8, 22, 206))
         img.alpha_composite(veil.filter(ImageFilter.GaussianBlur(28)))
         d = ImageDraw.Draw(img)
-        d.text((w / 2, 70), "МЕГА", font=fit(d, "МЕГА", w - 60, 78), fill=CYAN + (255,), anchor="mm")
-        text_glow(img, (w / 2, 150), T_HEAD, fit(d, T_HEAD, w - 30, 78), INK, CYAN, 12, anchor="mm")
+        d.text((w / 2, 60), "МЕГА", font=fit(d, "МЕГА", w - 60, 70), fill=CYAN + (255,), anchor="mm")
+        text_glow(img, (w / 2, 134), T_HEAD, fit(d, T_HEAD, w - 30, 78), INK, CYAN, 12, anchor="mm")
         d = ImageDraw.Draw(img)
-        d.text((w / 2, 232), T_WINNERS, font=fit(d, T_WINNERS, w - 50, 46), fill=MUTED + (255,), anchor="mm")
-        for i, line in enumerate(["5 PERMANENT", "MAGNET"]):
-            text_glow(img, (w / 2, h - 238 + i * 74), line, fit(d, line, w - 30, 76), INK,
-                      MK if i else CYAN, 10, anchor="mm")
+        for i, line in enumerate(T_PRIZE_A2):
+            d.text((w / 2, 198 + i * 44), line, font=fit(d, line, w - 40, 46),
+                   fill=INK + (255,), anchor="mm")
+        for i, line in enumerate(T_PRIZE_B2):
+            text_glow(img, (w / 2, h - 236 + i * 58), line, fit(d, line, w - 30, 60), INK,
+                      MK, 9, anchor="mm")
         d = ImageDraw.Draw(img)
         d.text((w / 2, h - 96), T_TG, font=fit(d, T_TG, w - 40, 42), fill=INK + (255,), anchor="mm")
-        d.text((w / 2, h - 52), "УЧАСТВОВАТЬ", font=fit(d, "УЧАСТВОВАТЬ", w - 60, 32),
+        d.text((w / 2, h - 50), "УЧАСТВОВАТЬ", font=fit(d, "УЧАСТВОВАТЬ", w - 60, 32),
                fill=CYAN + (255,), anchor="mm")
         return img
 
     # popup
-    r = scaled(robot, h=430)
-    drop(img, r, (w - r.width) // 2 + 40, 210)
-    m = scaled(magnet, h=300)
-    drop(img, m, 20, 330)
+    r = scaled(robot, h=340)
+    drop(img, r, (w - r.width) // 2, 184)
+    m = scaled(magnet, h=236)
+    drop(img, m, 4, 306)
+    gold_num(img, (210, 470), "×5", 82)
+    c = scaled(chest, h=222)
+    drop(img, c, w - c.width - 4, 336)
     veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(veil).rectangle([0, 0, w, 210], fill=(4, 8, 22, 200))
-    ImageDraw.Draw(veil).rectangle([0, h - 210, w, h], fill=(4, 8, 22, 205))
+    ImageDraw.Draw(veil).rectangle([0, 0, w, 190], fill=(4, 8, 22, 202))
+    ImageDraw.Draw(veil).rectangle([0, h - 226, w, h], fill=(4, 8, 22, 212))
     img.alpha_composite(veil.filter(ImageFilter.GaussianBlur(34)))
     d = ImageDraw.Draw(img)
-    d.text((w / 2, 66), "МЕГА-РОЗЫГРЫШ", font=fit(d, "МЕГА-РОЗЫГРЫШ", w - 120, 76), fill=CYAN + (255,), anchor="mm")
-    text_glow(img, (w / 2, 146), "5 PERMANENT MAGNET", fit(d, "5 PERMANENT MAGNET", w - 80, 86),
-              INK, MK, 14, anchor="mm")
+    d.text((w / 2, 62), T_HEAD_BIG, font=fit(d, T_HEAD_BIG, w - 120, 76), fill=CYAN + (255,), anchor="mm")
+    text_glow(img, (w / 2, 138), T_PRIZE_A, fit(d, T_PRIZE_A, w - 80, 82), INK, CYAN, 13, anchor="mm")
     d = ImageDraw.Draw(img)
-    d.text((w / 2, 626), T_WINNERS, font=font(46), fill=INK + (255,), anchor="mm")
-    d.text((w / 2, 686), T_UPD, font=font(34), fill=MUTED + (255,), anchor="mm")
+    text_glow(img, (w / 2, 622), T_PRIZE_B, fit(d, T_PRIZE_B, w - 80, 82), INK, MK, 13, anchor="mm")
+    d = ImageDraw.Draw(img)
+    d.text((w / 2, 678), T_UPD, font=font(34), fill=MUTED + (255,), anchor="mm")
     f_cta = font(40)
     cw = d.textlength(T_TG, font=f_cta)
-    chip(img, [(w - cw) / 2 - 104, 720, (w + cw) / 2 + 44, 782], T_TG, f_cta,
+    chip(img, [(w - cw) / 2 - 104, 706, (w + cw) / 2 + 44, 768], T_TG, f_cta,
          bg_grad=dgrad(w, h, GRAD_A, GRAD_B), fg=INK)
-    img.alpha_composite(tg_glyph(46), (int((w - cw) / 2 - 90), 728))
+    img.alpha_composite(tg_glyph(46), (int((w - cw) / 2 - 90), 714))
     return img
 
 
-BUILDERS = {"neon": neon, "ticket": ticket, "boss": boss}
+BUILDERS = {"duo": duo, "ticket": ticket, "boss": boss}
 
 
 def main():

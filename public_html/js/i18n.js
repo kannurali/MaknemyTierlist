@@ -231,7 +231,7 @@
       // Собственный розыгрыш (PROMO.HOUSE_GIVEAWAY). Когда он кончится,
       // кампания выключается в js/promo.js, а эти строки остаются под
       // следующий: переписать текст дешевле, чем заводить ключи заново.
-      "promo.giveawayText":     "Розыгрыш 5 permanent Magnet: 5 победителей в честь Update 30",
+      "promo.giveawayText":     "Розыгрыш в честь Update 30: 5 permanent Magnet и 50 Chromatic Box",
       "promo.giveawayCta":      "Участвовать",
 
       "footer.addLinkBtn":      "＋ ссылка",
@@ -594,7 +594,7 @@
       "promo.cta":              "Open",
       "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
       "promo.houseTgCta":       "Open the channel",
-      "promo.giveawayText":     "Giveaway: 5 permanent Magnet, 5 winners for Update 30",
+      "promo.giveawayText":     "Update 30 giveaway: 5 permanent Magnet and 50 Chromatic Box",
       "promo.giveawayCta":      "Enter the giveaway",
 
       "footer.addLinkBtn":      "＋ link",
