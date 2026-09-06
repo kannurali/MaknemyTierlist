@@ -213,7 +213,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=8" />
+<link rel="stylesheet" href="css/base.css?v=9" />
 <link rel="stylesheet" href="css/news.css?v=12" />
 <!-- Общая шапка сайта: та же, что на главной и тирлисте. Идёт после
      news.css — прячет старый бренд и .nav-seg в тулбаре, их роль забрала
