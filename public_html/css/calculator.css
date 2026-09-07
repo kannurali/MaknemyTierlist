@@ -427,10 +427,17 @@
 .tc-slot.is-empty { color: rgba(255, 255, 255, 0.22); }
 .tc-slot:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
+/* Значок типа в углу слота — пометка, а не содержание: слот узнают по
+   картинке и названию, а тип уточняют вторым взглядом. Макетные 15 точек
+   при значке предмета в 62 делали его второй картинкой в ячейке — ширина
+   у двубуквенных кодов (MS, PM, CM) вдвое больше высоты, и плашка
+   съедала треть верхней кромки. В каталоге значок остаётся макетным:
+   там он в своём стеклянном квадрате за углом карточки и ничего не
+   перекрывает. */
 .tc-slot-badge {
   position: absolute;
-  top: calc(6 * var(--u)); left: calc(6 * var(--u));
-  height: calc(15 * var(--u));
+  top: calc(5 * var(--u)); left: calc(5 * var(--u));
+  height: calc(11 * var(--u));
   width: auto;
 }
 .tc-slot-remove {
@@ -1339,7 +1346,7 @@
   .tc-slot-bottom { gap: 3px; }
   .tc-slot-value { font-size: 10px; letter-spacing: 0.02em; }
   .tc-slot-dot { width: 6px; height: 6px; }
-  .tc-slot-badge { height: 11px; top: 3px; left: 3px; }
+  .tc-slot-badge { height: 8px; top: 3px; left: 3px; }
   .tc-slot-remove { width: 16px; height: 16px; font-size: 10px; top: 3px; right: 3px; }
 
   /* Панель шкал — над сеткой, а не под ней: в узкой колонке итог стороны
@@ -1469,7 +1476,7 @@
   .tc-slot-name { font-size: 12px; padding: 0 4px; }
   .tc-slot-value { font-size: 14px; }
   .tc-slot-dot { width: 8px; height: 8px; }
-  .tc-slot-badge { height: 15px; top: 6px; left: 6px; }
+  .tc-slot-badge { height: 11px; top: 5px; left: 5px; }
   .tc-slot-remove { width: 22px; height: 22px; font-size: 13px; top: 6px; right: 6px; }
 
   .tc-meters { padding: 9px 12px 11px; column-gap: 6px; row-gap: 7px; }
@@ -1502,7 +1509,7 @@
   .tc-slot-name { font-size: 11px; padding: 0 4px; }
   .tc-slot-value { font-size: 12px; }
   .tc-slot-dot { width: 8px; height: 8px; }
-  .tc-slot-badge { height: 13px; top: 5px; left: 5px; }
+  .tc-slot-badge { height: 10px; top: 4px; left: 4px; }
   .tc-slot-remove { width: 18px; height: 18px; font-size: 11px; top: 5px; right: 5px; }
 
   .tc-meter-label { font-size: 11px; }
