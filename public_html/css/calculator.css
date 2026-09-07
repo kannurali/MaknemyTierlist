@@ -332,8 +332,19 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tc-pill-l { left: calc(44 * var(--u)); top: calc(167 * var(--u)); }
-.tc-pill-r { left: calc(647 * var(--u)); top: calc(167 * var(--u)); }
+/* Пилюля лежит внутри своей .tc-side, а не в общей строке .tc-marks, и
+   отсчитывается от угла секции. Макетные точки те же: секция
+   начинается на 202 сверху (пилюля на 167 → −35 от секции), левая — на
+   44 слева (пилюля тоже 44 → 0), правая — на 385 (пилюля 647 → 262).
+   position задан прямо: раньше его давало правило .tc-marks > *, а у
+   .tc-side такого правила нет. */
+.tc-pill-l,
+.tc-pill-r {
+  position: absolute;
+  top: calc(-35 * var(--u));
+}
+.tc-pill-l { left: 0; }
+.tc-pill-r { left: calc(262 * var(--u)); }
 
 /* Стрелка-указатель из макета (Vector 3/4, 32×12, залита тем же
    градиентом). Правая — та же фигура, отражённая. */
@@ -440,11 +451,20 @@
   height: calc(62 * var(--u));
   object-fit: contain;
 }
+/* Тот же набор, что у плашки названия в каталоге (.tc-cat-name) и у
+   карточки на тирлисте (.cr-name): одна и та же строка из базы не
+   имеет права менять шрифт оттого, что предмет выбрали. Раньше
+   слот наследовал var(--ui) от .tc-page, и после выбора из каталога
+   название перекладывалось с дисплейного на системный прямо на
+   глазах. */
 .tc-slot-name {
   max-width: 100%;
   padding: 0 calc(4 * var(--u));
+  font-family: var(--display);
   font-size: calc(11 * var(--u));
   line-height: 1.2;
+  letter-spacing: .02em;
+  text-transform: uppercase;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -455,10 +475,12 @@
   align-items: center;
   gap: calc(4 * var(--u));
 }
+/* Цена — тоже шрифтом каталога (.tc-cat-value): в карточке выбора и в
+   слоте стоит одно и то же число. */
 .tc-slot-value {
-  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-family: var(--display);
   font-size: calc(13 * var(--u));
-  letter-spacing: 0.04em;
+  letter-spacing: .02em;
   font-variant-numeric: tabular-nums;
   color: #8fd6ff;
 }
@@ -1245,22 +1267,33 @@
   .tc-title { font-size: 26px; }
   .tc-subtitle { font-size: 13px; margin-top: 8px; letter-spacing: 0.04em; }
 
-  /* Пилюли — подписи своих колонок: «вы» прижата к левому краю левой
-     колонки, «вам» — к правому краю правой, «vs» в просвете между ними.
-     Те же 1fr и 10px, что у доски, поэтому пилюля стоит ровно над своей
-     стороной. Стрелки макета указывали на конкретные панели; здесь их
-     роль взяла на себя привязка пилюли к колонке, поэтому их нет. */
+  /* На телефоне в этой строке остаётся одно «vs» по центру доски:
+     пилюли ушли внутрь своих сторон, а стрелки макета указывали на
+     конкретные панели и без макетной раскладки теряют смысл.
+     Флекс, а не грид: скрытые стрелки выбывают из потока, и в гриде
+     «vs» встало бы в первую колонку, а не в середину. */
   .tc-marks {
     order: 2;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
     align-items: center;
-    column-gap: 10px;
+    justify-content: center;
   }
-  .tc-pill-l { justify-self: start; }
-  .tc-pill-r { justify-self: end; }
   .tc-arrow { display: none; }
   .tc-vs { width: auto; font-size: 18px; }
+
+  /* Пилюля — подпись своей стороны и стоит внутри неё: между панелью
+     шкал (она выше, order: -1) и сеткой слотов. Отдельной строкой над
+     двумя колонками она оторвана от того, что подписывает, и читается
+     заголовком всей доски. Край — свой у каждой стороны: левая к
+     левому, правая к правому, как было в строке над колонками. */
+  .tc-pill-l,
+  .tc-pill-r {
+    position: static;
+    order: 0;
+    flex: 0 0 auto;
+  }
+  .tc-pill-l { align-self: flex-start; }
+  .tc-pill-r { align-self: flex-end; }
 
   .tc-side {
     order: 3;
@@ -1459,15 +1492,10 @@
   .tc-side[data-side="left"],
   .tc-side[data-side="right"] { grid-column: 1; }
 
-  /* Колонок больше нет — пилюлям не над чем стоять, и они возвращаются
-     в одну строку с «vs» по центру доски. */
-  .tc-marks {
-    grid-template-columns: auto auto auto;
-    justify-content: center;
-    column-gap: 14px;
-  }
-  .tc-pill-l,
-  .tc-pill-r { justify-self: center; }
+  /* Колонок больше нет, и правый край перестал что-либо значить: обе пилюли
+     встают у левого края своей стороны и читаются заголовком блока под
+     ними. */
+  .tc-pill-r { align-self: flex-start; }
 
   .tc-slots { padding: 12px; gap: 10px; }
   .tc-slot { border-radius: 14px; padding: 6px; gap: 3px; }
