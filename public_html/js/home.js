@@ -1,4 +1,63 @@
 /* ===================================================================
+   Язык интерфейса (RU / EN).
+
+   Тот же приём и тот же ключ localStorage, что в app.js,
+   news-page.js и calculator-page.js: выбор один на весь сайт, и
+   переход с главной на тирлист не имеет права сбрасывать язык.
+
+   Страница статичная, поэтому вся работа — один проход по
+   [data-i18n*]. Единственная тонкость — копия ряда карточек: её
+   делает лента ниже клонированием узлов, и атрибуты уезжают в
+   клон вместе с разметкой — перевод находит их в любом порядке.
+   =================================================================== */
+(function () {
+  'use strict';
+
+  var LANG_KEY = 'nexus-lang-v1';
+  var i18n = window.I18N;
+  if (!i18n) return;   // словарь не подключён — остаёмся на русской разметке
+
+  var stored = null;
+  try { stored = localStorage.getItem(LANG_KEY); } catch (e) { /* приватный режим */ }
+  var lang = i18n.pickLang(stored, navigator.language);
+
+  function tx(key) { return i18n.t(key, lang); }
+
+  function apply(next) {
+    if (next) {
+      lang = next;
+      try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* приватный режим */ }
+    }
+    document.documentElement.lang = lang;
+
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      el.textContent = tx(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
+      el.title = tx(el.dataset.i18nTitle);
+    });
+    document.querySelectorAll('[data-i18n-label]').forEach(function (el) {
+      el.setAttribute('aria-label', tx(el.dataset.i18nLabel));
+    });
+    document.querySelectorAll('#langSwitch [data-lang]').forEach(function (b) {
+      var on = b.dataset.lang === lang;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  var box = document.getElementById('langSwitch');
+  if (box) {
+    box.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-lang]');
+      if (btn) apply(btn.dataset.lang);
+    });
+  }
+
+  apply();
+})();
+
+/* ===================================================================
    Главная страница: аккордеон в блоке «Немного о важном».
 
    Всё остальное на странице — вступительная анимация, бегущая строка —

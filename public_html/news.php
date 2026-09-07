@@ -265,13 +265,13 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
         <li>
           <a class="mk-pill" href="/">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 16.0302V8.423C18.05 7.48807 17.644 6.60551 16.9498 6.03152L11.833 1.80094C10.4608 0.666372 8.53926 0.666371 7.16704 1.80094L2.05028 6.03152C1.35606 6.60551 0.950013 7.48807 0.950013 8.423V16.0302C0.950013 17.1457 1.80067 18.05 2.85001 18.05H4.75001C5.79936 18.05 6.65001 17.1994 6.65001 16.15V13.0006C6.65001 11.8851 7.50067 10.9808 8.55002 10.9808H10.45C11.4994 10.9808 12.35 11.8851 12.35 13.0006V16.15C12.35 17.1994 13.2007 18.05 14.25 18.05H16.15C17.1994 18.05 18.05 17.1457 18.05 16.0302Z" stroke="currentColor" stroke-width="1.81101"/></svg>
-            <span class="mk-pill-text">Главная</span>
+            <span class="mk-pill-text" data-i18n="nav.home">Главная</span>
           </a>
         </li>
         <li>
           <a class="mk-pill" href="/tierlist">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M8.57627 3.7533C8.57627 3.22702 8.14799 2.79425 7.62582 2.85987C6.45486 3.00701 5.32947 3.42467 4.341 4.08515C3.08735 4.9228 2.11026 6.1134 1.53327 7.50637C0.95628 8.89935 0.805314 10.4321 1.09946 11.9109C1.39361 13.3897 2.11965 14.748 3.18579 15.8142C4.25193 16.8803 5.61027 17.6063 7.08904 17.9005C8.56781 18.1946 10.1006 18.0437 11.4936 17.4667C12.8866 16.8897 14.0771 15.9126 14.9148 14.659C15.5753 13.6705 15.9929 12.5451 16.1401 11.3741C16.2057 10.852 15.7729 10.4237 15.2466 10.4237H9.52918C9.0029 10.4237 8.57627 9.99705 8.57627 9.47077V3.7533Z" stroke="currentColor" stroke-width="1.82067"/><path d="M11.435 1.84748C11.435 1.3212 11.8638 0.887589 12.3847 0.962518C12.934 1.04153 13.4726 1.18898 13.9876 1.40232C14.7969 1.73754 15.5323 2.22887 16.1517 2.84828C16.7711 3.46768 17.2624 4.20302 17.5976 5.0123C17.811 5.52735 17.9584 6.06592 18.0374 6.61527C18.1124 7.13618 17.6787 7.56495 17.1525 7.56495L11.5303 7.56495C11.4777 7.56495 11.435 7.52228 11.435 7.46965V1.84748Z" stroke="currentColor" stroke-width="1.82067"/></svg>
-            <span class="mk-pill-text">Тирлист</span>
+            <span class="mk-pill-text" data-i18n="nav.tierlist">Тирлист</span>
           </a>
         </li>
         <li>
@@ -290,7 +290,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
                добраться. Приглушённый вид даёт селектор [data-soon]. -->
           <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="mk-pill-text">Трейдинг</span>
+            <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </button>
         </li>
         <li>
@@ -300,13 +300,13 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
                несёт aria-current="page" (см. calculator.php). -->
           <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-            <span class="mk-pill-text">Калькулятор</span>
+            <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
           </a>
         </li>
         <li>
           <a class="mk-pill" href="/news" aria-current="page">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 9.50002C18.05 14.2221 14.222 18.05 9.49995 18.05M18.05 9.50002C18.05 4.77798 14.222 0.950013 9.49995 0.950013M18.05 9.50002C18.05 7.92601 14.222 6.65002 9.49995 6.65002C4.77792 6.65002 0.949949 7.92601 0.949949 9.50002M18.05 9.50002C18.05 11.074 14.222 12.35 9.49995 12.35C4.77792 12.35 0.949949 11.074 0.949949 9.50002M9.49995 18.05C4.77792 18.05 0.949949 14.2221 0.949949 9.50002M9.49995 18.05C11.074 18.05 12.35 14.2221 12.35 9.50002C12.35 4.77798 11.074 0.950013 9.49995 0.950013M9.49995 18.05C7.92594 18.05 6.64995 14.2221 6.64995 9.50002C6.64995 4.77798 7.92594 0.950013 9.49995 0.950013M0.949949 9.50002C0.949949 4.77798 4.77792 0.950013 9.49995 0.950013" stroke="currentColor" stroke-width="1.9"/></svg>
-            <span class="mk-pill-text">Новости</span>
+            <span class="mk-pill-text" data-i18n="nav.news">Новости</span>
           </a>
         </li>
       </ul>
@@ -478,7 +478,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=32"></script>
+  <script src="js/i18n.js?v=33"></script>
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
