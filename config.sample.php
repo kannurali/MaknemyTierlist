@@ -12,6 +12,17 @@ return [
     // Absolute path to the writable images directory.
     'images_dir' => __DIR__ . '/public_html/images',
 
+    // --- Roblox OAuth (вход посетителей) -------------------------------
+    // Пустой client_id или secret = вход выключен: api/roblox_start.php
+    // отвечает 503, а шапка не показывает кнопку (см. README).
+    // Приложение заводится на create.roblox.com/dashboard/credentials.
+    'roblox_client_id'     => '',
+    'roblox_client_secret' => '',
+    // Должен СОВПАДАТЬ посимвольно с Redirect URI в настройках
+    // приложения у Roblox. Задан явно, а не собран из $_SERVER['HTTP_HOST']:
+    // заголовок Host приходит от клиента и подделывается.
+    'roblox_redirect_uri'  => 'https://maknemy.com/api/roblox_callback.php',
+
     // --- GitHub push webhook (api/deploy.php) ---------------------------
     // Leave 'deploy_secret' empty to keep the endpoint disabled: it then
     // answers 503 and never runs anything.

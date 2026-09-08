@@ -150,11 +150,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/styles.css?v=54" />
 <!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
      бренд и .nav-seg в тулбаре. -->
-<link rel="stylesheet" href="css/topbar.css?v=9" />
+<link rel="stylesheet" href="css/topbar.css?v=10" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=3" defer></script>
+<script src="js/topbar.js?v=4" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
 <link rel="stylesheet" href="css/design-page.css?v=30" />
 
@@ -683,7 +683,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
        /api/state.php. См. комментарий у $nxRev в начале файла. -->
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=33"></script>
+  <script src="js/i18n.js?v=34"></script>
   <script src="js/content.js?v=2"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при

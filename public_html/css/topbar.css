@@ -439,6 +439,89 @@
 .mk-chat:focus-visible,
 .mk-avatar:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
 
+/* ===================== Профиль: аватар и меню ===================== */
+/* В разметку всех четырёх страниц кнопка профиля приезжает заглушкой
+   data-soon. По ответу api/session.php js/topbar.js делает из неё либо
+   ссылку «Войти через Roblox», либо кнопку с аватаром и меню — отсюда
+   селектор на <a class="mk-avatar">: тег меняется, вид остаётся тем же.
+   Размеры круга задаёт общее правило .mk-chat/.mk-avatar выше вместе со
+   всеми медиазапросами, и переопределять их здесь не нужно. */
+a.mk-avatar { text-decoration: none; }
+
+/* Аватар заполняет круг целиком. Картинка из Roblox квадратная, но
+   object-fit оставлен на случай неквадратной: без него она растянулась бы. */
+.mk-avatar-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Меню профиля. Узел лежит в <body> и позиционируется fixed, координаты
+   ставит скрипт: шапка режет переполнение по горизонтали (overflow-x: clip
+   с откатом на hidden — см. начало файла), и вложенное меню в движках без
+   clip обрезало бы по её краю.
+
+   z-index 80 — выше самой шапки (60), её язычка (70) и плашки «в активной
+   разработке» (70): меню всегда поверх. */
+.mk-user-menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 200px;
+  max-width: min(80vw, 280px);
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(6, 10, 22, 0.96);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+/* Шапка меню: display name крупно, ник @… мельче и приглушённо. Оба могут
+   быть длинными — режем многоточием, а не переносим: меню не должно расти
+   в высоту из-за чужого ника. */
+.mk-user-name {
+  padding: 6px 10px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mk-user-name span {
+  display: block;
+  font-weight: 400;
+  font-size: 13px;
+  opacity: .65;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Пункты меню — и <a>, и <button>. Общее правило, потому что различаться
+   они не должны ничем, кроме того, что делают. */
+.mk-user-item {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .14s ease;
+}
+.mk-user-item:hover { background: rgba(255, 255, 255, 0.09); }
+.mk-user-item:focus-visible { outline: 2px solid #bfe6ff; outline-offset: -2px; }
+.mk-user-item[disabled] { opacity: .5; cursor: default; }
+
 /* ===================== Плашка «В активной разработке» ===================== */
 /* Один узел на страницу, его создаёт js/topbar.js. role="status" +
    aria-live: сообщение проговаривается скринридером, а не только видно. */

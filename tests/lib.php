@@ -74,6 +74,17 @@ function test_db(): PDO {
         -- колонка вместо отдельной таблицы.
         likes INTEGER NOT NULL DEFAULT 0
     )");
+    // Зеркалит schema.sql: вошедшие через Roblox. BIGINT UNSIGNED в
+    // SQLite — просто INTEGER, но roblox_id везде ходит строкой: id
+    // игрока у Roblox — это claim `sub`, то есть текст из цифр.
+    $pdo->exec("CREATE TABLE users (
+        roblox_id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL DEFAULT '',
+        display_name TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        last_login_at INTEGER NOT NULL
+    )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
     return $pdo;

@@ -218,11 +218,11 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <!-- Общая шапка сайта: та же, что на главной и тирлисте. Идёт после
      news.css — прячет старый бренд и .nav-seg в тулбаре, их роль забрала
      она сама. -->
-<link rel="stylesheet" href="css/topbar.css?v=9" />
+<link rel="stylesheet" href="css/topbar.css?v=10" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=3" defer></script>
+<script src="js/topbar.js?v=4" defer></script>
 <!-- Фон страницы и подвал из редизайна. -->
 <link rel="stylesheet" href="css/design-page.css?v=30" />
 <!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
@@ -478,7 +478,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=33"></script>
+  <script src="js/i18n.js?v=34"></script>
   <script src="js/news.js?v=4"></script>
   <script src="js/news-blocks.js?v=1"></script>
   <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
