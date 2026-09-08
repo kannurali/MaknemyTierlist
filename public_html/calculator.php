@@ -25,8 +25,8 @@ header('Cache-Control: no-cache, must-revalidate');
      пути не поедут в несуществующие /calculator/css/…, /calculator/js/… . -->
 <base href="/" />
 
-<title>Калькулятор трейдов Blox Fruits | Maknemy Tier List</title>
-<meta name="description" content="Калькулятор трейдов Blox Fruits от Maknemy: соберите обе стороны сделки по ценам нашего тирлиста и узнайте, выгодна ли она." />
+<title>Калькулятор трейдов Blox Fruits — Maknemy | Макнеми калькулятор</title>
+<meta name="description" content="Калькулятор трейдов Blox Fruits от Maknemy (Макнеми): соберите обе стороны сделки по ценам нашего тирлиста и узнайте, выгодна ли она." />
 <link rel="canonical" href="https://maknemy.com/calculator" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 
@@ -51,6 +51,77 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:alt" content="Калькулятор трейдов Blox Fruits" />
 <meta name="twitter:card" content="summary_large_image" />
+
+<!-- Разметка для поисковиков. На главной и тирлисте здесь стоит WebSite —
+     он описывает сайт целиком и объявляет кириллические написания бренда
+     ("Макнеми тирлист"), по которым его и ищут. У калькулятора своя пара
+     задач, поэтому и типов два:
+
+     WebApplication — заявка на то, что /calculator это отдельный инструмент,
+     а не подстраница тирлиста. Без него по запросу «макнеми калькулятор»
+     поисковик показывает главную: раздел ничем не объявляет, что он и есть
+     калькулятор. alternateName перечисляет ровно то, как запрос набирают
+     руками — латиницей и кириллицей.
+
+     BreadcrumbList — хлебные крошки, которые Google рисует строкой над
+     заголовком в выдаче (Главная › Калькулятор трейдов) вместо голого URL.
+     Крошки в самой вёрстке страницы нет: разметка описывает положение
+     раздела в структуре сайта, а рисовать её на странице редизайн не
+     просит.
+
+     offers с ценой 0 — не украшение: у SoftwareApplication и наследников
+     Google требует либо offers, либо aggregateRating, иначе валидатор
+     ругается на неполный объект. Калькулятор бесплатный, так и написано. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Калькулятор трейдов Blox Fruits",
+      "alternateName": ["Макнеми калькулятор", "Maknemy calculator", "Калькулятор трейдов Maknemy"],
+      "url": "https://maknemy.com/calculator",
+      "inLanguage": "ru",
+      "applicationCategory": "UtilityApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires JavaScript",
+      "description": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "Maknemy Tier List",
+        "url": "https://maknemy.com/"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "RUB"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Maknemy",
+        "url": "https://t.me/mksvtnc"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Maknemy",
+          "item": "https://maknemy.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Калькулятор трейдов",
+          "item": "https://maknemy.com/calculator"
+        }
+      ]
+    }
+  ]
+}
+</script>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
