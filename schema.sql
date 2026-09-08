@@ -75,3 +75,23 @@ CREATE TABLE IF NOT EXISTS news (
   likes        INT UNSIGNED NOT NULL DEFAULT 0,
   KEY idx_feed (published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Посетители, вошедшие через Roblox (api/roblox_callback.php). Пароля здесь
+-- нет и быть не может: аутентификацию целиком делает Roblox, сайт хранит
+-- только то, что показывает шапка.
+--
+-- Ключ — сам roblox_id (claim `sub` из userinfo), без своего AUTO_INCREMENT:
+-- второго источника личности у нас нет, а лишний суррогатный id пришлось бы
+-- всюду тащить рядом с настоящим. Токены Roblox не хранятся вовсе — они
+-- нужны ровно на один запрос профиля в момент входа.
+--
+-- api/session.php переживает отсутствие этой таблицы: без неё никто просто
+-- не считается вошедшим (как promo.php без своей таблицы).
+CREATE TABLE IF NOT EXISTS users (
+  roblox_id     BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  username      VARCHAR(64)  NOT NULL DEFAULT '',
+  display_name  VARCHAR(64)  NOT NULL DEFAULT '',
+  avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
+  created_at    BIGINT UNSIGNED NOT NULL,
+  last_login_at BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

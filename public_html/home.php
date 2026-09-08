@@ -92,11 +92,11 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/base.css?v=9" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
-<link rel="stylesheet" href="css/topbar.css?v=9" />
+<link rel="stylesheet" href="css/topbar.css?v=10" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=3" defer></script>
+<script src="js/topbar.js?v=4" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=30" />
 <link rel="stylesheet" href="css/home.css?v=14" />
@@ -420,7 +420,7 @@ header('Cache-Control: no-cache, must-revalidate');
      в home.js и без window.I18N оставил бы страницу на русском. Номер
      версии обязан совпадать с остальными страницами — файл один на весь
      сайт, и разные ?v= держали бы в кэше две его копии. -->
-<script src="js/i18n.js?v=33"></script>
+<script src="js/i18n.js?v=34"></script>
 <script src="js/home.js?v=4"></script>
 </body>
 </html>

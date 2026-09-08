@@ -59,11 +59,11 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="stylesheet" href="css/base.css?v=9" />
 <!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
      набрана вся страница. -->
-<link rel="stylesheet" href="css/topbar.css?v=9" />
+<link rel="stylesheet" href="css/topbar.css?v=10" />
 <!-- Поведение шапки: компактный режим при прокрутке и плашка
      «В активной разработке» на разделах, которых ещё нет.
      defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=3" defer></script>
+<script src="js/topbar.js?v=4" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
 <link rel="stylesheet" href="css/design-page.css?v=30" />
 <link rel="stylesheet" href="css/calculator.css?v=21" />
@@ -506,7 +506,7 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=33"></script>
+  <script src="js/i18n.js?v=34"></script>
   <script src="js/promo.js?v=6"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
   <script src="js/promo-dock.js?v=3"></script>

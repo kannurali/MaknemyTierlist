@@ -53,7 +53,14 @@ function json_out(array $data, int $status = 200): void {
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
-function start_admin_session(): void {
+// Единственная PHP-сессия сайта: в ней и админский флаг, и вошедший через
+// Roblox посетитель (api/roblox_callback.php). Кука одна — и функция одна.
+//
+// SameSite=Lax здесь не просто «по умолчанию безопасно»: возврат с
+// roblox.com — это переход верхнего уровня по GET, и именно Lax пропускает
+// на нём куку. Со Strict сессия на возврате оказалась бы пустой, и вход не
+// доходил бы до конца.
+function start_site_session(): void {
     if (session_status() === PHP_SESSION_ACTIVE) { return; }
     session_set_cookie_params([
         'lifetime' => 0,
@@ -64,6 +71,10 @@ function start_admin_session(): void {
     ]);
     session_start();
 }
+
+// Прежнее имя той же сессии. Оставлено как есть: его зовут все админские
+// эндпоинты, и переименование ничего бы не улучшило.
+function start_admin_session(): void { start_site_session(); }
 
 function is_admin(): bool { return !empty($_SESSION['admin']); }
 

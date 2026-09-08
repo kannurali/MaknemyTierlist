@@ -30,6 +30,20 @@
       "topbar.showNav":         "Показать разделы",
       "topbar.hideNav":         "Скрыть разделы",
 
+      // Вход через Roblox (js/topbar.js, api/roblox_start.php). Кнопка
+      // профиля в шапке меняет смысл в зависимости от того, вошёл ли
+      // посетитель, поэтому подписей две, а не одна.
+      "user.login":             "Войти через Roblox",
+      "user.menu":              "Меню профиля",
+      "user.profile":           "Профиль в Roblox",
+      "user.logout":            "Выйти",
+      // Чем кончился возврат с Roblox: метка ?login= в адресе от
+      // api/roblox_callback.php. Без сообщения неудачный вход выглядел
+      // бы как «сайт просто перезагрузился».
+      "user.cancelled":         "Вход отменён",
+      "user.expired":           "Вход занял слишком много времени — попробуйте ещё раз",
+      "user.error":             "Не удалось войти — попробуйте ещё раз",
+
       // Подписи пилюль в шапке (.mk-pill-text). Общие для всех страниц:
       // шапка одна, и раздел не может называться по-русски на тирлисте и
       // по-английски на главной.
@@ -480,6 +494,14 @@
       "topbar.soon":            "In active development",
       "topbar.showNav":         "Show sections",
       "topbar.hideNav":         "Hide sections",
+
+      "user.login":             "Log in with Roblox",
+      "user.menu":              "Profile menu",
+      "user.profile":           "Roblox profile",
+      "user.logout":            "Log out",
+      "user.cancelled":         "Login cancelled",
+      "user.expired":           "Login took too long — please try again",
+      "user.error":             "Could not log in — please try again",
 
       "nav.home":               "Home",
       "nav.tierlist":           "Tier list",
