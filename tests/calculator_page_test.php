@@ -55,6 +55,58 @@ test('калькулятор объявляет себя на /calculator', func
         'og:url калькулятора');
 });
 
+// Запрос, ради которого страница и правится, — «макнеми калькулятор»
+// кириллицей. Ни одного из двух слов в таком написании на странице раньше не
+// было: бренд стоял только латиницей (Maknemy), а «калькулятор» жил в title и
+// в description, но без бренда рядом. Проверяем именно точную пару, а не два
+// отдельных вхождения: соседние страницы (главная, тирлист) кириллический
+// бренд уже несут и по такому запросу выигрывают у калькулятора.
+test('калькулятор отвечает на запрос «макнеми калькулятор» кириллицей', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    preg_match('~<title>(.*?)</title>~su', $calc, $t);
+    assert_true(!empty($t), '<title> на месте');
+    assert_true(mb_stripos($t[1], 'Макнеми калькулятор') !== false,
+        'в <title> есть точная фраза «Макнеми калькулятор», а не только латиница');
+
+    preg_match('~<meta name="description" content="(.*?)" />~su', $calc, $d);
+    assert_true(!empty($d), 'description на месте');
+    assert_true(mb_stripos($d[1], 'Макнеми') !== false, 'в description есть кириллический бренд');
+    assert_true(mb_strlen($d[1]) <= 160, 'description не длиннее 160 символов, иначе выдача его обрежет');
+});
+
+// Разметка Schema.org. Битый JSON тут — не мелочь: поисковик молча
+// выбрасывает весь блок целиком, а не одно поле, и страница остаётся вообще
+// без разметки. Поэтому проверяется именно разбор, а не наличие подстрок.
+test('на калькуляторе валидная разметка WebApplication + хлебные крошки', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    preg_match('~<script type="application/ld\+json">(.*?)</script>~su', $calc, $m);
+    assert_true(!empty($m), 'блок ld+json на месте');
+
+    $data = json_decode($m[1], true);
+    assert_true(is_array($data), 'ld+json разбирается: ' . json_last_error_msg());
+    assert_true(isset($data['@graph']) && count($data['@graph']) === 2, 'в @graph два объекта');
+
+    $byType = [];
+    foreach ($data['@graph'] as $node) { $byType[$node['@type']] = $node; }
+
+    assert_true(isset($byType['WebApplication']), 'WebApplication объявлен');
+    $app = $byType['WebApplication'];
+    assert_true($app['url'] === 'https://maknemy.com/calculator', 'url приложения — сам калькулятор');
+    assert_true(in_array('Макнеми калькулятор', $app['alternateName'], true),
+        'кириллическое написание в alternateName');
+    // offers обязателен: без него (или без aggregateRating) Google считает
+    // объект неполным и не показывает по нему расширенный результат.
+    assert_true(isset($app['offers']['price']), 'у приложения объявлена цена');
+
+    assert_true(isset($byType['BreadcrumbList']), 'хлебные крошки объявлены');
+    $crumbs = $byType['BreadcrumbList']['itemListElement'];
+    assert_true(count($crumbs) === 2, 'две крошки: главная и калькулятор');
+    assert_true($crumbs[0]['position'] === 1 && $crumbs[0]['item'] === 'https://maknemy.com/',
+        'первая крошка — главная');
+    assert_true($crumbs[1]['position'] === 2 && $crumbs[1]['item'] === 'https://maknemy.com/calculator',
+        'вторая крошка — калькулятор');
+});
+
 test('в карте сайта есть /calculator', function () use ($PUB) {
     $map = calc_read($PUB . '/sitemap.xml');
     assert_true(strpos($map, '<loc>https://maknemy.com/calculator</loc>') !== false, '/calculator в sitemap');
