@@ -156,7 +156,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=4" defer></script>
 <!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=30" />
+<link rel="stylesheet" href="css/design-page.css?v=31" />
 
 <!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
      api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
@@ -440,6 +440,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
     </ul>
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
+    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
+         Roblox и должны быть найдены с любой страницы, поэтому они в общем
+         подвале, а не только в карточке приложения. -->
+    <p class="mk-foot-legal">
+      <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
+      <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
+    </p>
   </footer>
 
   <!-- ====== Боковые рекламные борта (только широкий десктоп) ======
@@ -683,7 +690,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
        /api/state.php. См. комментарий у $nxRev в начале файла. -->
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=34"></script>
+  <script src="js/i18n.js?v=35"></script>
   <script src="js/content.js?v=2"></script>
   <script src="js/tiers.js?v=1"></script>
   <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при

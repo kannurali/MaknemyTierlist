@@ -198,6 +198,10 @@
       "site.footCoder":         "разработчик",
       "site.footHiring":        "активно ищем",
       "site.footTagline":       "макнеми тирлист - гарантия успешных трейдов",
+      // Служебная строка подвала: /privacy и /terms. Страницы сами
+      // двуязычные и переключателем не управляются, переводится только подпись ссылки.
+      "site.footPrivacy":       "Политика конфиденциальности",
+      "site.footTerms":         "Условия использования",
 
       "credits.remove":         "Убрать из списка",
       "credits.add":            "Добавить участника",
@@ -652,6 +656,8 @@
       "site.footCoder":         "developer",
       "site.footHiring":        "hiring",
       "site.footTagline":       "maknemy tier list - your guarantee of good trades",
+      "site.footPrivacy":       "Privacy Policy",
+      "site.footTerms":         "Terms of Service",
 
       "credits.remove":         "Remove from the list",
       "credits.add":            "Add a member",

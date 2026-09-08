@@ -33,4 +33,17 @@
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+  <!-- Правовые страницы. Приоритет низкий и yearly: искать их в поиске
+       никто не будет, но адреса вписаны в карточку OAuth-приложения
+       Roblox, и страницы обязаны быть живыми и видимыми снаружи. -->
+  <url>
+    <loc>https://maknemy.com/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
 </urlset>
