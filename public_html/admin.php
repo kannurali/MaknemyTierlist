@@ -42,7 +42,7 @@ $html = preg_replace(
 
 $html = str_replace(
     '</head>',
-    '<link rel="stylesheet" href="/css/admin-shell.css?v=1" />' . "\n</head>",
+    '<link rel="stylesheet" href="/css/admin-shell.css?v=3" />' . "\n</head>",
     $html
 );
 

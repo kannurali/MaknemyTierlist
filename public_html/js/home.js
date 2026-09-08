@@ -1,24 +1,13 @@
-/* ===================================================================
-   Язык интерфейса (RU / EN).
 
-   Тот же приём и тот же ключ localStorage, что в app.js,
-   news-page.js и calculator-page.js: выбор один на весь сайт, и
-   переход с главной на тирлист не имеет права сбрасывать язык.
-
-   Страница статичная, поэтому вся работа — один проход по
-   [data-i18n*]. Единственная тонкость — копия ряда карточек: её
-   делает лента ниже клонированием узлов, и атрибуты уезжают в
-   клон вместе с разметкой — перевод находит их в любом порядке.
-   =================================================================== */
 (function () {
   'use strict';
 
   var LANG_KEY = 'nexus-lang-v1';
   var i18n = window.I18N;
-  if (!i18n) return;   // словарь не подключён — остаёмся на русской разметке
+  if (!i18n) return;
 
   var stored = null;
-  try { stored = localStorage.getItem(LANG_KEY); } catch (e) { /* приватный режим */ }
+  try { stored = localStorage.getItem(LANG_KEY); } catch (e) {}
   var lang = i18n.pickLang(stored, navigator.language);
 
   function tx(key) { return i18n.t(key, lang); }
@@ -26,7 +15,7 @@
   function apply(next) {
     if (next) {
       lang = next;
-      try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* приватный режим */ }
+      try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
     }
     document.documentElement.lang = lang;
 
@@ -57,29 +46,18 @@
   apply();
 })();
 
-/* ===================================================================
-   Главная страница: аккордеон в блоке «Немного о важном».
-
-   Всё остальное на странице — вступительная анимация, бегущая строка —
-   живёт в css/home.css и обходится без JS. Здесь только раскрытие
-   вопросов, потому что оно завязано на состояние и клавиатуру.
-   =================================================================== */
 (function () {
   'use strict';
 
   var list = document.querySelector('.hm-faq-list');
   if (!list) return;
 
-  // Делегирование, а не слушатель на каждой кнопке: ответы будут
-  // заливаться позже, и разметка может дописываться на сервере.
   list.addEventListener('click', function (e) {
     var btn = e.target.closest('.hm-faq-q');
     if (!btn || !list.contains(btn)) return;
 
     var open = btn.getAttribute('aria-expanded') === 'true';
 
-    // Открыт всегда один вопрос: в макете раскрытый пункт раздвигает
-    // плашку, и два раскрытых сразу сломали бы её высоту.
     list.querySelectorAll('.hm-faq-q[aria-expanded="true"]').forEach(function (other) {
       other.setAttribute('aria-expanded', 'false');
     });
@@ -88,18 +66,6 @@
   });
 })();
 
-/* ===================================================================
-   Ряд карточек — бесконечная лента.
-
-   Едет влево сама, останавливается под курсором и тянется рукой.
-   Сделано трансформом, а не прокруткой контейнера: у карточки арт
-   вылезает за верхний край, а при наведении поднимается ещё на 71
-   единицу макета — контейнер с overflow обрезал бы его.
-
-   Вступительная анимация ряда написана на свойстве translate, лента
-   двигает transform. Это разные свойства, они складываются, поэтому
-   перехватывать анимацию не нужно.
-   =================================================================== */
 (function () {
   'use strict';
 
@@ -110,9 +76,6 @@
   var originals = Array.prototype.slice.call(row.children);
   if (!originals.length) return;
 
-  // Вторая копия ряда: без неё лента доезжает до конца и обрывается.
-  // Копия — те же самые ссылки, поэтому она скрыта от скринридеров и
-  // выключена из обхода по Tab.
   originals.forEach(function (li) {
     var clone = li.cloneNode(true);
     clone.setAttribute('aria-hidden', 'true');
@@ -122,9 +85,6 @@
     row.appendChild(clone);
   });
 
-  // Ширина одной копии — расстояние от первой карточки до её клона.
-  // Считать по сумме ширин и отступов нельзя: gap задан в единицах
-  // макета и меняется на телефоне.
   var setW = 0;
   function measure() {
     var first = row.children[0];
@@ -132,7 +92,7 @@
     setW = clone ? clone.offsetLeft - first.offsetLeft : 0;
   }
 
-  var SPEED = 32;          // px/с — «медленно», карточка проходит ~11 с
+  var SPEED = 32;
   var offset = 0;
   var hovered = false;
   var dragging = false;
@@ -157,7 +117,7 @@
     requestAnimationFrame(frame);
     var dt = last ? (now - last) / 1000 : 0;
     last = now;
-    // Вкладка была в фоне — dt накопится в секунды, и лента прыгнет.
+
     if (dt > 0.05) dt = 0.05;
     if (reduce || hovered || dragging || !onScreen || document.hidden) return;
     offset += SPEED * dt;
@@ -165,15 +125,13 @@
     paint();
   }
 
-  // ---------- пауза ----------
   box.addEventListener('pointerenter', function (e) {
     if (e.pointerType === 'mouse') hovered = true;
   });
   box.addEventListener('pointerleave', function (e) {
     if (e.pointerType === 'mouse') hovered = false;
   });
-  // Клавиатура: пока фокус внутри ленты, она стоит — иначе карточка
-  // уезжает из-под фокуса.
+
   box.addEventListener('focusin', function () { hovered = true; });
   box.addEventListener('focusout', function () { hovered = false; });
 
@@ -183,15 +141,11 @@
     }).observe(box);
   }
 
-  // ---------- перетаскивание ----------
   var startX = 0;
   var startOffset = 0;
   var moved = 0;
   var pointerId = null;
 
-  // Порог, после которого нажатие считается протяжкой. Тот же, по которому
-  // ниже глушится клик: иначе одно и то же движение было бы для захвата уже
-  // протяжкой, а для ссылки ещё кликом.
   var DRAG_AT = 6;
   var captured = false;
 
@@ -210,17 +164,12 @@
     if (!dragging) return;
     var dx = e.clientX - startX;
     if (Math.abs(dx) > moved) moved = Math.abs(dx);
-    // Указатель захватываем не на нажатии, а только когда протяжка
-    // действительно началась. Захват с первого pointerdown переносил на
-    // .hm-cards и последующий click: его целью становился сам контейнер, а
-    // не карточка под пальцем — карточки-ссылки переставали открываться, а
-    // «Фрукты» и «Цены» молчали в ответ на нажатие (js/topbar.js ищет
-    // [data-soon] от e.target).
+
     if (!captured && moved > DRAG_AT) {
       captured = true;
       try { box.setPointerCapture(pointerId); } catch (err) {}
     }
-    if (!captured) return;   // ещё не протяжка — ленту не двигаем
+    if (!captured) return;
     offset = startOffset - dx;
     normalize();
     paint();
@@ -238,13 +187,8 @@
   box.addEventListener('pointerup', endDrag);
   box.addEventListener('pointercancel', endDrag);
 
-  // Карточки — ссылки с картинками, и браузер на движении мышью с зажатой
-  // кнопкой начинает свой drag-and-drop. Он отбирает указатель (прилетает
-  // pointercancel), и протяжка обрывается на первом же кадре.
   box.addEventListener('dragstart', function (e) { e.preventDefault(); });
 
-  // Свайп по карточке-ссылке не должен превращаться в переход.
-  // Ловим на фазе перехвата, до штатного обработчика ссылки.
   box.addEventListener('click', function (e) {
     if (moved > DRAG_AT) {
       e.preventDefault();
@@ -253,7 +197,6 @@
     moved = 0;
   }, true);
 
-  // ---------- запуск ----------
   var remeasure = 0;
   window.addEventListener('resize', function () {
     if (remeasure) return;

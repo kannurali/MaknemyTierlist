@@ -1,16 +1,10 @@
-/* ============================================================
-   Страница калькулятора трейдов. Вся арифметика (парсинг значений,
-   суммы, вердикт, кодирование ссылки) живёт в js/calc.js — этот файл
-   только DOM: слоты, каталог предметов, шкалы, вердикт, рекламные борта.
-   ============================================================ */
+
 (() => {
   "use strict";
 
   const $ = sel => document.querySelector(sel);
   const sideRoot = side => document.querySelector('.tc-side[data-side="' + side + '"]');
 
-  // Тот же ключ, что и на тирлисте/ленте новостей (app.js/news-page.js,
-  // LANG_KEY) — иначе выбор языка не переносился бы между страницами.
   const LANG_KEY = "nexus-lang-v1";
 
   let lang = I18N.pickLang(
@@ -19,36 +13,18 @@
 
   const tx = (key, vars) => I18N.t(key, lang, vars);
 
-  // Числа показываем разделителем разрядов того языка, что выбран сейчас —
-  // калькулятор двуязычный (в отличие от тирлиста, где toLocaleString всегда
-  // "ru-RU", потому что сам тирлист на английский не переводится).
   function fmtNum(n) {
     return Math.round(n).toLocaleString(lang === "en" ? "en-US" : "ru-RU");
   }
 
-  // ------------------------------------------------------------------------
-  //  Состояние: две стороны сделки. Формат — ровно тот, что понимает calc.js:
-  //  [{item, count}], без дублей по id (дубль показывается счётчиком).
-  //  Слот доски — это строка entries, а не единица count: одна и та же
-  //  сторона не может занять больше CALC.MAX_SLOTS строк (см. canAddToSide()
-  //  в calc.js и wireSlots() ниже).
-  // ------------------------------------------------------------------------
-  let catalog = [];       // плоский список предметов тирлиста
-  let catalogIndex = {};  // id -> предмет
+  let catalog = [];
+  let catalogIndex = {};
   const sides = { left: [], right: [] };
 
-  // Слот доски == позиция в entries, и в нём ровно ОДИН предмет: два
-  // одинаковых занимают два слота. Защитный потолок нужен и здесь, не
-  // только в интерактивном добавлении: старая/враждебная ссылка-«поделиться»
-  // могла закодировать больше шести предметов, и без обрезки на восстановлении
-  // доска нарисовала бы седьмой слот, которого в разметке физически нет.
   function capSide(entries) {
     return (entries || []).slice(0, CALC.MAX_SLOTS);
   }
 
-  // ------------------------------------------------------------------------
-  //  Значок типа предмета — общий для слота доски и карточки каталога.
-  // ------------------------------------------------------------------------
   function badgeImg(type, className) {
     const code = CALC.badgeCodeFor(type);
     const img = document.createElement("img");
@@ -58,10 +34,6 @@
     return img;
   }
 
-  // ------------------------------------------------------------------------
-  //  Слоты стороны: ровно CALC.MAX_SLOTS штук, часть занята предметом,
-  //  остальные — пустые "плюсы", открывающие каталог.
-  // ------------------------------------------------------------------------
   function buildEmptySlot(side, index) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -87,7 +59,7 @@
     const removeMark = document.createElement("span");
     removeMark.className = "tc-slot-remove";
     removeMark.setAttribute("aria-hidden", "true");
-    removeMark.textContent = "✕"; // ✕ — клик по слоту убирает предмет
+    removeMark.textContent = "✕";
     btn.appendChild(removeMark);
 
     const icon = document.createElement("img");
@@ -134,19 +106,11 @@
     }
   }
 
-  // Цвет агрегированного спроса → уже переведённое название уровня. Те же
-  // четыре слова, что и в легенде тирлиста (index.php: "Хорошо"/"Средне"/
-  // "Ниже среднего"/"Плохо") — новых строк под них заводить незачем.
   const DEMAND_LEVEL_KEY = {
     neon: "legend.neon", green: "legend.good", yellow: "legend.mid",
     orange: "legend.low", red: "legend.bad"
   };
 
-  // ------------------------------------------------------------------------
-  //  Шкалы стороны: «Пойнты» (сумма value — и ничего больше, отдельной
-  //  метрики "очков" в данных нет), «Спрос» (агрегированная точка,
-  //  demandBucket() в calc.js) и тонкая полоса относительно другой стороны.
-  // ------------------------------------------------------------------------
   function renderMeters(side, trade) {
     const root = sideRoot(side);
     if (!root) return;
@@ -162,17 +126,11 @@
       ? tx("calc.demandAggregate", { level: tx(DEMAND_LEVEL_KEY[bucket]) })
       : tx("calc.demandUnknown"));
 
-    // Указатель на полосе: доля стороны в сумме двух сторон. Пустая сделка —
-    // ровно середина, как в макете: делить 0 на 0 нечем, а «ноль слева»
-    // читался бы как «эта сторона проигрывает», хотя сравнивать ещё нечего.
     const sum = total + otherTotal;
     const pct = sum > 0 ? Math.max(0, Math.min(100, (total / sum) * 100)) : 50;
     root.querySelector('[data-role="mark"]').style.left = pct + "%";
   }
 
-  // ------------------------------------------------------------------------
-  //  Итог сделки: вердикт, разница, подсказка по спросу
-  // ------------------------------------------------------------------------
   function renderResult(trade) {
     const resultEl = $("#tcResult");
     const bothEmpty = sides.left.length === 0 && sides.right.length === 0;
@@ -180,14 +138,6 @@
     resultEl.dataset.verdict = bothEmpty ? "none" : trade.verdict;
     $("#tcVerdictBadge").dataset.verdict = bothEmpty ? "none" : trade.verdict;
 
-    // Боковые столбики: сторона в минусе красная, в плюсе синяя, при честном
-    // обмене обе зелёные. Порог берётся из того же computeTrade, что и вердикт
-    // под доской — иначе столбик показывал бы «в минусе» там, где надпись
-    // говорит «честная сделка».
-    //
-    // trade.verdict считается ОТ ЛЕВОЙ стороны: "lose" значит, что отдающий
-    // отдаёт больше, чем получает. Значит левый столбик повторяет вердикт как
-    // есть, а правый всегда противоположен ему.
     const invert = v => v === "win" ? "lose" : v === "lose" ? "win" : v;
     const gaugeL = bothEmpty ? "none" : trade.verdict;
     const gaugeR = bothEmpty ? "none" : invert(trade.verdict);
@@ -195,11 +145,6 @@
     if (gl) { gl.dataset.state = gaugeL; }
     if (gr) { gr.dataset.state = gaugeR; }
 
-    // Заголовок карточки называет исход: «ПРОВЕРИМ?» до сделки и
-    // «ВЫГОДНО» / «НЕ ВЫГОДНО» / «РАВНО» после — четыре варианта компонента
-    // «Group 10» в макете отличаются именно им, а не только цветом обводки.
-    // Строка под чертой поясняет исход словами, число под ней — процентом,
-    // а разницу в пойнтах показывает строка под доской.
     const headingEl = $("#tcVerdictHeading");
     const stateEl = $("#tcVerdictState");
     const numberEl = $("#tcVerdictNumber");
@@ -222,10 +167,7 @@
 
       const diffAbs = Math.round(trade.diffAbs);
       const diffPct = Math.round(trade.diffPct * 10) / 10;
-      // Оба числа печатаются с одним и тем же минусом U+2212. Дефис, который
-      // Number отдаёт сам, заметно короче и выше плюса, и в строке вида
-      // «−116 400» / «−88.2%» разнобой видно глазом — а это самые крупные
-      // числа на странице. Отсюда явный знак и Math.abs() у обоих.
+
       const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
       const pctSign = diffPct > 0 ? "+" : (diffPct < 0 ? "−" : "");
       numberEl.textContent = pctSign + Math.abs(diffPct) + "%";
@@ -242,32 +184,15 @@
     }
   }
 
-  // Помечено data-i18n в разметке не может — строка с подстановкой {pct}, а
-  // общий проход applyLang() подстановки не делает. Отдельная функция.
   function renderThreshold() {
     $("#tcThreshold").textContent = tx("calc.thresholdNote", { pct: CALC.THRESHOLD_PCT });
   }
 
-  // Ссылка в адресной строке всегда отражает текущую сделку — это и есть
-  // «поделиться»: скопировать location.href уже даёт рабочую ссылку без
-  // отдельного шага «собрать ссылку». replaceState, а не pushState: смена
-  // состава сторон не должна плодить историю переходов браузера.
   function syncUrl() {
-    // Путь берётся из location, а не зашивается литералом "/calculator":
-    // страница живёт и по /calculator.php (встроенный сервер .htaccess не
-    // читает), и перезапись адреса на несуществующий там путь теряла бы
-    // собранную сделку при перезагрузке.
     const query = CALC.encodeShareQuery(sides.left, sides.right);
     history.replaceState(null, "", location.pathname + (query ? "?" + query : ""));
   }
 
-  // renderAll() — только перерисовка, без побочных эффектов на адресную
-  // строку. onSidesChanged() — то же самое плюс синхронизация ссылки.
-  // Разделены намеренно: при восстановлении сделки ИЗ ссылки (load(), ниже)
-  // вызывать syncUrl() нельзя — на этот момент location.search ещё не
-  // прочитан decodeShareQuery(), и запись пустой сделки стёрла бы l=/r= из
-  // адреса раньше, чем их успели разобрать. Смена языка (applyLang) тоже не
-  // должна трогать ссылку — состав сторон не менялся.
   function renderAll() {
     const trade = CALC.computeTrade(sides.left, sides.right);
     renderSlots("left");
@@ -282,14 +207,6 @@
     syncUrl();
   }
 
-  // ------------------------------------------------------------------------
-  //  Каталог предметов — единый оверлей на обе стороны. Клик по пустому
-  //  слоту открывает его для этой стороны; карточка добавляет предмет и
-  //  каталог закрывается с анимацией — предмет должен сразу быть виден на
-  //  доске, иначе непонятно, засчитался ли выбор. Заполнить следующий слот
-  //  — это ещё один клик по доске. Закрывается также крестиком, кликом по
-  //  подложке или Escape.
-  // ------------------------------------------------------------------------
   const catalogState = { open: false, side: null, triggerEl: null, slotIndex: -1 };
 
   function norm(s) { return String(s || "").toLowerCase(); }
@@ -306,9 +223,6 @@
 
     const code = CALC.badgeCodeFor(it.type);
 
-    // Скруглением и обрезкой заведует внутренняя обёртка, а не сама кнопка:
-    // значок типа в макете выходит за левый верхний угол карточки, и
-    // overflow:hidden на кнопке срезал бы его.
     const inner = document.createElement("span");
     inner.className = "tc-cat-inner";
 
@@ -323,7 +237,7 @@
 
     const name = document.createElement("span");
     name.className = "tc-cat-name";
-    // Плашка названия залита градиентом своего типа (Rectangle 67 макета).
+
     name.style.setProperty("--tc-plate", "var(--tc-plate-" + code + ")");
     name.textContent = it.name || "";
     inner.appendChild(name);
@@ -344,7 +258,6 @@
     inner.appendChild(bottom);
     btn.appendChild(inner);
 
-    // Значок типа последним: он лежит поверх карточки и за её углом.
     const badgeBox = document.createElement("span");
     badgeBox.className = "tc-cat-badge-box";
     badgeBox.appendChild(badgeImg(it.type, "tc-cat-badge"));
@@ -360,9 +273,7 @@
       $("#tcCatalogStatus").textContent = "";
       sides[side] = capSide(CALC.addToSide(sides[side], it));
       onSidesChanged();
-      // Каталог закрывается сразу после удачного добавления: пока он оставался
-      // открытым, было не видно, попал предмет на доску или нет. Слот, куда он
-      // лёг, коротко подсвечивается — чтобы глаз сам нашёл результат.
+
       closeCatalog({ side: side, addedId: it.id });
     });
 
@@ -389,16 +300,13 @@
     catalogState.open = true;
     catalogState.side = side;
     catalogState.triggerEl = triggerEl || null;
-    // Номер слота, а не ссылка на него: onSidesChanged() перерисовывает доску,
-    // и прежний элемент к моменту закрытия уже выброшен из документа — фокус
-    // на нём молча уходил на body, и человек с клавиатуры терял место.
+
     catalogState.slotIndex = triggerEl
       ? [...sideRoot(side).querySelectorAll(".tc-slot")].indexOf(triggerEl)
       : -1;
     $("#tcCatalogStatus").textContent = "";
     $("#tcCatalogSearch").value = "";
-    // Отложенный кадр от прошлого открытия нарисовал бы сетку по уже
-    // стёртому запросу поверх свежей.
+
     cancelQueuedRender();
     renderCatalogGrid("");
     $("#tcCatalogBackdrop").hidden = false;
@@ -406,18 +314,12 @@
     $("#tcCatalogSearch").focus();
   }
 
-  // Длительность закрытия должна совпадать с переходом .tc-cat-backdrop в CSS.
-  // Держим её здесь одним числом, а не в двух местах: разъехавшись, они дали бы
-  // либо обрыв анимации на середине, либо застрявший поверх страницы оверлей.
   const CATALOG_CLOSE_MS = 180;
 
   function reducedMotion() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  // Короткая подсветка слота, в который только что лёг предмет. Ищем ПОСЛЕДНИЙ
-  // слот с этим id, а не первый: добавленный экземпляр всегда встаёт в конец,
-  // и при втором таком же предмете подсветился бы старый слот, а не новый.
   function flashAddedSlot(side, addedId) {
     if (!side || !addedId) return;
     const list = sides[side] || [];
@@ -429,9 +331,7 @@
     const slot = sideRoot(side).querySelectorAll(".tc-slot")[idx];
     if (!slot) return;
     slot.classList.remove("is-just-added");
-    // Перезапуск анимации: без чтения offsetWidth браузер склеит снятие и
-    // возврат класса в один кадр, и повторное добавление того же предмета
-    // не мигнёт.
+
     void slot.offsetWidth;
     slot.classList.add("is-just-added");
     setTimeout(() => slot.classList.remove("is-just-added"), 900);
@@ -452,12 +352,9 @@
     const finish = () => {
       backdrop.hidden = true;
       backdrop.classList.remove("is-closing");
-      // Слот ищем заново в живом документе: доска уже перерисована.
+
       const slots = side ? sideRoot(side).querySelectorAll(".tc-slot") : [];
-      // Если предмет добавлен — ведём фокус туда же, куда ушла подсветка, а не
-      // на слот, по которому кликнули. Предмет ложится первой свободной
-      // строкой, и она почти никогда не совпадает с нажатой клеткой: фокус и
-      // подсветка в разных местах заставляли бы искать результат дважды.
+
       const addedIndex = (opts && opts.addedId)
         ? (sides[side] || []).findIndex(e => e && e.item && e.item.id === opts.addedId)
         : -1;
@@ -473,10 +370,6 @@
     setTimeout(finish, CATALOG_CLOSE_MS);
   }
 
-  // Поиск перестраивает сетку целиком — 113 карточек по пять узлов каждая.
-  // Без задержки слово из девяти букв давало девять полных перестроек
-  // подряд, и на телефоне ввод отставал от клавиатуры. Рисуем один раз,
-  // когда человек перестал печатать.
   const SEARCH_DEBOUNCE_MS = 120;
   let searchTimer = null;
 
@@ -492,18 +385,12 @@
     }, SEARCH_DEBOUNCE_MS);
   }
 
-  // aria-modal="true" только обещает вспомогательным технологиям, что
-  // остального на странице нет — сам он ничего не удерживает. Без ловушки
-  // Tab из последней карточки уходил на пилюли шапки и слоты доски под
-  // затемнением: невидимые элементы, по которым не понять, где находишься,
-  // и вернуться в каталог можно было только наощупь.
   const FOCUSABLE_SEL = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
   function catalogFocusables() {
     const dialog = $("#tcCatalog");
     if (!dialog) return [];
-    // Скрытое (display:none у пустой сетки, например) в обход не берём:
-    // фокус на элементе без коробки выглядит как пропавший фокус.
+
     return [...dialog.querySelectorAll(FOCUSABLE_SEL)]
       .filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement);
   }
@@ -537,9 +424,6 @@
     });
   }
 
-  // ------------------------------------------------------------------------
-  //  Слоты
-  // ------------------------------------------------------------------------
   function wireSlots(side) {
     const root = sideRoot(side);
     root.querySelector(".tc-slots").addEventListener("click", e => {
@@ -554,9 +438,6 @@
     });
   }
 
-  // ------------------------------------------------------------------------
-  //  Общие действия
-  // ------------------------------------------------------------------------
   function wireActions() {
     $("#tcClearAllBtn").addEventListener("click", () => {
       if (!window.confirm(tx("calc.confirmClearAll"))) return;
@@ -571,22 +452,11 @@
         await navigator.clipboard.writeText(location.href);
         statusEl.textContent = tx("calc.shareCopied");
       } catch (_e) {
-        // Буфер обмена недоступен (нет разрешения, старый браузер, http без
-        // secure context) — показываем саму ссылку текстом вместо тихой
-        // ошибки: её всё ещё можно скопировать вручную.
         statusEl.textContent = tx("calc.shareFailed") + ": " + location.href;
       }
     });
   }
 
-  // ------------------------------------------------------------------------
-  //  Рекламные борта — слот "rail", тот же документ /api/promo.php и тот же
-  //  модуль js/promo.js, что у тирлиста (app.js) и ленты (news-page.js,
-  //  fillNewsRail()/renderNewsPromo()). Своей логики отбора кампании здесь
-  //  нет умышленно: третий independent-механизм показа рекламы — это ровно
-  //  тот способ рассинхронизировать три страницы, которого ТЗ требует
-  //  избежать.
-  // ------------------------------------------------------------------------
   const PROMO_API = "/api/promo.php";
 
   function fillRail(el, camp) {
@@ -610,9 +480,6 @@
     chip.textContent = tx("ad.chip");
     el.appendChild(chip);
 
-    // Маркировка рекламы обязательна по закону, если рекламодатель её
-    // прислал: без erid борт показывать можно, а вот выкидывать
-    // присланный идентификатор — нельзя.
     if (camp.erid) {
       const erid = document.createElement("span");
       erid.className = "ptn-erid";
@@ -634,10 +501,6 @@
     return true;
   }
 
-  // Один запрос на оба размещения: борта по бокам доски (слот "rail", видны
-  // на компьютере) и нижняя полоса (слот "dock", видна на телефоне, где
-  // борта скрыты вместе с макетным фреймом). Документ /api/promo.php один и
-  // тот же, тянуть его дважды незачем.
   function renderPromo() {
     const promo = window.PROMO;
     const left = document.getElementById("tcRailL");
@@ -645,49 +508,33 @@
     const dock = document.getElementById("promoDock");
     if (!promo) return;
 
-    // Реклама не должна ронять калькулятор: не пришёл документ — борта
-    // остаются полосатыми. Отсюда .catch перед разбором, а не после: с null
-    // дальше по цепочке умеют работать и полоса, и окно (у окна есть своё
-    // объявление на случай, когда купленных кампаний нет вовсе).
     fetch(PROMO_API, { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null)
       .then(doc => {
-        // Нижняя полоса — общий модуль с лентой (js/promo-dock.js): он сам
-        // решает, строить ли её на этой ширине экрана, и сам меряет высоту
-        // под нижнее поле страницы.
         if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc);
 
-        // Окно — тот же общий модуль (js/promo-popup.js). busy() держит его
-        // закрытым, пока открыт каталог: человек ищет предмет, и накрывать
-        // поиск рекламой нельзя.
         if (window.NX_PROMO_POPUP) {
           window.NX_PROMO_POPUP.mount({ doc, busy: () => catalogState.open });
         }
 
         if (!left || !right) return;
-        // Документ мог не приехать (doc === null) — борта от этого не
-        // пустеют: своё объявление лежит в js/promo.js, а не в базе.
+
         const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now()) : [];
-        // Не куплено — борт занимает своё объявление (идущий розыгрыш).
-        // Своего нет — борт остаётся полосатой заглушкой из макета.
+
         const house = promo.houseFor("rail", Date.now());
         const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
         if (!list.length) return;
         fillRail(left, list[0]);
-        // Один рекламодатель занимает оба борта: пустой второй борт рядом с
-        // заполненным читается как поломка, а не как свободное место.
+
         fillRail(right, list[1] || list[0]);
       });
   }
 
-  // ------------------------------------------------------------------------
-  //  Язык интерфейса (RU / EN) — тот же приём, что в app.js/news-page.js.
-  // ------------------------------------------------------------------------
   function applyLang(next) {
     if (next) {
       lang = next;
-      try { localStorage.setItem(LANG_KEY, lang); } catch (_) { /* приватный режим */ }
+      try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
     }
     document.documentElement.lang = lang;
 
@@ -702,12 +549,7 @@
     });
 
     renderThreshold();
-    // Строки-подстановки (счётчик, слоты, вердикт, подсказка по спросу)
-    // заново рисуются вместе со всей сделкой — их не покрывает общий проход
-    // выше. renderAll(), не onSidesChanged(): состав сторон не менялся,
-    // трогать адресную строку незачем (и до первой загрузки каталога —
-    // см. load() — это ещё и стёрло бы l=/r= из входящей ссылки раньше, чем
-    // она прочитана).
+
     renderAll();
     if (catalogState.open) { renderCatalogGrid($("#tcCatalogSearch").value); }
   }
@@ -721,21 +563,6 @@
     });
   })();
 
-  // ------------------------------------------------------------------------
-  //  Загрузка каталога, опрос обновлений и восстановление сделки из ссылки
-  // ------------------------------------------------------------------------
-  //  Цены калькулятора — это цены тирлиста: отдельной копии нет, каталог
-  //  собирается из того же /api/tierlist.php. Но одной загрузки при открытии
-  //  страницы мало: вкладку держат открытой часами, и правка цены в админке
-  //  доезжала бы до неё только после F5 — человек считал бы сделку по цифрам,
-  //  которых на сайте уже нет.
-  //
-  //  Опрос устроен как на тирлисте (js/app.js): раз в POLL_MS читаем
-  //  крошечный /api/state.php ({rev, likes, promoRev} — десятки байт), и
-  //  только когда rev изменился, качаем полный документ по
-  //  /api/tierlist.php?rev=<n>. Ответ на конкретный rev помечен immutable
-  //  (см. api/tierlist.php), поэтому повторный запрос с тем же rev до сервера
-  //  не доходит вовсе.
   const API_STATE = "/api/state.php";
   const API_TIERLIST = "/api/tierlist.php";
   const POLL_MS = 30000;
@@ -747,11 +574,6 @@
     catalogIndex = CALC.buildCatalogIndex(catalog);
   }
 
-  // Сделка хранит сами предметы, а не только их id, поэтому после обновления
-  // каталога строки надо пересобрать: иначе на доске остались бы объекты со
-  // старой ценой, и итог разошёлся бы с тирлистом ровно на величину правки.
-  // Предмет, которого в новом каталоге больше нет, из сделки выпадает — так
-  // же, как при разборе входящей ссылки (decodeShareQuery в calc.js).
   function remapSides() {
     ["left", "right"].forEach(side => {
       sides[side] = (sides[side] || [])
@@ -767,12 +589,10 @@
     try {
       const r = await fetch(API_STATE, { cache: "no-store" });
       if (r.ok) { return await r.json(); }
-    } catch (e) { /* оффлайн — молча ждём следующего опроса */ }
+    } catch (e) {}
     return null;
   }
 
-  // Без rev — обычный «дай текущее» (no-store). С rev — запрос за конкретной
-  // ревизией, и вот его уже можно кэшировать: содержимое ревизии неизменно.
   async function fetchTierlist(rev) {
     const hasRev = rev !== null && rev !== undefined && rev !== "";
     const url = API_TIERLIST + (hasRev ? "?rev=" + encodeURIComponent(rev) : "");
@@ -790,12 +610,9 @@
       applyTierlist(await fetchTierlist(st.rev));
       lastRev = st.rev;
       remapSides();
-      // renderAll(), не onSidesChanged(): состав сделки не менялся — поменялись
-      // цены под ним, и переписывать адресную строку незачем.
+
       renderAll();
-      // Открытый каталог показывает те же цены, что доска, — значит и он
-      // должен обновиться. Перерисовка редкая (только по смене rev), поэтому
-      // она не спорит с правилом «не перестраивать сетку на каждый символ».
+
       if (catalogState.open) { renderCatalogGrid($("#tcCatalogSearch").value); }
     } catch (e) {
       console.warn("calculator: не удалось обновить тирлист", e);
@@ -805,7 +622,7 @@
   function startPolling() {
     if (pollTimer) { clearInterval(pollTimer); }
     pollTimer = setInterval(poll, POLL_MS);
-    // Свежие цены сразу при возврате на вкладку, без ожидания интервала.
+
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") { poll(); }
     });
@@ -816,9 +633,6 @@
     stateEl.hidden = false;
     stateEl.textContent = tx("calc.loading");
     try {
-      // Сначала rev, потом документ по нему: так первая же загрузка попадает
-      // в тот же immutable-кэш, что и последующие опросы, и повторное открытие
-      // страницы не тянет тирлист заново.
       const st = await fetchState();
       const rev = st && typeof st.rev === "number" ? st.rev : null;
       applyTierlist(await fetchTierlist(rev));
@@ -826,15 +640,10 @@
       stateEl.hidden = true;
       stateEl.textContent = "";
 
-      // Восстановление возможно только ПОСЛЕ загрузки каталога:
-      // decodeShareQuery обязана проверить, что id реально существуют, и без
-      // индекса у неё нет данных, чтобы отличить настоящий предмет от
-      // подделки — см. русский комментарий в calc.js про враждебный ввод.
       const restored = CALC.decodeShareQuery(new URLSearchParams(location.search), catalogIndex);
       sides.left = capSide(restored.left);
       sides.right = capSide(restored.right);
-      // renderAll(), не onSidesChanged(): адрес и так уже несёт ровно эту
-      // сделку (мы её из него и прочитали) — переписывать нечего.
+
       renderAll();
       startPolling();
     } catch (e) {
@@ -848,7 +657,7 @@
   wireSlots("right");
   wireCatalog();
   wireActions();
-  applyLang(); // без аргумента — язык уже выбран выше, localStorage лишний раз не трогаем
+  applyLang();
   load();
   renderPromo();
 })();

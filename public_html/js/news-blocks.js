@@ -1,20 +1,9 @@
-// Модель блочного тела поста: константы, валидация, плоский текст, рендер.
-//
-// Файл не трогает глобальный document: рендер (см. вторую половину файла)
-// принимает его аргументом. Поэтому модуль требуется из node в тестах — как
-// news.js, i18n.js, tiers.js и content.js.
+
 (function (root) {
   "use strict";
 
-  // Версия формата. Документ с другой версией отклоняется, а не разбирается
-  // «как получится»: молчаливый разбор чужой версии — это тихая порча поста,
-  // а явный отказ виден сразу.
   var DOC_VERSION = 1;
 
-  // Потолки. Тот же список лежит в api/lib/news_blocks.php (NB_LIMIT_*) —
-  // если правится один, обязан правиться и второй, иначе редактор предложит
-  // то, чего сервер не примет. Та же дисциплина, что у CATEGORIES в news.js
-  // и NEWS_CATEGORIES в api/news.php.
   var LIMITS = {
     blocks: 200,
     albumItems: 10,
@@ -25,13 +14,8 @@
 
   var BLOCK_TYPES = ["p", "quote", "list", "code", "image", "album"];
 
-  // Флаги спана — ровно набор телеграма. href живёт отдельно: он не флаг, а
-  // значение, и проверяется своей функцией.
   var SPAN_FLAGS = ["b", "i", "u", "st", "c", "sp"];
 
-  // Разрешённые ключи каждого типа блока. Ключ вне списка — ошибка, а не
-  // молчаливое отбрасывание: то же решение, что у bad image_pct на сервере
-  // (см. validate_news_post в api/news_save.php).
   var BLOCK_KEYS = {
     p:     ["t", "ru", "en"],
     quote: ["t", "ru", "en", "collapsible"],
@@ -41,15 +25,10 @@
     album: ["t", "items", "cap_ru", "cap_en"]
   };
 
-  // Тот же белый список формы, что NEWS_IMAGE_RE в api/news_save.php: чужой
-  // хост, javascript: и обход каталога отсекаются по построению, а не
-  // перечислением опасного.
   var IMAGE_RE = /^\/images\/[0-9a-f]{40}\.(png|jpg|webp)$/;
 
   var ALIGNS = ["left", "center", "right"];
 
-  // Схема ссылки. Проверяется без учёта регистра, потому что "JavaScript:"
-  // браузер выполнит так же охотно, как "javascript:".
   function isSafeHref(v) {
     if (typeof v !== "string") { return false; }
     if (v.length > 2048) { return false; }
@@ -72,7 +51,6 @@
     return typeof v === "number" && isFinite(v) && Math.floor(v) === v && v >= lo && v <= hi;
   }
 
-  // Спан: {s: "текст"} плюс любые флаги из SPAN_FLAGS и необязательный href.
   function validSpans(v) {
     if (!Array.isArray(v) || v.length > LIMITS.spans) { return false; }
     for (var i = 0; i < v.length; i++) {
@@ -124,7 +102,7 @@
         && typeof b.wrap === "boolean"
         && validSpans(b.cap_ru) && validSpans(b.cap_en);
     }
-    // album
+
     if (!Array.isArray(b.items) || b.items.length < 2 || b.items.length > LIMITS.albumItems) { return false; }
     for (var j = 0; j < b.items.length; j++) {
       if (!validImageItem(b.items[j])) { return false; }
@@ -132,8 +110,6 @@
     return validSpans(b.cap_ru) && validSpans(b.cap_en);
   }
 
-  // Возвращает {ok, error, blocks}, а не бросает: вызывающему (редактору и
-  // тестам) нужна причина отказа строкой, а не стек.
   function validateDoc(d) {
     if (!isPlainObject(d)) { return { ok: false, error: "not an object", blocks: [] }; }
     if (!keysAllowed(d, ["v", "blocks"])) { return { ok: false, error: "unknown key", blocks: [] }; }
@@ -148,9 +124,6 @@
     return { ok: true, error: "", blocks: d.blocks };
   }
 
-  // Текст спанов одного языка с откатом на второй — то же правило, что
-  // pickLang() в news.js: наполовину переведённый пост показывает хоть
-  // что-то, а не пустоту.
   function spansText(primary, fallback) {
     var use = (Array.isArray(primary) && primary.length) ? primary : (fallback || []);
     var out = "";
@@ -178,8 +151,6 @@
     return "";
   }
 
-  // Плоский текст всего поста — он уезжает в колонки body_ru/body_en и оттуда
-  // в превью ссылки (api/lib/og.php) и в noscript-тело news.php.
   function toPlainText(blocks, lang) {
     var parts = [];
     for (var i = 0; i < blocks.length; i++) {
@@ -189,8 +160,6 @@
     return parts.join("\n\n");
   }
 
-  // Первая картинка поста — она уезжает в колонку image_url и становится
-  // картинкой превью ссылки.
   function firstImage(blocks) {
     for (var i = 0; i < blocks.length; i++) {
       var b = blocks[i];
@@ -202,15 +171,6 @@
     return null;
   }
 
-  // ------------------------------ Рендер ------------------------------
-  // doc — это document (или его заглушка в тестах): модуль обязан работать и
-  // в браузере, и в node, поэтому глобального document здесь нет.
-  //
-  // Ни одна строка ниже не собирает разметку из текста: только createElement,
-  // createTextNode и textContent. Это то же правило, по которому написан
-  // cardFor() в news-page.js, и единственная причина, по которой тело поста
-  // не может стать скриптом, что бы ни лежало в базе.
-
   function langKeys(lang) {
     return lang === "en" ? { self: "en", other: "ru" } : { self: "ru", other: "en" };
   }
@@ -220,9 +180,6 @@
     return (Array.isArray(s) && s.length) ? s : (Array.isArray(holder[keyOther]) ? holder[keyOther] : []);
   }
 
-  // Обёртки флагов, от внутренней к внешней. Порядок фиксирован, чтобы
-  // одинаковый спан всегда давал одинаковый DOM — иначе сравнивать превью
-  // редактора с лентой было бы нечем.
   var FLAG_TAGS = [
     ["b", "strong"], ["i", "em"], ["u", "u"], ["st", "s"], ["c", "code"]
   ];
@@ -242,17 +199,13 @@
       if (sp.sp) {
         var spoiler = doc.createElement("span");
         spoiler.className = "nw-spoiler";
-        // Спойлер открывается кликом, значит он управляющий элемент и обязан
-        // открываться с клавиатуры тоже.
+
         spoiler.setAttribute("tabindex", "0");
         spoiler.setAttribute("role", "button");
         spoiler.append(node);
         node = spoiler;
       }
-      // Второй рубеж после validateDoc: рендер получает блоки из базы, а не
-      // только из редактора, и не имеет права построить javascript:-ссылку,
-      // даже если она каким-то путём туда попала. Небезопасный href просто не
-      // даёт ссылки — текст при этом остаётся на месте.
+
       if (sp.href && isSafeHref(sp.href)) {
         var a = doc.createElement("a");
         a.setAttribute("href", sp.href);
@@ -280,8 +233,7 @@
   function imageEl(doc, item, pct, align, wrap) {
     var img = doc.createElement("img");
     img.style.width = pct + "%";
-    // center + обтекание не имеет смысла: у float нет «по центру». Ровно то
-    // же решение, что уже принимает cardFor() для легаси-поста.
+
     var floated = wrap && align !== "center";
     img.className = "nw-image " + (floated
       ? (align === "left" ? "nw-img-float-left" : "nw-img-float-right")
@@ -290,9 +242,7 @@
     img.setAttribute("alt", "");
     img.setAttribute("loading", "lazy");
     img.setAttribute("decoding", "async");
-    // width/height — не размер показа (им управляет CSS и style.width выше), а
-    // подсказка браузеру, чтобы он зарезервировал место до загрузки байтов и
-    // текст под картинкой не прыгал.
+
     img.setAttribute("width", item.w);
     img.setAttribute("height", item.h);
     return img;
@@ -341,8 +291,7 @@
       var af = doc.createElement("figure");
       af.className = "nw-figure";
       var grid = doc.createElement("div");
-      // Класс несёт количество, а раскладку выбирает CSS: сетка на 2, 3 и 4+
-      // картинок отличается только колонками, и городить это в JS незачем.
+
       grid.className = "nw-album nw-album-" + Math.min(b.items.length, 4);
       for (var j = 0; j < b.items.length; j++) {
         grid.append(imageEl(doc, b.items[j], 100, "center", false));

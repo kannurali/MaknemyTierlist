@@ -1,28 +1,12 @@
-/* ===================================================================
-   Лента новостей: только правила с префиксом nw-/ne-. Тулбар, кнопки,
-   чипы, переключатель языка, сегмент навигации Тирлист/Новости, сцена,
-   лепестки и модалка приходят из base.css (задачи 6 и 9) — здесь их
-   быть не должно.
-   =================================================================== */
 
 .nw-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; padding: 1.12cqw 1.38cqw 0 1.51cqw; margin-bottom: 2.2cqw; }
 
-/* Заголовок ленты стоит один, без даты над ним, поэтому шапка и без того
-   компактнее тирлистовской (margin-bottom 2.2cqw против 3cqw у .tl-header):
-   блоку заголовка хватает небольшого отступа сверху, чтобы лечь между
-   логотипом BF слева и марками справа, а не наверх заодно с ними. */
 .nw-header .nw-title-wrap { text-align: center; margin-top: 1.5cqw; }
 
-/* Постерный вид h1, как у .tl-title в styles.css (тот же Proto Sans, цвет,
-   letter-spacing и двухслойная тень), но своя логика кегля и line-height —
-   заголовок ленты одно слово в одну строку, а не сборка «MAKNEMY»+«TIER LIST»
-   в два ряда, поэтому 6.9cqw тирлиста сюда не подходят один в один. */
 .nw-title {
   font-family: var(--proto);
   font-size: 5cqw;
-  /* Одна строка — не нужно ужимать line-height, как в тирлисте (там .88
-     разводит два ряда капители, чтобы они не наезжали друг на друга).
-     Здесь строка одна, наезжать не на что, поэтому обычной 1 достаточно. */
+
   line-height: 1;
   margin: 0;
   color: #fff;
@@ -30,8 +14,6 @@
   text-shadow: 0 0 .55cqw rgba(120,190,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
 }
 
-/* Лента. Заголовок сцены живёт в cqw, как весь постер, а текст поста — в px:
-   это проза, её читают, и она не должна ужиматься вместе с контейнером. */
 .nw-feed { width: 84.63cqw; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 1.6cqw; }
 .nw-filters { width: 84.63cqw; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 1.6cqw; }
 .nw-card { position: relative; background: var(--panel); border: 1px solid rgba(120,190,255,.22); border-radius: 12px; padding: 18px 20px; }
@@ -47,35 +29,16 @@
 .nw-body p { margin: 0 0 10px; }
 .nw-body p:last-child { margin-bottom: 0; }
 .nw-image { display: block; height: auto; margin: 4px 0 12px; border-radius: 8px; border: 1px solid rgba(120,190,255,.2); }
-/* Ширина — свободная (10..100% ширины карточки), поэтому не CSS-классом, а
-   инлайновым style, выставленным из провалидированного числа (см. cardFor()
-   в news-page.js). Здесь остаются только выравнивание и обтекание — они
-   конечный набор из трёх/двух вариантов и естественно ложатся в классы.
 
-   Блочные варианты (обтекание выключено, или включено при align=center —
-   см. комментарий в cardFor() о том, почему центр игнорирует обтекание):
-   margin left/right управляет тем, к какому краю карточки прижата картинка
-   при ширине меньше 100%. */
 .nw-image.nw-img-left   { margin: 4px auto 12px 0; }
 .nw-image.nw-img-center { margin: 4px auto 12px; }
 .nw-image.nw-img-right  { margin: 4px 0 12px auto; }
-/* Обтекание: картинка всплывает к своему краю, текст .nw-body обтекает её
-   с другой стороны. .nw-card::after ниже гарантирует, что карточка не
-   схлопнется по высоте до текста, обрезая картинку, и следующую карточку
-   не утащит вверх, в конец float-а. */
+
 .nw-image.nw-img-float-left  { float: left;  margin: 4px 16px 8px 0; }
 .nw-image.nw-img-float-right { float: right; margin: 4px 0 8px 16px; }
-/* Классический clearfix — а не overflow:hidden на .nw-card, который обрезал
-   бы будущие эффекты у контента, торчащего за край. Работает вне
-   зависимости от того, есть ли в конкретной карточке float вообще: без него
-   это нулевая строка, ничего не меняющая. */
+
 .nw-card::after { content: ""; display: table; clear: both; }
 
-/* Лайк поста (задача про кнопку лайка) — виден всем посетителям, в отличие от
-   .nw-tools ниже (только админ в режиме редактирования). Свой контейнер
-   .nw-footer, а не место внутри .nw-tools: разные аудитории не должны делить
-   один кластер кнопок, и абсолютно позиционированный .nw-tools не должен
-   наезжать на то, что стоит в потоке карточки. */
 .nw-footer { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .nw-like {
   display: inline-flex; align-items: center; gap: 6px;
@@ -85,9 +48,7 @@
   transition: background .15s, border-color .15s, color .15s;
 }
 .nw-like:hover { border-color: var(--cyan); color: #dce9ff; }
-/* Кнопка лайка в превью редактора (buildPreviewPost() ставит id: 0 для ещё не
-   сохранённого поста, см. cardFor() в news-page.js) отключена — лайкать
-   нечего. */
+
 .nw-like:disabled { cursor: default; opacity: .55; }
 .nw-like.liked {
   color: #fff; border-color: #6fd6ff;
@@ -99,11 +60,6 @@
 @keyframes nwLikePop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .nw-like-heart.pop { animation: nwLikePop .35s ease; }
 
-/* Копирование ссылки на пост — вторая кнопка футера, у каждого посетителя
-   (раньше жила в .nw-tools и существовала только у админа). Геометрия
-   намеренно повторяет .nw-like: та же высота, тот же радиус, та же подложка —
-   пара читается как одна группа, а не как два случайно соседствующих
-   элемента. Внутри один глиф, поэтому padding симметричный. */
 .nw-copy {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--ui); font-size: 13px; font-weight: 700; color: #9db8dc;
@@ -111,57 +67,30 @@
   border-radius: 999px; padding: 6px 12px; cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
 }
-/* Глиф цепочки мельче подписи: с U+FE0E он рисуется текстовым моно-символом
-   и в одном кегле с буквами выглядит тяжелее них. */
+
 .nw-copy-icon { font-size: 11px; line-height: 1; display: inline-block; }
 .nw-copy:hover { border-color: var(--cyan); color: #dce9ff; }
 .nw-copy:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-/* Отклик на копирование — те же два класса, что вешает showCopyFeedback()
-   в js/news-page.js: держатся 2 с и снимаются своим же таймером. Цветом, а не
-   подписью: рядом нет места под текст, а читатель со скринридером получает
-   словами из живого региона .nw-sr-only. */
+
 .nw-copy.nw-copy-ok   { color: #8ff0c4; border-color: #3cc878; background: rgba(60,200,120,.22); }
 .nw-copy.nw-copy-fail { color: #ffb3bf; border-color: #ff6b5e; background: rgba(255,90,90,.22); }
 @media (prefers-reduced-motion: reduce) { .nw-like-heart.pop { animation: none; } }
 
 .nw-state { width: 84.63cqw; margin-inline: auto; text-align: center; padding: 40px 20px; color: #8fb0dc; font-size: 14px; border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; background: rgba(18,30,56,.35); }
 
-/* Карточка, на которую вела ссылка /news/<id> — подсвечивается и
-   проскролливается в неё в focusLinkedPost() (js/news-page.js). scroll-margin
-   -top — чтобы липкий .toolbar (position: sticky, base.css) не перекрыл
-   верх карточки при scrollIntoView({block:"start"}). */
 .nw-card.nw-linked { scroll-margin-top: 84px; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(79,214,255,.55), 0 0 22px rgba(79,214,255,.22); }
 .nw-card.nw-linked:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 
-/* Пояснение над лентой на /news/<id>, когда пост из ссылки существует
-   (иначе сервер уже ответил бы 404), но не входит в последние 50 — см.
-   #newsNotice в news.php и focusLinkedPost() в news-page.js. */
 .nw-notice { width: 84.63cqw; margin: 0 auto 14px; padding: 10px 16px; border-radius: 10px; background: rgba(79,214,255,.12); border: 1px solid rgba(79,214,255,.35); color: #cfe9ff; font-size: 13px; line-height: 1.4; }
 
-/* Визуально скрытый, но доступный скринридерам live-регион — используется
-   отклик на кнопку копирования ссылки (copyPostLink() в news-page.js), а не
-   `hidden`: атрибут hidden убирает элемент из accessibility tree целиком, и
-   его смена текста ничем не озвучилась бы. */
 .nw-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 @media (max-width: 720px) {
   .nw-feed, .nw-filters, .nw-state, .nw-notice { width: 92cqw; }
   .nw-card { padding: 14px; border-radius: 10px; }
   .nw-body { font-size: 14.5px; }
-  /* Раньше здесь принудительно растягивало картинку до 100% на телефоне —
-     иначе small/medium стали бы ~110/200px на экране 375px, нечитаемо мелко.
-     С этой правки ширина — свободный выбор админа (image_pct), и телефон её
-     уважает так же, как десктоп: именно это убирало ограничение, которое не
-     давало хранить маленькие картинки маленькими (см. потолок стороны в
-     lib/images.php — он и рассчитан на то, что телефон больше не форсирует
-     100%). Оверрайда здесь больше нет намеренно. */
 }
 
-/* ===================== Редактор новости (админ) ===================== */
-
-/* input[type="date"] в styles.css не стилизован — там его нигде не было.
-   Повторяем оформление текстового поля, чтобы редактор не выглядел собранным
-   из двух разных наборов элементов. */
 .ne-date {
   font-family: var(--ui); font-size: 14px; color: #eaf4ff;
   background: rgba(10,18,36,.85); border: 1px solid rgba(120,190,255,.28);
@@ -169,10 +98,6 @@
 }
 .ne-date:focus { outline: none; border-color: var(--cyan); }
 
-/* Сегмент категорий (#neCat) — тот же вид, что у .seg в styles.css
-   (сегментированные прямоугольные кнопки с циановой подсветкой активной),
-   но под своим неймспейсом: .seg там завязан на другую разметку (точки,
-   значки трендов), которой здесь нет. */
 .ne-cat-seg { display: flex; flex-wrap: wrap; gap: 6px; }
 .ne-cat-seg button {
   min-width: 38px; height: 38px; padding: 0 12px;
@@ -186,15 +111,9 @@
 }
 .ne-cat-seg button:hover { border-color: var(--cyan); }
 .ne-cat-seg button.active { background: rgba(42,166,224,.35); border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
-/* Клавиатурный фокус — как у .nw-tools button и .lang-switch .chip. */
+
 .ne-cat-seg button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-/* Ширина картинки (#nePct) — обычный range, без своей track/thumb разметки:
-   accent-color красит нативный ползунок в тот же циан, что и остальной
-   интерфейс, и остаётся полностью клавиатурно управляемым (стрелки,
-   Home/End) без единой строчки JS для этого. output рядом — числовой
-   индикатор, связанный с полем через for="nePct" (нативная семантика
-   HTML5, а не просто визуально соседний текст). */
 .ne-pct-row { display: flex; align-items: center; gap: 10px; }
 .ne-pct-row input[type="range"] { flex: 1; accent-color: var(--cyan); cursor: pointer; }
 .ne-pct-row input[type="range"]:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
@@ -203,31 +122,14 @@
   min-width: 42px; text-align: right; font-variant-numeric: tabular-nums;
 }
 
-/* Подсказка "картинка сохранена под меньшую ширину" (#nePctHint) — совет,
-   а не ошибка: свой цвет (--d-yellow, тот же токен предупреждений, что и в
-   base.css), не .ne-error (тот — #ff8a7e, зарезервирован за сбоями
-   сохранения/загрузки), чтобы не читаться как «что-то сломалось». */
 .ne-hint { min-height: 0; margin: 6px 0 0; font-size: 12px; color: var(--d-yellow); }
 
-/* Обтекание (#neWrap) — обычный видимый чекбокс, а не переиспользование
-   .switch из base.css: тот прячет <input> (display:none) и не рисует
-   :focus-visible ни на чём, а news.css не имеет права переопределять чужой
-   селектор .switch, чтобы его дорисовать (см. правило "только nw-/ne-" в
-   этом файле). Нативный чекбокс со своим фокус-кольцом решает то же самое
-   без этого конфликта. */
 .ne-wrap-field { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #cfe2ff; }
 .ne-wrap-check { width: 18px; height: 18px; accent-color: var(--cyan); cursor: pointer; }
 .ne-wrap-check:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
 .ne-error { min-height: 18px; margin: 0 0 12px; font-size: 13px; color: #ff8a7e; }
 
-/* ===================== Кроп-редактор картинки (#neCrop) =====================
-   Появляется между выбором файла и заливкой (см. #neImageFile в
-   news-page.js). Холст рисуется в css-px размера самого редактора — не в
-   полном разрешении исходника (см. комментарий у setupCropCanvasSize() в
-   news-page.js про декодированную память и историю Safari в
-   docs/superpowers/specs/2026-08-03-safari-memory-and-i18n-design.md),
-   полное разрешение считается только один раз, в момент подтверждения. */
 .ne-crop { margin-top: 12px; }
 .ne-crop > label { display: block; font-size: 12px; font-weight: 600; color: #8fb0dc; margin-bottom: 6px; }
 
@@ -240,17 +142,12 @@
   overflow: hidden;
   background: rgba(4, 10, 22, .9);
   border: 1px solid rgba(120, 190, 255, .28);
-  /* Тач: перетаскивание внутри редактора двигает картинку/рамку, а не
-     страницу под ней — без этого drag на телефоне превращался бы в скролл. */
+
   touch-action: none;
 }
 .ne-crop-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 .ne-crop-canvas:active { cursor: grabbing; }
 
-/* Рамка выделения — независимый прямоугольник поверх холста (двигается и
-   меняется в размере отдельно от панорамы картинки под ней). Тень в
-   9999px радиусом затемняет всё, что останется за кадром, не прибегая к
-   отдельным четырём затемняющим полосам. */
 .ne-crop-frame {
   position: absolute;
   border: 2px solid var(--cyan);
@@ -273,18 +170,12 @@
 .ne-crop-dims { margin: 6px 0 0; font-size: 12px; color: #8fb0dc; font-variant-numeric: tabular-nums; }
 .ne-crop-actions { margin-top: 10px; }
 
-/* Превью карточки в редакторе — cardFor(post, false) кладёт сюда настоящую
-   .nw-card. Пунктирная рамка отделяет её от полей формы (тот же приём, что
-   у .nw-state), а не «оживляет» карточку самостоятельным оформлением — вид
-   самой карточки должен быть один в один как в ленте, иначе превью врёт. */
 .ne-preview-card { border: 1px dashed rgba(120,190,255,.28); border-radius: 12px; padding: 6px; }
 .ne-preview-card:empty { display: none; }
 
 .nw-admin-bar { width: 84.63cqw; margin-inline: auto; display: flex; gap: 8px; margin-bottom: 14px; }
 .nw-tools { position: absolute; top: 12px; right: 12px; display: none; gap: 6px; }
-/* nw-editing, а не голое .editing: .editing уже занят под режим правки
-   тирлиста в styles.css (несвязанный набор правил), а news.css обязан
-   держать все свои селекторы в неймспейсе nw-/ne-, чтобы не столкнуться. */
+
 .nw-editing .nw-card .nw-tools { display: flex; }
 .nw-editing .nw-card { box-shadow: inset 0 0 0 1px rgba(79,214,255,.28); }
 .nw-tools button { width: 28px; height: 28px; padding: 0; display: grid; place-items: center; font-size: 13px; line-height: 1; border-radius: 6px; cursor: pointer; color: #dce9ff; background: rgba(12,22,44,.85); border: 1px solid rgba(120,190,255,.35); }
@@ -292,23 +183,14 @@
 .nw-tools button.danger:hover { background: #a02c2c; border-color: #ff6b5e; }
 .nw-tools button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-/* ===================== Блочное тело поста =====================
-   Типы блоков описаны в
-   docs/superpowers/specs/2026-08-29-news-block-editor-design.md.
-   Абзац (.nw-body p) уже стилизован выше — здесь только то, чего у плоского
-   тела не было. Все селекторы в неймспейсе nw-, как и весь остальной файл. */
-
 .nw-body a { color: var(--cyan); text-underline-offset: 2px; }
 .nw-body code { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: .92em; padding: 1px 4px; border-radius: 4px; background: rgba(120,190,255,.14); }
 
 .nw-code { margin: 0 0 10px; padding: 10px 12px; border-radius: 8px; background: rgba(6,14,30,.7); overflow-x: auto; }
 .nw-code code { background: none; padding: 0; }
 
-/* Односторонняя граница со скруглением выглядит сломанной — border-radius: 0. */
 .nw-quote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 3px solid var(--cyan); border-radius: 0; color: #b9cde6; }
 
-/* Раскрывающаяся цитата сложена до трёх строк и открывается кликом — класс
-   is-open вешает тот же обработчик карточки, что и у спойлера (cardFor). */
 .nw-quote-collapsible { max-height: 4.8em; overflow: hidden; cursor: pointer; }
 .nw-quote-collapsible.is-open { max-height: none; cursor: auto; }
 
@@ -318,13 +200,9 @@
 .nw-figure { margin: 0 0 10px; }
 .nw-caption { margin-top: 4px; font-size: 13px; color: #8ea5c0; }
 
-/* Спойлер: текст спрятан цветом, а не display — иначе он не занимал бы место
-   и абзац прыгал бы при открытии. user-select запрещает вытащить его
-   выделением, как это делает protect.js со всей страницей. */
 .nw-spoiler { border-radius: 4px; background: rgba(180,205,235,.28); color: transparent; cursor: pointer; user-select: none; }
 .nw-spoiler.is-open { background: none; color: inherit; cursor: auto; user-select: auto; }
 
-/* Альбом. Класс несёт количество картинок, раскладку выбирает CSS. */
 .nw-album { display: grid; gap: 4px; }
 .nw-album-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .nw-album-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }

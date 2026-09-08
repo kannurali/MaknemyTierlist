@@ -1,10 +1,6 @@
-/* Защита контента (body.protected) уехала в base.css: теперь её делят
-   тирлист и лента новостей. Обработчики — в js/protect.js. */
 
-/* ===================== Тулбар: статус сохранения и админ-бейдж ===================== */
 .tb-saved { margin-left: auto; font-size: 12px; color: #6f86ad; min-width: 90px; text-align: right; }
-/* На iOS сохранение уходит вторым нажатием (нужен свежий жест пользователя).
-   Пульсация нужна, чтобы этот шаг нельзя было пропустить. */
+
 .btn.png-ready { animation: png-ready-pulse 1.1s ease-in-out infinite; }
 @keyframes png-ready-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(79,214,255,.55); }
@@ -12,9 +8,6 @@
 }
 @media (prefers-reduced-motion: reduce) { .btn.png-ready { animation: none; } }
 
-/* ===================== Floating like button ===================== */
-/* Кнопка лайка — закреплена в правом нижнем углу, видна всем посетителям.
-   Лайки общие (таблица likes в БД). Кнопка вне #stage, поэтому в PNG не попадает. */
 .like-fab {
   position: fixed;
   right: 18px;
@@ -59,7 +52,6 @@
 }
 .like-fab.pop .like-heart { animation: likePop .35s ease; }
 
-/* Кнопка доната — над кнопкой лайка, тот же стиль в фиолетовых тонах */
 .donate-fab {
   position: fixed;
   right: 18px;
@@ -91,7 +83,6 @@
 .donate-fab:active { transform: scale(0.94); }
 .donate-heart { font-size: 18px; line-height: 1; display: inline-block; }
 
-/* Баннер с UID для не-админов (показывается на странице, а не через alert) */
 .uid-banner {
   position: fixed;
   top: 64px;
@@ -125,13 +116,12 @@
   color: #9fc2ee; font-size: 16px; line-height: 1; cursor: pointer;
 }
 .uid-banner-close:hover { color: #fff; }
-/* баннер живой синхронизации (свежие правки другого админа) */
+
 .sync-banner { top: 72px; border-color: rgba(120,190,255,.6); box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(42,166,224,.35); }
 .sync-banner .uid-banner-row { margin-top: 4px; }
 
-/* ----- Кнопка «Сохранить» (публикация изменений) ----- */
 .save-btn { font-weight: 700; min-width: 124px; transition: background .15s, border-color .15s, box-shadow .2s, transform .08s; }
-/* есть несохранённые изменения — зовём нажать (янтарное свечение + пульс) */
+
 .save-btn.dirty {
   background: linear-gradient(180deg, #ffd05a, #f5a623);
   border-color: #ffe08a;
@@ -144,7 +134,7 @@
   0%, 100% { box-shadow: 0 0 0 1px rgba(245,166,35,.5),  0 0 10px rgba(245,166,35,.4); }
   50%      { box-shadow: 0 0 0 1px rgba(245,166,35,.75), 0 0 20px rgba(245,166,35,.85); }
 }
-/* всё опубликовано */
+
 .save-btn.clean {
   background: rgba(46,160,67,.16);
   border-color: rgba(80,200,120,.5);
@@ -153,7 +143,7 @@
   box-shadow: none;
 }
 .save-btn.clean:hover { background: rgba(46,160,67,.22); border-color: rgba(80,200,120,.6); }
-/* идёт сохранение */
+
 .save-btn.saving {
   background: rgba(40,64,110,.55);
   border-color: rgba(120,190,255,.4);
@@ -162,10 +152,6 @@
   box-shadow: none;
 }
 
-/* ===================== Header =====================
-   Геометрия из PSD (канва 1523 px, 1cqw = 15.23 px): лого BF в 23/25 px от
-   угла, марки справа в 21/17 px. Заголовок и дата — Proto Sans, а не Bootshaus:
-   в макете это разные гарнитуры, и подменять одну другой заметно. */
 .tl-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -173,8 +159,7 @@
   padding: 1.12cqw 1.38cqw 0 1.51cqw;
   margin-bottom: 3cqw;
 }
-/* Дата в макете стоит заметно ниже логотипов — на 80 px от верха канвы, тогда
-   как марки справа на 17 px. Отсюда отдельный отступ у титульного блока. */
+
 .title-block { margin-top: 3.7cqw; }
 .title-block { text-align: center; }
 .date {
@@ -193,25 +178,16 @@
 .date:focus { background: rgba(79,214,255,.12); }
 .tl-title {
   font-family: var(--proto);
-  /* В макете шаг строк равен высоте прописной (75 px при кегле ~104), то есть
-     заглавные стоят вплотную, зазор в 1 px. Буквальный line-height: .72 в
-     браузере даёт не это, а наложение: глиф-бокс Proto Sans — 80 px при кегле
-     71.8, шаг строки выходил 51.7, и «TIER LIST» налезал на «MAKNEMY» на 28 px.
-     .88 разводит строки до тонкого просвета — макет по духу, но читаемо. */
+
   font-size: 6.9cqw;
   line-height: .88;
   margin: .5cqw 0 0;
   color: #fff;
   letter-spacing: .1cqw;
-  /* Свечение было 16px/.55 — на светлых буквах оно расплывалось ореолом и
-     заголовок читался мыльным. В макете подсветка едва заметна, поэтому радиус
-     втрое меньше, а вниз идёт плотная тень для отрыва от фона. */
+
   text-shadow: 0 0 .55cqw rgba(120,190,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
 }
 
-/* ===================== Tiers =====================
-   В макете содержимое — 1289 px из 1523 (84.63cqw) по центру, а по краям
-   остаётся видимый фон. Одна ширина на тиры, легенду, подвал и титры. */
 .tiers, .legend, .tl-footer, .credits { width: 84.63cqw; margin-inline: auto; }
 
 .tiers {
@@ -220,9 +196,7 @@
   flex: 1;
   padding: .2cqw 0;
   border-radius: 1.64cqw;
-  /* «Плашка для фруктов» из макета: белая заливка с вертикальным градиентом
-     прозрачности, слой на 30%. Лежит под всеми тирами сразу, а не под каждым
-     по отдельности — это вуаль, а не карточка. */
+
   background: linear-gradient(180deg,
     rgba(255,255,255,.085) 25%,
     rgba(255,255,255,.063) 50%,
@@ -230,16 +204,9 @@
 }
 
 .tier { position: relative; display: flex; flex-direction: column; gap: 1cqw; }
-/* группа «плашка + ряд предметов». При переполнении тир показывает несколько
-   таких групп — каждая отдельный ряд со своей плашкой и небольшим отступом
-   (через gap у .tier), а не один «удвоенный» по высоте блок. */
+
 .tier-rowgroup { display: flex; flex-direction: column; gap: .7cqw; }
 
-/* --- label band ---
-   Плашка вырезана из макета целиком (полутоновые точки + подсветка краёв +
-   цветокор). Собрать это градиентами не выходит: цвет даёт стопка
-   корректирующих слоёв поверх, которую CSS не повторяет. Растяжка по 100% 100%
-   — тот же приём, что был у dots-band.png. */
 .tier-band {
   position: relative;
   height: 5.84cqw;
@@ -272,11 +239,6 @@
 .tier-label:focus { background: rgba(79,214,255,.18); border-radius: 4px; }
 .tier-tools { position: absolute; right: .8cqw; display: flex; gap: .4cqw; }
 
-/* --- items track: translucent panel with halftone tile --- */
-/* Панель предметов. В макете её нет (он пустой шаблон), поэтому берём от него
-   характер подложки — полупрозрачная вуаль вместо плотного тёмно-синего, — но
-   тон оставляем заметно темнее плашки: иконки предметов рисуются поверх, и на
-   совсем прозрачном фоне тёмные из них теряются на фоне пагоды. */
 .tier-items {
   display: flex; flex-wrap: wrap;
   column-gap: .5cqw; row-gap: .9cqw;
@@ -293,13 +255,6 @@
 }
 .tier.drag-over .tier-items { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan), inset 0 1px 0 rgba(255,255,255,.22); }
 
-/* ===================== Item cell =====================
-   Ряд обязан вмещать 11 предметов на десктопе и 6 на телефоне. Контент по
-   макету сузился со 100 до 84.63cqw, поэтому ячейка ужата в те же 0.85 раза
-   (8.2 → 6.95cqw) вместе со всем содержимым — иначе в ряд влезало 9.
-   Проверка: доступная ширина 84.63 − 1.6 (паддинги дорожки) − 0.19 (рамка) =
-   82.84cqw; (82.84 + 0.5) / (6.95 + 0.5) = 11.19 → 11 штук, до 12 далеко.
-   Разбивку на ряды считает itemsPerRow() зондом, так что JS подстроится сам. */
 .cell {
   position: relative;
   width: 6.95cqw;
@@ -311,10 +266,7 @@
   transition: transform .14s ease;
 }
 .cell.dragging { opacity: .4; }
-/* Наведение на предмет — подсвечиваем всю ячейку со всеми элементами.
-   Только для устройств с настоящим курсором: на тач-экране :hover «залипает»
-   после тапа, и ячейка остаётся увеличенной с двойной drop-shadow — лишняя
-   перерисовка на каждом касании. */
+
 @media (hover: hover) and (pointer: fine) {
 .cell:hover { transform: translateY(-.35cqw) scale(1.06); z-index: 8; }
 .cell:hover .cell-value { color: #fff; text-shadow: 0 0 .5cqw rgba(79,214,255,.9), 0 1px 2px rgba(0,0,0,.95); }
@@ -337,7 +289,7 @@
   image-rendering: auto;
   pointer-events: none;
 }
-/* value + type badge row (без тёмной подложки — цифры лежат прямо на дорожке) */
+
 .cell-strip {
   position: relative;
   margin-top: .13cqw;
@@ -351,29 +303,20 @@
   font-size: 1.7cqw;
   color: #fff;
   letter-spacing: .04cqw;
-  /* без подложки нужна более плотная тень, чтобы белые цифры читались на дорожке */
+
   text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.7), 0 0 1px rgba(0,0,0,.9);
   line-height: 1;
   white-space: nowrap;
 }
 
-/* Значки в ячейке задаются здесь, а не в общих .tbadge/.dot/.trend: те же
-   классы висят на кнопках модалки, а модалка живёт вне сцены — там cqw меряется
-   от вьюпорта, и общий размер трогать нельзя. */
-/* type badge — coloured chip next to the value (как в макете) */
 .cell .tbadge { flex: none; height: 1.7cqw; }
-/* demand dot — right of the icon, near the strip (как в макете) */
+
 .cell .dot {
   position: absolute; top: 3.9cqw; right: .1cqw;
   width: 1.27cqw; height: 1.27cqw;
   z-index: 3;
 }
-/* trend arrow — mirrors the dot on the left. С картинками легенды все три
-   стрелки одной пропорции (27×32, 37×43, 27×32), поэтому ширина у них общая.
-   Но записать её надо и для «swap» отдельно: ниже по файлу лежит общее
-   правило .trend.tr-swap (2.2cqw) для легенды и модалки, у него та же
-   специфичность, и без этой строки оно перебивало бы ячейку — круглый значок
-   выходил вдвое шире стрелок и наезжал на цену. */
+
 .cell .trend {
   position: absolute; top: 3.98cqw; left: .1cqw;
   width: 1.27cqw;
@@ -381,7 +324,6 @@
 }
 .cell .trend.tr-swap { width: 1.27cqw; }
 
-/* per-cell edit controls */
 .cell-edit {
   position: absolute; top: -.4cqw; right: -.4cqw;
   display: none; gap: .3cqw; z-index: 5;
@@ -398,11 +340,6 @@
 }
 .cell-edit button:hover { background: var(--cyan-deep); }
 
-/* Значок NEW — новый / изменённый предмет. Картинка из макета (та же, что в
-   легенде), а не нарисованная плашка.
-   По горизонтали значки держим ВНУТРИ ячейки: колонки стоят вплотную (зазор
-   ~5px на десктопе), а раньше плашки свисали наружу на 6-7px, и «?» одного
-   предмета налезал на NEW соседнего. */
 .cell-new {
   position: absolute; top: -.15cqw; left: .1cqw; z-index: 7;
   width: 2.5cqw; height: auto;
@@ -410,9 +347,6 @@
   pointer-events: none;
 }
 
-/* Значок «?» — цена под вопросом. Тоже картинка из макета, но в правом углу.
-   Наклона больше нет: значок и так фигурный, а повёрнутый он налезал на соседа.
-   Включаются независимо: у предмета может быть и NEW, и «?» одновременно. */
 .cell-wip {
   position: absolute; top: -.2cqw; right: .1cqw; z-index: 7;
   width: 1.2cqw; height: auto;
@@ -420,7 +354,6 @@
   pointer-events: none;
 }
 
-/* всплывающая подсказка предмета (название + описание) при наведении */
 .cell-tip {
   position: absolute;
   bottom: calc(100% + .3cqw);
@@ -441,10 +374,9 @@
 .cell:hover .cell-tip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 .tip-name { font-family: var(--display); font-size: 1.55cqw; color: var(--cyan); letter-spacing: .04cqw; }
 .tip-desc { font-family: var(--ui); font-size: 1.15cqw; color: #dbeaff; margin-top: .25cqw; line-height: 1.25; white-space: normal; }
-/* в режиме редактирования подсказку не показываем — мешает кнопкам/перетаскиванию */
+
 .editing .cell-tip { display: none; }
 
-/* add-item ghost cell */
 .cell-add {
   width: 6.95cqw; height: 7.6cqw;
   border: 1px dashed rgba(150,200,255,.45);
@@ -459,22 +391,6 @@
 .editing .cell-add { display: flex; }
 .cell-add:hover { background: rgba(50,80,140,.4); border-color: var(--cyan); color: #fff; }
 
-/* Фильтры теперь применяются в JS (render): скрытые типы не рендерятся,
-   предметы переупаковываются, а пустые тиры не отображаются. */
-
-/* ===================== Badges / dots / trends (shared) =====================
-   Точки и тренды — оригинальные пиксельные иконки из макета (dot-*.png,
-   trend-*.png), извлечены из nav-legend.png 1-в-1. Значки типов пришли
-   позже вектором (assets/design/legend/badge-*.svg) и лежат в одном наборе
-   с легендой.
-
-   Теней здесь нет намеренно. Каждый filter: drop-shadow заставляет WebKit
-   рисовать элемент в отдельную поверхность и размывать её альфу. На полном
-   тирлисте это 79 точек, 78 бейджей и 14 трендов — 171 поверхность ради тени
-   на элементах 14x14 и 42x19 px, которую на таком размере не видно (проверено
-   попиксельно: разница не превышает 3/255). Раньше правило filter: none стояло
-   только в мобильном медиазапросе; на десктопе цена та же, поэтому оно
-   переехало в базовые стили. */
 .tbadge {
   height: 2cqw; width: auto;
   display: inline-block;
@@ -489,7 +405,6 @@
 }
 .trend.tr-swap { width: 2.2cqw; }
 
-/* colour tokens — используются кнопками категорий в модалке */
 .t-f { --bc: var(--t-f); }
 .t-p { --bc: var(--t-p); }
 .t-gp { --bc: var(--t-gp); }
@@ -499,10 +414,6 @@
 .t-ms { --bc: var(--t-ms); }
 .t-vh { --bc: var(--t-vh); }
 
-/* ===================== Ad block ===================== */
-/* Рекламный баннер остаётся посреди тирлиста. В макете его нет, поэтому берём
-   тон панели предметов — чтобы он читался частью той же плашки, а не чужой
-   карточкой. */
 .ptn-card {
   position: relative;
   border-radius: 1.2cqw;
@@ -516,14 +427,8 @@
   gap: .4cqw;
   overflow: hidden;
 }
-/* Плашка «РЕКЛАМА» в углу карточки.
-   Раньше стояла вплотную в угол (top/left: 0) и выглядела обрезанной: у
-   Bootshaus прописные выше строчного бокса, буквы вылезали над плашкой, а
-   карточка срезала их своим overflow: hidden. Поэтому плашка отодвинута от
-   угла и получила запас сверху — теперь буква целиком внутри. */
+
 .ptn-chip {
-  /* Плашка идёт в разметке раньше кадра с макетом, поэтому без слоя кадр
-     закрывает её собой, как только она перестаёт торчать в поле карточки. */
   position: absolute; top: .45cqw; left: .45cqw; z-index: 5;
   font-family: var(--display);
   font-size: 1.2cqw;
@@ -534,11 +439,7 @@
   padding: .3cqw .8cqw .2cqw;
   border-radius: .6cqw;
 }
-/* Токен маркировки (erid) от ОРД. Это обязательная подпись к рекламе, а не
-   элемент оформления: должен читаться, но не спорить с макетом
-   рекламодателя — поэтому мелко, в углу, поверх подложки. Клики не ловит,
-   чтобы не отнимать нажатие у самого баннера. Пустой erid узла не создаёт,
-   так что у кампании без токена разметка прежняя. */
+
 .ptn-erid {
   position: absolute; right: 0; bottom: 0; z-index: 4;
   max-width: 100%;
@@ -566,13 +467,7 @@
 .editing .ptn-text { cursor: text; }
 .ptn-text:focus { background: rgba(79,214,255,.12); border-radius: 4px; }
 .ptn-img-wrap { position: relative; display: block; max-width: 100%; margin: 0 auto; line-height: 0; }
-/* Баннер тянется на всю ширину блока (max-width: 100%), а высота ограничена
-   долей ширины сцены. Раньше здесь стояло max-height: 12cqw (~117px на
-   десктопе): любая картинка выше этого сжималась пропорционально, и баннер
-   3:2 показывался шириной 175px внутри блока в 973px.
-   Потолок разный для десктопа и телефона: одинаковая доля ширины сцены даёт
-   на десктопе баннер в половину высоты окна (сцена широкая, окно низкое), а на
-   телефоне — всего пятую часть. Телефонный потолок — в медиазапросе ниже. */
+
 .ptn-img {
   max-width: 100%;
   max-height: 28cqw;
@@ -583,12 +478,9 @@
 }
 .ptn-tools { display: flex; gap: .5cqw; flex-wrap: wrap; justify-content: center; }
 
-/* скрытая ссылка рекламы: вся карточка кликабельна (курсор-рука) + значок 🔗 */
 .stage:not(.editing) .ptn-card.has-link,
 .stage:not(.editing) .ptn-card.has-link * { cursor: pointer; }
-/* Значок «это ссылка». Глиф — фоновая SVG-картинка, а не эмодзи: эмодзи
-   рисуется системным шрифтом (на каждой платформе свой) и по-разному попадает
-   в PNG-экспорт, а data-URL фон рендерится одинаково везде. */
+
 .ptn-link-badge {
   position: absolute; top: .8cqw; right: .8cqw; z-index: 4;
   width: 4cqw; height: 4cqw; border-radius: 50%;
@@ -615,17 +507,6 @@
   }
 }
 
-/* ===================== Ad carousel =====================
-   Одна поверхность крутит несколько объявлений.
-
-   Листание сделано ПРОКРУТКОЙ со scroll-snap, а не transform/opacity:
-   1) нативный свайп с инерцией и упором в край — без своей обработки жестов,
-      которая ещё и подралась бы с preventDefault в setupProtection();
-   2) слой размером со сцену с прозрачностью WebKit выносит в отдельный буфер
-      на десятки мегабайт (см. комментарии у .stage и .petals — на этом падали
-      вкладки iPhone). Поэтому здесь НЕТ кроссфейдов: слайды едут вбок.
-   overscroll-behavior-x: contain нужен, чтобы свайп на последнем слайде не
-   уводил Safari назад по истории. */
 .ptn-viewport {
   width: 100%;
   overflow-x: auto;
@@ -638,7 +519,7 @@
 .ptn-viewport::-webkit-scrollbar { display: none; }
 .ptn-track { display: flex; }
 .ptn-slide {
-  position: relative;               /* якорь для значка ссылки */
+  position: relative;
   flex: 0 0 100%;
   min-width: 0;
   scroll-snap-align: center;
@@ -660,14 +541,8 @@
   }
 }
 
-/* Рамка вокруг прокручиваемой области — система координат для стрелок. */
 .ptn-frame { position: relative; width: 100%; }
 
-/* Стрелки лежат ПОВЕРХ баннера по его краям и проявляются при наведении
-   (и при переходе на них с клавиатуры) — как на маркетплейсах.
-   Прячем прозрачностью, а не display: none: так они не влияют на раскладку
-   и карточка не меняет размер под курсором. Правило «никакой прозрачности»
-   в этом проекте про слои размером со сцену, а не про кнопку в 3cqw. */
 .ptn-nav {
   position: absolute;
   top: 50%;
@@ -692,8 +567,7 @@
   .ptn-strip:focus-within .ptn-nav { opacity: 1; pointer-events: auto; }
   .ptn-nav:hover { background: rgba(12, 30, 66, .85); }
 }
-/* Шеврон нарисован бордерами, а не эмодзи: эмодзи берёт системный шрифт и
-   на каждой платформе выглядит по-своему. */
+
 .ptn-nav::before {
   content: "";
   position: absolute; top: 50%; left: 50%;
@@ -703,43 +577,13 @@
 }
 .ptn-prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
 .ptn-next::before { transform: translate(-70%, -50%) rotate(45deg); }
-/* На сайте видимый фокус есть ровно в одном месте (.lang-switch .chip).
-   Стрелки доступны с клавиатуры, поэтому здесь он обязателен. */
+
 .ptn-nav:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ptn-viewport { scroll-behavior: auto; }
   .ptn-nav { transition: none; }
 }
 
-/* ===================== Ad side rails =====================
-   160x600 (IAB Wide Skyscraper) слева и справа от постера, макет сдаётся в
-   320x1200 под экраны с DPR 2.
-
-   Порог 1460px посчитан, а не подобран:
-     сцена min(1040px, 96vw)      1040
-     поля .stage-wrap  2 x 16       32
-     борта             2 x 160      320
-     зазоры            2 x 24        48
-                                  ------
-                                   1440  + запас на классический скроллбар
-
-   Условие по высоте не декоративное: борт начинается на top: 96px, значит
-   его низ на 696px, а .like-fab и .donate-fab висят на bottom: 18px и 62px.
-   На вьюпорте ниже 760px они встречаются — там борта прячем.
-
-   96px — только нижняя граница. Само значение считает syncRailTop() в
-   app.js и кладёт в --rail-top: борт не должен подниматься выше верхнего
-   края тирлиста, иначе он лезет на шапку и панель фильтров редизайна.
-   На низком окне 600px под тирлист целиком не влезают, и борт свешивается
-   за нижний край — это отыгрывается первой же прокруткой.
-
-   position: fixed, а не sticky: постер на боевых данных около 4400px
-   высотой, и рекламодатель покупает именно присутствие на всём скролле.
-   Заодно не приходится перестраивать .stage-wrap в три колонки — это
-   поломало бы container-type: inline-size, на котором держится весь макет.
-
-   z-index 20 — выше фона, но ниже подсказки предмета (30): всплывающая
-   подсказка у края постера должна выигрывать у рекламы. */
 .ptn-rail { display: none; }
 
 @media (min-width: 1460px) and (min-height: 760px) {
@@ -755,21 +599,10 @@
     border: 1px solid var(--panel-edge);
     box-shadow: 0 10px 32px rgba(0, 0, 0, .45);
   }
-  /* 520 = половина сцены (1040), 24 — зазор до постера. */
+
   .ptn-rail-l { left:  calc(50% - 520px - 24px - 160px); }
   .ptn-rail-r { right: calc(50% - 520px - 24px - 160px); }
 
-  /* Обе плавающие кнопки прижаты к правому краю окна, и правый борт — тоже
-     справа: «Поддержать» (она шире лайка из-за подписи и висит выше) на
-     невысоком окне наезжала на низ борта.
-     Пока борта показаны, разводим кнопки по нижним углам — лайк налево,
-     донат направо. Они оказываются НИЖЕ бортов (борт кончается на 696px,
-     кнопка начинается от низа окна), в пустых полях по бокам от постера, и
-     не закрывают ни баннер, ни борта.
-     Только внутри этого медиазапроса: без бортов кнопки стоят стопкой
-     справа, как раньше, и на телефоне так же уезжают вправо при прокрутке
-     (см. .fabs-hidden — он двигает их по X, и левая кнопка уехала бы не
-     в ту сторону). */
   .like-fab   { right: auto; left: 18px; bottom: 18px; }
   .donate-fab { right: 18px; bottom: 18px; }
 }
@@ -790,7 +623,7 @@
   padding: 3px 8px 1px;
   border-radius: 6px;
 }
-/* Борт живёт вне .stage, container-query единиц здесь нет — размеры в px. */
+
 .ptn-rail .ptn-erid {
   font-size: 9px;
   line-height: 1.9;
@@ -800,16 +633,6 @@
 .ptn-rail.has-link { cursor: pointer; }
 .ptn-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-/* ===================== Ad bottom dock (phones) =====================
-   Горизонтальная пара к боковым бортам: на телефоне бортов нет, и место
-   «сбоку от контента» там — низ экрана. Полоса приклеена и видна всегда.
-
-   Живёт снаружи .stage-wrap: у .stage стоит container-type, а контейнер
-   перехватывает position: fixed у потомков — изнутри сцены полоса прилипла
-   бы к сцене, а не к экрану.
-
-   z-index 55 — ниже плавающих кнопок (60), попапа (90) и модалок (100), но
-   выше липкого тулбара (50) не нужно: они на разных краях экрана. */
 .ptn-dock { display: none; }
 
 @media (max-width: 640px) {
@@ -831,12 +654,11 @@
     display: block;
     width: 100%;
     height: auto;
-    max-height: 22vh;      /* потолок, если рекламодатель прислал макет выше нормы */
+    max-height: 22vh;
     object-fit: contain;
     border-radius: 8px;
   }
-  /* В полосе токен идёт вверх справа, а не вниз: снизу у неё отступ под
-     системную зону iPhone, и подпись уехала бы в неё. */
+
   .ptn-dock .ptn-erid {
     top: 0; right: 0; bottom: auto;
     font-size: 9px;
@@ -857,32 +679,15 @@
     z-index: 1;
   }
 
-  /* Под полосу отводим место, иначе она навсегда закрывает последний ряд
-     предметов. Высоту меряет JS и кладёт в --ptn-dock-h: она зависит от
-     пропорций присланного макета. */
   body.has-promo-dock .stage-wrap {
     padding-bottom: calc(var(--ptn-dock-h, 90px) + 34px);
   }
 
-  /* Кнопки встают по бокам НАД полосой. */
   body.has-promo-dock .like-fab   { bottom: calc(var(--ptn-dock-h, 90px) + 12px); }
   body.has-promo-dock .donate-fab { bottom: calc(var(--ptn-dock-h, 90px) + 12px); left: auto; right: 12px; }
   body.has-promo-dock .like-fab   { left: 12px; right: auto; }
 }
 
-/* ===================== Ad popup =====================
-   Живёт снаружи .stage-wrap: .stage — контейнер с overflow: hidden, из него
-   ничто не выбирается.
-
-   z-index 90 — из свободной полосы 61-99: выше тулбара (50) и плавающих
-   кнопок (60), ниже настоящих модалок (100) и баннера синхронизации (200).
-   Если человек всё-таки открыл карточку предмета, выигрывает то, что он
-   попросил сам.
-
-   Подложка НЕ анимируется. Прозрачный слой размером во весь экран — ровно
-   тот случай, из-за которого в этом проекте запрещены opacity < 1 и
-   mix-blend-mode на больших элементах: WebKit заводит под них отдельный
-   буфер в десятки мегабайт и роняет вкладку. Двигаем только карточку. */
 .ptn-pop {
   position: fixed;
   inset: 0;
@@ -892,7 +697,7 @@
   justify-content: center;
   padding: 16px;
   background: rgba(3, 7, 20, .72);
-  touch-action: none;          /* iOS протаскивает скролл сквозь overflow:hidden */
+  touch-action: none;
 }
 .ptn-pop-card {
   position: relative;
@@ -955,23 +760,17 @@
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
 }
-/* Блокировка прокрутки фона, пока окно открыто. */
+
 body.ptn-locked { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .ptn-pop-card { animation: none; }
 }
 
-/* ===================== Legend =====================
-   Новый макет плашки «помощь новичкам» (Figma, группа 343:2185, 912×403):
-   заголовок по центру сверху, под ним три колонки — типы предмета, спрос,
-   тренды цены. Ширина плашки осталась общей для постера (84.63cqw), поэтому
-   все размеры пересчитаны из макетных пикселей как px / 912 * 84.63cqw. */
 .legend {
   margin-top: .85cqw;
   padding: 2.41cqw 2.51cqw 4.83cqw 2.41cqw;
   border-radius: 2.23cqw;
-  /* Заливка из макета: сверху плотный синий, книзу уходит в ноль прозрачности,
-     так что низ плашки живёт прямо на фоне постера. */
+
   background: linear-gradient(180deg, #3d5694 0%, rgba(68,102,174,0) 100%);
 }
 .legend-title {
@@ -982,18 +781,16 @@ body.ptn-locked { overflow: hidden; }
   text-align: center;
   color: #fff;
 }
-/* Колонки стоят на макетных позициях 26 / 379 / 659 px внутри плашки, то есть
-   353 и 280 px шириной от 859 px содержимого. */
+
 .legend-grid {
   margin-top: 1.86cqw;
   display: grid;
   grid-template-columns: 41.09% 32.6% auto;
 }
 .legend-col { display: flex; flex-direction: column; gap: .84cqw; }
-/* У трендов строки реже: значки выше подписи и в макете разведены на 52 px. */
+
 .lc-trends { gap: 2.51cqw; }
-/* Высота строки зафиксирована по подписи (25 px). Значки трендов выше и
-   спокойно вылезают за неё — так шаг колонки не пляшет от формы значка. */
+
 .lg {
   display: grid;
   align-items: center;
@@ -1009,15 +806,8 @@ body.ptn-locked { overflow: hidden; }
 .lc-trends .lg { grid-template-columns: 5.38cqw auto; column-gap: .65cqw; }
 .lg .lgl::before { content: "- "; }
 
-/* Значки типов — SVG из макета: буквы Proto Sans, переведённые в кривые, с
-   градиентной заливкой и тёмной обводкой наружу. Картинкой, а не текстом с
-   background-clip, потому что экспорт постера в PNG идёт через html2canvas —
-   он не умеет ни градиент по тексту, ни text-stroke и нарисовал бы вместо
-   букв цветные прямоугольники. Все восемь файлов приведены к одному
-   viewBox 42x18, поэтому размер один на всех. */
 .lgb { width: 3.9cqw; height: 1.67cqw; }
 
-/* Точки спроса — сплошные круги, картинка тут не нужна. */
 .lgd::before {
   content: "";
   display: block;
@@ -1029,13 +819,9 @@ body.ptn-locked { overflow: hidden; }
 .d-yellow { --dc: #fff200; }
 .d-orange { --dc: #ffa100; }
 .d-red { --dc: #ff0000; }
-/* «Оверпрайс» — единственная точка не одного цвета, а с переливом. Картинкой,
-   а не linear-gradient() в CSS: ровно тот же файл стоит на карточке предмета,
-   и легенда с карточкой не разъедутся при первой же правке оттенка. */
+
 .d-neon { --dc: url("../assets/dot-neon.png") center / cover no-repeat; }
 
-/* Значки трендов в макете разной формы и высоты («new» широкий и низкий,
-   стрелки узкие и высокие), но выровнены по правому краю своей колонки. */
 .lc-trends .trend { justify-self: end; }
 .lc-trends .tr-wip { width: 2.23cqw; height: 3.25cqw; }
 .lc-trends .tr-up,
@@ -1043,9 +829,6 @@ body.ptn-locked { overflow: hidden; }
 .lc-trends .tr-swap { width: 3.43cqw; height: 3.99cqw; }
 .lc-trends .tr-new { width: 5.38cqw; height: 2.97cqw; }
 
-/* ===================== Footer =====================
-   В макете колонки прижаты влево, а не растянуты на всю панель, поэтому
-   grid-template-columns здесь по содержимому, а не repeat(3, 1fr). */
 .tl-footer {
   margin-top: 1.12cqw;
   display: grid;
@@ -1055,16 +838,14 @@ body.ptn-locked { overflow: hidden; }
   row-gap: 1.12cqw;
   padding: 2.2cqw 1.3cqw 1.4cqw 3.81cqw;
   border-radius: 1.25cqw;
-  /* Панель в макете — белая заливка на 30%, но поверх неё лежит стопка
-     цветокора, которая уводит её в синий (#36508E на композите). CSS этой
-     стопки не повторяет, поэтому цвет подобран так, чтобы совпасть с итогом. */
+
   background: rgba(110,170,255,.40);
 }
 .flink { position: relative; display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
 .fl-title { font-family: var(--display); font-size: 1.8cqw; color: #00f7ff; letter-spacing: .5px; text-shadow: 0 0 6px rgba(0,247,255,.4); }
 .fl-sub { font-family: var(--display); letter-spacing: .03cqw; font-size: 1.55cqw; color: #eaf4ff; }
 .flink:hover .fl-title { color: #fff; }
-/* в режиме редактирования у ссылки видны кнопки: 🔗 (URL) и ✕ (удалить) */
+
 .editing .flink .fl-title, .editing .flink .fl-sub { cursor: text; }
 .flink-tools { position: absolute; top: -1.1cqw; right: -.2cqw; display: none; gap: .3cqw; z-index: 5; }
 .editing .flink:hover .flink-tools { display: flex; }
@@ -1087,7 +868,6 @@ body.ptn-locked { overflow: hidden; }
 }
 .flink-add:hover { border-color: var(--cyan); color: #fff; }
 
-/* ===================== Credits / team ===================== */
 .credits {
   margin-top: 1cqw;
   padding: .7cqw 1cqw;
@@ -1133,7 +913,6 @@ body.ptn-locked { overflow: hidden; }
 }
 .credit-add:hover { border-color: var(--cyan); color: #fff; }
 
-/* ===================== Модалка редактирования: иконка и переключатели ===================== */
 .icon-btn { background: none; border: none; color: #9fc2ee; font-size: 18px; cursor: pointer; }
 .icon-btn:hover { color: #fff; }
 
@@ -1163,13 +942,9 @@ body.ptn-locked { overflow: hidden; }
 .seg .dot { width: 16px; height: 16px; position: static; }
 .seg .trend { position: static; width: 16px; }
 .seg .trend.tr-swap { width: 22px; }
-/* NEW в макете широкий и низкий (232x128): по общей ширине 16 px он вышел бы
-   высотой 9 px и потерялся бы рядом со стрелками. */
+
 .seg .trend.tr-new { width: 34px; }
-/* badge-coloured segment buttons keep readable text on dark */
-/* Категорий шесть плюс «—», и в одну строку они не помещаются — сегмент
-   переносится. Подчёркивание цветом значка оставлено: по нему видно, какой
-   именно значок получит предмет, ещё до сохранения. */
+
 .seg button[class*="t-"] {
   background: rgba(8,16,32,.6); color: #cfe2ff; min-width: auto; height: 38px;
   box-shadow: inset 0 -3px 0 var(--bc);
@@ -1179,7 +954,6 @@ body.ptn-locked { overflow: hidden; }
 }
 #mType2 { flex-wrap: wrap; }
 
-/* Regular / Permanent toggle */
 .seg-toggle { display: flex; gap: 6px; padding: 5px; border-radius: 12px; background: rgba(8,16,32,.6); border: 1px solid rgba(120,190,255,.25); }
 .seg-toggle button {
   flex: 1; height: 46px; min-width: 0; padding: 0 10px;
@@ -1196,44 +970,16 @@ body.ptn-locked { overflow: hidden; }
 }
 .seg-toggle button.active small { opacity: 1; }
 
-/* ===================== Item VIEW modal ===================== */
-/* Карточка предмета по макету (Figma «MAKNEMY (Copy)», компонент Frame 121,
-   561 px шириной). Размеры сняты оттуда и пересчитаны в CSS с коэффициентом
-   ~0.71 (561 → 400): 500-широкая колонка макета даёт 357, поля 31 → 22,
-   скругления 24 → 17, плитка иконки 197 → 140.
-
-   Градиент плашек — тот же, что у полосы прокрутки и кнопок редизайна:
-   сверху #61b5e9, снизу #2d4aed (в макете это поворот на 90°).
-
-   Кегли НЕ масштабированы механически: в макете весь текст набран одним
-   размером 32.8 по Akira/Bebas, и в вебе это дало бы описание кеглем с
-   заголовок. Заголовки оставлены крупными, текст панелей уменьшен до
-   читаемого — иерархия та же, что на картинке.
-
-   Гарнитура на всю карточку ОДНА — var(--display) (Bootshaus, замена Akira).
-   Кегль текста панелей остался 15px, хотя шрифт сменился: у Bootshaus и рост
-   прописных ниже, и буквы уже, чем у Oswald (та же строка занимает ~135px
-   против ~170px), так что строка стала короче, а не длиннее — высота окна
-   не изменилась.
-   Раньше подписи плашек и текст панелей были набраны Oswald (заменой Bebas),
-   и в одном окне сталкивались два шрифта: «МУТАЦИЯ» квадратным, «СКИН» под
-   ним — узким гротеском. В макете это следы подстановки Figma (у части
-   надписей Bebas Bold отмечен missing, у части нет), а не замысел: карточка
-   набрана одним шрифтом. Иерархия держится кеглем, а не сменой гарнитуры. */
 .vmodal {
   width: min(400px, 94vw);
   position: relative;
   padding: 0;
   border-radius: 17px;
-  /* Заливка карточки из макета (Rectangle 124): чёрный с прозрачностью
-     поверх подложки страницы, а не синий градиент обычных модалок. */
+
   background: rgba(0,0,0,.62);
   border: 1px solid rgba(120,190,255,.3);
 }
-/* Шапка макета — светлая стеклянная полоса во всю ширину карточки.
-   Без backdrop-filter: под ней лежит собственный фон карточки, размывать
-   там нечего, а лишний композиторский слой на телефоне стоит памяти
-   (та же причина, по которой на сцене нет blend-режимов). */
+
 .vmodal-head {
   position: relative; flex: none;
   display: flex; align-items: center; justify-content: center;
@@ -1257,13 +1003,10 @@ body.ptn-locked { overflow: hidden; }
   padding: 22px 22px 21px;
   overflow-y: auto;
 }
-/* Плитка иконки: в макете градиентный квадрат 197 со скруглением 25,
-   картинка предмета лежит поверх почти во всю плитку (183 из 197). */
+
 .vmodal-icon {
   width: 140px; height: 140px; flex: none;
-  /* 42 + 11 общего зазора = 53: столько в макете от плитки до разделителя
-     (74 при ширине 561). Разделитель стоит заметно ближе к плашке типа,
-     чем к иконке, — из-за этого блок иконки читается отдельным. */
+
   margin-bottom: 42px;
   border-radius: 18px;
   background: linear-gradient(180deg, #61b5e9, #2d4aed);
@@ -1271,7 +1014,7 @@ body.ptn-locked { overflow: hidden; }
   box-shadow: 0 8px 26px rgba(0,0,0,.45);
 }
 .vmodal-icon img { max-width: 93%; max-height: 93%; }
-/* Разделитель под иконкой (Vector 59): 335 из 500 ширины колонки. */
+
 .vmodal-rule {
   width: 67%; height: 1px; flex: none;
   background: linear-gradient(90deg, #61b5e9, #2d4aed);
@@ -1287,8 +1030,7 @@ body.ptn-locked { overflow: hidden; }
   color: #fff;
 }
 .vmodal-kind { width: 100%; }
-/* Цена и метка стоят в ряд равными половинами, как в макете (242 + 242
-   при зазоре 16). Метки может не быть — тогда цена занимает всю ширину. */
+
 .vmodal-pills { display: flex; width: 100%; gap: 11px; }
 .vmodal-pills .vmodal-pill { flex: 1 1 0; min-width: 0; }
 .vmodal-pill-main {
@@ -1300,14 +1042,7 @@ body.ptn-locked { overflow: hidden; }
   font-size: 14px; line-height: 1; text-transform: uppercase; letter-spacing: .04em;
   opacity: .95;
 }
-/* Панели «Описание» и «Условия»: прозрачная заливка и градиентная рамка в
-   1px. Обычный border градиент не берёт, а приём «два фона, padding-box +
-   border-box» тут не годится: внутренний слой должен быть непрозрачным,
-   иначе градиент рамки виден сквозь всю панель — а внутри панели по макету
-   просвечивает фон карточки. Поэтому рамка — отдельный слой с маской:
-   градиент во всю панель, из которого вырезана внутренняя часть.
-   Слоя два на всё окно и только пока оно открыто — на сцене такое не
-   применяем (там дорогие слои валили Safari на iPhone). */
+
 .vmodal-panel {
   position: relative;
   width: 100%;
@@ -1328,9 +1063,7 @@ body.ptn-locked { overflow: hidden; }
           mask-composite: exclude;
   pointer-events: none;
 }
-/* Знак внимания стоит ВНУТРИ панели условий, над заголовком: в макете он
-   на 21 ниже её верхнего края, за рамку не выходит. Отрицательного отступа
-   тут быть не должно — с ним знак наезжал на панель описания выше. */
+
 .vmodal-panel-icon {
   width: 46px; height: 41px; flex: none;
   color: #d9d9d9;
@@ -1345,12 +1078,9 @@ body.ptn-locked { overflow: hidden; }
   color: #fff; text-transform: uppercase;
   max-width: 100%; white-space: pre-wrap; word-break: break-word;
 }
-/* Курсива у Bootshaus нет, браузер наклонил бы начертание сам — на квадратном
-   дисплейном шрифте это выглядит поломкой. Приглушённого цвета хватает,
-   чтобы «описания пока нет» читалось заглушкой, а не текстом предмета. */
+
 .vmodal-panel-text.empty { color: #9fb6d8; text-transform: none; }
 
-/* ===================== Донат-модалка ===================== */
 .dmodal { width: min(360px, 94vw); position: relative; padding: 8px; }
 .dmodal-close { position: absolute; top: 10px; right: 12px; z-index: 2; font-size: 18px; line-height: 1; }
 .dmodal-body {
@@ -1367,7 +1097,7 @@ body.ptn-locked { overflow: hidden; }
   background: #fff; box-shadow: 0 8px 26px rgba(0,0,0,.45);
 }
 .dmodal-qr img { width: 168px; height: 168px; display: block; image-rendering: pixelated; }
-/* Кнопки правки ссылок доната (только админ в режиме редактирования) */
+
 .dmodal-tools {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
   padding-top: 4px; margin-top: 2px;
@@ -1376,35 +1106,23 @@ body.ptn-locked { overflow: hidden; }
 .dmodal-tools .btn { cursor: pointer; }
 .dmodal-qr-cap { font-family: var(--ui); font-size: 12px; color: #2a1840; font-weight: 700; }
 
-/* Ссылка, у которой не задан адрес: анкер без href. Не подсвечиваем её как
-   кликабельную — иначе посетитель жмёт и ничего не происходит. */
 .flink-nourl { cursor: default; }
 
-/* ===================== View (non-edit) mode ===================== */
 .stage:not(.editing) .cell { cursor: default; }
 
-/* ===================== Responsive (телефоны) ===================== */
 @media (max-width: 640px) {
   html, body { overflow-x: hidden; }
 
-  /* --- панель: ничего не обрезается, чипы переносятся --- */
   .toolbar { gap: 10px 10px; padding: 10px 12px; }
-  .tb-brand { width: 100%; padding-right: 92px; font-size: 20px; } /* место под «Войти» */
+  .tb-brand { width: 100%; padding-right: 92px; font-size: 20px; }
   .tb-saved { display: none; }
-  /* Без width:100% чипы и переключатель языка попадают в один поток переноса:
-     RU|EN встаёт в хвост последней строки чипов, а не забирает третью строку
-     панели целиком. */
+
   .tb-group.filters { flex-wrap: wrap; flex: 1 1 100%; gap: 6px; }
   .filters .tb-label { width: 100%; margin-bottom: 2px; }
   .lang-switch { margin-left: auto; }
-  .chip { padding: 7px 12px; }                 /* чуть крупнее под палец */
+  .chip { padding: 7px 12px; }
   .btn { padding: 9px 12px; }
 
-  /* кнопка лайка — компактнее и ближе к углу на телефоне.
-     backdrop-filter снимаем: кнопки position:fixed висят над сценой, и на
-     каждом кадре прокрутки Safari пересобирает размытую копию фона под ними —
-     главный источник рывков и мерцания при скролле. Вместо размытия — плотная
-     заливка, визуально почти то же самое. */
   .like-fab, .donate-fab {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -1413,14 +1131,6 @@ body.ptn-locked { overflow: hidden; }
   .like-fab { right: 12px; bottom: 12px; padding: 9px 14px; font-size: 14px; }
   .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
 
-  /* Телефону хватает уменьшенных фонов: меньше трафика и, что важнее, вчетверо
-     меньше памяти под распакованный битмап.
-
-     Зеркальная плитка вдвое выше исходника, поэтому распакованный битмап тоже
-     вдвое тяжелее: 760x2480x4 = 7.5 МБ вместо 3.8 МБ, и столько же у лепестков.
-     Это заметно меньше тех ~17 МБ, которые съедал один offscreen-слой под
-     blend-mode (его убрали выше), но при новых жалобах на вылеты вкладки на
-     iPhone уменьшать надо в первую очередь именно эти два файла. */
   .stage {
     background-image: url("../assets/poster/bg-tile-export.jpg");
     background-image: -webkit-image-set(url("../assets/poster/bg-tile-m.webp") 1x);
@@ -1432,15 +1142,8 @@ body.ptn-locked { overflow: hidden; }
     background-image: image-set(url("../assets/poster/petals-tile-m.webp") type("image/webp"));
   }
 
-  /* Тень иконки предмета: на телефоне ячейка ~39 px, тень 2/4 px почти не
-     читается, а поверхностей — по одной на каждый из 113 предметов. Именно
-     телефон упирается в лимит памяти вкладки, поэтому здесь тень снимаем;
-     на десктопе ячейка 62 px и тень остаётся. */
   .cell-icon img { filter: none; }
 
-  /* Прокрутка вниз — кнопки уезжают за правый край и не закрывают тирлист;
-     прокрутка вверх — возвращаются. Класс вешает JS (initFabAutoHide).
-     Правило только внутри медиазапроса, поэтому на десктопе не работает. */
   .like-fab, .donate-fab {
     transition: transform .22s ease, opacity .22s ease,
                 background .15s, border-color .15s, box-shadow .2s;
@@ -1451,32 +1154,22 @@ body.ptn-locked { overflow: hidden; }
     opacity: 0;
     pointer-events: none;
   }
-  /* С прилипшей полосой кнопки стоят у РАЗНЫХ краёв, и общий увод вправо
-     потащил бы левую через весь экран. Прячем их вниз, за полосу. */
+
   body.has-promo-dock.fabs-hidden .like-fab,
   body.has-promo-dock.fabs-hidden .donate-fab {
     transform: translateY(calc(100% + var(--ptn-dock-h, 90px)));
   }
 
-  /* --- тирлист во всю ширину экрана (крупнее) --- */
   .stage-wrap { padding: 10px 0 34px; }
   .stage { width: 100vw; border-radius: 0; padding: 0 0 3cqw; }
 
-  /* На десктопе по бокам от контента остаётся 7.7cqw фона, как в макете. На
-     телефоне сцена и так узкая — эти поля съедали бы ещё один предмет в ряду,
-     поэтому контент распускаем почти во всю ширину. */
   .tiers, .legend, .tl-footer, .credits { width: 95cqw; }
   .tiers { gap: 2.6cqw; }
-  /* Шапка — грид 1fr auto 1fr, средняя колонка меряется по заголовку. На 375 px
-     сумма 9 + 60 + 238 + 82 + 9 = 398 не влезала, и марки справа выезжали за
-     сцену на 14 px — страница получала горизонтальную прокрутку. Размеры
-     подрезаны так, чтобы строка сходилась с запасом и на 320 px тоже. */
+
   .tl-header { padding: 2cqw 2.4cqw 0 2.4cqw; }
   .bf-logo { width: 15cqw; margin-top: .8cqw; }
   .brand-logo { width: 20cqw; }
 
-  /* --- крупнее предметы и текст: меньше штук в ряд, но читаемо ---
-     (itemsPerRow меряет ячейку зондом, поэтому разбивка на ряды подстроится) */
   .cell { width: 14cqw; }
   .cell-icon { height: 10.5cqw; }
   .cell-strip { height: 4cqw; margin-top: .3cqw; }
@@ -1485,9 +1178,6 @@ body.ptn-locked { overflow: hidden; }
   .cell .trend { top: 7.6cqw; }
   .cell-add { width: 14cqw; height: 15cqw; font-size: 6cqw; }
 
-  /* Иконки-бейджи/точки/тренды крупнее. Общие правила остаются для модалки, а
-     ячейке нужны свои: селектор `.cell .tbadge` весомее одиночного `.tbadge`,
-     иначе десктопные 1.7cqw остались бы и здесь — а на телефоне это 6 px. */
   .tbadge { height: 3.3cqw; }
   .dot { width: 2.5cqw; height: 2.5cqw; }
   .trend { width: 2.5cqw; }
@@ -1496,22 +1186,14 @@ body.ptn-locked { overflow: hidden; }
   .cell .dot { width: 2.5cqw; height: 2.5cqw; }
   .cell .trend { width: 2.5cqw; }
 
-  /* плашки тиров */
   .tier-band { height: 8.4cqw; border-radius: 2.5cqw; }
   .band-logo { height: 5.6cqw; }
   .tier-label { font-size: 4cqw; }
   .tier-items { min-height: 14cqw; border-radius: 2cqw; }
 
-  /* шапка */
   .date { font-size: 4.2cqw; }
   .tl-title { font-size: 8.4cqw; }
 
-  /* Легенда держит ту же раскладку, что и на десктопе — по просьбе владельца.
-     Размеры не наследуются как есть: панель здесь 95cqw против 84.63cqw на
-     десктопе, поэтому все десктопные значения умножены на 95/84.63 = 1.1225 —
-     композиция совпадает один в один, только в масштабе экрана. Текст выходит
-     ~9 px на 375 px; на телефоне с DPR 2-3 он отрисовывается чётко, но это
-     заметно мельче остального интерфейса. */
   .legend { padding: 2.71cqw 2.82cqw 5.42cqw 2.71cqw; border-radius: 2.5cqw; }
   .legend-title { font-size: 3.96cqw; }
   .legend-grid { margin-top: 2.09cqw; }
@@ -1529,7 +1211,6 @@ body.ptn-locked { overflow: hidden; }
   .lc-trends .tr-swap { width: 3.85cqw; height: 4.48cqw; }
   .lc-trends .tr-new { width: 6.04cqw; height: 3.33cqw; }
 
-  /* Подвал: три колонки в ряд не влезают — две. */
   .tl-footer {
     grid-template-columns: repeat(2, auto);
     column-gap: 5cqw; row-gap: 2cqw;
@@ -1541,13 +1222,11 @@ body.ptn-locked { overflow: hidden; }
   .cr-name { font-size: 2.5cqw; }
   .ptn-text { font-size: 3.6cqw; }
   .ptn-chip { font-size: 2cqw; }
-  /* на телефоне сцена узкая, а экран высокий — баннер можно отпустить выше */
+
   .ptn-img { max-height: 45cqw; }
-  /* На телефоне стрелок нет вовсе: наведения там не существует, а баннеры
-     листаются свайпом — scroll-snap делает это сам, без единой кнопки. */
+
   .ptn-nav { display: none; }
 
-  /* подсказка и значок NEW крупнее под палец/экран */
   .cell-new { width: 6.6cqw; }
   .cell-wip { width: 3.5cqw; }
   .cell-tip { max-width: 40cqw; border-radius: 1.4cqw; padding: 1cqw 1.2cqw; }

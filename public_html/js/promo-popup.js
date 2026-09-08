@@ -1,36 +1,15 @@
-// Рекламное окно (слот "popup") для ленты и калькулятора.
-//
-// На тирлисте такое окно уже есть, но его код вплетён в app.js: он знает про
-// режим редактирования, экспорт PNG и три собственные модалки тирлиста.
-// Ничего из этого на ленте и калькуляторе нет, а копировать полторы сотни
-// строк в две страницы значит завести три независимых механизма показа
-// рекламы — ровно то, чего вся система промо избегает. Поэтому общий кусок
-// вынесен сюда, а app.js оставлен как есть.
-//
-// Что показать, решает не этот файл: PROMO.popupPick() в js/promo.js берёт
-// купленную кампанию, а если такой нет — собственное объявление о
-// телеграм-канале (PROMO.HOUSE_TG). Частота там же: «раз в сутки» — это
-// capHours: 24 в настройках кампании, а не таймер здесь.
-//
-// Счётчик показов лежит в localStorage под тем же ключом, что у тирлиста:
-// объявление одно на сайт, и человек, который закрыл его на тирлисте, не
-// должен увидеть его же через минуту в ленте.
-//
-// Имя файла с префиксом promo-, а не ad-: ##[class^="ad-"] и ad.js —
-// стандартные косметические правила EasyList (см. шапку js/promo.js).
+
 (function (root) {
   "use strict";
 
   var SEEN_KEY = "nx-ptn-seen-v1";
   var LANG_KEY = "nexus-lang-v1";
 
-  // Что глушим для скринридера, пока окно открыто. Список общий на две
-  // страницы: лишний селектор просто не находится.
   var BEHIND = [".mk-top", "main", ".mk-foot", "#promoDock"];
 
   var seenCache = null;
   var timer = null;
-  var opened = false;      // одно окно за загрузку страницы
+  var opened = false;
   var camp = null;
   var restoreFocus = null;
   var cfg = null;
@@ -41,13 +20,10 @@
     var i18n = root.I18N;
     if (!i18n || !key) { return fallback || ""; }
     var stored = null;
-    try { stored = localStorage.getItem(LANG_KEY); } catch (_) { /* приватный режим */ }
+    try { stored = localStorage.getItem(LANG_KEY); } catch (_) {}
     return i18n.t(key, i18n.pickLang(stored, navigator.language));
   }
 
-  // Приватный режим Safari бросает на localStorage. Тогда счётчик живёт
-  // только в памяти: окно покажется раз за сессию вместо раза в сутки — это
-  // хуже, чем задумано, но лучше, чем на каждой перезагрузке.
   function readSeen() {
     if (seenCache) { return seenCache; }
     try { seenCache = JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; }
@@ -65,10 +41,6 @@
     return false;
   }
 
-  // Заголовок и подпись кнопки. У платной кампании это строки от
-  // рекламодателя — их не переводят. У собственного объявления вместо строк
-  // приходят ключи словаря, и тогда узел помечается data-i18n: applyLang()
-  // страницы переведёт его при переключении языка, не трогая окно.
   function setCopy(el, key, text, fallbackKey) {
     if (key) {
       el.setAttribute("data-i18n", key);
@@ -96,8 +68,6 @@
     cta.hidden = !url;
     if (url) { cta.href = url; }
 
-    // Узел маркировки статический — прячем, когда токена нет, вместо того
-    // чтобы создавать и удалять.
     var erid = $("#promoPopErid");
     if (erid) {
       erid.textContent = camp.erid ? "erid: " + camp.erid : "";
@@ -105,8 +75,7 @@
     }
 
     pop.hidden = false;
-    // Блокировка прокрутки фона. На iOS одного overflow: hidden у body мало —
-    // тач-скролл протекает, поэтому у подложки ещё touch-action (CSS).
+
     document.body.classList.add("ptn-locked");
     restoreFocus = document.activeElement;
     BEHIND.forEach(function (sel) {
@@ -127,17 +96,13 @@
       if (el) { el.removeAttribute("aria-hidden"); }
     });
     document.removeEventListener("keydown", onKey, true);
-    // Картинку отцепляем: анимированный креатив иначе продолжает крутить
-    // кадры в скрытом окне.
+
     var img = $("#promoPopImg");
     if (img) { img.removeAttribute("src"); }
     if (restoreFocus && restoreFocus.focus) { try { restoreFocus.focus(); } catch (_) {} }
     restoreFocus = null;
   }
 
-  // Ловушка фокуса. На сайте её нет больше нигде, но именно это окно человек
-  // не просил открывать, поэтому уйти из него с клавиатуры обязано
-  // получаться.
   function onKey(e) {
     var pop = $("#promoPop");
     if (!pop || pop.hidden) { return; }
@@ -155,8 +120,7 @@
   function tryOpen(pick) {
     if (opened || blocked()) { return; }
     if (document.visibilityState !== "visible") { return; }
-    // Проверяем ещё раз: между планированием и срабатыванием таймера могла
-    // пройти полночь лимита или окно могли показать в соседней вкладке.
+
     if (!root.PROMO.shouldShowPopup(pick, readSeen(), Date.now())) { return; }
 
     var cre = root.PROMO.creativeFor(pick, "popup");
@@ -166,9 +130,6 @@
     var reduced = root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var src = (reduced && cre.anim && cre.poster) ? cre.poster : cre.src;
 
-    // Ждём декодирования: окно, открытое поверх серого прямоугольника,
-    // выглядит как поломка сайта, а не как реклама. Таймаут — на случай,
-    // если картинка не приедет вовсе.
     var img = $("#promoPopImg");
     var done = false;
     var go = function () { if (!done) { done = true; open(src); } };
@@ -181,8 +142,7 @@
   function schedule() {
     if (!root.PROMO || opened || blocked()) { return; }
     clearTimeout(timer);
-    // Отсчёт идёт только на видимой вкладке. Иначе лимит «раз в сутки»
-    // сгорит на человеке, который открыл сайт в фоне и ничего не увидел.
+
     if (document.visibilityState !== "visible") { return; }
     var now = Date.now();
     var pick = root.PROMO.popupPick(cfg.doc, readSeen(), now, Math.random());
@@ -190,10 +150,6 @@
     timer = setTimeout(function () { tryOpen(pick); }, pick.popup.delayMs);
   }
 
-  // opts.doc      — документ /api/promo.php как есть (может быть null:
-  //                 тогда покажется собственное объявление);
-  // opts.isAdmin  — админу рекламу не показываем вовсе;
-  // opts.busy     — функция «сейчас открыто что-то своё» (каталог, модалка).
   function mount(opts) {
     cfg = opts || {};
     var pop = $("#promoPop");

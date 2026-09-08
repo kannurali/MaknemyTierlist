@@ -1,17 +1,4 @@
-/* ===================================================================
-   Общая основа страниц: шрифты, палитра, сброс и хром, который делят
-   тирлист (index.html) и лента новостей (news.html) — тулбар, кнопки,
-   чипы, переключатель языка, сцена, модалка.
 
-   Подключается ПЕРВОЙ на обеих страницах.
-
-   Вынесено из styles.css сознательно: держать вторую копию тулбара и
-   кнопок в news.css значит однажды получить две разные кнопки. Всё, что
-   специфично для тирлиста, осталось в styles.css; всё, что специфично
-   для ленты, живёт в news.css с префиксами nw-/ne-.
-   =================================================================== */
-
-/* ===================== Fonts ===================== */
 @font-face {
   font-family: "Bootshaus";
   src: url("../assets/fonts/Bootshaus/Bootshaus-Regular.ttf") format("truetype");
@@ -25,12 +12,7 @@
   font-display: swap;
 }
 
-/* ===================== Theme tokens ===================== */
 :root {
-  /* Явно объявляем тёмную схему: движки на Chromium (в первую очередь
-     Яндекс.Браузер с «Тёмной темой для сайтов») трогают только страницы,
-     у которых своей тёмной темы нет. Без объявления браузер сам инвертирует
-     светлые монохромные картинки — белые логотипы тиров становились чёрными. */
   color-scheme: dark;
 
   --display: "Bootshaus", "Proto Sans", "Arial Narrow", Impact, sans-serif;
@@ -53,26 +35,19 @@
   --t-p: #f2b01e;
   --t-gp: #c0392b;
   --t-cr: #2e86ff;
-  /* Значки, появившиеся вместе с новой легендой. Цвет — доминанта градиента
-     из assets/design/legend/badge-*.svg, чтобы подчёркивание кнопки в модалке
-     совпадало со значком, который получит предмет. */
+
   --t-cs: #ee00ff;
   --t-cm: #fb0fdc;
   --t-ms: #00ffd9;
   --t-vh: #ff0004;
 }
 
-/* Второй сигнал для тех же движков: сайт отвечает на prefers-color-scheme,
-   значит «своя тёмная тема» у него есть и подкрашивать её не надо.
-   Правило не меняет вид — палитра и так тёмная при любой схеме. */
 @media (prefers-color-scheme: dark) {
   :root { color-scheme: dark; }
 }
 
 * { box-sizing: border-box; }
 
-/* Атрибут hidden должен реально прятать элемент, даже если класс задаёт
-   display:flex (иначе .tb-group перебивает hidden). */
 [hidden] { display: none !important; }
 
 html, body {
@@ -82,30 +57,20 @@ html, body {
   color: #eaf4ff;
   font-family: var(--ui);
   -webkit-font-smoothing: antialiased;
-  /* iPhone в ландшафте сам «подкручивает» размер шрифта под ширину экрана.
-     Вся вёрстка тирлиста считается в cqw, поэтому после поворота текст
-     вылезал из ячеек и ломал ряды. Отключаем автоподгонку. */
+
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-/* ===================== Защита контента =====================
-   Класс висит на <body> у всех, кроме вошедшего админа: гость не выделяет
-   текст и не утаскивает картинки ни на тирлисте, ни в ленте новостей. Админу
-   защита снимается целиком, иначе он не сможет ни править подписи, ни двигать
-   ячейки между тирами.
-
-   Правила живут в base.css, а не в styles.css, потому что их делят обе
-   страницы. Клавиатура и правая кнопка добиваются из JS — см. js/protect.js. */
 body.protected {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  /* iOS: долгое нажатие по картинке больше не открывает «Скопировать/Сохранить» */
+
   -webkit-touch-callout: none;
 }
-/* Поля ввода и редактируемые области остаются рабочими всегда. */
+
 body.protected input,
 body.protected textarea,
 body.protected [contenteditable="true"] {
@@ -114,27 +79,13 @@ body.protected [contenteditable="true"] {
   user-select: text;
   -webkit-touch-callout: default;
 }
-/* Картинку нельзя перетащить в соседнюю вкладку или на рабочий стол.
 
-   pointer-events отключены не ради кликов, а ради iOS: одного
-   -webkit-touch-callout выше не хватает — долгое нажатие по картинке всё
-   равно открывает «Поделиться / Сохранить в Фото / Скопировать субъект»
-   (проверено на iPhone в карточке предмета). Меню Safari строит по тому,
-   что вернул hit-test, поэтому картинка убирается из него целиком: нажатие
-   достаётся родителю, а он не картинка, и предлагать «Сохранить в Фото»
-   не с чего.
-
-   Кликам это не мешает. Ни одна картинка на сайте не слушает события сама —
-   все лежат внутри ячейки, кнопки или ссылки, и событие приходит им; у
-   делегирования (e.target.closest) целью становится тот же контейнер.
-   Админу защита снята целиком, так что перенос ячеек мышью цел. */
 body.protected img {
   -webkit-user-drag: none;
   -webkit-touch-callout: none;
   pointer-events: none;
 }
 
-/* ===================== Тулбар и элементы управления ===================== */
 .toolbar {
   position: sticky;
   top: 0;
@@ -143,7 +94,7 @@ body.protected img {
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
-  padding: 10px 16px; /* плавающей кнопки входа справа больше нет — админка на /admin */
+  padding: 10px 16px;
   background: linear-gradient(180deg, #0c1426, #0a0f1d);
   border-bottom: 1px solid rgba(120, 190, 255, 0.18);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
@@ -159,8 +110,6 @@ body.protected img {
 .tb-group { display: flex; gap: 8px; align-items: center; }
 .tb-label { font-size: 12px; font-weight: 600; color: #8fb0dc; }
 
-/* Навигация Тирлист / Новости — сегментированная пара на токенах чипов.
-   Обе страницы используют её, поэтому она здесь, а не в news.css. */
 .nav-seg { display: flex; gap: 0; }
 .nav-seg a { font-family: var(--ui); font-size: 12px; font-weight: 700; color: #7e94b8; text-decoration: none; background: rgba(20,34,62,.6); border: 1px solid rgba(120,190,255,.2); padding: 6px 14px; transition: background .15s, color .15s, border-color .15s; }
 .nav-seg a:first-child { border-radius: 999px 0 0 999px; border-right-width: 0; }
@@ -191,7 +140,6 @@ body.protected img {
 .btn.small { font-size: 12px; padding: 6px 10px; }
 .btn.ghost { background: transparent; }
 
-/* filter chips */
 .chip {
   font-family: var(--ui);
   font-size: 12px;
@@ -214,15 +162,6 @@ body.protected img {
 }
 .chip.all { border-style: dashed; }
 
-/* Переключатель языка — сегментированная пара RU|EN: один выбор из двух, и
-   вид должен это показывать. Дорожка — тёмная плашка макета, выбранная
-   половина — та же градиентная пилюля, что у кнопок шапки, «каталога» и
-   выбранного чипа фильтра.
-
-   Раньше половинки были двумя чипами со своими рамками: у активной справа
-   оставалось скругление, у соседней слева — прямой угол, и на стыке торчала
-   ступенька — пара читалась двумя разными кнопками, а не одним выбором.
-   Теперь рамка одна и общая (дорожка), а половинки внутри неё без границ. */
 .lang-switch {
   display: inline-flex;
   gap: 0;
@@ -239,9 +178,7 @@ body.protected img {
   background: none;
   text-align: center;
   color: #9fb6d8;
-  /* Тот же шрифт, что у остальных подписей редизайна. Кегль и поля под
-     шапку переопределяет .mk-top-lang .chip (topbar.css): переключатель
-     живёт в шапке и масштабируется вместе с логотипом и пилюлями. */
+
   font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
   font-size: 15px;
   font-weight: 400;
@@ -252,8 +189,7 @@ body.protected img {
 .lang-switch .chip.active {
   color: #fff;
   background: linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%);
-  /* Тень, а не кольцо: кольцо в 5px, как у чипа фильтра, вылезло бы за
-     дорожку — половинка ведь лежит внутри неё, а не сама по себе. */
+
   box-shadow: 0 3px 10px rgba(37, 44, 97, .45);
 }
 .lang-switch .chip:focus-visible {
@@ -262,7 +198,6 @@ body.protected img {
   z-index: 1;
 }
 
-/* toggle switch */
 .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .switch input { display: none; }
 .switch .track {
@@ -280,7 +215,6 @@ body.protected img {
 .switch input:checked + .track .thumb { left: 20px; background: #eaf6ff; }
 .switch-label { font-size: 13px; font-weight: 600; color: #cfe2ff; }
 
-/* ===================== Stage ===================== */
 .stage-wrap {
   display: flex;
   justify-content: center;
@@ -292,22 +226,7 @@ body.protected img {
   min-height: 540px;
   border-radius: 14px;
   overflow: hidden;
-  /* Фон уже с цветокором (bg-ck.png из макета), поэтому его НЕ домножаем на
-     #091640, как домножали старый: тот был неотгрейженный и без умножения
-     светил. Заодно это принципиально для памяти: каждый blend-mode заставляет
-     WebKit заводить offscreen-слой размером со сцену (на iPhone это ~17 МБ), а
-     при нехватке памяти Safari молча отключает смешивание — картинка «теряет
-     цвет», мерцает и вкладка вылетает.
-     WebP-варианты весят на порядок меньше JPEG-фолбэка (332 КБ → 95 КБ).
 
-     Картинка макета кончается на высоте width * 1959/1200, а сцена на боевых
-     данных вдвое выше — ниже оставался плоский #05091f. Поэтому здесь не сама
-     картинка, а «плитка» из tools/make-poster-tiles.py: картинка плюс её
-     вертикальное отражение. Верхняя строка плитки равна нижней, так что
-     repeat-y стыкуется без шва. Простой repeat-y исходника так не умеет: у
-     него тёмный низ (0,2,6) встречался бы со светлым верхом (6,11,23) — это и
-     была видимая тёмная полоса. Зеркало печём в файл, потому что в CSS нет
-     mirror-варианта background-repeat. */
   background-color: #05091f;
   background-image: url("../assets/poster/bg-tile-export.jpg");
   background-image: -webkit-image-set(url("../assets/poster/bg-tile.webp") 1x);
@@ -316,14 +235,11 @@ body.protected img {
   background-repeat: repeat-y;
   background-position: center top;
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(120, 190, 255, 0.15);
-  /* internal layout uses container query units for proportional scaling */
+
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  /* По горизонтали паддинга нет намеренно: cqw — это процент от content-box
-     контейнера, и с нулевым боковым паддингом 1cqw ровно равен 1% ширины
-     макета (1523 px). Все отступы из PSD пересчитаны в cqw и разложены по
-     самим блокам, а не по сцене. */
+
   padding: 0 0 2.4cqw;
 }
 .stage::before {
@@ -337,26 +253,11 @@ body.protected img {
   background-image: url("../assets/poster/petals-tile-export.png");
   background-image: -webkit-image-set(url("../assets/poster/petals-tile.webp") 1x);
   background-image: image-set(url("../assets/poster/petals-tile.webp") type("image/webp"));
-  /* Ровно те же размеры, привязка и повтор, что у фона сцены: лепестки обязаны
-     повторяться с ним синхронно, иначе отражённая половина фона осталась бы без
-     своих бликов. Раньше тут стоял cover: он растягивал картинку по высоте
-     страницы (на живых данных сцена ~4400 px), и яркие блики из углов макета
-     уезжали в середину — над легендой висело синее пятно. */
+
   background-size: 100% auto;
   background-repeat: repeat-y;
   background-position: center top;
-  /* mix-blend-mode: screen убран намеренно. Лепестки уже с альфа-каналом и
-     почти белые, а подложка тёмно-синяя, поэтому screen и обычное наложение
-     дают разницу максимум 4.9/255 (проверено попиксельно) — глазом не видно.
-     Зато исчезает второй offscreen-слой WebKit: именно он на iPhone съедал
-     память, ронял вкладку и «сбрасывал» цвета при нехватке ресурсов.
 
-     opacity: .7 убран по той же причине и запечён в альфа-канал самих файлов
-     (petals-tile.webp / petals-tile-m.webp / petals-tile-export.png). Любая
-     opacity < 1 заставляет WebKit рисовать элемент в отдельный
-     transparency-слой РАЗМЕРОМ СО СЦЕНУ — это 30 МБ на iPhone и 43 МБ на
-     десктопе поверх всего остального. Картинка на экране та же, слоя больше
-     нет. */
   pointer-events: none;
   z-index: 1;
 }
@@ -370,7 +271,6 @@ body.protected img {
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.7));
 }
 
-/* ===================== Модальное окно ===================== */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(4, 8, 16, 0.7);

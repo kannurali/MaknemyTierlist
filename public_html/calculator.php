@@ -17,12 +17,6 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="dark" />
 
-<!-- Пути внутри страницы документ-относительные ("css/base.css", "js/…").
-     Сама она отдаётся с "/calculator" (глубина 0 от корня — как /tierlist и
-     /news), поэтому база документа и так корень. <base> здесь по тому же
-     принципу, что и в news.php/home.php: если адрес когда-нибудь уедет на
-     глубину (например, появится /calculator/<id> для сохранённых пресетов),
-     пути не поедут в несуществующие /calculator/css/…, /calculator/js/… . -->
 <base href="/" />
 
 <title>Калькулятор трейдов Blox Fruits — Maknemy | Макнеми калькулятор</title>
@@ -36,15 +30,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta property="og:url" content="https://maknemy.com/calculator" />
 <meta property="og:title" content="Калькулятор трейдов Blox Fruits" />
 <meta property="og:description" content="Соберите обе стороны сделки по ценам тирлиста Maknemy и узнайте, выгодна ли она." />
-<!-- Превью — карточка вердикта калькулятора: то, ради чего на страницу и
-     заходят. Снята с живой страницы (tools/make-og-calculator.mjs), а не
-     нарисована заново, иначе разъехалась бы с сайтом на первой же правке
-     calculator.css.
 
-     Прежде тут стоял assets/og-image.jpg — баннер «ВАША РЕКЛАМА». В чужом
-     чате по ссылке на калькулятор показывалось объявление вместо
-     калькулятора; на остальных страницах эту картинку из превью уже убрали
-     (см. og_brand_card() в api/lib/og.php), калькулятор оставался последним. -->
 <meta property="og:image" content="https://maknemy.com/assets/og-calculator.jpg?v=1" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -52,26 +38,6 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta property="og:image:alt" content="Калькулятор трейдов Blox Fruits" />
 <meta name="twitter:card" content="summary_large_image" />
 
-<!-- Разметка для поисковиков. На главной и тирлисте здесь стоит WebSite —
-     он описывает сайт целиком и объявляет кириллические написания бренда
-     ("Макнеми тирлист"), по которым его и ищут. У калькулятора своя пара
-     задач, поэтому и типов два:
-
-     WebApplication — заявка на то, что /calculator это отдельный инструмент,
-     а не подстраница тирлиста. Без него по запросу «макнеми калькулятор»
-     поисковик показывает главную: раздел ничем не объявляет, что он и есть
-     калькулятор. alternateName перечисляет ровно то, как запрос набирают
-     руками — латиницей и кириллицей.
-
-     BreadcrumbList — хлебные крошки, которые Google рисует строкой над
-     заголовком в выдаче (Главная › Калькулятор трейдов) вместо голого URL.
-     Крошки в самой вёрстке страницы нет: разметка описывает положение
-     раздела в структуре сайта, а рисовать её на странице редизайн не
-     просит.
-
-     offers с ценой 0 — не украшение: у SoftwareApplication и наследников
-     Google требует либо offers, либо aggregateRating, иначе валидатор
-     ругается на неполный объект. Калькулятор бесплатный, так и написано. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -127,49 +93,35 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=9" />
-<!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
-     набрана вся страница. -->
-<link rel="stylesheet" href="css/topbar.css?v=10" />
-<!-- Поведение шапки: компактный режим при прокрутке и плашка
-     «В активной разработке» на разделах, которых ещё нет.
-     defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=4" defer></script>
-<!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=31" />
-<link rel="stylesheet" href="css/calculator.css?v=21" />
-<!-- Нижняя рекламная полоса на телефоне: слот "dock", тот же документ
-     /api/promo.php, что у бортов по бокам доски. -->
-<link rel="stylesheet" href="css/promo-dock.css?v=1" />
-<!-- Рекламное окно: слот "popup", раз в сутки. Пока место не выкуплено,
-     показывает собственное объявление о телеграм-канале. -->
-<link rel="stylesheet" href="css/promo-popup.css?v=1" />
-<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
-     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<link rel="stylesheet" href="css/base.css?v=10" />
+
+<link rel="stylesheet" href="css/topbar.css?v=11" />
+
+<script src="js/topbar.js?v=5" defer></script>
+
+<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/calculator.css?v=22" />
+
+<link rel="stylesheet" href="css/promo-dock.css?v=2" />
+
+<link rel="stylesheet" href="css/promo-popup.css?v=2" />
+
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
 
-  <!-- ================= Шапка ================= -->
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <!-- Язык интерфейса. Стоит в самой шапке, а не под макетным фреймом:
-         шапка общая для всех страниц, значит и переключатель обязан быть в
-         одном месте везде. При прокрутке уезжает влево вместе с логотипом
-         (.mk-top.is-stuck .mk-top-lang в topbar.css). -->
     <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
          data-i18n-label="lang.switch" aria-label="Язык интерфейса">
       <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
       <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
     </div>
 
-    <!-- Разделы и профиль лежат в одной плашке: аватар — последний элемент
-         .mk-top-bar, за волосяным разделителем (см. topbar.css). Отдельной
-         кнопкой рядом с меню он читался как чужой элемент. -->
     <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
       <ul class="mk-nav">
         <li>
@@ -185,31 +137,14 @@ header('Cache-Control: no-cache, must-revalidate');
           </a>
         </li>
         <li>
-          <!-- «Трейдинг» с сайта пока снят, профиля тоже нет. Это
-               <button data-soon>, а не мёртвый <span> и не href="#": кнопка
-               кликается и по клику показывает «В активной разработке»
-               (js/topbar.js). Пилюля, которая молчит в ответ на клик,
-               читается как поломка сайта, а якорь-пустышка только дописывает
-               "#" в адресную строку. Вернуть раздел — заменить тег на <a>
-               с href и убрать data-soon (так уже сделано с «Калькулятором»
-               ниже — у него теперь есть страница).
 
-               aria-disabled намеренно нет: кнопка отвечает на нажатие, а
-               «disabled» в ARIA значит «не работает вовсе» — скринридер
-               объявил бы её недоступной, и до объяснения было бы не
-               добраться. Приглушённый вид даёт селектор [data-soon]. -->
           <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </button>
         </li>
         <li>
-          <!-- «Калькулятор» получил страницу — /calculator (см. эту же
-               страницу) — и вышел из «В активной разработке»: рабочая
-               ссылка, как «Главная»/«Тирлист»/«Новости» выше. На самой
-               странице калькулятора пилюля дополнительно несёт
-               aria-current="page" — тем же приёмом, что «Тирлист» на
-               index.php и «Новости» на news.php отмечают текущий раздел. -->
+
           <a class="mk-pill" href="/calculator" aria-current="page">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
@@ -223,16 +158,6 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
       </ul>
 
-      <!-- Чат. Появился в макете шапки (Figma, нода 244:7171): такой же
-           круг с градиентом, что и профиль, слева от него. Раздела ещё нет,
-           поэтому кнопка помечена data-soon и по клику отвечает «В активной
-           разработке» — как «Трейдинг» и профиль. Вернуть раздел = убрать
-           data-soon и заменить тег на <a href>.
-
-           Волосяной разделитель между разделами и парой круглых кнопок
-           теперь рисует она (.mk-chat::before в topbar.css): в макете чат
-           стоит первым из пары, и разделитель у профиля оказался бы
-           посреди неё. -->
       <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </button>
@@ -242,15 +167,6 @@ header('Cache-Control: no-cache, must-revalidate');
       </button>
     </nav>
 
-    <!-- Язычок. Как только страница уходит из самого верха, шапка гасит фон
-         и убирает плашку разделов за правый край — экран освобождается
-         целиком. Язычок остаётся единственным способом вернуть меню, и
-         поэтому он не декор: без него навигации на прокрученной странице
-         не было бы вовсе.
-
-         aria-expanded говорит о состоянии плашки, aria-controls связывает
-         кнопку с ней по id — скринридер объявит «свёрнуто/развёрнуто», а не
-         просто «кнопка». Подпись меняет js/topbar.js вместе с состоянием. -->
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
             aria-expanded="true" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
@@ -259,18 +175,9 @@ header('Cache-Control: no-cache, must-revalidate');
     </button>
   </header>
 
-  <!-- Раскладка страницы — макет Figma «калькулятор» (node 127:303): фрейм
-       «лид» 1443×1038 сразу под шапкой, внутри всё стоит по макетным
-       координатам (см. css/calculator.css). Порядок элементов в разметке —
-       смысловой (доска, затем вердикт), позиции задаёт CSS. -->
   <main class="tc-page">
     <div class="tc-frame">
 
-      <!-- Рекламные борта 248×670 по краям — реальные размещения слота "rail"
-           (renderPromo() в js/calculator-page.js): тот же документ
-           /api/promo.php и тот же модуль js/promo.js, что у тирлиста и ленты.
-           Пока слот не куплен, борт остаётся тем, чем он и является в
-           макете, — полосатой заглушкой. -->
       <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
         <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
@@ -278,12 +185,6 @@ header('Cache-Control: no-cache, must-revalidate');
         <aside class="tc-rail" id="tcRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
 
-      <!-- Столбики состояния по бокам доски (в макете — «Frame 42/41»).
-           Левый показывает состояние стороны «ВЫ», правый — «ВАМ». Порог
-           честности тот же, что у вердикта (CALC.THRESHOLD_PCT), иначе
-           столбики спорили бы с надписью в карточке. aria-hidden: это
-           дублирование вердикта цветом, а сам вердикт уже объявляется
-           через role="status". -->
       <div class="tc-gauge tc-gauge-l" id="tcGaugeL" data-state="none" aria-hidden="true">
         <span></span><span></span><span></span>
       </div>
@@ -291,7 +192,6 @@ header('Cache-Control: no-cache, must-revalidate');
         <span></span><span></span><span></span>
       </div>
 
-      <!-- ================= Доска сравнения ================= -->
       <div class="tc-board">
 
         <div class="tc-hero">
@@ -299,14 +199,6 @@ header('Cache-Control: no-cache, must-revalidate');
           <p class="tc-subtitle" data-i18n="calc.subtitle">Сравните цены фруктов в реальном времени!</p>
         </div>
 
-        <!-- Стрелки-указатели и «vs» между ними. Обёртка не занимает места
-             на макетной сетке — она нужна телефону, где «vs» встаёт
-             отдельной строкой над сторонами.
-
-             Сами пилюли «я» и «вы» лежат не здесь, а внутри своих секций
-             (.tc-side ниже): подпись стороны обязана ехать вместе со
-             стороной. На десктопе это ничего не меняет — координаты те же
-             макетные, только отсчитанные от угла секции. -->
         <div class="tc-marks" aria-hidden="true">
           <span class="tc-arrow tc-arrow-l">
             <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -327,10 +219,7 @@ header('Cache-Control: no-cache, must-revalidate');
         </div>
 
         <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
-          <!-- Полный смысл стороны остаётся доступным именем секции для
-               скринридера; на глаз — короткая пилюля «Я» ниже. Она
-               aria-hidden: сторона уже подписана этим заголовком, и вторая
-               подпись читалась бы дважды. -->
+
           <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
           <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">Я</span>
 
@@ -398,8 +287,6 @@ header('Cache-Control: no-cache, must-revalidate');
           </div>
         </section>
 
-        <!-- Итоговая строка под сторонами: полоса во всю доску, знак
-             равенства и разница в пойнтах. -->
         <div class="tc-total">
           <span class="tc-total-line" aria-hidden="true"></span>
           <span class="tc-total-eq" aria-hidden="true"></span>
@@ -407,16 +294,9 @@ header('Cache-Control: no-cache, must-revalidate');
         </div>
       </div>
 
-      <!-- role="status" + aria-live: разница и вердикт обязаны озвучиваться
-           скринридером при каждом изменении состава сторон. Одна общая
-           область, а не отдельная на каждый кусок — иначе смена сделки
-           звучала бы двумя-тремя рассинхронизированными репликами. -->
       <section class="tc-result" id="tcResult" role="status" aria-live="polite">
         <span class="tc-result-badge" id="tcVerdictBadge" data-verdict="none" aria-hidden="true">
-          <!-- viewBox равен значку макета (Frame 51, 134×134), поэтому
-               координаты ниже — те же числа, что в Figma, без пересчёта.
-               Все четыре лица лежат в разметке, показывает одно CSS по
-               data-verdict: строить их в JS значило бы собирать SVG строкой. -->
+
           <svg viewBox="0 0 134 134" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="67" cy="67" r="39.5" stroke="#fff" stroke-width="5"/>
             <g class="tc-face tc-face-none">
@@ -451,19 +331,10 @@ header('Cache-Control: no-cache, must-revalidate');
       </section>
     </div>
 
-    <!-- ============ Служебная полоса ============
-         Кнопок и оговорок в макете нет: доска там всегда пустая, делиться
-         нечем и объяснять нечего. На сайте всё это нужно, поэтому вынесено
-         под макетный фрейм — композиция макета остаётся нетронутой.
-         Переключатель языка отсюда уехал в общую шапку сайта. -->
     <div class="tc-extras">
 
       <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
 
-      <!-- Подсказка про спрос лежит рядом с вердиктом по смыслу, но не внутри
-           карточки: в макете у карточки фиксированная высота 199, и абзац
-           переменной длины ломал бы её. Своя aria-live — чтобы предупреждение
-           всё равно прозвучало, как когда оно жило внутри #tcResult. -->
       <p class="tc-demand-note" id="tcDemandNote" role="status" aria-live="polite" hidden></p>
 
       <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
@@ -476,15 +347,8 @@ header('Cache-Control: no-cache, must-revalidate');
       <p class="tc-sr-only" id="tcShareStatus" role="status" aria-live="polite"></p>
     </div>
 
-    <!-- ============ Каталог предметов — отдельная панель поверх страницы ============ -->
   </main>
 
-  <!-- Оверлей каталога лежит прямым потомком <body>, а НЕ внутри .tc-page.
-       У .tc-page есть position:relative и z-index:2 — это контекст наложения,
-       и внутри него z-index:80 у оверлея ничего не значил: весь блок целиком
-       оставался на уровне 2, ниже шапки с её 60. Поле поиска уходило под
-       шапку и было не видно, что набираешь. Подкручивать числа тут
-       бесполезно — надо стоять вне запирающего контейнера. -->
     <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
       <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
         <div class="tc-cat-head">
@@ -494,9 +358,7 @@ header('Cache-Control: no-cache, must-revalidate');
                    data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
                    autocomplete="off" spellcheck="false" />
           </div>
-          <!-- Лупа в макете стоит отдельным кружком справа от поля. Это
-               подпись к полю, а не кнопка: список фильтруется по вводу, и
-               нажимать тут нечего. -->
+
           <span class="tc-cat-search-btn" aria-hidden="true">
             <svg class="tc-cat-search-icon" viewBox="0 0 20 20" fill="none">
               <circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
@@ -514,7 +376,6 @@ header('Cache-Control: no-cache, must-revalidate');
       </div>
     </div>
 
-  <!-- Подвал сайта — тот же, что на главной, тирлисте и в ленте. -->
   <footer class="mk-foot">
     <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
     <ul class="mk-foot-roles">
@@ -525,43 +386,16 @@ header('Cache-Control: no-cache, must-revalidate');
       <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
     </ul>
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
-    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
-         Roblox и должны быть найдены с любой страницы, поэтому они в общем
-         подвале, а не только в карточке приложения. -->
+
     <p class="mk-foot-legal">
       <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
 
-
-  <!-- ====== Нижняя рекламная полоса (только телефоны) ======
-       Горизонтальная пара к боковым бортам: на телефоне борта скрыты
-       вместе с остальным декором, и место «сбоку от контента» там — низ
-       экрана. Слот "dock" в /api/promo.php, тот же документ, что у бортов.
-
-       Прямой потомок <body> намеренно: полоса прибита position: fixed, а
-       любой предок с transform или container-type перехватил бы это на
-       себя, и она прилипла бы к колонке, а не к экрану.
-
-       hidden снимает js/promo-dock.js, когда приехал реальный креатив:
-       пустая тёмная полоса поверх нижней трети телефона читается как
-       поломка вёрстки, а не как свободное место. -->
   <div class="ptn-dock" id="promoDock" hidden
        data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
 
-  <!-- ====== Рекламное окно ======
-       Всплывает через ~12 секунд после захода и не чаще раза в сутки
-       (частоту задаёт сама кампания, см. capHours в js/promo.js). Пока
-       слот "popup" не выкуплен, здесь показывается собственное
-       объявление о телеграм-канале проекта — PROMO.HOUSE_TG.
-
-       Разметка лежит в странице, а не собирается в JS: applyLang()
-       проходит по [data-i18n*] при каждой смене языка, и статическая
-       разметка получает перевод бесплатно.
-
-       Прямой потомок <body>: окно прибито position: fixed, и предок с
-       transform или container-type перехватил бы это на себя. -->
   <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
        data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
        aria-labelledby="promoPopTitle">
@@ -570,27 +404,23 @@ header('Cache-Control: no-cache, must-revalidate');
               data-i18n-label="promo.close" data-i18n-title="promo.close"
               aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
       <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
-      <!-- alt пустой намеренно: доступное имя несёт само окно
-           (data-i18n-label выше), и подпись на картинке дублировала бы
-           его вторым «Реклама» подряд. -->
+
       <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" /></div>
-      <!-- Текст и подпись кнопки платной кампании приходят от
-           рекламодателя и не переводятся; у своего объявления вместо них
-           ключи словаря — js/promo-popup.js вешает на узел data-i18n. -->
+
       <div class="ptn-pop-title" id="promoPopTitle"></div>
       <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
-      <!-- Токен маркировки. Заполняет js/promo-popup.js; без него узел скрыт. -->
+
       <span class="ptn-erid" id="promoPopErid" hidden></span>
     </div>
   </div>
 
-  <script src="js/i18n.js?v=35"></script>
-  <script src="js/promo.js?v=6"></script>
-  <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
-  <script src="js/promo-dock.js?v=3"></script>
-  <!-- Рекламное окно — общий модуль с лентой новостей. -->
-  <script src="js/promo-popup.js?v=1"></script>
-  <script src="js/calc.js?v=7"></script>
-  <script src="js/calculator-page.js?v=16"></script>
+  <script src="js/i18n.js?v=36"></script>
+  <script src="js/promo.js?v=7"></script>
+
+  <script src="js/promo-dock.js?v=4"></script>
+
+  <script src="js/promo-popup.js?v=2"></script>
+  <script src="js/calc.js?v=8"></script>
+  <script src="js/calculator-page.js?v=17"></script>
 </body>
 </html>

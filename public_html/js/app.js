@@ -1,19 +1,11 @@
-/* ============================================================
-   Nexus Tier List — интерактивный редактор
-   Чистый JS, состояние в localStorage.
-   ============================================================ */
+
 (() => {
   "use strict";
 
   const STORAGE_KEY = "nexus-tierlist-v1";
-  const DIRTY_KEY = "nexus-tierlist-dirty-v1"; // помним факт НЕопубликованных правок между перезагрузками
+  const DIRTY_KEY = "nexus-tierlist-dirty-v1";
   const DEFAULT_ICON = "assets/icon-sample.png";
-  // Марки полос тиров и перевод старых сохранений — js/tiers.js. Модуль берётся
-  // защищённо, как i18n.js и content.js ниже: строки стоят первыми в IIFE, и без
-  // проверки не догрузившийся tiers.js уронил бы ReferenceError'ом весь редактор,
-  // а не одну картинку. Без модуля тир остаётся с той маркой, что лежит в
-  // сохранении (logo-flame.png с сервера никуда не делся), а новый тир — с
-  // текстовым ярлыком вместо картинки.
+
   const tierMarks = (typeof TIERS !== "undefined") ? TIERS : null;
   if (!tierMarks) console.warn("tiers.js не загружен — марки полос тиров останутся как есть");
   const TIER_LOGOS = tierMarks ? tierMarks.TIER_LOGOS : {};
@@ -21,18 +13,10 @@
 
   const uid = () => "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-  // ============================================================
-  //  ССЫЛКИ НА ДОНАТ — значения ПО УМОЛЧАНИЮ
-  //  Кнопка «Поддержать» открывает окно с этими ссылками и QR-кодом.
-  //  Менять их код больше не нужно: админ правит прямо на сайте
-  //  (режим «Редактирование» → кнопка «Поддержать» → 🔗 / 🖼 QR).
-  //  Значения хранятся в state.donate и публикуются вместе с тирлистом.
-  // ============================================================
-  const DONATE_DA  = "https://www.donationalerts.com/r/maknemy"; // прямой донат
-  const DONATE_HUB = "https://dalink.to/maknemy";                // хаб со всеми способами
-  const DONATE_QR  = "assets/qr-donate.png?v=1";                 // QR ведёт на DONATE_HUB
+  const DONATE_DA  = "https://www.donationalerts.com/r/maknemy";
+  const DONATE_HUB = "https://dalink.to/maknemy";
+  const DONATE_QR  = "assets/qr-donate.png?v=1";
 
-  // ---------- Default template ----------
   function defaultState() {
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
@@ -93,17 +77,6 @@
     };
   }
 
-  // Каркас на время загрузки. Те же плашки тиров с логотипами и та же шапка,
-  // но БЕЗ выдуманных предметов, без «ВАША РЕКЛАМА» и без даты.
-  //
-  // Раньше зритель на месте данных видел defaultState() целиком — фальшивый
-  // тирлист из предметов «Item» по выдуманным ценам и два рекламных
-  // плейсхолдера. Причём каждый заход, а не только первый: applyServer()
-  // localStorage не пишет, и в него попадают лишь правки админа.
-  //
-  // Сам defaultState() никуда не делся — он остаётся шаблоном для админа
-  // («сбросить к шаблону» и первичное наполнение пустой базы), просто зритель
-  // его больше не видит.
   function bootState() {
     const d = defaultState();
     d.date = "";
@@ -112,20 +85,17 @@
     return d;
   }
 
-  // ---------- State ----------
   let state = load() || bootState();
   let isAdmin = false;
-  let dirty = false;   // есть несохранённые правки админа
-  let saving = false;  // идёт публикация на сервер
-  // Восстановление после перезагрузки: не затирать локальные правки данными из базы
+  let dirty = false;
+  let saving = false;
+
   let bootedFromLocal = localStorage.getItem(STORAGE_KEY) != null;
-  // Были ли при прошлой сессии РЕАЛЬНЫЕ неопубликованные правки (нажимали Save?).
-  // Только в этом случае при старте защищаем локальные данные от базы — иначе
-  // админ молча застревал «грязным» и переставал получать чужие обновления.
+
   let bootedDirty = (() => { try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch (e) { return false; } })();
-  let deferredServer = null;       // снимок из базы, отложенный до выяснения роли входа
-  let pendingServer = null;        // свежая база, пришедшая пока есть свои неопубликованные правки
-  let roleResolved = false;        // роль выяснена (checkSession/вход/выход отработали)
+  let deferredServer = null;
+  let pendingServer = null;
+  let roleResolved = false;
   let firstSnapshotHandled = false;
 
   function load() {
@@ -134,24 +104,23 @@
       if (!raw) return null;
       const data = JSON.parse(raw);
       if (!data || !data.tiers) return null;
-      // merge with defaults so old saves get the new fields
+
       const d = defaultState();
       const merged = Object.assign({}, d, data);
       merged.ad = Object.assign({}, d.ad, data.ad || {});
       merged.donate = Object.assign({}, d.donate, data.donate || {});
       merged.filters = normalizeFilters(data.filters, d.filters);
-      merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
+      merged.filters.perms = false;
       if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
       if (!Array.isArray(merged.footer) || !merged.footer.length) merged.footer = d.footer;
       if (typeof merged.autoSort !== "boolean") merged.autoSort = true;
-      // old saves: give default tiers their logos back, retire replaced marks
+
       normalizeTierLogos(merged.tiers, false);
       return merged;
     } catch (e) { return null; }
   }
   let saveTimer = null;
-  // Локальное сохранение (резервная копия). В общую базу изменения НЕ уходят
-  // автоматически — только по кнопке «💾 Сохранить» (publish()).
+
   function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -159,17 +128,13 @@
     }, 400);
     if (isAdmin) { dirty = true; try { localStorage.setItem(DIRTY_KEY, "1"); } catch (e) {} renderSaveBtn(); }
   }
-  // Снять отметку «есть неопубликованные правки» после успешной публикации
+
   function clearDirty() {
     dirty = false;
     try { localStorage.removeItem(DIRTY_KEY); } catch (e) {}
     renderSaveBtn();
   }
 
-  // ---------- Сжатие картинок ----------
-  // Картинки уходят на сервер отдельными файлами (upload.php), но сначала их
-  // уменьшаем и пережимаем в WebP (обычно единицы КБ): так и загрузка быстрее,
-  // и на диске хостинга не копятся мегабайтные исходники.
   function shrinkDataURL(src, maxSize, quality) {
     return new Promise(resolve => {
       const img = new Image();
@@ -184,18 +149,18 @@
         c.getContext("2d").drawImage(img, 0, 0, w, h);
         let out = "";
         try { out = c.toDataURL("image/webp", quality); } catch (e) {}
-        // WebP не поддержан (старый Safari) → toDataURL вернёт PNG
+
         if (out.indexOf("data:image/webp") !== 0) {
           try { out = c.toDataURL("image/png"); } catch (e) { out = ""; }
         }
-        // если меньше не стало (картинка и так крошечная) — оставляем исходник
+
         resolve(out && out.length < src.length ? out : src);
       };
       img.onerror = () => resolve(src);
       img.src = src;
     });
   }
-  // File → сжатый data URL
+
   function fileToSmallDataURL(file, maxSize, quality) {
     return new Promise(resolve => {
       const reader = new FileReader();
@@ -204,10 +169,7 @@
       reader.readAsDataURL(file);
     });
   }
-  // Сервер принимает картинку не больше 500 КБ (api/lib/images.php), а отказ
-  // ломает сохранение целиком: неудавшаяся выгрузка оставляет data-URL прямо в
-  // состоянии, и сохранение падает на извлечении картинок. Поэтому для крупных
-  // баннеров перебираем пресеты, пока не влезем в бюджет.
+
   function dataUrlBytes(du) {
     const comma = du.indexOf(",");
     if (comma < 0) return du.length;
@@ -222,8 +184,7 @@
     }
     return out;
   }
-  // fetch с ограничением по времени. Без него зависший сервер оставляет кнопку
-  // «Сохранить» в состоянии «⏳ Сохранение…» навсегда, без выхода.
+
   const REQUEST_TIMEOUT_MS = 30000;
   async function fetchWithTimeout(url, opts, ms) {
     const ctrl = new AbortController();
@@ -235,9 +196,6 @@
     }
   }
 
-  // Загрузить (сжатый) data-URL на сервер, вернуть URL сохранённого файла.
-  // При ошибке возвращаем исходный data-URL — правка не ломается оффлайн
-  // (сервер при сохранении всё равно извлечёт встроенные картинки).
   async function uploadDataUrl(dataUrl) {
     if (typeof dataUrl !== "string" || dataUrl.indexOf("data:") !== 0) return dataUrl;
     try {
@@ -248,12 +206,10 @@
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok && d.url) return d.url;
-    } catch (e) { /* оффлайн */ }
+    } catch (e) {}
     return dataUrl;
   }
 
-  // Перед публикацией выгрузить все ещё встроенные (data:) картинки в файлы,
-  // чтобы сохранённый JSON нёс только URL. Сервер извлекает как бэкстоп.
   async function compactState() {
     for (const t of state.tiers) {
       if (typeof t.logo === "string" && t.logo.indexOf("data:") === 0) {
@@ -273,12 +229,11 @@
     }
   }
 
-  // Публикация текущего состояния на сервер (PHP) — по кнопке «Сохранить».
   async function publish() {
     if (!isAdmin || !dirty || saving) return;
     saving = true; renderSaveBtn();
     try {
-      await compactState(); // выгружает встроенные картинки в файлы (бэкстоп: сервер тоже извлечёт)
+      await compactState();
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       render();
       const r = await fetchWithTimeout(API_SAVE, {
@@ -288,7 +243,7 @@
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.ok) { throw new Error(d.error || ("save failed: " + r.status)); }
-      // rev генерит сервер; берём его из ответа.
+
       state._rev = d.rev; lastRev = d.rev;
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       saving = false; clearDirty(); flashSaved();
@@ -300,7 +255,6 @@
     }
   }
 
-  // Внешний вид кнопки «Сохранить» по текущему состоянию
   function renderSaveBtn() {
     if (!btnSave) return;
     btnSave.classList.remove("clean", "dirty", "saving");
@@ -314,7 +268,6 @@
     flashSaved._t = setTimeout(() => (savedHint.textContent = ""), 1200);
   }
 
-  // ---------- DOM refs ----------
   const $ = (s, r = document) => r.querySelector(s);
   const stage = $("#stage");
   const tiersEl = $("#tiers");
@@ -325,25 +278,8 @@
   const creditsEl = $("#credits");
   const footerEl = $("#tlFooter");
 
-  // ============================================================
-  //  ЯЗЫК ИНТЕРФЕЙСА (RU / EN)
-  // ------------------------------------------------------------
-  //  Переводится ТОЛЬКО интерфейс. Названия тиров и предметов, реклама, титры
-  //  и ссылки в подвале приходят из БД и показываются как есть.
-  //  Легенда лежит внутри #stage, поэтому выбранный язык попадает и в PNG.
-  //  Строки живут в js/i18n.js, узлы помечены data-i18n* в разметке.
-  // ============================================================
   const LANG_KEY = "nexus-lang-v1";
 
-  // Словарь подключается отдельным <script>. Если он почему-то не доехал
-  // (частичная выкладка, блокировщик, битый кеш), обращение к I18N уронило бы
-  // весь этот IIFE — то есть весь сайт, у всех.
-  //
-  // Без словаря: разметку не трогаем, поэтому посетитель видит русский текст из
-  // index.html и сайт работает. Подписи, которые ставит JS, покажут сам ключ
-  // («admin.saved» вместо «✓ Сохранено») — это заметно и чинится выкладкой
-  // файла. Прятать такую поломку хуже, чем показать: молчаливый фолбэк на
-  // вторую копию строк разошёлся бы со словарём при первой же правке.
   const i18n = (typeof I18N !== "undefined") ? I18N : null;
   if (!i18n) console.warn("i18n.js не загружен — интерфейс останется на русском");
 
@@ -353,28 +289,20 @@
         navigator.language)
     : "ru";
 
-  // Не `t`: это имя в файле уже занято под тир/таймер в девяти местах, и внутри
-  // таких блоков вызов t("ключ") молча ушёл бы не туда.
   const tx = (key, vars) => (i18n ? i18n.t(key, lang, vars) : key);
 
-  // Описание предмета — контент, а не интерфейс: язык выбирается из самого
-  // предмета (desc — русский, descEn — английский) с откатом на второй язык.
-  // Читает текущий lang в момент вызова, поэтому описания обновляются при
-  // переключении языка (initLangSwitch дёргает render).
   const content = (typeof CONTENT !== "undefined") ? CONTENT : null;
-  // base — имя русского поля предмета; английское лежит под base + "En".
-  // Фолбэк на месте и без content.js: файл подключается отдельным <script>,
-  // и без него карточка должна показать хотя бы русский текст.
+
   const textFor = (it, base) => content
     ? content.textFor(it, base, lang)
     : String((it && it[base]) || "").trim();
   const descFor = it => textFor(it, "desc");
 
   function applyLang(next) {
-    if (!i18n) return;      // оставляем разметку как есть
+    if (!i18n) return;
     if (next) {
       lang = next;
-      try { localStorage.setItem(LANG_KEY, lang); } catch (_) { /* приватный режим */ }
+      try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
     }
     document.documentElement.lang = lang;
 
@@ -402,19 +330,14 @@
       const btn = e.target.closest("[data-lang]");
       if (!btn) return;
       const next = btn.dataset.lang;
-      // Обе кнопки видны на любой ширине — и на телефоне тоже (правило,
-      // которое схлопывало пару в одну кнопку, из design-page.css убрано по
-      // правке заказчика). Нажатие по уже выбранному языку ничего не
-      // меняет, и это правильное поведение сегментированной пары.
+
       if (next === lang) return;
-      // Перерисовываем: подписи, которые ставит JS (кнопка сохранения,
-      // тултипы тиров, «＋ Предмет» внутри тира), живут не в разметке.
+
       applyLang(next);
       render();
     });
   })();
 
-  // ---------- Helpers ----------
   function findTier(tid) { return state.tiers.find(t => t.id === tid); }
   function findItem(iid) {
     for (const t of state.tiers) {
@@ -423,7 +346,7 @@
     }
     return null;
   }
-  // "60 000", "60к", "60,5" → число; нечисловое → NaN
+
   function parseVal(v) {
     if (v === null || v === undefined) return NaN;
     let s = String(v).toLowerCase().replace(/\s/g, "").replace(",", ".");
@@ -435,21 +358,9 @@
     const n = parseFloat(s);
     return isNaN(n) ? NaN : n * mult;
   }
-  // ---------- Ссылки ----------
-  // Адрес, введённый руками, обычно идёт без схемы: «t.me/mksvtnc». Браузер
-  // считает такую строку ОТНОСИТЕЛЬНЫМ путём и уводит на
-  // maknemy.com/t.me/mksvtnc — ссылка «перестаёт работать».
-  // Поэтому схему подставляем сами.
-  //
-  // Заодно отсекаем всё, кроме http(s)/mailto/tel: «javascript:…» в поле
-  // ссылки — это исполняемый код на странице у каждого посетителя.
-  //
-  // fallback — подпись ссылки (.sub): в ней уже написан адрес, поэтому если
-  // href пустой или остался заглушкой «https://», берём адрес оттуда.
+
   const SAFE_SCHEME = /^(https?:|mailto:|tel:)/i;
-  // Подпись — свободный текст: «t.me/bfsnews» подойдёт как адрес, а
-  // «наш чат» нет. Берём её в дело, только если это похоже на домен:
-  // без пробелов и с точкой в доменной части.
+
   function looksLikeUrl(s) { return /^[^\s]+\.[a-z]{2,}([\/?#].*)?$/i.test(s); }
   function normalizeHref(href, fallback) {
     let s = String(href == null ? "" : href).trim();
@@ -458,44 +369,21 @@
       s = looksLikeUrl(fb) ? fb : "";
     }
     if (!s) return "";
-    // уже со схемой — пропускаем только безопасные
+
     if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return SAFE_SCHEME.test(s) ? s : "";
-    // «//host» — протокол-относительный адрес, а не путь внутри сайта
+
     if (s.indexOf("//") === 0) return "https:" + s;
-    // свой же путь или якорь — оставляем как есть
+
     if (s.charAt(0) === "/" || s.charAt(0) === "#") return s;
     return "https://" + s.replace(/^\/+/, "");
   }
 
-  // Значок предмета — вектор из набора новой легенды
-  // (assets/design/legend/badge-*.svg). Те же файлы стоят в блоке «Помощь
-  // новичкам», поэтому значок на карточке и значок в легенде совпадают по
-  // определению, а не по договорённости. Растровые assets/badge-*.png от
-  // старого тирлиста больше не используются: они были по 25×24 px и в
-  // экспорте PNG растягивались втрое, а буквы на них — прежние (F вместо FR,
-  // P вместо PM), то есть карточка подписывалась не тем, что в легенде.
-  //
-  // Код типа в базе короче имени файла и старше его: "f" пишется значком FR,
-  // "p" — PM. Плюс типы, которых больше нет: скины и мутации стали
-  // конфигурациями (s → cs, m → cm), а "v" был ранним ваучером. Алиасы живут
-  // здесь, чтобы старое сохранение не давало читателю битую картинку.
   const BADGE_FILE = { f: "fr", p: "pm", s: "cs", m: "cm", v: "vh" };
 
   function badgeSrc(type) {
     return "assets/design/legend/badge-" + (BADGE_FILE[type] || type) + ".svg";
   }
 
-  // Тип предмета → категория фильтра. Категорий четыре плюс «Все»:
-  //
-  //   Фрукты        f или пусто
-  //   Пермы         p
-  //   Пассы         gp, vh (ваучеры)
-  //   Конфигураторы cs, cm, ms, cr (плюс снятые s и m)
-  //
-  // Ваучеры и пассы — одна корзина: продуктово это одно и то же, отдельным
-  // фильтром они дробили бы список на две почти пустые категории. Старый код
-  // "v" оставлен рядом с "vh": в сохранениях он мог успеть появиться, и
-  // выкидывать такой предмет во «Фрукты» нельзя.
   function groupOf(type) {
     if (type === "p") return "perms";
     if (type === "gp" || type === "vh" || type === "v") return "passes";
@@ -504,16 +392,10 @@
     return "fruits";
   }
 
-  // Набор фильтров из сохранения приводим к текущему виду. Раньше «Скины» и
-  // «Мутации» были двумя категориями, теперь это одни «Конфигураторы»: в
-  // localStorage и в БД лежат состояния со старыми ключами, и без переноса
-  // объединённая категория молча пропала бы из виду (её ключа там нет, а
-  // значение по умолчанию перетёрло бы выбор пользователя).
   function normalizeFilters(saved, defaults) {
     const out = Object.assign({}, defaults, saved || {});
     const s = saved || {};
     if (s.configurators === undefined && (s.skins !== undefined || s.mutations !== undefined)) {
-      // Категория видна, если была видна хотя бы одна из двух прежних.
       out.configurators = !!(s.skins || s.mutations);
     }
     delete out.skins;
@@ -521,11 +403,6 @@
     return out;
   }
 
-  // ============================================================
-  //  AUTO SORT (по убыванию цены)
-  // ============================================================
-  // Ставит предмет на место согласно его цене: сканируем тиры сверху
-  // вниз и вставляем перед первым предметом с меньшей ценой.
   function autoPlace(itemId) {
     const found = findItem(itemId);
     if (!found) return;
@@ -545,7 +422,6 @@
     state.tiers[state.tiers.length - 1].items.push(item);
   }
 
-  // Полная сортировка: внутри каждого тира по убыванию (без цены — в конец)
   function sortAllTiers() {
     state.tiers.forEach(t => {
       t.items.sort((a, b) => {
@@ -559,59 +435,33 @@
     save(); render();
   }
 
-  // ============================================================
-  //  RENDER
-  // ============================================================
-  // Предметы тира, проходящие активные фильтры (Фрукты/Мутации/Пермы/…)
   function visibleItemsOf(tier) {
     return tier.items.filter(it => state.filters[groupOf(it.type)]);
   }
 
-  // Целевое число предметов в блоке (тире) при ПРОСМОТРЕ: видимые предметы
-  // переливаются в блоки по столько штук, заполняя верхние блоки ближайшими
-  // предметами снизу — чтобы не было пустых мест.
   const ITEMS_PER_BLOCK = 11;
 
-  // Сколько иконок грузить обычным (не ленивым) способом. loading="lazy" на
-  // ВСЕХ иконках означало, что даже верхний ряд браузер начинает качать только
-  // после первой раскладки — предметы на первом экране появлялись с заметной
-  // задержкой, «текстуры подгружались». Два верхних ряда всегда видны сразу,
-  // поэтому их грузим приоритетно, а всё остальное остаётся ленивым.
   let eagerIconBudget = 0;
 
   function render() {
-    // Строго перед очисткой: innerHTML = "" убивает узлы, но не таймер
-    // карусели. Одна точка покрывает всех, кто зовёт render().
     teardownPromoStrip();
     tiersEl.innerHTML = "";
     eagerIconBudget = Math.max(6, (itemsPerRow() || ITEMS_PER_BLOCK) * 2);
     const editing = editToggle.checked;
 
-    // blocks: [{ tier, ti, items }] — что и под какой плашкой рисуем
     let blocks;
     if (editing) {
-      // Редактирование: реальная структура — каждый тир со своими предметами
-      // (с учётом фильтров). Полностью пустой тир оставляем видимым, чтобы его
-      // можно было наполнить. Предметы между тирами НЕ перемещаем.
       blocks = [];
       state.tiers.forEach((tier, ti) => {
         const items = visibleItemsOf(tier);
         if (items.length || !tier.items.length) blocks.push({ tier, ti, items });
       });
     } else {
-      // Просмотр: переливаем ВСЕ видимые предметы в блоки, заполняя верхние
-      // блоки ближайшими предметами снизу — без пустых мест. В один блок берём
-      // столько, сколько ВЛЕЗАЕТ в ряд (на телефоне ~6), но не больше
-      // ITEMS_PER_BLOCK (на десктопе 11) — чтобы каждый ряд был заполнен целиком
-      // и не оставалось коротких «хвостов» по 5 штук.
       const blockSize = Math.min(itemsPerRow() || ITEMS_PER_BLOCK, ITEMS_PER_BLOCK);
       const flat = [];
       state.tiers.forEach(tier => { for (const it of visibleItemsOf(tier)) flat.push(it); });
       blocks = [];
-      // Предметов нет вовсе — рисуем плашки тиров пустыми. Это состояние
-      // видит каждый посетитель, пока едут данные (см. bootState() выше):
-      // без плашек страница коротка, а с приходом данных вырастает разом на
-      // десяток рядов и уводит вниз всё, что человек в этот момент читал.
+
       if (!flat.length) {
         state.tiers.forEach((tier, ti) => blocks.push({ tier, ti, items: [] }));
       }
@@ -622,7 +472,7 @@
       }
     }
 
-    const adAfter = Math.ceil(blocks.length / 2) - 1; // середина списка
+    const adAfter = Math.ceil(blocks.length / 2) - 1;
     blocks.forEach((b, idx) => {
       tiersEl.appendChild(renderTier(b.tier, b.ti, b.items));
       if (idx === adAfter) tiersEl.appendChild(renderPromoBlock());
@@ -636,16 +486,12 @@
     fitValues();
   }
 
-  // Ужимаем значение по ШРИФТУ (а не transform: scale), чтобы строка
-  // перекомпоновывалась и цифры с бейджем оставались по центру — без
-  // съезжания/наложения. Размер берём из CSS (cqw) и при необходимости
-  // уменьшаем в px; на ресайзе/смене шрифта пересчитывается заново.
   function fitValues() {
     requestAnimationFrame(() => {
       tiersEl.querySelectorAll(".cell-strip").forEach(strip => {
         const val = strip.querySelector(".cell-value");
         if (!val) return;
-        val.style.fontSize = "";                 // сброс к базовому размеру из CSS
+        val.style.fontSize = "";
         const base = parseFloat(getComputedStyle(val).fontSize);
         if (!base) return;
         const badge = strip.querySelector(".tbadge");
@@ -659,16 +505,13 @@
     });
   }
 
-  // Сколько ячеек помещается в один ряд при текущей ширине сцены.
-  // Ширину ячейки и gap МЕРЯЕМ зондом, а не берём 8.2cqw жёстко — чтобы
-  // разбивка на ряды учитывала медиазапросы (на телефоне ячейки крупнее).
   function itemsPerRow() {
     const cs = getComputedStyle(stage);
     const contentW = stage.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
-    if (!contentW || contentW < 60) return 0; // сцена ещё не разложена
+    if (!contentW || contentW < 60) return 0;
     const cqw = contentW / 100;
     let cellW = 8.2 * cqw, colGap = 0.55 * cqw, panelPad = 0.8 * cqw;
-    // зонд: настоящая .tier-items с одной .cell внутри
+
     const pList = document.createElement("div");
     pList.className = "tier-items";
     pList.style.cssText = "position:absolute;visibility:hidden;width:auto;min-height:0;";
@@ -684,14 +527,11 @@
     if (cw > 0) cellW = cw;
     if (!isNaN(g)) colGap = g;
     if (!isNaN(pad)) panelPad = pad / 2;
-    const innerW = contentW - 2 * panelPad - 2; // -2 на рамку панели
+    const innerW = contentW - 2 * panelPad - 2;
     const per = Math.floor((innerW + colGap) / (cellW + colGap) + 1e-6);
     return Math.max(1, per);
   }
 
-  // Плашка-заголовок тира. Инструменты/редактирование — только у первой
-  // плашки (isFirst); у плашек-продолжений логотип/название повторяются,
-  // но без кнопок и без contenteditable.
   function renderBand(tier, ti, isFirst) {
     const band = document.createElement("div");
     band.className = "tier-band";
@@ -709,8 +549,6 @@
       label.textContent = tier.label || "";
       label.spellcheck = false;
       if (isFirst) {
-        // В режиме редактирования плашка становится contenteditable, но без
-        // подсказки это ниоткуда не следует.
         label.title = tx("tier.rename");
         label.addEventListener("blur", () => { tier.label = label.textContent.trim(); save(); });
         label.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); label.blur(); } });
@@ -736,9 +574,6 @@
     sec.className = "tier";
     sec.dataset.id = tier.id;
 
-    // Разбиваем ВИДИМЫЕ предметы тира на ряды: каждый ряд — отдельная плашка-тир
-    // со своей шапкой и небольшим отступом, чтобы тир «не удваивался» в одной
-    // полосе при переполнении. Данные тира не меняем — это только верстка.
     const per = itemsPerRow();
     const chunks = [];
     if (per > 0 && items.length > per) {
@@ -746,7 +581,7 @@
     } else {
       chunks.push(items.slice());
     }
-    if (!chunks.length) chunks.push([]); // пустой тир — одна плашка
+    if (!chunks.length) chunks.push([]);
 
     chunks.forEach((chunk, ci) => {
       const isFirst = ci === 0;
@@ -793,7 +628,6 @@
     cell.dataset.group = groupOf(item.type);
     cell.draggable = true;
 
-    // demand dot — справа от иконки
     if (item.demand) {
       const d = document.createElement("img");
       d.className = "dot";
@@ -801,12 +635,7 @@
       d.alt = "";
       cell.appendChild(d);
     }
-    // trend — слева от иконки. Картинка ровно та же, что в колонке трендов
-    // легенды (assets/design/legend/): ячейка брала старый набор
-    // assets/trend-*.png, который при редизайне легенды переросли. Заметнее
-    // всего расходился «перерассмотр цены»: в легенде это круглые стрелки
-    // 37×43, а в ячейке — старая широкая и плоская фигура 60×34, и на
-    // предмете она читалась смазанным пятном, а не значком из легенды.
+
     if (item.trend) {
       const tr = document.createElement("img");
       tr.className = "trend" + (item.trend === "swap" ? " tr-swap" : "");
@@ -818,16 +647,11 @@
     const iconWrap = document.createElement("div");
     iconWrap.className = "cell-icon";
     const img = document.createElement("img");
-    // Предметов больше сотни, а на экране телефона видно два-три ряда.
-    // Ленивая загрузка и асинхронное декодирование не дают браузеру держать
-    // в памяти сразу все распакованные иконки. Верхние ряды — исключение:
-    // они видны сразу, и ленивая загрузка только оттягивала их появление.
+
     if (eagerIconBudget > 0) {
       eagerIconBudget--;
       img.loading = "eager";
-      // Через атрибут, а не через свойство: Safari понимает fetchpriority
-      // только с 17.2, и на более старых присваивание img.fetchPriority
-      // создало бы бесполезное свойство объекта вместо атрибута.
+
       img.setAttribute("fetchpriority", "high");
     } else {
       img.loading = "lazy";
@@ -839,7 +663,6 @@
     iconWrap.appendChild(img);
     cell.appendChild(iconWrap);
 
-    // тёмная полоса с ценой и бейджем типа (как в макете)
     const strip = document.createElement("div");
     strip.className = "cell-strip";
     const val = document.createElement("span");
@@ -855,9 +678,6 @@
     }
     cell.appendChild(strip);
 
-    // Значок NEW — новый/изменённый предмет (виден всем, попадает в PNG).
-    // Картинка из макета, а не нарисованная градиентами плашка: тот же значок
-    // стоит в легенде, и раньше они не совпадали ни формой, ни цветом.
     if (item.flag) {
       const nb = document.createElement("img");
       nb.className = "cell-new";
@@ -865,9 +685,7 @@
       nb.alt = "NEW";
       cell.appendChild(nb);
     }
-    // значок «?» — цена под вопросом. Независим от NEW: у предмета могут
-    // гореть оба сразу, NEW слева, «?» справа. Старые сохранения поля не
-    // имеют — undefined тоже ложь, поэтому миграция не нужна.
+
     if (item.wip) {
       const wb = document.createElement("img");
       wb.className = "cell-wip";
@@ -877,8 +695,6 @@
       cell.appendChild(wb);
     }
 
-    // всплывающая подсказка при наведении: ТОЛЬКО название.
-    // Описание показывается в отдельном окне по клику (openViewModal).
     const nm = (item.name || "").trim();
     if (nm && nm !== "Item") {
       const tip = document.createElement("div");
@@ -890,15 +706,12 @@
       cell.appendChild(tip);
     }
 
-    // edit controls
     const edit = document.createElement("div");
     edit.className = "cell-edit";
     edit.appendChild(miniBtn("✎", tx("item.edit"), e => { e.stopPropagation(); openModal(item.id); }));
     edit.appendChild(miniBtn("✕", tx("modal.delete"), e => { e.stopPropagation(); deleteItem(item.id); }));
     cell.appendChild(edit);
 
-    // Клик в режиме редактирования → окно редактирования (админ).
-    // Обычный клик (просмотр) → окно с предметом: иконка, цена, название, описание.
     cell.addEventListener("dblclick", () => { if (stage.classList.contains("editing")) openModal(item.id); });
     cell.addEventListener("click", () => {
       if (stage.classList.contains("editing")) openModal(item.id);
@@ -916,55 +729,15 @@
     return b;
   }
 
-  // ============================================================
-  //  РЕКЛАМА (в середине тирлиста)
-  // ------------------------------------------------------------
-  //  Кампании живут в отдельном документе (/api/promo.php), а не в state.
-  //  Пока подходящих кампаний нет — рисуем старый одиночный баннер из
-  //  state.ad слово в слово, как он рисовался до этой системы. Значит откат
-  //  сводится к тому, чтобы убрать <script src="js/promo.js"> из разметки.
-  // ============================================================
   const promo = (typeof PROMO !== "undefined") ? PROMO : null;
 
-  // Дом-заглушка: место, которое рекламирует само себя, пока его не купили.
-  // Обычная кампания по форме, поэтому её рисуют те же функции, что и
-  // платную, — отдельной ветки рендера нет. Попапа у неё нет намеренно: окно
-  // «ВАША РЕКЛАМА» поверх сайта каждому посетителю раздражает, а продать
-  // место не помогает.
-  //
-  // Макеты лежат в репозитории (assets/promo/), а не в базе: заглушка должна
-  // работать на чистой установке, где ещё ни одной кампании не заводили.
-  // Объект переехал в js/promo.js (PROMO.houseFor): ту же заглушку теперь
-  // показывают лента и калькулятор, и три страницы обязаны брать её из
-  // одного места — иначе они разойдутся и по картинке, и по id, по которому
-  // ведётся счёт показов. Свободное место занимает идущий розыгрыш
-  // (PROMO.HOUSE_GIVEAWAY), а когда он кончится — снова «ВАША РЕКЛАМА».
   const houseFor = slot => (promo ? promo.houseFor(slot, Date.now()) : null);
 
-  // Заглушка вместо пустоты — но не вместо того, что владелец поставил сам.
-  // Старый одиночный баннер (state.ad) живёт ровно в этом месте, и подменять
-  // его заглушкой значило бы молча снять с сайта то, что там стоит сейчас.
-  //
-  // «Поставил сам» = есть макет или ссылка. Голый текст без того и другого —
-  // это ровно тот дефолт, что зашит выше («МЕСТО ДЛЯ ВАШЕЙ РЕКЛАМЫ — …»),
-  // то есть словесная версия той же заглушки; картинка её и заменяет.
-  //
-  // В режиме редактирования баннер показываем всегда: иначе пропадут его
-  // кнопки и заполнить его будет нечем.
   function legacyAdEmpty() {
     const ad = (state && state.ad) || {};
     return !String(ad.image || "").trim() && !String(ad.link || "").trim();
   }
 
-  // Отдельный случай: в баннере тир-листа стоит РОВНО ТА ЖЕ кампания, что и
-  // в нашем объявлении — ссылка ведёт на тот же адрес. Тогда показать надо
-  // объявление, а не баннер: картинка внутри state.ad проходит через
-  // walk_state_images() и живёт под потолком 256 px (api/lib/images.php), а
-  // макет кампании лежит в assets/promo целиком. Один и тот же розыгрыш,
-  // разница только в качестве картинки.
-  //
-  // Сравниваем именно ссылки: любой ДРУГОЙ баннер владельца остаётся на
-  // месте — подменять его нельзя, там может стоять оплаченное размещение.
   function legacySameAs(camp) {
     const link = normalizeHref((state && state.ad && state.ad.link) || "", "");
     const href = promo ? promo.safeHref(camp && camp.href) : "";
@@ -974,12 +747,10 @@
   function renderPromoBlock() {
     const list = stripOrder();
     if (list.length) return renderPromoStrip(list);
-    // promo && — объявление приходит из js/promo.js, и без него его нет.
+
     if (promo && !stage.classList.contains("editing")) {
       const house = houseFor("strip");
-      // Заглушкой «ВАША РЕКЛАМА» баннер владельца не подменяем никогда —
-      // только пустое место (id сверяем именно поэтому). Своей кампанией —
-      // ещё и когда владелец сам поставил её же.
+
       const sellable = house && house.id === promo.HOUSE_SLOT.id;
       if (house && (legacyAdEmpty() || (!sellable && legacySameAs(house)))) {
         return renderPromoStrip([house]);
@@ -995,23 +766,18 @@
     const hasLink = !!adUrl;
     if (hasLink) ad.classList.add("has-link");
 
-    // Скрытая ссылка: клик по картинке/тексту/значку открывает URL (в обычном
-    // режиме). Сам URL в тексте не показываем — его пишет админ как захочет.
     const openLink = (e) => {
       if (!hasLink || stage.classList.contains("editing")) return;
       if (e) e.preventDefault();
       window.open(adUrl, "_blank", "noopener");
     };
-    // Вся карточка рекламы — одна кликабельная зона: клик в ЛЮБОЙ части
-    // (любая точка картинки, поля вокруг неё, текст) открывает ссылку в
-    // обычном режиме. Один обработчик на блок — без двойного срабатывания.
+
     ad.addEventListener("click", openLink);
-    // значок-индикатор «это ссылка» — всегда в углу самой карточки рекламы,
-    // а не поверх картинки: на краю баннера он не залезает на макет рекламы
+
     const makeBadge = () => {
       const b = document.createElement("span");
       b.className = "ptn-link-badge";
-      // сам глиф цепочки рисует CSS (фоновая SVG-картинка) — эмодзи здесь нет
+
       b.setAttribute("aria-label", tx("ad.linkLabel"));
       b.title = tx("ad.isLink");
       return b;
@@ -1042,8 +808,6 @@
     txt.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); txt.blur(); } });
     ad.appendChild(txt);
 
-    // значок-ссылка крепится к самой карточке — её угол одинаков и с картинкой,
-    // и без неё (позиционируется от .ptn-card, у которого position: relative)
     if (hasLink) ad.appendChild(makeBadge());
 
     const tools = document.createElement("div");
@@ -1060,18 +824,6 @@
     return ad;
   }
 
-  // ---------- порядок ротации ----------
-  //
-  // Генератор псевдослучайных чисел засеян один раз за загрузку страницы,
-  // поэтому порядок слайдов НЕ пересобирается на каждом render(). А render()
-  // здесь зовут пятеро: reflowPass при повороте телефона, опрос сервера,
-  // переключатель языка, публикация и повторный проход safeRender. Без
-  // фиксированного порядка карусель прыгала бы на другой баннер при каждом
-  // из них.
-  // Подпись маркировки. Пустой erid — узла нет вовсе, и разметка остаётся
-  // ровно такой, какой была до появления поля. Токен приходит от
-  // рекламодателя и уже прошёл разбор в promo.js; ставим его textContent —
-  // строка с рекламной биржи на страницу как разметка не попадает.
   function promoEridNode(camp) {
     if (!camp || !camp.erid) return null;
     const el = document.createElement("span");
@@ -1090,7 +842,7 @@
 
   let promoOrderCache = null;
   let promoOrderRev = -1;
-  let promoIndex = 0;              // переживает teardown: см. комментарий ниже
+  let promoIndex = 0;
 
   function stripOrder() {
     if (!promo) return [];
@@ -1099,32 +851,21 @@
     const eligible = promo.eligible(promoDoc, "strip", Date.now());
     promoOrderCache = promo.orderForCarousel(eligible, promoRnd, promo.MAX_STRIP_SLIDES);
     promoOrderRev = promoDoc.rev;
-    promoIndex = 0;                // новый набор кампаний — начинаем с начала
+    promoIndex = 0;
     return promoOrderCache;
   }
 
-  // Открытие рекламной ссылки. Цель клика — вся карточка, поэтому смахивание
-  // не должно считаться кликом: сравниваем позицию прокрутки до и после.
   function openPromo(camp, slot) {
     const url = promo ? promo.safeHref(camp.href) : "";
     if (!url || stage.classList.contains("editing")) return;
-    // Счётчик уже стоит на странице, поэтому клики можно отдавать клиенту
-    // сегодня, не заводя своей таблицы. Это нижняя граница, а не точное
-    // число: mc.yandex.ru сам есть в списках блокировщиков.
+
     try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: slot }); }
-    catch (e) { /* счётчик не должен ломать переход */ }
+    catch (e) {}
     window.open(url, "_blank", "noopener");
   }
 
-  // ---------- карусель ----------
-
   let stripCtl = null;
 
-  // Узлы умирают вместе с innerHTML = "", а setInterval — нет. Утёкший таймер
-  // пишет в оторванные от документа узлы и НЕ бросает исключение, поэтому он
-  // пройдёт беглую проверку и вылезет через полчаса на телефоне как всё
-  // ускоряющаяся карусель. Вызов стоит строкой выше очистки #tiers — одна
-  // точка на всех пятерых, кто зовёт render().
   function teardownPromoStrip() {
     if (stripCtl) { stripCtl.destroy(); stripCtl = null; }
   }
@@ -1140,9 +881,6 @@
     chip.textContent = tx("ad.chip");
     root.appendChild(chip);
 
-    // Рамка нужна как система координат для стрелок: они лежат ПОВЕРХ
-    // баннера по его краям, а не в полосе под ним, и не должны уезжать
-    // вместе с прокруткой — значит они соседи вьюпорта, а не его дети.
     const frame = document.createElement("div");
     frame.className = "ptn-frame";
     const viewport = document.createElement("div");
@@ -1170,9 +908,7 @@
         wrap.className = "ptn-img-wrap";
         const img = document.createElement("img");
         img.className = "ptn-img";
-        // Реальный src ставит контроллер и только соседям активного слайда.
-        // Размеры проставлены заранее, чтобы геометрия и арифметика прокрутки
-        // не зависели от того, загружена картинка или нет.
+
         img.dataset.src = cre.src;
         img.dataset.poster = cre.poster || cre.src;
         img.dataset.anim = cre.anim ? "1" : "";
@@ -1192,21 +928,12 @@
         slide.appendChild(txt);
       }
 
-      // Значка-цепочки здесь нет намеренно: он лежал поверх макета, за
-      // который заплачено, и закрывал его угол. Что баннер кликабелен, видно
-      // по курсору и подсветке; в старом одиночном баннере значок остался.
-
-      // Маркировка живёт в слайде, а не в карточке: чип «РЕКЛАМА» один на всю
-      // карусель, а токен у каждой кампании свой.
       const erid = promoEridNode(camp);
       if (erid) slide.appendChild(erid);
 
       track.appendChild(slide);
     });
 
-    // Стрелки по краям баннера, как на маркетплейсах. В экспорт не идут —
-    // их снимает onclone по классу ptn-export-hide. Один баннер листать
-    // нечем, поэтому стрелок тогда просто нет.
     const mkNav = (cls, label) => {
       const b = document.createElement("button");
       b.type = "button";
@@ -1233,22 +960,11 @@
     const slides = Array.from(ui.track.children);
     const count = slides.length;
 
-    // Автолистания нет: баннер стоит, пока человек сам не пролистает. Значит
-    // нет и кнопки паузы — останавливать нечего.
-    //
-    // Единственное, что двигается само, — анимация внутри креатива. Её
-    // выключает системная настройка «уменьшить движение»: при ней вместо
-    // анимации показывается статичный кадр (поле poster). Раньше эту роль
-    // играла кнопка паузы, теперь она отрабатывает автоматически.
     let settleT = null;
     let scrollRaf = 0;
     let index = Math.min(promoIndex, count - 1);
     if (index < 0) index = 0;
 
-    // Живой src только у активного слайда и двух соседей. Три картинки
-    // 1200x300 — это ~4.3 МБ распакованных пикселей; восемь были бы 11.5 МБ
-    // на телефоне, который и так держит фон и сотню иконок. Плюс главное:
-    // анимированный WebP или GIF без src просто не крутит кадры.
     function syncWindow() {
       slides.forEach((slide, i) => {
         const img = slide.querySelector(".ptn-img");
@@ -1268,32 +984,21 @@
       index = ((i % count) + count) % count;
       promoIndex = index;
       const left = index * ui.viewport.clientWidth;
-      // Прокрутка, а не opacity и не transform по всей сцене: слой размером
-      // со сцену с прозрачностью WebKit выносит в отдельный буфер на
-      // десятки мегабайт, и на этом падали вкладки iPhone. Здесь никаких
-      // кроссфейдов — слайды именно едут вбок.
+
       ui.viewport.scrollTo({
         left: left,
         behavior: (smooth && !ui.reduced) ? "smooth" : "auto"
       });
-      // Плавная прокрутка может быть отключена целиком — системной
-      // настройкой анимаций, флагом браузера, автоматизацией. Тогда
-      // scrollTo({behavior:"smooth"}) молча не делает НИЧЕГО: точки
-      // переключаются, а баннер стоит. Такую поломку никто не заметит, и
-      // оплаченная карусель просто не будет крутиться. Поэтому проверяем,
-      // доехала ли она, и досаживаем жёстко.
+
       clearTimeout(settleT);
       const want = index;
       settleT = setTimeout(() => {
-        if (index !== want) return;              // человек успел смахнуть сам
+        if (index !== want) return;
         if (Math.abs(ui.viewport.scrollLeft - left) > 4) ui.viewport.scrollLeft = left;
       }, 450);
       syncWindow();
     }
 
-    // Свайп двигает scrollLeft напрямую — забираем из него активный индекс.
-    // На телефоне это ЕДИНСТВЕННЫЙ способ листать: кнопок там нет.
-    // Дросселируем через rAF, как это уже сделано для авто-скрытия кнопок.
     function onScroll() {
       if (scrollRaf) return;
       scrollRaf = requestAnimationFrame(() => {
@@ -1308,8 +1013,6 @@
       });
     }
 
-    // Смахивание не должно открывать ссылку: сравниваем позицию прокрутки
-    // в момент нажатия и в момент клика.
     let downAt = 0;
     function onDown() { downAt = ui.viewport.scrollLeft; }
     function onClick(e) {
@@ -1331,22 +1034,17 @@
     ui.viewport.addEventListener("pointerdown", onDown, { passive: true });
     ui.track.addEventListener("click", onClick);
     ui.root.addEventListener("keydown", onKey);
-    // Панель держится видимой через :hover и :focus-within. После клика
-    // мышью кнопка остаётся в фокусе, и панель залипала бы на экране, хотя
-    // курсор уже увели. Снимаем фокус — но только с настоящего клика:
-    // у Enter с клавиатуры detail === 0, и там фокус наоборот нужен.
+
     const nav = (e, i) => { goTo(i, true); if (e.detail > 0 && e.currentTarget.blur) e.currentTarget.blur(); };
     ui.prev.addEventListener("click", e => nav(e, index - 1));
     ui.next.addEventListener("click", e => nav(e, index + 1));
     document.addEventListener("visibilitychange", onVis);
 
     ui.root.tabIndex = -1;
-    // Позицию восстанавливаем без анимации: после поворота экрана карусель
-    // должна оказаться там же, где была, а не уехать на первый слайд.
+
     goTo(index, false);
 
     return {
-      // Активный слайд и подмена анимации на статичный кадр — для экспорта.
       freezeForExport() {
         slides.forEach(slide => {
           const img = slide.querySelector(".ptn-img");
@@ -1363,13 +1061,6 @@
     };
   }
 
-  // ============================================================
-  //  БОКОВЫЕ БОРТА (только широкий десктоп)
-  // ------------------------------------------------------------
-  //  Живут вне #tiers, поэтому render() их не трогает вовсе: они переживают
-  //  любой рефлоу и смену языка без teardown. Сознательный контраст с
-  //  каруселью, которую перестройка сцены уничтожает каждый раз.
-  // ============================================================
   const RAIL_ROTATE_MS = 20000;
   const railMQ = window.matchMedia
     ? window.matchMedia("(min-width: 1460px) and (min-height: 760px)")
@@ -1384,14 +1075,9 @@
     clearInterval(railTimer);
     railTimer = null;
 
-    // Ниже порога борта не просто прячем стилями — мы их вообще не строим.
-    // Скрытая через display: none картинка всё равно скачивается, а на
-    // телефоне это лишние сотни килобайт ради того, что никто не увидит.
     const wide = railMQ ? railMQ.matches : false;
     let list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now()) : [];
-    // Купленных бортов нет — стоит своё объявление (розыгрыш, пока он идёт,
-    // иначе заглушка). Своего баннера у этого места никогда не было,
-    // подменять нечего.
+
     if (wide && promo && !list.length) {
       const house = houseFor("rail");
       if (house) list = [house];
@@ -1402,8 +1088,6 @@
     }
 
     const paint = () => {
-      // Один рекламодатель занимает оба борта — это и есть пакет «оба
-      // борта». Двое и больше — расходим их по разным сторонам.
       const a = list[railStep % list.length];
       const b = list.length > 1 ? list[(railStep + 1) % list.length] : a;
       fillRail(left, a);
@@ -1415,23 +1099,6 @@
     syncRailTop();
   }
 
-  // ---------- верхняя граница бортов ----------
-  //
-  // Борт прибит position: fixed и обязан быть виден на всём скролле — это то,
-  // что покупает рекламодатель (см. комментарий у .ptn-rail в styles.css).
-  // Но подниматься выше верхнего края тирлиста ему нельзя: там шапка и панель
-  // фильтров, и борт лез поверх них.
-  //
-  // Поэтому top считается здесь, а CSS читает его из --rail-top:
-  //   не выше RAIL_MIN_TOP — иначе на прокрученной странице борт уедет под
-  //                          липкую панель фильтров;
-  //   не выше края .stage  — собственно требование.
-  //
-  // Нижним краем борт при этом может свеситься за экран: на невысоком окне
-  // 600px под тирлист целиком не влезают. Это лечится первым же движением
-  // колеса — как только страница поехала, борт поднимается к RAIL_MIN_TOP и
-  // виден полностью. Поджимать его вверх на старте нельзя: он снова окажется
-  // поверх шапки, ровно то, от чего уходим.
   const RAIL_MIN_TOP = 96;
   let railTopRaf = 0;
 
@@ -1442,10 +1109,6 @@
     if (!stage) return;
     let top = Math.max(RAIL_MIN_TOP, stage.getBoundingClientRect().top);
 
-    // Нижняя граница: борт не заезжает на подвал. Как только подвал дошёл до
-    // нижнего края борта, борт перестаёт стоять на месте и едет вверх вместе
-    // со страницей — состав команды и слоган остаются открыты. Ограничение
-    // именно снизу, а не «спрятать борт»: реклама видна до последнего.
     const foot = document.querySelector(".mk-foot");
     const rail = document.querySelector(".ptn-rail:not([hidden])");
     if (foot && rail) {
@@ -1460,12 +1123,6 @@
     railTopRaf = requestAnimationFrame(syncRailTop);
   }
 
-  // ---------- нижняя полоса на телефоне ----------
-  //
-  // То же размещение, что борта, только горизонтальное: на телефоне бортов
-  // нет, а место сбоку от контента там — это низ экрана. Полоса приклеена и
-  // видна всегда, поэтому под неё отводится место снизу страницы, иначе она
-  // закрывала бы последний ряд предметов.
   const dockMQ = window.matchMedia ? window.matchMedia("(max-width: 640px)") : null;
   let dockRO = null;
 
@@ -1474,7 +1131,7 @@
     if (!dock) return;
     const wide = dockMQ ? dockMQ.matches : false;
     let list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now()) : [];
-    // Как и у бортов: не куплено — стоит своё объявление.
+
     if (wide && promo && !list.length) {
       const house = houseFor("dock");
       if (house) list = [house];
@@ -1522,8 +1179,6 @@
     dock.hidden = false;
     document.body.classList.add("has-promo-dock");
 
-    // Высота зависит от пропорций макета, поэтому её меряем, а не хардкодим:
-    // от неё считается и отступ снизу страницы, и позиция кнопок над полосой.
     const measure = () => {
       document.body.style.setProperty("--ptn-dock-h", Math.round(dock.offsetHeight) + "px");
     };
@@ -1560,23 +1215,17 @@
     const url = promo.safeHref(camp.href);
     el.classList.toggle("has-link", !!url);
     el.onclick = url ? (() => openPromo(camp, "rail")) : null;
-    // Борт кликабелен мышью — значит должен открываться и с клавиатуры.
+
     el.tabIndex = url ? 0 : -1;
     el.onkeydown = url ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPromo(camp, "rail"); } }) : null;
   }
 
-  // ============================================================
-  //  РЕКЛАМНОЕ ОКНО (всплывает через ~12 секунд после захода)
-  // ============================================================
   const PROMO_SEEN_KEY = "nx-ptn-seen-v1";
   let popupTimer = null;
-  let popupOpened = false;         // одно окно за загрузку страницы
+  let popupOpened = false;
   let popupCamp = null;
   let popupRestoreFocus = null;
 
-  // Приватный режим Safari бросает на localStorage. Тогда счётчик живёт
-  // только в памяти: окно покажется раз за сессию вместо раза в сутки —
-  // это хуже, чем задумано, но лучше, чем на каждой перезагрузке.
   let seenCache = null;
   function readSeen() {
     if (seenCache) return seenCache;
@@ -1599,15 +1248,10 @@
   function schedulePromoPopup() {
     if (!promo || popupOpened) return;
     clearTimeout(popupTimer);
-    // Отсчёт идёт только на видимой вкладке. Иначе лимит «раз в сутки»
-    // сгорит на человеке, который открыл сайт в фоне и ничего не увидел.
+
     if (document.visibilityState !== "visible") return;
     const now = Date.now();
-    // Отбор общий с лентой и калькулятором (PROMO.popupPick в js/promo.js):
-    // сначала купленная кампания, а если такой сейчас нет — собственное
-    // объявление о телеграм-канале. Раньше здесь была своя пара строк, и
-    // окно на тирлисте молчало, пока место не выкуплено, — три страницы
-    // вели себя по-разному.
+
     const camp = promo.popupPick(promoDoc, readSeen(), now, Math.random());
     if (!camp) return;
     popupTimer = setTimeout(() => tryOpenPromoPopup(camp), camp.popup.delayMs);
@@ -1624,9 +1268,6 @@
     const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const src = (reduced && cre.anim && cre.poster) ? cre.poster : cre.src;
 
-    // Ждём декодирования: окно, открытое поверх серого прямоугольника,
-    // выглядит как поломка сайта, а не как реклама. Таймаут на случай, если
-    // картинка не приедет вовсе.
     const img = $("#promoPopImg");
     let done = false;
     const go = () => { if (!done) { done = true; openPromoPopup(camp, src); } };
@@ -1644,10 +1285,7 @@
 
     const pop = $("#promoPop");
     $("#promoPopImg").src = src;
-    // Текст платной кампании приходит от рекламодателя и не переводится.
-    // У собственного объявления вместо строк лежат ключи словаря — тогда
-    // узел помечается data-i18n, и applyLang() переведёт его при смене
-    // языка, не перестраивая окно.
+
     setPromoCopy($("#promoPopTitle"), camp.textKey, camp.text, null);
     const cta = $("#promoPopCta");
     const url = promo.safeHref(camp.href);
@@ -1655,8 +1293,6 @@
     cta.hidden = !url;
     if (url) cta.href = url;
 
-    // Узел в окне статический — прячем его, когда токена нет, вместо того
-    // чтобы создавать и удалять.
     const popErid = $("#promoPopErid");
     if (popErid) {
       popErid.textContent = camp.erid ? "erid: " + camp.erid : "";
@@ -1664,8 +1300,7 @@
     }
 
     pop.hidden = false;
-    // Блокировка прокрутки фона. На iOS одного overflow: hidden у body мало —
-    // тач-скролл всё равно протекает, поэтому у подложки ещё touch-action.
+
     document.body.classList.add("ptn-locked");
     popupRestoreFocus = document.activeElement;
     ["#toolbar", ".stage-wrap", "#likeBtn", "#donateBtn"].forEach(sel => {
@@ -1696,16 +1331,13 @@
       if (el) el.removeAttribute("aria-hidden");
     });
     document.removeEventListener("keydown", onPopupKey, true);
-    // Картинку отцепляем: анимированный креатив иначе продолжает крутить
-    // кадры в скрытом окне.
+
     const img = $("#promoPopImg");
     if (img) img.removeAttribute("src");
     if (popupRestoreFocus && popupRestoreFocus.focus) { try { popupRestoreFocus.focus(); } catch (e) {} }
     popupRestoreFocus = null;
   }
 
-  // Ловушка фокуса. В проекте её нет нигде, но именно это окно человек не
-  // просил открывать, поэтому уйти из него с клавиатуры обязано получаться.
   function onPopupKey(e) {
     const pop = $("#promoPop");
     if (!pop || pop.hidden) return;
@@ -1737,15 +1369,7 @@
     schedulePromoPopup();
   }
 
-  // ============================================================
-  //  CREDITS (команда тирлиста)
-  // ============================================================
   function renderCredits() {
-    // Контейнера на странице тирлиста больше нет: в редизайне команду
-    // показывает подвал страницы (.mk-foot в index.php), а внутри постера
-    // строка дублировала бы его. Данные при этом живы — state.credits
-    // по-прежнему сохраняется и уезжает в экспорт/импорт JSON, так что
-    // вернуть строку обратно можно одним <section class="credits">.
     if (!creditsEl) return;
     creditsEl.innerHTML = "";
     state.credits.forEach((cr, idx) => {
@@ -1784,21 +1408,17 @@
     creditsEl.appendChild(add);
   }
 
-  // ============================================================
-  //  FOOTER (ссылки соцсетей — редактируемые: текст + URL)
-  // ============================================================
   function renderFooter() {
     footerEl.innerHTML = "";
     state.footer.forEach((lnk, idx) => {
       const a = document.createElement("a");
       a.className = "flink";
-      // Без адреса ссылку НЕ делаем кликабельной: анкер без href ведёт себя
-      // как текст, а не швыряет посетителя на несуществующую страницу.
+
       const url = normalizeHref(lnk.href, lnk.sub);
       if (url) a.href = url; else a.classList.add("flink-nourl");
       a.target = "_blank";
       a.rel = "noopener";
-      // в режиме редактирования ссылка не открывается — можно править текст
+
       a.addEventListener("click", e => { if (stage.classList.contains("editing")) e.preventDefault(); });
 
       const title = document.createElement("span");
@@ -1823,7 +1443,7 @@
       urlBtn.addEventListener("click", e => {
         e.preventDefault(); e.stopPropagation();
         const v = prompt(tx("footer.urlPrompt"), lnk.href || "");
-        // Сохраняем уже нормализованным, чтобы в базе копились рабочие адреса.
+
         if (v !== null) { lnk.href = normalizeHref(v, ""); save(); render(); }
       });
       const del = document.createElement("button");
@@ -1853,10 +1473,7 @@
     footerEl.appendChild(add);
   }
 
-  // ============================================================
-  //  DRAG & DROP
-  // ============================================================
-  let dragData = null; // { itemId, fromTierId }
+  let dragData = null;
 
   function setupDraggable(cell, item, tier) {
     cell.addEventListener("dragstart", e => {
@@ -1899,7 +1516,7 @@
     if (!found) return;
     const fromTier = found.tier;
     const item = found.item;
-    // remove from source
+
     fromTier.items = fromTier.items.filter(i => i.id !== itemId);
     const toTier = findTier(toTierId);
     if (!toTier) return;
@@ -1913,9 +1530,6 @@
     render();
   }
 
-  // ============================================================
-  //  MUTATIONS
-  // ============================================================
   function addTier() {
     state.tiers.push({ id: uid(), label: "Новый тир", logo: "", items: [] });
     save(); render();
@@ -1952,7 +1566,6 @@
     save(); render();
   }
 
-  // ---------- tier logo upload ----------
   let tierLogoTarget = null;
   function pickTierLogo(tid) {
     tierLogoTarget = tid;
@@ -1970,13 +1583,10 @@
     e.target.value = "";
   });
 
-  // ---------- ad image upload ----------
   $("#ptnImgFile").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
-    // 1280px по большей стороне: ширина сцены ограничена 1040px, блок рекламы —
-    // ~986px, поэтому баннер остаётся чётким на всю ширину блока. Прежние 720px
-    // физически не давали баннеру заполнить блок, как бы его ни растягивал CSS.
+
     fileToBudgetedDataURL(file, [[1280, 0.85], [1280, 0.7], [1024, 0.7], [800, 0.65]], 460000)
       .then(du => uploadDataUrl(du))
       .then(url => {
@@ -1985,14 +1595,10 @@
     e.target.value = "";
   });
 
-  // ============================================================
-  //  FILTERS (Конфигураторы / Фрукты / Пермы / Пассы)
-  // ============================================================
   const FILTER_KEYS = ["configurators", "fruits", "perms", "passes"];
   const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
   const filtersEl = $("#filters");
-  // Подсветка чипов под текущие фильтры. Само скрытие предметов/тиров —
-  // в render(): предметы переупаковываются, пустые тиры пропадают.
+
   function applyFilters() {
     FILTER_KEYS.forEach(key => {
       const chip = filtersEl.querySelector(`.chip[data-f="${key}"]`);
@@ -2009,24 +1615,21 @@
       FILTER_KEYS.forEach(k => state.filters[k] = true);
     } else {
       state.filters[key] = !state.filters[key];
-      // нельзя выключить всё разом — хотя бы одна категория остаётся
+
       if (!FILTER_KEYS.some(k => state.filters[k])) {
         state.filters[key] = true;
         return;
       }
     }
     save();
-    render(); // перерисовываем: предметы переупаковываются, пустые тиры пропадают
+    render();
   });
 
-  // ============================================================
-  //  ITEM MODAL
-  // ============================================================
   const modal = $("#modal");
   let editingId = null;
 
   function openModal(iid) {
-    if (!isAdmin) return; // редактировать может только администратор
+    if (!isAdmin) return;
     const found = findItem(iid);
     if (!found) return;
     editingId = iid;
@@ -2050,16 +1653,6 @@
   }
   function closeModal() { modal.hidden = true; editingId = null; }
 
-  // ----- Окно ПРОСМОТРА предмета (для всех посетителей) -----
-  // Показывает иконку, название, тип, цену, метку, описание и условия.
-  // Открывается кликом по предмету в обычном режиме (без редактирования).
-  //
-  // Тип в макете подписан двумя строками — крупным разрядом («КОНФИГУРАЦИЯ»)
-  // и уточнением под ним («скин»). В данных это по-прежнему один код, поэтому
-  // разбивка живёт таблицей здесь, а сами слова — в i18n.js: их переводить.
-  // Уточнения нет — вторая строка не рисуется вовсе, плашка ужимается.
-  // Снятые коды s/m/v оставлены рядом с новыми: в старых сохранениях они
-  // встречаются, и без них у такого предмета плашка осталась бы пустой.
   const KIND_LABEL = {
     f:  ["view.kindFruit",     ""],
     p:  ["view.kindFruit",     "view.kindSubPerm"],
@@ -2089,8 +1682,6 @@
     subEl.textContent = subKey ? tx(subKey) : "";
     subEl.hidden = !subKey;
 
-    // Метка и условия есть далеко не у каждого предмета: пустое поле прячет
-    // плашку и панель целиком, а не оставляет рамку с пустотой внутри.
     const tag = textFor(it, "tag");
     $("#vTag").textContent = tag;
     $("#vTagPill").hidden = !tag;
@@ -2110,10 +1701,6 @@
   $("#viewClose").addEventListener("click", closeViewModal);
   viewModal.addEventListener("click", e => { if (e.target === viewModal) closeViewModal(); });
 
-  // В сегменте тренда рядом со стрелками стоят кнопки-флаги («?» и NEW).
-  // Они помечены data-flag, значением сегмента не являются и переключаются
-  // сами по себе — иначе выбор стрелки гасил бы NEW, а нажатие NEW стирало бы
-  // тренд. Селектор :not([data-flag]) отделяет одно от другого в одном месте.
   const SEG_VALUE = "button:not([data-flag])";
   function setSeg(sel, value) {
     $(sel).querySelectorAll(SEG_VALUE).forEach(b => {
@@ -2124,28 +1711,20 @@
     const a = $(sel).querySelector(SEG_VALUE + ".active");
     return a ? (a.dataset.v || "") : "";
   }
-  // Флаги предмета живут кнопками того же сегмента: горит — значок на карточке
-  // есть, не горит — нет.
+
   const flagBtn = name => $(`#mTrend button[data-flag="${name}"]`);
   function setFlag(name, on) { flagBtn(name).classList.toggle("active", !!on); }
   function getFlag(name) { return flagBtn(name).classList.contains("active"); }
 
-  // ----- Type: Regular/Permanent toggle (#mFruit) + optional category (#mType2) -----
-  // Все коды кнопок #mType2. Список отставал от разметки: конфигурации и
-  // ваучер в него не попали, и предмет с типом cs/cm/ms/vh открывался
-  // «Обычным фруктом» — тип молча терялся при первом же сохранении.
   const CATEGORIES = ["cs", "cm", "ms", "cr", "gp", "vh"];
-  // Кнопок «S · Скин» и «M · Мутация» в модалке больше нет: скины и мутации
-  // стали конфигурациями. В базе предметы с этими типами остались, поэтому
-  // при открытии подсвечиваем их наследника — и сохранение переписывает тип
-  // на новый, по предмету за раз.
+
   const LEGACY_CATEGORY = { s: "cs", m: "cm", v: "vh" };
   function setType(type) {
     const cat = LEGACY_CATEGORY[type] || type;
     const isCat = CATEGORIES.includes(cat);
     $("#mFruit").querySelectorAll("button").forEach(b => b.classList.remove("active"));
     if (!isCat) {
-      const v = type === "p" ? "p" : "f"; // пусто/обычный → Обычный (FR) по умолчанию
+      const v = type === "p" ? "p" : "f";
       $("#mFruit").querySelector(`button[data-v="${v}"]`).classList.add("active");
     }
     setSeg("#mType2", isCat ? cat : "");
@@ -2156,7 +1735,7 @@
     const fr = $("#mFruit").querySelector("button.active");
     return fr ? fr.dataset.v : "";
   }
-  // wire fruit toggle: choosing a fruit clears the category
+
   $("#mFruit").addEventListener("click", e => {
     const btn = e.target.closest("button");
     if (!btn) return;
@@ -2164,7 +1743,7 @@
     btn.classList.add("active");
     setSeg("#mType2", "");
   });
-  // wire category: a real category overrides the fruit toggle; "—" restores Обычный
+
   $("#mType2").addEventListener("click", e => {
     const btn = e.target.closest("button");
     if (!btn) return;
@@ -2176,19 +1755,18 @@
       $("#mFruit").querySelector('button[data-v="f"]').classList.add("active");
     }
   });
-  // wire simple segmented controls
+
   ["#mDemand", "#mTrend"].forEach(sel => {
     $(sel).addEventListener("click", e => {
       const btn = e.target.closest("button");
       if (!btn) return;
-      // «?» и NEW — не тренд, а флаги: щелчок переключает только их самих.
+
       if (btn.dataset.flag) { btn.classList.toggle("active"); return; }
       $(sel).querySelectorAll(SEG_VALUE).forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
     });
   });
 
-  // icon upload
   $("#mIconFile").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -2218,7 +1796,7 @@
     it.type = getType();
     it.demand = getSeg("#mDemand");
     it.trend = getSeg("#mTrend");
-    // автоперемещение по цене
+
     if (state.autoSort && it.value !== oldVal) autoPlace(it.id);
     save(); render(); closeModal();
   });
@@ -2234,28 +1812,21 @@
     if (!viewModal.hidden) closeViewModal();
   });
 
-  // ============================================================
-  //  HEADER / DATE editable
-  // ============================================================
   const dateEl = $("#tlDate");
   dateEl.textContent = state.date;
   dateEl.addEventListener("blur", () => { state.date = dateEl.textContent.trim(); save(); });
   dateEl.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); dateEl.blur(); } });
 
-  // ============================================================
-  //  EDIT MODE
-  // ============================================================
   function applyEditMode() {
     const on = editToggle.checked;
     stage.classList.toggle("editing", on);
     document.querySelectorAll(".edit-only").forEach(el => { el.style.display = on ? "" : "none"; });
-    // contenteditable only in edit mode (плашки-продолжения .cont-label не редактируются)
+
     document.querySelectorAll(".tier-label:not(.cont-label), #tlDate, .ptn-text, .cr-role, .cr-name, .fl-title, .fl-sub").forEach(el => {
       el.contentEditable = on ? "true" : "false";
     });
   }
-  // Перерисовываем при смене режима: пустые тиры появляются (для наполнения)
-  // или прячутся, плюс обновляются элементы редактирования.
+
   editToggle.addEventListener("change", render);
 
   autoSortToggle.checked = state.autoSort;
@@ -2264,9 +1835,6 @@
     save();
   });
 
-  // ============================================================
-  //  TOOLBAR ACTIONS
-  // ============================================================
   $("#btnAddTier").addEventListener("click", addTier);
   $("#btnAddItem").addEventListener("click", () => {
     if (!state.tiers.length) addTier();
@@ -2274,7 +1842,7 @@
   });
   $("#btnSort").addEventListener("click", sortAllTiers);
   if (btnSave) btnSave.addEventListener("click", publish);
-  // Предупреждать о несохранённых изменениях при закрытии / перезагрузке
+
   window.addEventListener("beforeunload", e => {
     if (isAdmin && dirty) { e.preventDefault(); e.returnValue = ""; }
   });
@@ -2287,7 +1855,6 @@
     }
   });
 
-  // ----- Export / Import JSON -----
   $("#btnExport").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -2325,14 +1892,6 @@
     e.target.value = "";
   });
 
-  // ============================================================
-  //  ДИАГНОСТИКА ЭКСПОРТА (?debug=1)
-  // ------------------------------------------------------------
-  //  Экспорт ломается только на iPhone, а устройства под рукой нет и консоль
-  //  Safari оттуда не достать. По ?debug=1 сайт показывает панель, в которую
-  //  экспорт пишет каждый шаг: тестеру достаточно прислать скрин или нажать
-  //  «Копировать». Без параметра ничего не создаётся и не считается.
-  // ============================================================
   const DEBUG = /(?:^|[?&])debug=1(?:&|$)/.test(location.search);
   const dbgLines = [];
   let dbgBody = null;
@@ -2378,10 +1937,6 @@
     dbgBody.parentElement.scrollTop = dbgBody.parentElement.scrollHeight;
   }
 
-  // Проба готового холста: берём центральную четверть каждой иконки и смотрим
-  // разброс яркости. У настоящей иконки он большой; если иконка не нарисовалась,
-  // там ровный фон ячейки — разброс около нуля. Это и отличает «иконок нет»
-  // от «иконки есть, но тусклые».
   function dbgProbeIcons(canvas, scale) {
     if (!DEBUG) return;
     const sr = stage.getBoundingClientRect();
@@ -2414,10 +1969,6 @@
 
   if (DEBUG) dbg("диагностика включена — нажми «⬇ Скачать PNG»");
 
-  // ----- Download PNG -----
-  // html2canvas весит ~200 КБ и нужен только админу при экспорте картинки.
-  // Раньше он подключался тегом <script> на каждой загрузке — телефон тратил
-  // на его разбор время и память впустую. Теперь грузим по требованию.
   let h2cPromise = null;
   function loadHtml2Canvas() {
     if (window.html2canvas) return Promise.resolve(window.html2canvas);
@@ -2433,26 +1984,9 @@
     return h2cPromise;
   }
 
-  // iOS (Safari и любой браузер на iPhone/iPad — все на WebKit) ведёт себя
-  // иначе, и именно из-за этого экспорт «не скачивался»:
-  //   1) «жест пользователя» живёт ~5 секунд. Рендер на телефоне занимает
-  //      7–12 с (шрифты + догрузка 70 иконок + 200 КБ html2canvas + сам
-  //      рендер), поэтому клик по <a download> происходил уже вне жеста и
-  //      WebKit молча его отбрасывал: ничего не скачивалось, ошибки не было.
-  //   2) data:-URL с атрибутом download на iOS не скачивается вообще —
-  //      менеджер загрузок Safari понимает только blob:.
-  //   3) <a>, не вставленный в документ, кликается ненадёжно.
-  // Поэтому на iOS сохранение вынесено во ВТОРОЕ (короткое) нажатие: к нему
-  // картинка уже готова, жест свежий, и работает либо системное «Поделиться»
-  // (сохранить в Фото/Файлы), либо обычная загрузка blob:.
   const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-  // Пиксельный бюджет холста. Пик памяти при экспорте — это холст
-  // (4 байта/пиксель) + буфер PNG + клон DOM, который делает html2canvas.
-  // В альбомной ориентации сцена крупнее (797×1456 CSS против 390×1347):
-  // при жёстком scale:2 холст выходил 1594×2912 = 4.6 Мп ≈ 17.7 МБ, и вкладка
-  // на iPhone падала по памяти. Теперь масштаб подбирается под бюджет.
   function exportScale(el) {
     const r = el.getBoundingClientRect();
     const area = Math.max(1, r.width * r.height);
@@ -2461,27 +1995,14 @@
     return Math.max(1, Math.min(2, Math.sqrt(budget / area)));
   }
 
-  // Иконки ниже сгиба помечены loading="lazy" и ещё не загружены — для
-  // экспорта нужны все сразу, иначе часть предметов выйдет пустой. Но
-  // форсировать все 70 разом = пик декодирования на телефоне, поэтому
-  // догружаем партиями.
   async function eagerLoadStageImages() {
-    // decode() дожидается не только загрузки, но и раскодирования: у иконок
-    // стоит decoding="async", и событие load приходит раньше, чем картинку
-    // реально можно рисовать на холсте.
     const decoded = img => (img.decode ? img.decode().catch(() => {}) : Promise.resolve());
-    // Берём ВСЕ картинки сцены, а не только помеченные lazy: верхние ряды
-    // теперь грузятся eager, и по фильтру [loading="lazy"] они бы выпали из
-    // ожидания — экспорт мог начаться до того, как они раскодированы.
-    // Для уже загруженных это быстрый путь через img.complete.
+
     const imgs = Array.from(stage.querySelectorAll("img"));
     for (let i = 0; i < imgs.length; i += 12) {
       await Promise.all(imgs.slice(i, i + 12).map(img => {
         img.loading = "eager";
-        // complete=true при naturalWidth=0 — картинка уже отвалилась (404).
-        // Ждать её событий бессмысленно: они уже прошли, и экспорт зависал
-        // навсегда на «Рендер…». Плюс таймаут на случай гонки, когда
-        // загрузка успела закончиться между сменой loading и подпиской.
+
         if (img.complete) return decoded(img);
         return new Promise(res => {
           const done = () => { clearTimeout(t); decoded(img).then(res); };
@@ -2493,19 +2014,6 @@
     }
   }
 
-  // html2canvas не берёт пиксели из уже отрисованных <img>. На каждый URL он
-  // заводит НОВЫЙ Image(), вешает crossOrigin="anonymous" (мы просим useCORS)
-  // и ждёт его load не дольше imageTimeout — не успел, промис отклоняется, и
-  // предмет попадает в PNG пустым. Именно так на айфоне терялась часть иконок;
-  // на десктопе повторить не удалось, там всё берётся из кэша мгновенно.
-  //
-  // Поэтому перед снимком перерисовываем уже показанные картинки в data:-URL и
-  // подменяем ссылки в клоне: html2canvas получает их мгновенно, без сети,
-  // кэша, CORS и таймаутов. Заодно ужимаем до того размера, в котором картинка
-  // реально попадёт в PNG — html2canvas тогда декодирует маленькие копии, а не
-  // исходники (среди иконок попадаются 720×405 на ячейку в 79 px).
-  // Что не удалось (чужой домен без CORS — холст «протухает»), оставляем как
-  // есть: хуже, чем было, не станет.
   function inlineStageImages(scale) {
     const map = new Map();
     let canvas = document.createElement("canvas");
@@ -2529,16 +2037,9 @@
         if (!canvas.width || !canvas.height) return;
         ctx.clearRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
-        // Только PNG. toDataURL("image/webp") экономит память, но на части
-        // версий Safari он не поддержан и возвращает мусор вместо картинки —
-        // лишняя развилка на устройстве, которое здесь не проверить.
+
         const url = canvas.toDataURL("image/png");
-        // Когда кодирование не удалось (нулевой холст, нехватка памяти,
-        // неподдержанный формат), Safari отдаёт строку "data:,". Она не
-        // подходит под /^data:image\//, поэтому html2canvas принимает её за
-        // чужой домен, вешает crossOrigin="anonymous" — и картинка не
-        // грузится совсем. Без этой проверки в экспорте пропали ВСЕ картинки
-        // разом, а не только те, что не успели загрузиться.
+
         if (url.indexOf("data:image/") !== 0 || url.length < 64) {
           badUrl++;
           if (samples.length < 3) {
@@ -2551,7 +2052,6 @@
         if (img.src && img.src !== src) map.set(img.src, url);
         ok++;
       } catch (e) {
-        // Холст протух от чужой картинки и уже не отдаст toDataURL — берём новый.
         tainted++;
         if (samples.length < 3) samples.push("исключение " + e.name + ": " + src.slice(-30));
         canvas = document.createElement("canvas");
@@ -2563,17 +2063,11 @@
         ", плохой data-URL " + badUrl + ", исключений " + tainted +
         (tried && ok < tried * 0.9 ? "  <- КАРТА СБРОШЕНА (<90%)" : ""));
     samples.forEach(s => dbg("  " + s));
-    // Подмена оправдана, только если удалась почти для всех. Если холст на
-    // этом устройстве не отдаёт картинки, честнее не подменять ничего и дать
-    // html2canvas грузить по обычным ссылкам, как он делал раньше.
+
     if (tried && ok < tried * 0.9) map.clear();
     return map;
   }
 
-  // Даём браузеру доложить раскладку перед снимком. requestAnimationFrame на
-  // скрытой вкладке не вызывается вообще: если во время экспорта свернуть
-  // браузер или заблокировать экран, кнопка навсегда залипала на «Рендер…».
-  // Поэтому ждём кадр, но не дольше секунды.
   function nextFrames() {
     return new Promise(res => {
       const t = setTimeout(res, 1000);
@@ -2581,12 +2075,9 @@
     });
   }
 
-  // toBlob вместо toDataURL: base64-строка портретного экспорта весит 3 млн
-  // символов = 6 МБ в памяти (JS-строки UTF-16), альбомного — вдвое больше,
-  // и присваивание в a.href копирует её ещё раз. Blob этого не требует.
   function canvasToBlob(canvas) {
     return new Promise((resolve, reject) => {
-      if (!canvas.toBlob) { // очень старый Safari
+      if (!canvas.toBlob) {
         try {
           const bin = atob(canvas.toDataURL("image/png").split(",")[1]);
           const buf = new Uint8Array(bin.length);
@@ -2612,17 +2103,15 @@
     a.href = pendingBlobUrl;
     a.download = PNG_NAME;
     a.rel = "noopener";
-    document.body.appendChild(a); // WebKit не кликает по узлу вне документа
+    document.body.appendChild(a);
     a.click();
     a.remove();
-    // Отзывать URL сразу нельзя: iOS начинает скачивание асинхронно.
+
     setTimeout(() => {
       if (pendingBlobUrl) { URL.revokeObjectURL(pendingBlobUrl); pendingBlobUrl = null; }
     }, 60000);
   }
 
-  // Вызывать ТОЛЬКО синхронно из обработчика клика — Web Share требует
-  // непросроченный жест пользователя.
   function saveBlob(blob) {
     if (isIOS() && navigator.canShare && typeof File === "function") {
       try {
@@ -2646,9 +2135,9 @@
   const btnPng = $("#btnPng");
   const PNG_LABEL = btnPng.textContent;
   const PNG_TITLE = btnPng.title;
-  let readyBlob = null;    // готовая картинка, ждущая второго нажатия (iOS)
+  let readyBlob = null;
   let readyTimer = null;
-  let exporting = false;   // на время экспорта запрещаем пересборку сцены
+  let exporting = false;
   let pendingReflow = false;
 
   function resetPngButton() {
@@ -2658,13 +2147,11 @@
     btnPng.title = PNG_TITLE;
     btnPng.disabled = false;
     btnPng.classList.remove("png-ready");
-    // Раньше подсказку искали по подстроке текста — при смене языка проверка
-    // молча переставала срабатывать. Помечаем её флагом.
+
     if (savedHint.dataset.pngHint) { savedHint.textContent = ""; delete savedHint.dataset.pngHint; }
   }
 
   btnPng.addEventListener("click", async () => {
-    // Второе нажатие на iOS: картинка уже готова — сохраняем в свежем жесте.
     if (readyBlob) {
       const blob = readyBlob;
       resetPngButton();
@@ -2692,11 +2179,7 @@
             ", картинок " + stage.querySelectorAll("img").length);
       }
       await document.fonts.ready.catch(() => {});
-      // Карусель замирает на текущем слайде, а анимированные креативы
-      // подменяются статичным кадром: html2canvas снял бы тот кадр, который
-      // случайно оказался на экране, и один и тот же экспорт давал бы разную
-      // картинку. Постер делает «ваш баннер попадает в PNG-постер»
-      // предсказуемой функцией, а не лотереей.
+
       if (stripCtl) stripCtl.freezeForExport();
       await eagerLoadStageImages();
       if (DEBUG) {
@@ -2704,8 +2187,7 @@
         dbg("после догрузки: " + all.filter(i => i.naturalWidth).length + "/" + all.length +
             " с пикселями, " + (Date.now() - t0) + " мс");
       }
-      // Иконки, которые так и не приехали, выйдут пустыми — лучше сказать об
-      // этом сразу, чем отдать человеку PNG с дырками и промолчать.
+
       const broken = Array.from(stage.querySelectorAll(".cell-icon img")).filter(i => !i.naturalWidth).length;
       const scale = exportScale(stage);
       const inlined = inlineStageImages(scale);
@@ -2718,9 +2200,7 @@
         allowTaint: false,
         logging: false,
         imageTimeout: 20000,
-        // html2canvas не разбирает image-set(), поэтому в клоне подставляем
-        // фон обычным url(). Фон из макета уже с цветокором, домножать его
-        // ни на что не надо — просто плоская JPEG-копия того же изображения.
+
         onclone: (doc) => {
           const url = new URL("assets/poster/bg-tile-export.jpg", location.href).href;
           const s = doc.getElementById("stage");
@@ -2728,25 +2208,19 @@
             s.style.backgroundImage = 'url("' + url + '")';
             s.style.backgroundColor = "#05091f";
             s.style.backgroundBlendMode = "normal";
-            // Плитка обязана повторяться и в экспорте: сцена на боевых данных
-            // вдвое выше одной плитки, без repeat-y низ PNG остался бы пустым.
+
             s.style.backgroundRepeat = "repeat-y";
             s.style.backgroundSize = "100% auto";
           }
           const p = doc.querySelector(".petals");
           if (p) {
-            // По той же причине, что и у фона: image-set() html2canvas не
-            // разбирает, поэтому подставляем плоский PNG той же плиткой.
             const pu = new URL("assets/poster/petals-tile-export.png", location.href).href;
             p.style.backgroundImage = 'url("' + pu + '")';
             p.style.backgroundRepeat = "repeat-y";
             p.style.backgroundSize = "100% auto";
             p.style.mixBlendMode = "normal";
           }
-          // Карусель в клоне сводится к одному активному слайду. Возиться со
-          // scrollLeft не нужно — и не стоит: html2canvas обрабатывает
-          // прокрутку внутри контейнера ненадёжно. Панель со стрелками и
-          // точками в постер тоже не идёт.
+
           doc.querySelectorAll(".ptn-export-hide").forEach(el => el.remove());
           const tr = doc.querySelector(".ptn-track");
           if (tr) {
@@ -2754,8 +2228,7 @@
             Array.from(tr.children).forEach((s, i) => { if (i !== keep) s.remove(); });
             if (tr.parentElement) tr.parentElement.style.overflow = "visible";
           }
-          // Подменяем ссылки на data:-URL, чтобы html2canvas не качал иконки
-          // заново по сети (см. комментарий у inlineStageImages).
+
           let swapped = 0, kept = 0;
           doc.querySelectorAll("img").forEach(im => {
             const d = inlined.get(im.currentSrc || im.src) || inlined.get(im.src);
@@ -2776,16 +2249,13 @@
       const blob = await canvasToBlob(canvas);
       dbg("blob " + (blob.size / 1048576).toFixed(2) + " МБ, " + blob.type +
           ", итого " + (Date.now() - t0) + " мс");
-      // Освобождаем холст сразу — на телефоне это десятки мегабайт.
+
       canvas.width = canvas.height = 0;
       canvas = null;
       if (broken) {
         alert(tx("msg.iconsMissing") + broken + tx("msg.iconsMissingTail"));
       }
       if (isIOS()) {
-        // Скачивание должно уйти в НОВОМ жесте, иначе WebKit его проглотит.
-        // Шаг нужно объяснить: молчаливая смена подписи читается как «ничего
-        // не произошло», и человек просто уходит с готовой картинкой в руках.
         readyBlob = blob;
         btnPng.textContent = tx("png.save");
         btnPng.title = tx("png.readyTitle");
@@ -2794,7 +2264,7 @@
         savedHint.textContent = tx("png.readyHint");
         savedHint.dataset.pngHint = "1";
         readyTimer = setTimeout(resetPngButton, 120000);
-        return; // finally ниже всё равно отработает
+        return;
       }
       saveBlob(blob);
     } catch (err) {
@@ -2815,13 +2285,6 @@
     }
   });
 
-  // ============================================================
-  //  LIKE BUTTON (глобальный счётчик лайков для всех посетителей)
-  // ============================================================
-  // Счётчик общий — лежит в БД (таблица likes), меняется через /api/like.php.
-  // Любой посетитель может
-  // поставить лайк (без входа). Чтобы один браузер не накручивал, запоминаем
-  // факт лайка в localStorage и разрешаем переключение лайк/не-лайк (±1).
   const LIKED_KEY = "nexus-liked";
   let hasLiked = false;
   let likeCount = 0;
@@ -2846,18 +2309,13 @@
     renderLike();
   }
 
-  // короткий «всплеск» сердечка при клике
   function popLike() {
     if (!likeBtn) return;
     likeBtn.classList.remove("pop");
-    void likeBtn.offsetWidth; // перезапустить CSS-анимацию
+    void likeBtn.offsetWidth;
     likeBtn.classList.add("pop");
   }
 
-  // Отправка лайка на свой PHP-эндпоинт (атомарный инкремент в БД).
-  //   true  — записано;
-  //   false — сервер отклонил (нужен откат UI);
-  //   null  — сеть недоступна (оффлайн, оставляем оптимистичный счётчик).
   async function sendLike(dir) {
     try {
       const r = await fetch(API_LIKE, {
@@ -2866,21 +2324,21 @@
         body: JSON.stringify({ dir }),
       });
       return r.ok ? true : false;
-    } catch (e) { /* оффлайн — считаем локальным успехом */ }
+    } catch (e) {}
     return null;
   }
 
   function toggleLike() {
     const willLike = !hasLiked;
     const dir = willLike ? 1 : -1;
-    // Оптимистично обновляем UI; следующий опрос сверит счётчик с сервером.
+
     setLiked(willLike);
     popLike();
     likeCount = Math.max(0, likeCount + dir);
     renderLike();
 
     sendLike(dir).then(ok => {
-      if (ok === false) { // запись не прошла — откат
+      if (ok === false) {
         setLiked(!willLike);
         likeCount = Math.max(0, likeCount - dir);
         renderLike();
@@ -2891,17 +2349,8 @@
   if (likeBtn) likeBtn.addEventListener("click", toggleLike);
   renderLike();
 
-  // ============================================================
-  //  ДОНАТ (ссылки + QR) — редактируются прямо на сайте
-  // ------------------------------------------------------------
-  //  Ссылки лежат в state.donate и публикуются вместе с тирлистом,
-  //  поэтому правка видна всем без правки кода. Кнопки редактирования
-  //  внутри окна помечены .edit-only — видны админу в режиме
-  //  «Редактирование» (как 🔗 у ссылок в подвале).
-  // ============================================================
   const donateModal = $("#donateModal");
 
-  // Подставить актуальные ссылки/QR в окно доната. Вызывается из render().
   function renderDonate() {
     const dn = state.donate || {};
     const linkDA  = $("#donateLinkDA");
@@ -2925,8 +2374,6 @@
     donateModal.addEventListener("click", e => { if (e.target === donateModal) close(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !donateModal.hidden) close(); });
 
-    // В режиме редактирования ссылки не открываются — иначе клик по кнопке
-    // «DonationAlerts» уводил бы админа со страницы вместо правки.
     donateModal.addEventListener("click", e => {
       const a = e.target.closest(".dmodal-link");
       if (a && stage.classList.contains("editing")) e.preventDefault();
@@ -2944,7 +2391,6 @@
     if (btnDA)  btnDA.addEventListener("click", () => editLink("da", tx("donate.promptDA")));
     if (btnHub) btnHub.addEventListener("click", () => editLink("hub", tx("donate.promptHub")));
 
-    // Новый QR — картинка уходит в файл через upload.php, как иконки предметов.
     const qrFile = $("#donateQrFile");
     if (qrFile) qrFile.addEventListener("change", e => {
       const file = e.target.files[0];
@@ -2963,18 +2409,10 @@
     });
   })();
 
-  // ============================================================
-  //  АВТОСКРЫТИЕ ПЛАВАЮЩИХ КНОПОК (лайк + донат)
-  // ------------------------------------------------------------
-  //  На телефоне кнопки перекрывают нижние ряды тирлиста. Прячем их за
-  //  правый край при прокрутке ВНИЗ и возвращаем при прокрутке ВВЕРХ.
-  //  Класс вешаем на <body>, само смещение — в CSS внутри медиазапроса
-  //  (max-width: 640px), поэтому на десктопе кнопки не двигаются.
-  // ============================================================
   (function initFabAutoHide() {
-    const THRESHOLD = 8;     // мелкое дрожание пальца не переключает состояние
-    const TOP_ZONE = 90;     // у самого верха кнопки всегда видны
-    const BOTTOM_ZONE = 60;  // у самого низа — всегда спрятаны
+    const THRESHOLD = 8;
+    const TOP_ZONE = 90;
+    const BOTTOM_ZONE = 60;
     let lastY = window.pageYOffset || 0;
     let hidden = false;
     let ticking = false;
@@ -2996,28 +2434,16 @@
         const doc = document.documentElement;
         const atBottom = y + window.innerHeight >= doc.scrollHeight - BOTTOM_ZONE;
         if (y < TOP_ZONE) { setHidden(false); return; }
-        // В самом низу держим кнопки спрятанными. Раньше здесь они наоборот
-        // показывались, и на телефоне это выглядело так: прокрутил вниз —
-        // спрятались, докрутил до конца — вернулись. Плюс «резинка» iOS в конце
-        // страницы даёт короткий рывок вверх, который читался как прокрутка
-        // вверх и тоже выдёргивал кнопки обратно.
+
         if (atBottom) { setHidden(true); return; }
         setHidden(dy > 0);
       });
     }
     window.addEventListener("scroll", onScroll, { passive: true });
-    // Открытое окно (донат / предмет) — кнопки не должны «выезжать» из-под него
-    // при прокрутке содержимого модалки.
+
     window.addEventListener("orientationchange", () => { lastY = window.pageYOffset || 0; setHidden(false); });
   })();
 
-  // ============================================================
-  //  РОЛЬ (cookie-сессия) и синхронизация
-  // ------------------------------------------------------------
-  //  Пароль этот файл больше не спрашивает: вход живёт на /admin, и роль там
-  //  решает сервер ДО отдачи разметки. Здесь остаётся только включить
-  //  админский режим, когда admin.php поставил window.NX_ADMIN_PAGE.
-  // ============================================================
   function setAdminMode(admin) {
     isAdmin = admin;
     const tbEdit    = $("#tbEdit");
@@ -3042,19 +2468,18 @@
       editToggle.checked = false;
       applyEditMode();
     }
-    applyProtection(); // админу выделение и перетаскивание нужны, гостю — нет
+    applyProtection();
     roleResolved = true;
     resolvePending();
   }
 
-  // ---------- Слияние и применение данных с сервера ----------
   function mergeServer(data) {
     const d = defaultState();
     const merged = Object.assign({}, d, data);
     merged.ad      = Object.assign({}, d.ad,      data.ad      || {});
     merged.donate  = Object.assign({}, d.donate,  data.donate  || {});
     merged.filters = normalizeFilters(data.filters, d.filters);
-    merged.filters.perms = false; // пермы по умолчанию скрыты — показываются только по клику
+    merged.filters.perms = false;
     if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
     if (!Array.isArray(merged.footer)  || !merged.footer.length)  merged.footer  = d.footer;
     normalizeTierLogos(merged.tiers, true);
@@ -3069,35 +2494,20 @@
   function sameState(a, b) {
     try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
   }
-  // Когда роль входа выяснена, решаем судьбу отложенного снимка из базы:
-  // админ сохраняет свои несохранённые правки, обычный зритель видит базу.
+
   function resolvePending() {
     if (deferredServer === null) return;
     const srv = deferredServer; deferredServer = null;
     if (isAdmin) {
       dirty = true; try { localStorage.setItem(DIRTY_KEY, "1"); } catch (e) {} renderSaveBtn();
       savedHint.textContent = tx("msg.restored");
-      // Дать возможность одним кликом взять версию из базы вместо своих правок
+
       pendingServer = srv; showUpdateBanner();
     } else {
       applyServer(srv);
     }
   }
 
-  // ============================================================
-  //  ЧТЕНИЕ ДАННЫХ — опрос (polling) своих PHP-эндпоинтов
-  // ------------------------------------------------------------
-  //  Каждый посетитель периодически читает короткими запросами:
-  //    1) /api/state.php  — крошечный {rev, likes} (десятки байт);
-  //    2) /api/tierlist.php?rev=<n> — полный тирлист, но ТОЛЬКО когда rev
-  //       изменился; ответ помечен immutable-кэшем, поэтому один и тот же rev
-  //       берётся из кэша браузера без обращения к серверу.
-  //  Картинки вынесены в файлы /images/<hash>, их раздаёт веб-сервер напрямую.
-  //  Записи админа идут отдельно через publish() → POST /api/save.php.
-  //  rev генерит сервер (save.php) и возвращает в ответе; клиент кладёт его в
-  //  state._rev / lastRev. По изменению rev зрители понимают, что пора качать
-  //  полные данные. Экономит трафик.
-  // ============================================================
   const API_TIERLIST = "/api/tierlist.php";
   const API_STATE    = "/api/state.php";
   const API_LIKE     = "/api/like.php";
@@ -3106,17 +2516,9 @@
   const API_UPLOAD   = "/api/upload.php";
   const POLL_MS = 30000;
   let pollTimer = null;
-  let lastRev = null;          // последний известный rev тирлиста
-  let haveFullData = false;    // хотя бы раз загрузили полные данные
+  let lastRev = null;
+  let haveFullData = false;
 
-  // ---------- рекламные кампании ----------
-  //
-  // Отдельный документ со своим rev, поэтому смена креатива не сбрасывает
-  // immutable-кэш тирлиста и не заставляет каждого посетителя качать все
-  // данные заново. Приоритет источников — сеть, потом локальный кэш, потом
-  // пусто (и тогда рисуется старый одиночный баннер из state.ad). Никакой
-  // проверки окружения: на статическом сервере без PHP fetch просто падает и
-  // выигрывает кэш, на бою успешный ответ его всегда перезаписывает.
   const API_PROMO = "/api/promo.php";
   const PROMO_DOC_KEY = "nx-ptn-doc-v1";
   const PROMO_PREVIEW_KEY = "nx-ptn-preview";
@@ -3125,26 +2527,24 @@
 
   function readPromoLocal() {
     if (!promo) return null;
-    // Черновик из админки — только по явному ?promo_preview=1. Так владелец
-    // показывает рекламодателю точный вид ДО публикации, а без параметра
-    // механизм полностью инертен и на бою безопасен.
+
     try {
       if (/[?&]promo_preview=1(&|$)/.test(location.search)) {
         const draft = sessionStorage.getItem(PROMO_PREVIEW_KEY);
         if (draft) return JSON.parse(draft);
       }
-    } catch (e) { /* приватный режим Safari бросает */ }
+    } catch (e) {}
     try {
       const raw = localStorage.getItem(PROMO_DOC_KEY);
       if (raw) return JSON.parse(raw);
-    } catch (e) { /* битый кэш — не беда */ }
+    } catch (e) {}
     return null;
   }
 
   function applyPromoDoc(doc, cache) {
     if (!promo) return;
     promoDoc = promo.normalizeDoc(doc);
-    promoOrderCache = null;               // порядок пересоберётся под новый набор
+    promoOrderCache = null;
     if (cache) {
       try { localStorage.setItem(PROMO_DOC_KEY, JSON.stringify(promoDoc)); } catch (e) {}
     }
@@ -3155,30 +2555,25 @@
     try {
       const r = await fetch(API_PROMO + q, { cache: "default" });
       if (r.ok) { applyPromoDoc(await r.json(), true); return true; }
-    } catch (e) { /* оффлайн */ }
+    } catch (e) {}
     return false;
   }
 
-  // Меняем только сам рекламный блок. Полный render() стёр бы #tiers и
-  // отбросил прокрутку наверх — ради подмены баннера это слишком грубо.
   function refreshPromoBlock() {
     const old = tiersEl.querySelector(".ptn-card");
     if (!old) return;
     teardownPromoStrip();
     old.replaceWith(renderPromoBlock());
-    applyEditMode();                      // вернуть видимость .edit-only
+    applyEditMode();
     renderPromoRails();
     renderPromoDock();
-    schedulePromoPopup();                 // могла приехать новая popup-кампания
+    schedulePromoPopup();
   }
 
-  // Обработка снимка данных тирлиста, пришедшего с сервера.
   function handleSnapshot(data) {
     if (!data) return;
     const merged = mergeServer(data);
 
-    // Первый снимок после перезагрузки: защищаем локальные правки ТОЛЬКО если
-    // при прошлой сессии остались реально неопубликованные изменения.
     if (!firstSnapshotHandled) {
       firstSnapshotHandled = true;
       if (bootedDirty && !sameState(merged, state)) {
@@ -3189,29 +2584,19 @@
     }
     if (deferredServer !== null) { deferredServer = merged; return; }
 
-    // Есть свои НЕопубликованные правки → не затираем молча, показываем баннер.
     if (dirty) { pendingServer = merged; showUpdateBanner(); return; }
 
     applyServer(merged);
   }
 
-
-  // Лёгкий опрос {rev, likes} со своего PHP-эндпоинта.
   async function fetchState() {
     try {
       const r = await fetch(API_STATE, { cache: "no-store" });
       if (r.ok) return await r.json();
-    } catch (e) { /* оффлайн */ }
+    } catch (e) {}
     return null;
   }
 
-  // Тяжёлая загрузка полного тирлиста — вызывается только при первой загрузке и
-  // когда rev изменился.
-  //
-  // В URL добавляем ?rev=<n>: данные конкретной версии неизменны, поэтому сервер
-  // отдаёт их с immutable-кэшем. Одинаковый rev → браузер отвечает из своего
-  // кэша (cache:"default" даёт ему на это право), запрос до сервера не доходит.
-  // Значит полные данные качаются раз на версию, а не каждые 30 сек.
   async function fetchFull(rev) {
     const q = (rev !== null && rev !== undefined && rev !== "") ? ("?rev=" + encodeURIComponent(rev)) : "";
     try {
@@ -3220,15 +2605,10 @@
         const d = await r.json();
         if (d && d.tierlist) { handleSnapshot(d.tierlist); return true; }
       }
-    } catch (e) { /* оффлайн */ }
+    } catch (e) {}
     return false;
   }
 
-  // Ревизия, которую страница отдала вместе с разметкой (window.NX_REV в
-  // index.php). Первый заход благодаря ей идёт сразу за данными, минуя
-  // /api/state.php: раньше до первого предмета было два запроса подряд —
-  // сначала крошечный state, потом сам тирлист, — и каркас висел на экране
-  // всё это время. Дальше опрос работает как раньше, по своему таймеру.
   let bootRev = (typeof window.NX_REV === "number" && isFinite(window.NX_REV)) ? window.NX_REV : null;
 
   async function fetchSnapshot() {
@@ -3240,7 +2620,6 @@
     const st = await fetchState();
     if (st && typeof st.likes === "number") { likeCount = Math.max(0, st.likes); renderLike(); }
 
-    // Полные данные тянем только если ещё ни разу не грузили ИЛИ rev поменялся.
     const need = !haveFullData || (st && st.rev !== lastRev);
     if (need) {
       const ok = await fetchFull(st ? st.rev : null);
@@ -3249,9 +2628,6 @@
       lastRev = st.rev;
     }
 
-    // Кампании тянем по своему rev. Тот же приём, что с тирлистом: ответ на
-    // ?rev=<n> помечен immutable, поэтому повторный опрос с тем же rev до
-    // сервера не доходит вовсе.
     if (st && typeof st.promoRev === "number" && st.promoRev !== lastPromoRev) {
       if (await fetchPromo(st.promoRev)) {
         lastPromoRev = st.promoRev;
@@ -3264,14 +2640,12 @@
     fetchSnapshot();
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(fetchSnapshot, POLL_MS);
-    // Свежие цены сразу при возврате на вкладку, без ожидания интервала.
+
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") fetchSnapshot();
     });
   }
 
-  // Баннер «есть свежие изменения» — когда другой админ опубликовал правки,
-  // а у тебя есть свои неопубликованные. Один клик «Обновить» вместо Ctrl+F5.
   function showUpdateBanner() {
     if (!pendingServer || document.getElementById("syncBanner")) return;
     const box = document.createElement("div");
@@ -3295,42 +2669,22 @@
     });
   }
 
-  // Инициализация бэкенда: опрос данных + определение роли по сессии.
-  // Кнопок входа и выхода здесь нет: вход — отдельная страница /admin, выход —
-  // форма в её шапке (admin-logout.php). Так они работают одинаково и в
-  // редакторе тирлиста, и в панели рекламы, где этого файла нет вовсе.
   function initBackend() {
     startPolling();
     checkSession();
   }
 
-  // Кто я. На публичной странице — всегда гость, даже с живой кукой админа:
-  // редактирование переехало на /admin целиком, и лишний запрос делал бы
-  // каждый посетитель. Спрашиваем сервер только там, где разметку отдал
-  // admin.php.
   async function checkSession() {
     if (!window.NX_ADMIN_PAGE) { setAdminMode(false); return; }
     try {
       const r = await fetch(API_SESSION, { cache: "no-store" });
       const d = await r.json();
-      // Кука могла протухнуть между отдачей страницы и этим запросом.
-      // Возвращаем на вход, иначе редактор молча не сохранит ни одной правки.
+
       if (!d.admin) { location.reload(); return; }
       setAdminMode(true);
     } catch (e) { setAdminMode(false); }
   }
 
-  // ============================================================
-  //  ЗАЩИТА КОНТЕНТА
-  // ------------------------------------------------------------
-  //  Гость не уносит с сайта ни текст, ни картинки: выделение, копирование,
-  //  правая кнопка и перетаскивание отключены. Сами обработчики живут в
-  //  js/protect.js — тот же код защищает ленту новостей (news-page.js).
-  //
-  //  Роль передаётся функцией, а не значением: здесь она выясняется запросом
-  //  к API уже после установки обработчиков (initBackend), и снятое значение
-  //  навсегда осталось бы «гость».
-  // ============================================================
   function applyProtection() {
     NX_PROTECT.applyClass(isAdmin);
   }
@@ -3339,32 +2693,22 @@
     NX_PROTECT.install(() => isAdmin);
   }
 
-  // ============================================================
-  //  INIT
-  // ============================================================
-  // Язык применяем ДО первого render(): иначе интерфейс успевает мигнуть
-  // русским, а подписи, которые ставит render (кнопка сохранения, тултипы
-  // тиров), пришлось бы обновлять вторым проходом.
   applyLang();
   setupProtection();
-  // Кампании из локального кэша (или из черновика админки при
-  // ?promo_preview=1) — до первого render(), иначе баннер мигнёт заглушкой.
+
   applyPromoDoc(readPromoLocal(), false);
   render();
-  if (!localStorage.getItem(STORAGE_KEY)) save(); // persist seed on first run
+  if (!localStorage.getItem(STORAGE_KEY)) save();
   initBackend();
   renderPromoRails();
   renderPromoDock();
-  // Борта строятся и разбираются по медиазапросу, а не по window.resize:
-  // событие приходит один раз на пересечение порога, а не на каждый пиксель.
+
   if (railMQ) {
     const onRailMQ = () => renderPromoRails();
     if (railMQ.addEventListener) railMQ.addEventListener("change", onRailMQ);
-    else if (railMQ.addListener) railMQ.addListener(onRailMQ);   // Safari < 14
+    else if (railMQ.addListener) railMQ.addListener(onRailMQ);
   }
-  // Верхняя граница бортов пересчитывается на прокрутке и ресайзе. Слушатели
-  // ставятся всегда, а не по медиазапросу: syncRailTop() сам выходит, пока
-  // борта скрыты, а окно можно растянуть до порога и без перезагрузки.
+
   window.addEventListener("scroll", queueRailTop, { passive: true });
   window.addEventListener("resize", queueRailTop);
   syncRailTop();
@@ -3374,32 +2718,19 @@
     else if (dockMQ.addListener) dockMQ.addListener(onDockMQ);
   }
   initPromoPopup();
-  // render() полностью перестраивает #tiers (innerHTML=""). На телефоне это
-  // опасно: браузер шлёт 'resize' при сворачивании адресной строки во время
-  // прокрутки (меняется только ВЫСОТА) — перерисовка сбрасывала прокрутку
-  // вверх. Поэтому разметку пересобираем ТОЛЬКО при смене ШИРИНЫ; на смену
-  // высоты просто подгоняем цифры без перестройки DOM.
+
   function safeRender() {
     try { render(); }
     catch (e) {
-      // Транзитный сбой (например, поворот экрана на неустаканенном вьюпорте)
-      // не должен оставлять пустую страницу — повторяем на следующем кадре.
       console.error("render failed", e);
       requestAnimationFrame(() => { try { render(); } catch (_) {} });
     }
   }
   let resizeT = null;
-  let lastW = window.innerWidth;   // ширина, под которую собрана текущая разметка
-  let lastPer = itemsPerRow();     // и сколько ячеек в ряду при этой ширине
+  let lastW = window.innerWidth;
+  let lastPer = itemsPerRow();
 
-  // Один проход пересчёта. Перерисовываем, только если реально изменилась
-  // ширина ИЛИ вместимость ряда: на iOS размеры вьюпорта и container-query
-  // единицы (cqw) обновляются НЕ одновременно, поэтому одной проверки
-  // innerWidth мало — ширина уже новая, а .cell ещё старого размера.
   function reflowPass() {
-    // Во время экспорта пересобирать DOM нельзя: html2canvas клонирует сцену,
-    // и render() (innerHTML = "") на середине даёт битую картинку, а на
-    // iPhone ещё и удваивает пик памяти. Поворот отработаем после экспорта.
     if (exporting) { pendingReflow = true; return; }
     const w = window.innerWidth;
     const per = itemsPerRow();
@@ -3407,12 +2738,7 @@
     lastW = w; lastPer = per;
     safeRender();
   }
-  // Поворот экрана меняет ширину и высоту местами. Safari на iPhone шлёт
-  // orientationchange/resize РАНЬШЕ, чем вьюпорт устаканится: раскладка
-  // считалась по старой ширине — ряды выходили с неверным числом ячеек,
-  // а иногда тирлист вовсе пропадал. Поэтому после поворота гоняем серию
-  // проходов; каждый следующий перерисовывает только если размеры ещё
-  // менялись, так что лишней работы нет.
+
   let reflowTimers = [];
   function reflowUntilStable() {
     reflowTimers.forEach(clearTimeout);
@@ -3421,16 +2747,14 @@
 
   window.addEventListener("resize", () => {
     clearTimeout(resizeT);
-    resizeT = setTimeout(reflowPass, 150); // только высота (адресная строка) → fitValues
+    resizeT = setTimeout(reflowPass, 150);
   });
   window.addEventListener("orientationchange", reflowUntilStable);
-  // Screen Orientation API — в новых iOS/Safari событие приходит надёжнее
-  // устаревшего orientationchange (и после него), поэтому слушаем оба.
+
   if (window.screen && screen.orientation && screen.orientation.addEventListener) {
     screen.orientation.addEventListener("change", reflowUntilStable);
   }
-  // visualViewport ловит случаи, когда window.resize на iOS не приходит вовсе
-  // (смена размера при повороте с открытой панелью Safari).
+
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", () => {
       clearTimeout(resizeT);
@@ -3440,6 +2764,6 @@
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(fitValues).catch(() => {});
   }
-  // после загрузки картинок-бейджей ширина полосы могла измениться
+
   window.addEventListener("load", fitValues);
 })();

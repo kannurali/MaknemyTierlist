@@ -1,9 +1,4 @@
-/* Шапка админки и страница входа.
-   Отдельный маленький файл: его тянут только /admin и /admin/promo, а у этих
-   двух страниц нет общей таблицы стилей — редактор тирлиста грузит styles.css,
-   панель рекламы promo-admin.css. Класть шапку в любую из них значило бы
-   раздавать её половине, которой она не нужна (styles.css качает каждый
-   посетитель сайта). */
+
 :root {
   --adm-cyan: #4fd6ff;
   --adm-bg: #0a0e1a;
@@ -15,10 +10,9 @@
   color-scheme: dark;
 }
 
-/* ===================== Шапка ===================== */
 .adm-nav {
   position: relative;
-  z-index: 80; /* выше .toolbar (50) редактора и плавающих кнопок (60) */
+  z-index: 80;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -66,7 +60,6 @@
 .adm-nav-out:hover { color: var(--adm-text); border-color: var(--adm-cyan); }
 .adm-nav-exit { margin: 0; }
 
-/* ===================== Страница входа ===================== */
 .adm-gate-body {
   margin: 0;
   min-height: 100vh;
@@ -123,10 +116,6 @@
 }
 .adm-btn[disabled] { opacity: .5; cursor: default; }
 
-/* ===================== Блочный редактор поста =====================
-   Тело поста — список блоков вместо двух textarea. Разметка в
-   admin-news.php, поведение в js/news-editor.js. */
-
 .ne-body-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 
 .ne-lang-seg { display: inline-flex; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; overflow: hidden; }
@@ -167,7 +156,6 @@
 .ne-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
 .ne-count { margin-left: auto; font-size: 12px; opacity: .6; }
 
-/* ---- Блок картинки и альбома ---- */
 .ne-media { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .ne-thumbs { display: flex; flex-wrap: wrap; gap: 6px; }
 .ne-thumb {
@@ -195,17 +183,10 @@
 .ne-geom .ne-hint { flex-basis: 100%; margin: 0; }
 .ne-cap-field { display: flex; align-items: baseline; gap: 8px; }
 .ne-cap-label { font-size: 12px; opacity: .6; white-space: nowrap; }
-/* Без flex:1 пустая подпись схлопывается в ноль ширины — кликнуть в неё и
-   начать печатать было нельзя. */
+
 .ne-cap-field .ne-editable { flex: 1; min-width: 0; }
 
-/* ---- Плавающая панель форматирования ----
-   Лежит вне модалки и позиционируется absolute от документа, поэтому в
-   news-editor.js к координатам выделения прибавляется прокрутка. */
 .ne-fmt {
-  /* fixed, как и сама .modal-backdrop: обе считают от вьюпорта, поэтому
-     координаты выделения кладутся в left/top как есть. absolute здесь давал
-     панель ПОД модалкой — кликнуть по ней было нельзя. */
   position: fixed;
   z-index: 30;
   display: flex;
@@ -221,8 +202,6 @@
 }
 .ne-fmt button:hover { background: rgba(255,255,255,.12); }
 
-/* Меню типов блока по «/». fixed по той же причине, что и .ne-fmt: модалка
-   position: fixed, координаты документа уехали бы мимо. */
 .ne-slash {
   position: fixed;
   z-index: 30;

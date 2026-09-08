@@ -46,9 +46,6 @@ header('Cache-Control: no-cache, must-revalidate');
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="dark" />
 
-<!-- Пути внутри страницы документ-относительные. Сама она отдаётся с "/",
-     где база и так корень, но <base> оставлен явно — тот же приём, что в
-     news.php: если адрес когда-нибудь уедет на глубину, пути не поедут. -->
 <base href="/" />
 
 <title>Maknemy — тирлист, цены и новости Blox Fruits | Макнеми</title>
@@ -89,44 +86,31 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=9" />
-<!-- Шапка редизайна: отсюда же приезжает @font-face для Oswald, которым
-     набрана вся страница. -->
-<link rel="stylesheet" href="css/topbar.css?v=10" />
-<!-- Поведение шапки: компактный режим при прокрутке и плашка
-     «В активной разработке» на разделах, которых ещё нет.
-     defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=4" defer></script>
-<!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=31" />
-<link rel="stylesheet" href="css/home.css?v=14" />
-<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
-     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<link rel="stylesheet" href="css/base.css?v=10" />
+
+<link rel="stylesheet" href="css/topbar.css?v=11" />
+
+<script src="js/topbar.js?v=5" defer></script>
+
+<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/home.css?v=15" />
+
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
 
-  <!-- ================= Шапка ================= -->
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <!-- Язык интерфейса. Та же пара RU|EN, что на тирлисте, ленте и
-         калькуляторе, и в том же месте шапки: шапка общая, и переключатель
-         не имеет права прыгать от страницы к странице. Выбор лежит в
-         localStorage под общим ключом, поэтому язык, выбранный здесь, действует
-         и на остальных разделах. -->
     <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
          data-i18n-label="lang.switch" aria-label="Язык интерфейса">
       <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
       <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
     </div>
 
-    <!-- Разделы и профиль лежат в одной плашке: аватар — последний элемент
-         .mk-top-bar, за волосяным разделителем (см. topbar.css). Отдельной
-         кнопкой рядом с меню он читался как чужой элемент. -->
     <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
       <ul class="mk-nav">
         <li>
@@ -142,29 +126,14 @@ header('Cache-Control: no-cache, must-revalidate');
           </a>
         </li>
         <li>
-          <!-- «Трейдинг» с сайта пока снят, профиля тоже нет. Это
-               <button data-soon>, а не мёртвый <span> и не href="#": кнопка
-               кликается и по клику показывает «В активной разработке»
-               (js/topbar.js). Пилюля, которая молчит в ответ на клик,
-               читается как поломка сайта, а якорь-пустышка только дописывает
-               "#" в адресную строку. Вернуть раздел — заменить тег на <a>
-               с href и убрать data-soon (так уже сделано с «Калькулятором»
-               ниже — у него теперь есть страница).
 
-               aria-disabled намеренно нет: кнопка отвечает на нажатие, а
-               «disabled» в ARIA значит «не работает вовсе» — скринридер
-               объявил бы её недоступной, и до объяснения было бы не
-               добраться. Приглушённый вид даёт селектор [data-soon]. -->
           <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </button>
         </li>
         <li>
-          <!-- «Калькулятор» получил страницу — /calculator — и вышел из
-               «В активной разработке»: рабочая ссылка, как остальные пункты
-               меню. На самой странице /calculator эта же пилюля дополнительно
-               несёт aria-current="page" (см. calculator.php). -->
+
           <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
@@ -178,16 +147,6 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
       </ul>
 
-      <!-- Чат. Появился в макете шапки (Figma, нода 244:7171): такой же
-           круг с градиентом, что и профиль, слева от него. Раздела ещё нет,
-           поэтому кнопка помечена data-soon и по клику отвечает «В активной
-           разработке» — как «Трейдинг» и профиль. Вернуть раздел = убрать
-           data-soon и заменить тег на <a href>.
-
-           Волосяной разделитель между разделами и парой круглых кнопок
-           теперь рисует она (.mk-chat::before в topbar.css): в макете чат
-           стоит первым из пары, и разделитель у профиля оказался бы
-           посреди неё. -->
       <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </button>
@@ -197,15 +156,6 @@ header('Cache-Control: no-cache, must-revalidate');
       </button>
     </nav>
 
-    <!-- Язычок. Как только страница уходит из самого верха, шапка гасит фон
-         и убирает плашку разделов за правый край — экран освобождается
-         целиком. Язычок остаётся единственным способом вернуть меню, и
-         поэтому он не декор: без него навигации на прокрученной странице
-         не было бы вовсе.
-
-         aria-expanded говорит о состоянии плашки, aria-controls связывает
-         кнопку с ней по id — скринридер объявит «свёрнуто/развёрнуто», а не
-         просто «кнопка». Подпись меняет js/topbar.js вместе с состоянием. -->
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
             aria-expanded="true" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
@@ -216,11 +166,6 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <main class="hm">
 
-  <!-- ================= Лид =================
-       Порядок элементов внутри — это порядок слоёв макета снизу вверх:
-       сначала плашки и текст, потом карточки, и только сверху весь декор
-       (лепестки, мокап, стеклянные фигуры). Менять порядок нельзя, он же
-       задаёт перекрытия. -->
   <section class="hm-lead">
     <div class="hm-panel-main"></div>
     <div class="hm-panel-text"></div>
@@ -235,9 +180,6 @@ header('Cache-Control: no-cache, must-revalidate');
 
     <p class="hm-desc" data-i18n="home.desc">Актуальный тир-лист Blox Fruits от создателя Maknemy. Следите за изменениями меты, ловите самые щедрые розыгрыши и всегда будьте в центре игровых новостей.</p>
 
-    <!-- Бегущая строка. Список продублирован намеренно: прокрутка идёт
-         ровно на одну копию, поэтому шов не виден. Копия скрыта от
-         скринридеров, чтобы пункты не читались дважды. -->
     <div class="hm-ticker">
       <div class="hm-ticker-track">
         <ul class="hm-ticker-list">
@@ -256,14 +198,11 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
 
     <div class="hm-lead-actions">
-      <!-- Раздела фруктов ещё нет. Кнопка сверстана целиком, но это <span>:
-           когда страница появится, меняется только тег и href. -->
+
       <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnFruits">фрукты</span></span></a>
       <a class="hm-btn hm-btn-ghost" href="https://t.me/theMaknemy" target="_blank" rel="noopener"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">о нас</span><span class="hm-btn-word hm-btn-word-hover" data-i18n="home.btnAbout">о нас</span></span></a>
     </div>
 
-    <!-- Ряд карточек. Два уровня вложенности не декоративные: в макете
-         контейнер и сами карточки едут в анимации по разным осям. -->
     <div class="hm-cards hm-anim">
       <ul class="hm-cards-row">
         <li>
@@ -319,7 +258,6 @@ header('Cache-Control: no-cache, must-revalidate');
       </ul>
     </div>
 
-    <!-- ===== Декор ===== -->
     <div class="hm-ghost hm-ghost-a hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-ghost hm-ghost-b hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-phone hm-deco hm-anim" aria-hidden="true"></div>
@@ -331,7 +269,6 @@ header('Cache-Control: no-cache, must-revalidate');
     <div class="hm-fig hm-fig-tri hm-deco hm-anim" aria-hidden="true"></div>
   </section>
 
-  <!-- ================= Вопросы ================= -->
   <section class="hm-faq">
     <div class="hm-faq-inner">
       <div class="hm-faq-head">
@@ -339,9 +276,6 @@ header('Cache-Control: no-cache, must-revalidate');
         <p data-i18n="home.faqSub">ваша гарантия успешных трейдов - ваша любознательность!</p>
       </div>
 
-      <!-- Ответы разбиты на абзацы: <p> внутри .hm-faq-a, стили под них
-           лежат в home.css. Механика раскрытия работает по
-           aria-expanded (js/home.js) и текста не касается. -->
       <ul class="hm-faq-list">
         <li class="hm-faq-item">
           <button class="hm-faq-q" type="button" aria-expanded="false" data-i18n="home.faqQ1">Кто такой Maknemy и как появился этот проект?</button>
@@ -402,8 +336,6 @@ header('Cache-Control: no-cache, must-revalidate');
   </section>
 </main>
 
-<!-- ================= Подвал =================
-     Тот же .mk-foot, что на тирлисте: стили лежат в design-page.css. -->
 <footer class="mk-foot">
   <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
   <ul class="mk-foot-roles">
@@ -414,20 +346,14 @@ header('Cache-Control: no-cache, must-revalidate');
     <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
   </ul>
   <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
-    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
-         Roblox и должны быть найдены с любой страницы, поэтому они в общем
-         подвале, а не только в карточке приложения. -->
+
     <p class="mk-foot-legal">
       <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
 </footer>
 
-<!-- Словарь интерфейса идёт ПЕРЕД home.js: переключатель языка живёт
-     в home.js и без window.I18N оставил бы страницу на русском. Номер
-     версии обязан совпадать с остальными страницами — файл один на весь
-     сайт, и разные ?v= держали бы в кэше две его копии. -->
-<script src="js/i18n.js?v=35"></script>
-<script src="js/home.js?v=4"></script>
+<script src="js/i18n.js?v=36"></script>
+<script src="js/home.js?v=5"></script>
 </body>
 </html>

@@ -1,16 +1,4 @@
-// Панель управления рекламой (/admin/promo).
-//
-// Отдельная страница, а не инлайн-правка на постере: слотов три, кампаний
-// может быть десяток, и у каждой свои даты, вес и три макета — contentEditable
-// с window.prompt() этого не тянет.
-//
-// Формы входа здесь нет: пароль спрашивает сервер (admin-promo.php) ДО отдачи
-// разметки, поэтому до этого файла доходит только администратор. Сессия всё
-// же может истечь при открытой вкладке — этот случай ловится по 401 на записи.
-//
-// i18n сюда сознательно не подключён: файл словаря качает каждый посетитель
-// сайта, и сорок админских ключей утяжелили бы его ради внутреннего
-// инструмента. Строки здесь русские и живут прямо в разметке.
+
 (function () {
   "use strict";
 
@@ -19,9 +7,6 @@
   var API_TIERLIST = "/api/tierlist.php";
   var PREVIEW_KEY = "nx-ptn-preview";
 
-  // Зеркало CREATIVE_SPECS из api/lib/images.php. Расходиться им нельзя:
-  // здесь это подсказка «влезет / не влезет» ДО загрузки, а решает всё равно
-  // сервер. Те же числа стоят в таблице форматов медиакита.
   var SPECS = {
     strip: { label: "Карусель в постере", w: 1200, h: 300,  maxW: 1200, maxH: 400,  bytes: 400000, animBytes: 900000 },
     rail:  { label: "Боковой борт",       w: 320,  h: 1200, maxW: 320,  maxH: 1200, bytes: 300000, animBytes: 700000 },
@@ -32,11 +17,9 @@
 
   var $ = function (s) { return document.querySelector(s); };
   var doc = { v: 1, rev: 0, campaigns: [] };
-  var loadedRev = 0;          // ревизия, с которой мы начали править
-  var current = null;         // id выбранной кампании
+  var loadedRev = 0;
+  var current = null;
   var dirty = false;
-
-  // ---------------------------------------------------------------- утилиты
 
   function hint(text, cls) {
     var el = $("#saveHint");
@@ -49,8 +32,6 @@
   function fmtDate(s) { return s ? s.split("-").reverse().join(".") : "—"; }
 
   function newId() {
-    // Идентификатор — ключ, по которому позже сойдётся статистика кликов,
-    // поэтому он не переиспользуется и не меняется после создания.
     return "c_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
@@ -63,12 +44,7 @@
 
   function markDirty() { dirty = true; hint("есть несохранённые правки"); }
 
-  // Сессия оборвалась при открытой вкладке. Перезагружать страницу нельзя —
-  // вместе с ней уйдёт несохранённый черновик; просим войти в новой вкладке и
-  // повторить действие.
   var EXPIRED = "сессия истекла: войдите заново на /admin и повторите";
-
-  // -------------------------------------------------------------- загрузка
 
   function loadDoc() {
     return fetch(API_PROMO, { cache: "no-store" })
@@ -80,8 +56,6 @@
       })
       .catch(function () { return false; });
   }
-
-  // ------------------------------------------------------------- список
 
   function renderList() {
     var ul = $("#list");
@@ -119,11 +93,7 @@
     });
   }
 
-  // ------------------------------------------------------------- редактор
-
   function shareText(c) {
-    // Доля показов считается среди тех, кто прямо сейчас имеет право
-    // показаться в том же слоте — иначе число вводит в заблуждение.
     var now = Date.now();
     var slot = c.slots[0];
     if (!slot) return "";
@@ -276,11 +246,6 @@
     el.textContent = msg || "";
   }
 
-  // -------------------------------------------------------------- загрузка
-
-  // Анимацию нельзя прогонять через canvas: перерисовка в холст оставляет
-  // первый кадр ровно так же, как это делает GD на сервере. Смотрим на
-  // байты, а не на расширение.
   function isAnimatedFile(file) {
     return file.slice(0, 64).arrayBuffer().then(function (buf) {
       var b = new Uint8Array(buf);
@@ -289,7 +254,7 @@
         for (var k = i; k < i + n && k < b.length; k++) s += String.fromCharCode(b[k]);
         return s;
       };
-      // Любой GIF считаем анимацией: холст всё равно сохранил бы его в PNG.
+
       if (str(0, 3) === "GIF") return true;
       if (str(0, 4) === "RIFF" && str(8, 4) === "WEBP") {
         return str(12, 4) === "VP8X" && (b[20] & 0x02) !== 0;
@@ -307,8 +272,6 @@
     });
   }
 
-  // Статику ужимаем на клиенте, чтобы не упереться в лимит байт из-за
-  // исходника прямо из фотошопа.
   function compress(file, spec) {
     return readRaw(file).then(function (url) {
       return new Promise(function (res) {
@@ -322,7 +285,7 @@
           var out = url;
           [0.9, 0.8, 0.7, 0.6].some(function (q) {
             var d = cv.toDataURL("image/webp", q);
-            if (d.indexOf("data:image/webp") !== 0) return false;   // старый Safari
+            if (d.indexOf("data:image/webp") !== 0) return false;
             out = d;
             return d.length * 0.75 < spec.bytes;
           });
@@ -344,8 +307,7 @@
         return fetch(API_UPLOAD, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // kind, а не slot: у upload.php один параметр на иконку,
-          // картинку новости и рекламный макет — значение слота и есть вид.
+
           body: JSON.stringify({ data: dataUrl, kind: slot })
         }).then(function (r) {
           return r.json().then(function (j) {
@@ -371,14 +333,10 @@
         renderAll();
       })
       .catch(function (e) {
-        // Сообщение сервера намеренно показываем как есть: в нём названы
-        // фактический и допустимый размер, его можно переслать рекламодателю.
         slotError(slot, e.message);
         hint("макет не принят", "bad");
       });
   }
-
-  // ------------------------------------------------------------ сохранение
 
   function save() {
     hint("сохраняю…");
@@ -391,8 +349,6 @@
       .then(function (res) {
         if (res.status === 401) { hint(EXPIRED, "bad"); return; }
         if (res.status === 409) {
-          // Кто-то (или вторая вкладка) сохранил раньше. Молча затирать чужую
-          // правку — именно то, чем страдает блоб тирлиста; здесь спрашиваем.
           if (confirm("Кампании уже изменили в другом месте.\n\nПерезагрузить их? Ваши несохранённые правки пропадут.")) {
             return loadDoc().then(function () { current = null; renderAll(); hint("перезагружено"); });
           }
@@ -412,8 +368,6 @@
       .catch(function () { hint("сервер недоступен", "bad"); });
   }
 
-  // --------------------------------------------------------------- команды
-
   function addCampaign(from) {
     var c = PROMO.normalizeDoc({
       campaigns: [from
@@ -424,8 +378,7 @@
       c.id = newId();
       c.name = (from.name || "Кампания") + " (копия)";
       c.enabled = false;
-      // Токен выдаётся под конкретный креатив, а копию делают ради другого.
-      // Утащить чужой erid в новое размещение хуже, чем ввести его заново.
+
       c.erid = "";
     }
     doc.campaigns.push(c);
@@ -461,9 +414,6 @@
     bind("#fCap", function (c, v) { c.popup.capHours = Math.max(1, Math.min(720, parseInt(v, 10) || 24)); });
     bind("#fWeek", function (c, v) { c.popup.maxPerWeek = Math.max(1, Math.min(50, parseInt(v, 10) || 3)); });
 
-    // Токен маркировки. Тот же набор символов, что принимают promo.js и
-    // promo.php: строку, которую сайт всё равно выбросит, лучше подсветить
-    // здесь, чем молча потерять при сохранении.
     $("#fErid").addEventListener("input", function () {
       var c = camp();
       if (!c) return;
@@ -506,8 +456,6 @@
     });
     $("#btnSave").addEventListener("click", save);
 
-    // Перенос старого одиночного баннера из state.ad. Односторонний: сам
-    // state.ad не трогаем, поэтому откат остаётся мгновенным.
     $("#btnImportLegacy").addEventListener("click", function () {
       hint("читаю тирлист…");
       fetch(API_TIERLIST, { cache: "no-store" })
@@ -525,16 +473,10 @@
         .catch(function () { hint("не удалось прочитать тирлист", "bad"); });
     });
 
-    // Предпросмотр показывает НЕсохранённые правки: рекламодатель видит свой
-    // макет на настоящем сайте до того, как что-то опубликовано. Без
-    // ?promo_preview=1 механизм на сайте полностью инертен.
     $("#btnPreview").addEventListener("click", function () {
       try {
         sessionStorage.setItem(PREVIEW_KEY, JSON.stringify(doc));
-        // Без noopener намеренно: sessionStorage копируется в новую вкладку
-        // только когда связь с открывающей сохранена, а с noopener черновик
-        // до сайта просто не доезжает. Открываем свою же страницу на том же
-        // домене, так что защищаться тут не от чего.
+
         var w = window.open("/?promo_preview=1", "_blank");
         if (!w) hint("браузер заблокировал новое окно", "bad");
       } catch (e) {
