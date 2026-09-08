@@ -1,5 +1,4 @@
-/* Панель управления рекламой. Отдельный файл: styles.css качает каждый
-   посетитель сайта, и стили внутренней формы ему не нужны. */
+
 :root {
   --cyan: #4fd6ff;
   --bg: #0a0e1a;
@@ -13,9 +12,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-/* Атрибут hidden должен реально прятать элемент: у .edit-col стоит
-   display: flex, а он перебивает display: none из браузерных стилей — пустая
-   форма кампании висела на экране, пока ни одна кампания не выбрана. */
+
 [hidden] { display: none !important; }
 body {
   margin: 0;
@@ -60,7 +57,6 @@ input:focus, textarea:focus { outline: none; border-color: var(--cyan); }
 input[type="range"] { padding: 0; }
 input[type="checkbox"] { width: auto; }
 
-/* ---- каркас ---- */
 .top {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -104,7 +100,6 @@ input[type="checkbox"] { width: auto; }
 .withbtn input { flex: 1; }
 .popup-cfg .f { min-width: 130px; }
 
-/* ---- слоты ---- */
 .slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 .slot { border: 1px solid var(--edge); border-radius: 10px; padding: 10px; background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
 .slot-head { display: flex; align-items: center; gap: 8px; font-weight: 600; }

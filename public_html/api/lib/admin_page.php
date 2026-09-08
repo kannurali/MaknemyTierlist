@@ -113,7 +113,7 @@ function admin_login_page(string $title): void {
 <meta name="robots" content="noindex,nofollow" />
 <title>Вход — {$t}</title>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-<link rel="stylesheet" href="/css/admin-shell.css?v=1" />
+<link rel="stylesheet" href="/css/admin-shell.css?v=3" />
 </head>
 <body class="adm-gate-body">
 <form class="adm-gate" id="gateForm" autocomplete="on">

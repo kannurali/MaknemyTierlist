@@ -88,22 +88,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<!-- Сайт всегда тёмный. Без этой строчки «Тёмная тема для сайтов» в Яндекс.Браузере
-     считает страницу светлой, включает принудительное затемнение и инвертирует
-     монохромные картинки — белые логотипы на плашках тиров становились чёрными. -->
+
 <meta name="color-scheme" content="dark" />
 
-<!-- ============ SEO ============ -->
-<!-- Заголовок и описание — то, что видно в выдаче Google/Яндекса.
-     Название бренда в разных написаниях (латиницей и кириллицей), потому
-     что ищут и «Maknemy tier list», и «макнеми тирлист». -->
 <title>Maknemy Tier List — трейд-ценности Blox Fruits | Макнеми тирлист</title>
 <meta name="description" content="Maknemy Tier List — актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос, тренды роста и падения, обновляется вручную. Макнеми тирлист." />
 <link rel="canonical" href="https://maknemy.com/tierlist" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 
-<!-- Превью-карточка при отправке ссылки в Telegram, Discord, ВК —
-     og:image/title/description echo живые данные тирлиста, см. tierlist_og_data() выше. -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Maknemy Tier List" />
 <meta property="og:locale" content="ru_RU" />
@@ -120,7 +112,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <meta name="twitter:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
 
-<!-- Разметка для поисковиков: связывает сайт с брендом Maknemy -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -138,75 +129,44 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 }
 </script>
 
-<!-- Иконка сайта. Копия .ico лежит ещё и в корне: краулеры Google и Яндекса
-     (а также часть агрегаторов превью) не читают HTML, а просто дёргают
-     /favicon.ico — без этого файла в выдаче рисовался серый глобус.
-     Пути абсолютные, иначе на любом URL глубже корня они бы поехали.
-     sizes="any" убран: он объявляет иконку масштабируемой, а это не SVG. -->
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=9" />
-<link rel="stylesheet" href="css/styles.css?v=54" />
-<!-- Новая шапка из редизайна. Идёт после styles.css: перекрывает старый
-     бренд и .nav-seg в тулбаре. -->
-<link rel="stylesheet" href="css/topbar.css?v=10" />
-<!-- Поведение шапки: компактный режим при прокрутке и плашка
-     «В активной разработке» на разделах, которых ещё нет.
-     defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=4" defer></script>
-<!-- Хром страницы тирлиста по редизайну: фон, панель фильтров, подвал. -->
-<link rel="stylesheet" href="css/design-page.css?v=31" />
+<link rel="stylesheet" href="css/base.css?v=10" />
+<link rel="stylesheet" href="css/styles.css?v=55" />
 
-<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
-     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<link rel="stylesheet" href="css/topbar.css?v=11" />
+
+<script src="js/topbar.js?v=5" defer></script>
+
+<link rel="stylesheet" href="css/design-page.css?v=32" />
+
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
-  <!-- Кнопки входа здесь больше нет: админка живёт на отдельном адресе /admin,
-       и роль там решает сервер до отдачи разметки. Тулбар редактирования ниже
-       остаётся в файле — эту же разметку отдаёт admin.php, дописав к ней
-       window.NX_ADMIN_PAGE. Посетителю все админские группы скрыты. -->
 
-  <!-- ====== Floating like button (правый нижний угол, для всех посетителей) ====== -->
   <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="Поставить лайк" aria-pressed="false">
     <span class="like-heart" aria-hidden="true">🤍</span>
     <span class="like-count" id="likeCount">0</span>
   </button>
 
-  <!-- ====== Кнопка доната — открывает окно со ссылками и QR ====== -->
   <button class="donate-fab" id="donateBtn" type="button" data-i18n-title="donate.title" title="Поддержать проект" hidden>
     <span class="donate-heart" aria-hidden="true">💜</span>
     <span class="donate-label" data-i18n="donate.button">Поддержать</span>
   </button>
 
-  <!-- ================= Шапка сайта (редизайн) ================= -->
-  <!-- «Трейдинг» и профиль есть в макете, но разделов под них на сайте пока
-       нет: они выложены кнопками data-soon и по нажатию отвечают
-       «В активной разработке» — см. комментарий у самих пилюль.
-       «Калькулятор» из этого списка вышел — у него уже есть страница. -->
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <!-- Язык интерфейса. Стоит в самой шапке, а не в полосе под ней: шапка
-         общая для всех страниц, значит и переключатель обязан быть в одном
-         месте везде. При прокрутке уезжает влево вместе с логотипом
-         (.mk-top.is-stuck .mk-top-lang в topbar.css).
-
-         Содержимое тирлиста (названия, реклама, титры) идёт из БД и не
-         переводится — переключатель влияет только на интерфейс. -->
     <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
          data-i18n-label="lang.switch" aria-label="Язык интерфейса">
       <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
       <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
     </div>
 
-    <!-- Разделы и профиль лежат в одной плашке: аватар — последний элемент
-         .mk-top-bar, за волосяным разделителем (см. topbar.css). Отдельной
-         кнопкой рядом с меню он читался как чужой элемент. -->
     <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
       <ul class="mk-nav">
         <li>
@@ -222,29 +182,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </a>
         </li>
         <li>
-          <!-- «Трейдинг» с сайта пока снят, профиля тоже нет. Это
-               <button data-soon>, а не мёртвый <span> и не href="#": кнопка
-               кликается и по клику показывает «В активной разработке»
-               (js/topbar.js). Пилюля, которая молчит в ответ на клик,
-               читается как поломка сайта, а якорь-пустышка только дописывает
-               "#" в адресную строку. Вернуть раздел — заменить тег на <a>
-               с href и убрать data-soon (так уже сделано с «Калькулятором»
-               ниже — у него теперь есть страница).
 
-               aria-disabled намеренно нет: кнопка отвечает на нажатие, а
-               «disabled» в ARIA значит «не работает вовсе» — скринридер
-               объявил бы её недоступной, и до объяснения было бы не
-               добраться. Приглушённый вид даёт селектор [data-soon]. -->
           <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </button>
         </li>
         <li>
-          <!-- «Калькулятор» получил страницу — /calculator — и вышел из
-               «В активной разработке»: рабочая ссылка, как остальные пункты
-               меню. На самой странице /calculator эта же пилюля дополнительно
-               несёт aria-current="page" (см. calculator.php). -->
+
           <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
@@ -258,16 +203,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </li>
       </ul>
 
-      <!-- Чат. Появился в макете шапки (Figma, нода 244:7171): такой же
-           круг с градиентом, что и профиль, слева от него. Раздела ещё нет,
-           поэтому кнопка помечена data-soon и по клику отвечает «В активной
-           разработке» — как «Трейдинг» и профиль. Вернуть раздел = убрать
-           data-soon и заменить тег на <a href>.
-
-           Волосяной разделитель между разделами и парой круглых кнопок
-           теперь рисует она (.mk-chat::before в topbar.css): в макете чат
-           стоит первым из пары, и разделитель у профиля оказался бы
-           посреди неё. -->
       <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </button>
@@ -277,15 +212,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       </button>
     </nav>
 
-    <!-- Язычок. Как только страница уходит из самого верха, шапка гасит фон
-         и убирает плашку разделов за правый край — экран освобождается
-         целиком. Язычок остаётся единственным способом вернуть меню, и
-         поэтому он не декор: без него навигации на прокрученной странице
-         не было бы вовсе.
-
-         aria-expanded говорит о состоянии плашки, aria-controls связывает
-         кнопку с ней по id — скринридер объявит «свёрнуто/развёрнуто», а не
-         просто «кнопка». Подпись меняет js/topbar.js вместе с состоянием. -->
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
             aria-expanded="true" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
@@ -294,7 +220,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </button>
   </header>
 
-  <!-- ================= Toolbar ================= -->
   <div class="toolbar" id="toolbar">
     <div class="tb-brand">MAKNEMY<span>EDITOR</span></div>
 
@@ -303,7 +228,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <a href="/news" data-i18n="news.navNews">Новости</a>
     </nav>
 
-    <!-- Кнопки редактирования — только для админа -->
     <div class="tb-group" id="tbEdit" hidden>
       <button class="btn" id="btnAddTier" data-i18n="admin.addTier" data-i18n-title="admin.addTierTitle" title="Добавить новый тир">＋ Тир</button>
       <button class="btn" id="btnAddItem" data-i18n="admin.addItem" data-i18n-title="admin.addItemTitle" title="Добавить предмет в первый тир">＋ Предмет</button>
@@ -318,10 +242,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <button class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="Показать всё">Все</button>
     </div>
 
-    <!-- Переключатель языка переехал в шапку (.mk-top-lang в topbar.css):
-         он общий для всех страниц, и в полосе фильтров ему делать нечего. -->
-
-    <!-- Переключатели — только для админа -->
     <div class="tb-group" id="tbToggles" hidden>
       <label class="switch" data-i18n-title="admin.autoSortTitle" title="Автоматически переставлять предмет по цене при её изменении">
         <input type="checkbox" id="autoSortToggle" checked />
@@ -335,12 +255,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       </label>
     </div>
 
-    <!-- Сохранить (опубликовать изменения для всех) — только для админа -->
     <div class="tb-group" id="tbPublish" hidden>
       <button class="btn save-btn clean" id="btnSave" data-i18n-title="admin.saveTitle" title="Опубликовать изменения для всех">✓ Сохранено</button>
     </div>
 
-    <!-- Скачивание PNG — только для админа, как и всё ниже -->
     <div class="tb-group" id="tbPng" hidden>
       <button class="btn primary" id="btnPng" data-i18n="admin.png" data-i18n-title="admin.pngTitle" title="Скачать тирлист как PNG">⬇ Скачать PNG</button>
     </div>
@@ -356,12 +274,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     <span class="tb-saved" id="savedHint"></span>
   </div>
 
-  <!-- ================= Stage (exported area) ================= -->
   <div class="stage-wrap">
     <div class="stage" id="stage">
       <div class="petals" aria-hidden="true"></div>
 
-      <!-- Header -->
       <header class="tl-header">
         <img class="bf-logo" src="assets/poster/logo-bf.png" alt="Blox Fruits" />
         <div class="title-block">
@@ -371,13 +287,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         <img class="brand-logo" src="assets/poster/marks.png" data-i18n-alt="stage.brandAlt" alt="Логотип" />
       </header>
 
-      <!-- Tiers + ad block injected here -->
       <main class="tiers" id="tiers"></main>
 
-      <!-- Легенда. Новый макет: одна плашка, заголовок по центру сверху, под
-           ним три колонки — типы предмета, спрос и тренды цены. Значки типов
-           набраны текстом (Proto Sans + градиент и обводка в CSS), точки спроса
-           нарисованы кругами, значки трендов — SVG из макета. -->
       <section class="legend">
         <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ НОВИЧКАМ</h2>
         <div class="legend-grid">
@@ -393,11 +304,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </div>
 
           <div class="legend-col lc-demand">
-            <!-- Оверпрайс — верх шкалы, а не сноска в конце: за такой предмет
-                 переплачивают, значит отдать его легче всего. Порядок сверху
-                 вниз совпадает с оценками, по которым калькулятор считает
-                 спрос стороны (DEMAND_WEIGHT в js/calc.js): 12, 10, 8, 5, 2.
-                 Залит градиентом, а не одним цветом. -->
+
             <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
             <div class="lg"><span class="lgd d-green"></span><span class="lgl" data-i18n="legend.good">Хорошо</span></div>
             <div class="lg"><span class="lgd d-yellow"></span><span class="lgl" data-i18n="legend.mid">Средне</span></div>
@@ -415,21 +322,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
       </section>
 
-      <!-- Footer (ссылки рендерятся из state в renderFooter — редактируемые) -->
       <footer class="tl-footer" id="tlFooter"></footer>
 
-      <!-- Строка команды отсюда убрана: в редизайне её место занял подвал
-           страницы ниже (.mk-foot), и две одинаковые строки подряд не нужны.
-           Сами данные (state.credits) остались в базе нетронутыми —
-           renderCredits() в app.js просто выходит, не найдя контейнер. -->
     </div>
   </div>
 
-  <!-- ================= Подвал страницы (редизайн) =================
-       В макете подвал — часть страницы, а не постера: знак, строка ролей и
-       слоган на чёрной плашке. Ники участников остаются в .credits внутри
-       сцены — они редактируются админом и уезжают в PNG, а здесь по макету
-       только названия ролей. -->
   <footer class="mk-foot">
     <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
     <ul class="mk-foot-roles">
@@ -440,35 +337,21 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
     </ul>
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
-    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
-         Roblox и должны быть найдены с любой страницы, поэтому они в общем
-         подвале, а не только в карточке приложения. -->
+
     <p class="mk-foot-legal">
       <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
 
-  <!-- ====== Боковые рекламные борта (только широкий десктоп) ======
-       Снаружи .stage-wrap: .stage — контейнер с overflow: hidden, внутри него
-       fixed-элемент был бы обрезан. Побочный полезный эффект — борта не
-       попадают в PNG-экспорт, в отличие от карусели и попапа. -->
   <aside class="ptn-rail ptn-rail-l" id="promoRailL" hidden
          data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
   <aside class="ptn-rail ptn-rail-r" id="promoRailR" hidden
          data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
 
-  <!-- ====== Прилипающий баннер внизу экрана (только телефон) ======
-       Тоже снаружи .stage-wrap, и по той же причине, что попап и борта:
-       у .stage стоит container-type, а контейнер перехватывает
-       position: fixed на потомках — изнутри сцены баннер прилип бы к ней,
-       а не к экрану. Плюс собственный container-type здесь обязателен:
-       вся вёрстка баннера в единицах cqw, и без него они бы считались не
-       от той ширины. -->
   <div class="ptn-dock" id="promoDock" hidden
        data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
 
-  <!-- ================= Item editor modal ================= -->
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal">
       <div class="modal-head">
@@ -499,8 +382,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <label data-i18n="modal.descEn">Описание · EN (необязательно)</label>
           <textarea id="mDescEn" rows="3" data-i18n-placeholder="modal.descEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
         </div>
-        <!-- Условия передачи предмета: отдельный блок в карточке просмотра, а
-             не хвост описания. Пусто — блока в карточке нет. -->
+
         <div class="field">
           <label data-i18n="modal.terms">Условия · RU (необязательно)</label>
           <textarea id="mTerms" rows="3" data-i18n-placeholder="modal.termsPlaceholder" placeholder="Что нужно, чтобы предмет вообще можно было передать"></textarea>
@@ -509,9 +391,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <label data-i18n="modal.termsEn">Условия · EN (необязательно)</label>
           <textarea id="mTermsEn" rows="3" data-i18n-placeholder="modal.termsEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
         </div>
-        <!-- Метка — короткая плашка рядом с ценой (LIMITED, EVENT, OG…).
-             Свободный текст: список таких пометок меняется быстрее, чем
-             успевал бы обновляться жёсткий набор кнопок. -->
+
         <div class="field">
           <label data-i18n="modal.tag">Метка · RU (необязательно)</label>
           <input type="text" id="mTag" maxlength="24" data-i18n-placeholder="modal.tagPlaceholder" placeholder="Напр. LIMITED" />
@@ -529,11 +409,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
         <div class="field">
           <label data-i18n="modal.category">Категория (необязательно)</label>
-          <!-- Значки предмета. Порядок тот же, что в легенде на странице
-               («Помощь новичкам»): админ выбирает то же самое, что потом
-               увидит читатель. Коды в data-v — это и есть тип предмета, он
-               уходит в БД как есть и подставляется в имя файла значка,
-               см. badgeSrc() в js/app.js. -->
+
           <div class="seg" id="mType2">
             <button data-v="" class="active">—</button>
             <button data-v="cs" class="t-cs" data-i18n="modal.catConfigSkin">CS · Конфигурация скин</button>
@@ -546,8 +422,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
         <div class="field">
           <label data-i18n="modal.demand">Спрос</label>
-          <!-- Порядок тот же, что в колонке спроса легенды: админ жмёт ровно
-               тот кружок, который увидит читатель. -->
+
           <div class="seg" id="mDemand">
             <button data-v="" class="active">—</button>
             <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
@@ -559,12 +434,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </div>
         <div class="field">
           <label data-i18n="modal.trend">Тренд</label>
-          <!-- Порядок и картинки те же, что в колонке трендов легенды: админ
-               жмёт ровно тот значок, который увидит читатель.
-               «?» и NEW тредом не являются — это самостоятельные флаги предмета
-               (wip и flag), они горят вместе со стрелкой и друг с другом.
-               Поэтому у них data-flag вместо data-v: обработчик переключает их
-               по отдельности, а не как один выбор из списка. -->
+
           <div class="seg" id="mTrend">
             <button data-v="" class="active">—</button>
             <button data-flag="wip" data-i18n-title="modal.wipTitle" title="Показать значок «?» на предмете (цена под вопросом). Работает вместе с NEW"><img class="trend tr-wip" src="assets/design/legend/trend-wip.svg" alt="?" /></button>
@@ -582,13 +452,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <!-- ============ Item VIEW modal (для всех — клик по предмету) ============ -->
-  <!-- Разметка снята с макета (Figma «MAKNEMY (Copy)», компонент Frame 121):
-       стеклянная шапка с названием, иконка в градиентной плитке, разделитель,
-       широкая плашка типа с подписью, ряд из цены и метки, и две окантованные
-       панели — «Описание» и «Условия». Панель условий и плашка метки скрыты,
-       пока поля пустые: у большинства предметов их не будет, и пустая рамка
-       занимала бы полкарточки ни за чем. -->
   <div class="modal-backdrop" id="viewModal" hidden>
     <div class="modal vmodal">
       <div class="vmodal-head">
@@ -611,10 +474,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <div class="vmodal-panel-text" id="vDesc"></div>
         </section>
         <section class="vmodal-panel" id="vTermsPanel" hidden>
-          <!-- Знак внимания из макета: треугольник со скруглёнными углами, из
-               которого вырезан восклицательный знак. Инлайновый SVG, а не файл
-               в assets — фигура одна, цвет берёт от текста панели, и лишнего
-               запроса при открытии карточки не будет. -->
+
           <svg class="vmodal-panel-icon" viewBox="0 0 69 61" aria-hidden="true" focusable="false">
             <mask id="vTermsWarn" maskUnits="userSpaceOnUse" x="0" y="0" width="69" height="61">
               <rect width="69" height="61" fill="#fff" />
@@ -631,7 +491,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <!-- ============ Донат-модалка (ссылки + QR) ============ -->
   <div class="modal-backdrop" id="donateModal" hidden>
     <div class="modal dmodal">
       <button class="icon-btn dmodal-close" id="donateClose" data-i18n-title="modal.close" title="Закрыть">✕</button>
@@ -642,7 +501,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <a class="btn primary dmodal-link" id="donateLinkDA" href="#" target="_blank" rel="noopener">DonationAlerts</a>
           <a class="btn dmodal-link" id="donateLinkHub" href="#" target="_blank" rel="noopener" data-i18n="donate.linkHub">Все способы (dalink)</a>
         </div>
-        <!-- Правка ссылок прямо на сайте — видно админу в режиме «Редактирование» -->
+
         <div class="dmodal-tools edit-only">
           <button class="btn small" id="donateEditDA" data-i18n="donate.editDA" data-i18n-title="donate.editDATitle" title="Изменить ссылку DonationAlerts">🔗 DonationAlerts</button>
           <button class="btn small" id="donateEditHub" data-i18n="donate.editHub" data-i18n-title="donate.editHubTitle" title="Изменить ссылку на хаб (dalink)">🔗 Все способы</button>
@@ -657,15 +516,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <!-- ====== Рекламное окно (всплывает через ~12 секунд после захода) ======
-       Разметка лежит здесь, а не собирается в JS: applyLang() переводит
-       [data-i18n*] при каждой смене языка, и статическая разметка получает
-       перевод бесплатно. Собранный в JS баннер обновлений этого не умеет и
-       остаётся на языке, который был при его создании — повторять этот баг
-       не будем.
-       Место тоже не случайное: снаружи .stage-wrap. У .stage стоят
-       overflow: hidden и container-type: inline-size, из него ничто не может
-       вылезти. -->
   <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
        data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
        aria-labelledby="promoPopTitle">
@@ -675,31 +525,25 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
               aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
       <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
       <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" data-i18n-alt="ad.imageAlt" /></div>
-      <!-- Текст и подпись кнопки приходят от рекламодателя — это контент, он
-           не переводится. -->
+
       <div class="ptn-pop-title" id="promoPopTitle"></div>
       <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
-      <!-- Токен маркировки. Заполняет app.js; без него узел скрыт. -->
+
       <span class="ptn-erid" id="promoPopErid" hidden></span>
     </div>
   </div>
 
-  <!-- html2canvas грузится по требованию из app.js (только при экспорте PNG) -->
 <?php if ($nxRev !== null): ?>
-  <!-- Ревизия для js/app.js: первый запрос идёт сразу за данными, а не за
-       /api/state.php. См. комментарий у $nxRev в начале файла. -->
+
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=35"></script>
-  <script src="js/content.js?v=2"></script>
-  <script src="js/tiers.js?v=1"></script>
-  <!-- Логика показа рекламы. Обязательно ДО app.js: он читает PROMO при
-       первом render(). Файл намеренно не называется js/ads.js — это имя
-       режут сетевые фильтры блокировщиков. -->
-  <script src="js/promo.js?v=6"></script>
-  <!-- Защита контента от копирования — общая с лентой новостей.
-       ДО app.js: он зовёт NX_PROTECT в setupProtection() на старте. -->
-  <script src="js/protect.js?v=1"></script>
-  <script src="js/app.js?v=71"></script>
+  <script src="js/i18n.js?v=36"></script>
+  <script src="js/content.js?v=3"></script>
+  <script src="js/tiers.js?v=2"></script>
+
+  <script src="js/promo.js?v=7"></script>
+
+  <script src="js/protect.js?v=2"></script>
+  <script src="js/app.js?v=72"></script>
 </body>
 </html>

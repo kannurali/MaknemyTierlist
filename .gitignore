@@ -34,3 +34,6 @@
 /scratch_*
 .superpowers/
 /config.php.bak*
+
+# Вырезанные из public_html комментарии: локальная шпаргалка, не код сайта.
+/comments-archive/

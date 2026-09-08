@@ -174,17 +174,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<!-- news.php отдаётся и на /news, и на /news/<id> (см. .htaccess) —
-     относительные пути ниже («css/base.css», «js/news.js», …) без этого
-     тега резолвились бы от адреса ДОКУМЕНТА, а не от корня: на /news/<id>
-     (на один уровень глубже /news) это увело бы их в несуществующие
-     /news/css/…, /news/js/… — та же ловушка, которую /news/ → /news 301
-     выше в .htaccess уже решает для одного конкретного случая. Явный
-     <base> решает её сразу для любой глубины запроса, а не только для
-     той, что предусмотрели заранее. -->
+
 <base href="/" />
-<!-- Как и на тирлисте: без этой строчки принудительное затемнение в
-     Яндекс.Браузере инвертирует монохромные логотипы в шапке. -->
+
 <meta name="color-scheme" content="dark" />
 
 <title>Новости Blox Fruits и обновления тирлиста | Maknemy Tier List</title>
@@ -197,11 +189,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <meta property="og:locale" content="ru_RU" />
 <meta property="og:url" content="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
-<!-- og:description здесь нет намеренно: мессенджер рисует его абзацем под
-     заголовком, и карточка превращалась в стену текста, которая забивала
-     собой картинку с заголовком. На поиск это не влияет — выдача берёт
-     meta name="description" выше. Значение по-прежнему считается в
-     news_og_data() и покрыто tests/og_test.php: вернуть тег — одна строка. -->
+
 <meta property="og:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:image:width" content="<?= (int)$og['imageWidth'] ?>" />
 <meta property="og:image:height" content="<?= (int)$og['imageHeight'] ?>" />
@@ -213,28 +201,21 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=9" />
-<link rel="stylesheet" href="css/news.css?v=12" />
-<!-- Общая шапка сайта: та же, что на главной и тирлисте. Идёт после
-     news.css — прячет старый бренд и .nav-seg в тулбаре, их роль забрала
-     она сама. -->
-<link rel="stylesheet" href="css/topbar.css?v=10" />
-<!-- Поведение шапки: компактный режим при прокрутке и плашка
-     «В активной разработке» на разделах, которых ещё нет.
-     defer — код лезет в DOM сразу, без ожидания события. -->
-<script src="js/topbar.js?v=4" defer></script>
-<!-- Фон страницы и подвал из редизайна. -->
-<link rel="stylesheet" href="css/design-page.css?v=31" />
-<!-- Лента по редизайну: перекрывает постерный вид из news.css. -->
-<link rel="stylesheet" href="css/news-design.css?v=16" />
-<!-- Нижняя рекламная полоса на телефоне: слот "dock", тот же документ
-     /api/promo.php, что у бортов по бокам ленты. -->
-<link rel="stylesheet" href="css/promo-dock.css?v=1" />
-<!-- Рекламное окно: слот "popup", раз в сутки. Пока место не выкуплено,
-     показывает собственное объявление о телеграм-канале. -->
-<link rel="stylesheet" href="css/promo-popup.css?v=1" />
-<!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
-     api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
+<link rel="stylesheet" href="css/base.css?v=10" />
+<link rel="stylesheet" href="css/news.css?v=13" />
+
+<link rel="stylesheet" href="css/topbar.css?v=11" />
+
+<script src="js/topbar.js?v=5" defer></script>
+
+<link rel="stylesheet" href="css/design-page.css?v=32" />
+
+<link rel="stylesheet" href="css/news-design.css?v=17" />
+
+<link rel="stylesheet" href="css/promo-dock.css?v=2" />
+
+<link rel="stylesheet" href="css/promo-popup.css?v=2" />
+
 <?php echo metrika_counter_html(); ?>
 </head>
 <body class="news-bg">
@@ -244,22 +225,12 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <!-- Язык интерфейса. Стоит в самой шапке, а не в полосе под ней: шапка
-         общая для всех страниц, значит и переключатель обязан быть в одном
-         месте везде. При прокрутке уезжает влево вместе с логотипом
-         (.mk-top.is-stuck .mk-top-lang в topbar.css).
-
-         Тексты постов приходят из БД и не переводятся — переключатель
-         влияет только на интерфейс. -->
     <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
          data-i18n-label="lang.switch" aria-label="Язык интерфейса">
       <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
       <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
     </div>
 
-    <!-- Разделы и профиль лежат в одной плашке: аватар — последний элемент
-         .mk-top-bar, за волосяным разделителем (см. topbar.css). Отдельной
-         кнопкой рядом с меню он читался как чужой элемент. -->
     <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
       <ul class="mk-nav">
         <li>
@@ -275,29 +246,14 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
           </a>
         </li>
         <li>
-          <!-- «Трейдинг» с сайта пока снят, профиля тоже нет. Это
-               <button data-soon>, а не мёртвый <span> и не href="#": кнопка
-               кликается и по клику показывает «В активной разработке»
-               (js/topbar.js). Пилюля, которая молчит в ответ на клик,
-               читается как поломка сайта, а якорь-пустышка только дописывает
-               "#" в адресную строку. Вернуть раздел — заменить тег на <a>
-               с href и убрать data-soon (так уже сделано с «Калькулятором»
-               ниже — у него теперь есть страница).
 
-               aria-disabled намеренно нет: кнопка отвечает на нажатие, а
-               «disabled» в ARIA значит «не работает вовсе» — скринридер
-               объявил бы её недоступной, и до объяснения было бы не
-               добраться. Приглушённый вид даёт селектор [data-soon]. -->
           <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </button>
         </li>
         <li>
-          <!-- «Калькулятор» получил страницу — /calculator — и вышел из
-               «В активной разработке»: рабочая ссылка, как остальные пункты
-               меню. На самой странице /calculator эта же пилюля дополнительно
-               несёт aria-current="page" (см. calculator.php). -->
+
           <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
@@ -311,16 +267,6 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
         </li>
       </ul>
 
-      <!-- Чат. Появился в макете шапки (Figma, нода 244:7171): такой же
-           круг с градиентом, что и профиль, слева от него. Раздела ещё нет,
-           поэтому кнопка помечена data-soon и по клику отвечает «В активной
-           разработке» — как «Трейдинг» и профиль. Вернуть раздел = убрать
-           data-soon и заменить тег на <a href>.
-
-           Волосяной разделитель между разделами и парой круглых кнопок
-           теперь рисует она (.mk-chat::before в topbar.css): в макете чат
-           стоит первым из пары, и разделитель у профиля оказался бы
-           посреди неё. -->
       <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </button>
@@ -330,15 +276,6 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
       </button>
     </nav>
 
-    <!-- Язычок. Как только страница уходит из самого верха, шапка гасит фон
-         и убирает плашку разделов за правый край — экран освобождается
-         целиком. Язычок остаётся единственным способом вернуть меню, и
-         поэтому он не декор: без него навигации на прокрученной странице
-         не было бы вовсе.
-
-         aria-expanded говорит о состоянии плашки, aria-controls связывает
-         кнопку с ней по id — скринридер объявит «свёрнуто/развёрнуто», а не
-         просто «кнопка». Подпись меняет js/topbar.js вместе с состоянием. -->
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
             aria-expanded="true" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
@@ -347,26 +284,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </button>
   </header>
 
-  <!-- Полосы тулбара здесь больше нет. От неё оставался один переключатель
-       языка (бренд и дублирующее меню прятал topbar.css, фильтры по
-       категориям убраны по редизайну), а он переехал в шапку — держать ради
-       пустого блока отдельную полосу под шапкой незачем. -->
-
   <main class="nw-page">
     <div class="nw-lead">
 
-      <!-- Рекламные борта по бокам колонки (Frame 55 / Frame 56 в макете).
-           Полосатая панель — это образ СВОБОДНОГО места, и стоит она
-           всегда, куплен слот "rail" или нет: место, которое видно, можно
-           продать, а спрятанное — нельзя. Так же ведут себя борта
-           калькулятора (.tc-rail в calculator.css).
-
-           Когда из /api/promo.php приезжает креатив, renderNewsPromo() в
-           js/news-page.js вешает на борт класс has-ad, и полоски уступают
-           картинке кампании. -->
-      <!-- Два уровня не для красоты: внешняя колонка тянется на всю высоту
-           ленты, а сама панель внутри неё липкая — так борт остаётся на
-           виду всю прокрутку и при этом не вылезает за пределы ленты. -->
       <div class="nw-rail-slot nw-rail-l" aria-hidden="true">
         <aside class="nw-rail" id="newsRailL"
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
@@ -376,8 +296,6 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
 
-      <!-- Декор. Тот же набор картинок, что на главной, но разложен так,
-           как в макете новостей. Клики не перехватывает. -->
       <div class="nw-deco nw-ghost nw-ghost-a" aria-hidden="true"></div>
       <div class="nw-deco nw-ghost nw-ghost-b" aria-hidden="true"></div>
       <img class="nw-deco nw-sakura nw-sakura-l" src="assets/design/home/sakura.webp" alt="" aria-hidden="true" />
@@ -389,25 +307,13 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
       <!-- ADMIN-BAR -->
 
-      <!-- Пояснение для /news/<id>, когда пост из ссылки не входит в
-           последние 50, которые отдаёт api/news.php (пост существует —
-           иначе сервер уже ответил бы 404 выше, — но за пределами ленты
-           показать нечего). Заполняется и показывается из
-           focusLinkedPost() в js/news-page.js, не из PHP: сама лента
-           грузится и рисуется на клиенте. -->
       <div class="nw-notice" id="newsNotice" role="status" hidden></div>
 
-      <!-- Заголовка страницы и фильтров по категориям здесь больше нет:
-           в макете новостей их нет, и по решению заказчика они убраны.
-           Разметку фильтров заполнял renderFilters() в js/news-page.js —
-           он теперь молча выходит, не найдя контейнера, так что вернуть
-           фильтры можно одним <div id="newsFilters">. -->
       <div class="nw-feed" id="feed"></div>
       <div class="nw-state" id="newsState" role="status" aria-live="polite" hidden></div>
     </div>
   </main>
 
-  <!-- Подвал сайта — тот же, что на главной и тирлисте (стили в design-page.css). -->
   <footer class="mk-foot">
     <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
     <ul class="mk-foot-roles">
@@ -418,44 +324,16 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
       <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
     </ul>
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
-    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
-         Roblox и должны быть найдены с любой страницы, поэтому они в общем
-         подвале, а не только в карточке приложения. -->
+
     <p class="mk-foot-legal">
       <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
 
-
-  <!-- ====== Нижняя рекламная полоса (только телефоны) ======
-       Горизонтальная пара к боковым бортам: на телефоне борта скрыты
-       вместе с остальным декором, и место «сбоку от контента» там — низ
-       экрана. Слот "dock" в /api/promo.php, тот же документ, что у бортов.
-
-       Прямой потомок <body> намеренно: полоса прибита position: fixed, а
-       любой предок с transform или container-type перехватил бы это на
-       себя, и она прилипла бы к колонке, а не к экрану.
-
-       hidden снимает js/promo-dock.js, когда приехал реальный креатив:
-       пустая тёмная полоса поверх нижней трети телефона читается как
-       поломка вёрстки, а не как свободное место. -->
   <div class="ptn-dock" id="promoDock" hidden
        data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
 
-
-  <!-- ====== Рекламное окно ======
-       Всплывает через ~12 секунд после захода и не чаще раза в сутки
-       (частоту задаёт сама кампания, см. capHours в js/promo.js). Пока
-       слот "popup" не выкуплен, здесь показывается собственное
-       объявление о телеграм-канале проекта — PROMO.HOUSE_TG.
-
-       Разметка лежит в странице, а не собирается в JS: applyLang()
-       проходит по [data-i18n*] при каждой смене языка, и статическая
-       разметка получает перевод бесплатно.
-
-       Прямой потомок <body>: окно прибито position: fixed, и предок с
-       transform или container-type перехватил бы это на себя. -->
   <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
        data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
        aria-labelledby="promoPopTitle">
@@ -464,40 +342,31 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
               data-i18n-label="promo.close" data-i18n-title="promo.close"
               aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
       <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
-      <!-- alt пустой намеренно: доступное имя несёт само окно
-           (data-i18n-label выше), и подпись на картинке дублировала бы
-           его вторым «Реклама» подряд. -->
+
       <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" /></div>
-      <!-- Текст и подпись кнопки платной кампании приходят от
-           рекламодателя и не переводятся; у своего объявления вместо них
-           ключи словаря — js/promo-popup.js вешает на узел data-i18n. -->
+
       <div class="ptn-pop-title" id="promoPopTitle"></div>
       <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
-      <!-- Токен маркировки. Заполняет js/promo-popup.js; без него узел скрыт. -->
+
       <span class="ptn-erid" id="promoPopErid" hidden></span>
     </div>
   </div>
 
-  <!-- Редактора поста здесь нет: его вставляет admin-news.php на /admin/news.
-       Посетитель ленты не качает ни модалку на восемь полей, ни кнопку
-       «Добавить» — на публичной странице админской разметки ноль. -->
-
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=35"></script>
-  <script src="js/news.js?v=4"></script>
-  <script src="js/news-blocks.js?v=1"></script>
-  <!-- Отбор рекламных кампаний — тот же модуль, что на тирлисте. -->
-  <script src="js/promo.js?v=6"></script>
-  <!-- Нижняя полоса на телефоне — общий модуль с калькулятором. -->
-  <script src="js/promo-dock.js?v=3"></script>
-  <!-- Рекламное окно — общий модуль с калькулятором. -->
-  <script src="js/promo-popup.js?v=1"></script>
-  <!-- Защита контента от копирования — тот же модуль, что и на тирлисте.
-       ДО news-page.js: он зовёт NX_PROTECT на старте. -->
-  <script src="js/protect.js?v=1"></script>
-  <script src="js/news-page.js?v=22"></script>
+  <script src="js/i18n.js?v=36"></script>
+  <script src="js/news.js?v=5"></script>
+  <script src="js/news-blocks.js?v=2"></script>
+
+  <script src="js/promo.js?v=7"></script>
+
+  <script src="js/promo-dock.js?v=4"></script>
+
+  <script src="js/promo-popup.js?v=2"></script>
+
+  <script src="js/protect.js?v=2"></script>
+  <script src="js/news-page.js?v=23"></script>
 </body>
 </html>
 <?php endif; ?>

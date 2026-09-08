@@ -42,7 +42,7 @@ $html = preg_replace('~(src|href)="(?!https?:|//|/|#|data:)~i', '$1="/', $html);
 
 $html = str_replace(
     '</head>',
-    '<link rel="stylesheet" href="/css/admin-shell.css?v=2" />' . "
+    '<link rel="stylesheet" href="/css/admin-shell.css?v=3" />' . "
 </head>",
     $html
 );
@@ -194,7 +194,7 @@ $html = str_replace(
 // ничего и молча ничего не сделал.
 $html = preg_replace(
     '~(<script src="/js/news-page\.js[^"]*"></script>)~',
-    '$1' . "\n  " . '<script src="/js/news-editor.js?v=1"></script>',
+    '$1' . "\n  " . '<script src="/js/news-editor.js?v=2"></script>',
     $html,
     1
 );

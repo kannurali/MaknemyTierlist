@@ -23,8 +23,8 @@ echo <<<HTML
      и растить его на стили внутренней формы незачем. Пути абсолютные —
      страница живёт на /admin/promo, от относительных они уехали бы в
      /admin/css/. -->
-<link rel="stylesheet" href="/css/admin-shell.css?v=1" />
-<link rel="stylesheet" href="/css/promo-admin.css?v=2" />
+<link rel="stylesheet" href="/css/admin-shell.css?v=3" />
+<link rel="stylesheet" href="/css/promo-admin.css?v=3" />
 </head>
 <body>
 {$nav}
@@ -115,8 +115,8 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/promo.js?v=3"></script>
-<script src="/js/promo-admin.js?v=3"></script>
+<script src="/js/promo.js?v=7"></script>
+<script src="/js/promo-admin.js?v=4"></script>
 </body>
 </html>
 HTML;
