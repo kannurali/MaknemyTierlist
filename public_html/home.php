@@ -98,7 +98,7 @@ header('Cache-Control: no-cache, must-revalidate');
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=4" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=30" />
+<link rel="stylesheet" href="css/design-page.css?v=31" />
 <link rel="stylesheet" href="css/home.css?v=14" />
 <!-- Счётчик Яндекс Метрики. Разметка у всех страниц общая и лежит в
      api/lib/metrika.php: искать её текст в этом файле бесполезно. -->
@@ -414,13 +414,20 @@ header('Cache-Control: no-cache, must-revalidate');
     <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
   </ul>
   <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
+    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
+         Roblox и должны быть найдены с любой страницы, поэтому они в общем
+         подвале, а не только в карточке приложения. -->
+    <p class="mk-foot-legal">
+      <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
+      <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
+    </p>
 </footer>
 
 <!-- Словарь интерфейса идёт ПЕРЕД home.js: переключатель языка живёт
      в home.js и без window.I18N оставил бы страницу на русском. Номер
      версии обязан совпадать с остальными страницами — файл один на весь
      сайт, и разные ?v= держали бы в кэше две его копии. -->
-<script src="js/i18n.js?v=34"></script>
+<script src="js/i18n.js?v=35"></script>
 <script src="js/home.js?v=4"></script>
 </body>
 </html>

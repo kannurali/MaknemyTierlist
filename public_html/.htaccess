@@ -97,6 +97,24 @@ RewriteRule ^calculator\.php$ /calculator [L,R=301]
 
 RewriteRule ^calculator$ /calculator.php [L]
 
+# /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
+# именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy
+# URL / Terms of Service URL), а там адрес меняется только через повторное
+# ревью. Схема та же, что у /calculator выше, и по тем же причинам: слэш снимается
+# внешним 301 (иначе база документа станет "/privacy/" и css уедет в 404), прямой
+# адрес .php — тоже 301 против двух URL с одним содержимым, а условие на
+# REDIRECT_STATUS обязательно, иначе внутренний рероут сам попадёт под него и
+# получится бесконечный редирект.
+RewriteRule ^privacy/$ /privacy [L,R=301]
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^privacy\.php$ /privacy [L,R=301]
+RewriteRule ^privacy$ /privacy.php [L]
+
+RewriteRule ^terms/$ /terms [L,R=301]
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^terms\.php$ /terms [L,R=301]
+RewriteRule ^terms$ /terms.php [L]
+
 # /news/ (со слэшем на конце) — 301 на канонический /news, а не на news.html.
 # Без этого правила ниже (^news/?$) молча принимает и /news, и /news/ как один
 # и тот же внутренний рероут на news.html — но это ВНУТРЕННИЙ рероут: адрес в

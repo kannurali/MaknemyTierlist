@@ -296,6 +296,26 @@ html::-webkit-scrollbar-corner { background: #d9d9d9; }
   color: #fff;
 }
 
+/* Ссылки на правовые страницы (/privacy, /terms). Стоят ПОД слоганом и
+   набраны мелко приглушённым: по требованию Roblox к OAuth-приложению они
+   обязаны быть на сайте, но композицию подвала, снятую с макета, им ломать
+   незачем — это служебная строка, а не пункт меню. */
+.mk-foot-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 22px;
+  margin: 18px 0 0;
+  font-size: 13px;
+}
+.mk-foot-legal a {
+  color: #8fa6c6;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(143, 166, 198, 0.35);
+  transition: color .15s, border-color .15s;
+}
+.mk-foot-legal a:hover { color: #d7e6fb; border-bottom-color: rgba(215, 230, 251, 0.6); }
+
 .mk-foot-tagline {
   margin: 23px 0 0;
   font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;

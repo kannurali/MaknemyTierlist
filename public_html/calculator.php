@@ -136,7 +136,7 @@ header('Cache-Control: no-cache, must-revalidate');
      defer — код лезет в DOM сразу, без ожидания события. -->
 <script src="js/topbar.js?v=4" defer></script>
 <!-- Фон страницы и подвал из редизайна — те же, что на главной и тирлисте. -->
-<link rel="stylesheet" href="css/design-page.css?v=30" />
+<link rel="stylesheet" href="css/design-page.css?v=31" />
 <link rel="stylesheet" href="css/calculator.css?v=21" />
 <!-- Нижняя рекламная полоса на телефоне: слот "dock", тот же документ
      /api/promo.php, что у бортов по бокам доски. -->
@@ -525,6 +525,13 @@ header('Cache-Control: no-cache, must-revalidate');
       <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
     </ul>
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
+    <!-- Правовые страницы. Ссылки на них обязательны для OAuth-приложения
+         Roblox и должны быть найдены с любой страницы, поэтому они в общем
+         подвале, а не только в карточке приложения. -->
+    <p class="mk-foot-legal">
+      <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
+      <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
+    </p>
   </footer>
 
 
@@ -577,7 +584,7 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=34"></script>
+  <script src="js/i18n.js?v=35"></script>
   <script src="js/promo.js?v=6"></script>
   <!-- Нижняя полоса на телефоне — общий модуль с лентой новостей. -->
   <script src="js/promo-dock.js?v=3"></script>
