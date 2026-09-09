@@ -537,11 +537,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=37"></script>
+  <script src="js/i18n.js?v=38"></script>
   <script src="js/content.js?v=3"></script>
   <script src="js/tiers.js?v=2"></script>
 
-  <script src="js/promo.js?v=8"></script>
+  <script src="js/promo.js?v=9"></script>
 
   <script src="js/protect.js?v=2"></script>
   <script src="js/app.js?v=73"></script>

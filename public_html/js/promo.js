@@ -392,7 +392,7 @@
 
   var HOUSE_GIVEAWAY = {
     id: "house-giveaway-magnet-chromatic",
-    name: "house-giveaway-magnet-chromatic",
+    name: "house-giveaway-magnet",
     advertiser: "",
     enabled: true,
     weight: 1,
