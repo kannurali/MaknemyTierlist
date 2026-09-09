@@ -23,9 +23,8 @@ const CH_NOW = 1788950000;
 
 function ch_db(): PDO {
     $pdo = test_db();
-    // Колонки репутации добавляет миграция чата — в schema.sql их нет.
-    $pdo->exec('ALTER TABLE users ADD COLUMN likes INTEGER NOT NULL DEFAULT 0');
-    $pdo->exec('ALTER TABLE users ADD COLUMN dislikes INTEGER NOT NULL DEFAULT 0');
+    // Колонки репутации приходят из test_db(): они описаны в schema.sql, как
+    // и все остальные колонки, добавленные миграциями (см. news.likes).
     $pdo->exec('CREATE TABLE chat_threads (
         id      INTEGER PRIMARY KEY AUTOINCREMENT,
         a_id    INTEGER NOT NULL,
@@ -99,6 +98,19 @@ test('без таблиц чат отдаёт пустоту, а не падае
     assert_eq(200, $st, 'ответ 200');
     assert_eq(false, $p['ready'], 'ready:false');
     assert_eq(0, count($p['threads']), 'список пуст');
+});
+
+// Личность берётся ТОЛЬКО из сессии, и приведений тут быть не должно. Массив
+// в сессии дал бы «Array to string conversion» ПЕРЕД телом ответа, после чего
+// JSON уже не разбирается, а true молча превратился бы в '1' — пользователя с
+// roblox_id 1, вполне существующий номер.
+test('в сессии принимается лишь настоящий roblox_id', function () {
+    foreach (['', '0abc', 'abc', '12 34', "1'--", '123456789012345678901',
+              null, [], ['user_id' => 1], true, false, 1.5, new stdClass()] as $bad) {
+        assert_eq('', chat_me(['user_id' => $bad]), 'отклонено: ' . var_export($bad, true));
+    }
+    assert_eq('7', chat_me(['user_id' => '7']), 'настоящий id принимается');
+    assert_eq('42', chat_me(['user_id' => 42]), 'число тоже: сессия переживает выкладки');
 });
 
 // --------------------------------------------------------------------------
@@ -357,6 +369,26 @@ test('себе отзыв не поставить', function () {
     [$code, $p] = chat_review($pdo, $me, $t, 5, '', CH_NOW);
     assert_eq(400, $code, 'отказ');
     assert_eq('self', $p['error'], 'причина названа');
+});
+
+// Колонок репутации на боевой базе может ещё не быть: миграция выполняется
+// руками и отдельно от выкладки. Отзыв в этом случае обязан сохраниться —
+// он в своей таблице, — а пересчёт репутации промолчать, а не уронить ответ
+// пятисоткой посреди отправки.
+test('без колонок репутации отзыв всё равно сохраняется', function () {
+    $pdo = ch_db();
+    $pdo->exec('ALTER TABLE users DROP COLUMN likes');
+    $pdo->exec('ALTER TABLE users DROP COLUMN dislikes');
+    $me = '11'; $peer = '22';
+    ch_user($pdo, $me, 'MKSVTN'); ch_user($pdo, $peer, 'DANIKTOR');
+    $tid = ch_thread($pdo, $me, $peer, CH_NOW);
+
+    [$st, $p] = chat_review($pdo, $me, $tid, 5, 'спасибо', CH_NOW);
+    assert_eq(200, $st, 'ответ 200, а не пятисотка');
+    assert_eq(true, $p['ok'], 'отзыв принят');
+
+    $row = $pdo->query('SELECT stars FROM chat_reviews')->fetch(PDO::FETCH_ASSOC);
+    assert_eq(5, (int)$row['stars'], 'и лёг в свою таблицу');
 });
 
 run_tests();

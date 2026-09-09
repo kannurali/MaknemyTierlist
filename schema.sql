@@ -113,5 +113,15 @@ CREATE TABLE IF NOT EXISTS users (
   --
   -- NULL — «человек ничего не написал». Пустая строка значила бы то же самое
   -- вторым способом, поэтому profile_about_save() кладёт именно NULL.
-  about         VARCHAR(280) NULL DEFAULT NULL
+  about         VARCHAR(280) NULL DEFAULT NULL,
+  -- Репутация из чатов: два счётчика, которые показывает профиль. Хранятся
+  -- денормализованно рядом с пользователем, а не считаются на лету — профиль
+  -- открывают чаще, чем пишут отзывы. Пересчитываются целиком при каждом
+  -- отзыве (chat_recount_reputation), а не инкрементом: правка оценки меняет
+  -- вклад с плюса на минус.
+  --
+  -- Для уже созданной боевой базы те же колонки заводит миграция
+  -- docs/migrations/2026-09-09-chat.sql; при чистой установке она не нужна.
+  likes         INT UNSIGNED NOT NULL DEFAULT 0,
+  dislikes      INT UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

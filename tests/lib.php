@@ -87,7 +87,10 @@ function test_db(): PDO {
         -- Зеркалит schema.sql: присутствие, отдельно от времени входа.
         last_seen_at INTEGER NOT NULL DEFAULT 0,
         -- Зеркалит schema.sql: текст «о себе» со страницы профиля.
-        about TEXT NULL DEFAULT NULL
+        about TEXT NULL DEFAULT NULL,
+        -- Зеркалит schema.sql: репутация из чатов.
+        likes INTEGER NOT NULL DEFAULT 0,
+        dislikes INTEGER NOT NULL DEFAULT 0
     )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
