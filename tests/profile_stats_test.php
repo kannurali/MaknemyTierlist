@@ -42,11 +42,11 @@ function ps_user(PDO $pdo, string $id, string $name, string $display,
 
 function ps_session(string $id = PS_ME): array { return ['user_id' => $id]; }
 
-// Короткая обёртка: у обработчика пять параметров, и повторять «сессия,
-// сегодня, сейчас» в каждом тесте — значит прятать за ними то, что тест
-// на самом деле проверяет.
-function ps_call(PDO $pdo, ?string $month, ?array $session = null): array {
-    return handle_profile_stats($pdo, $session ?? ps_session(), $month, PS_TODAY, PS_NOW);
+// Короткая обёртка: у обработчика шесть параметров, и повторять «сессия,
+// адрес, сегодня, сейчас» в каждом тесте — значит прятать за ними то, что
+// тест на самом деле проверяет.
+function ps_call(PDO $pdo, ?string $month, ?array $session = null, array $get = []): array {
+    return handle_profile_stats($pdo, $session ?? ps_session(), $get, $month, PS_TODAY, PS_NOW);
 }
 
 function ps_make_table(PDO $pdo): void {
@@ -263,7 +263,6 @@ test('без сессии отдаётся authed:false и ничего боль
     [$status, $p] = ps_call($pdo, null, []);
     assert_eq(200, $status, 'ответ 200, а не 401: страница сама решает, что показать');
     assert_eq(false, $p['authed'], 'authed:false');
-    assert_eq(null, $p['profile'], 'карточки нет');
     assert_eq(false, $p['available'], 'сделок нет');
     assert_eq(0, $p['totals']['sum'], 'оборот не просочился');
     assert_eq(0, $p['lifetime']['total'], 'счётчики не просочились');
@@ -287,23 +286,55 @@ test('в сессии принимается лишь настоящий roblox_
 test('сессия ссылается на исчезнувшего — считаем, что не вошёл', function () {
     [, $p] = ps_call(test_db(), null);
     assert_eq(false, $p['authed'], 'authed:false');
-    assert_eq(null, $p['profile'], 'карточки нет');
+});
+
+// Карточку печатает profile.php, а эндпоинт отдаёт только цифры графика. Два
+// источника на одно и то же поле разъехались бы, и на экране половина
+// карточки была бы свежей, а половина — из прошлого запроса.
+test('в ответе нет карточки — её печатает страница', function () {
+    $pdo = ps_db();
+    ps_make_table($pdo);
+    ps_add($pdo, '2026-09-01', 'ok', 100);
+    foreach ([ps_call($pdo, null)[1], ps_call($pdo, null, [])[1], ps_call(ps_db(), null)[1]] as $p) {
+        assert_eq(false, array_key_exists('profile', $p), 'поля profile в ответе нет');
+    }
 });
 
 // Ни одного из этих полей нет в отдельной таблице профиля: они приходят из
 // users, той же, что кормит шапку сайта. Иначе ник в шапке и ник в профиле
 // разъехались бы при первой смене имени в Roblox.
+//
+// profile_card() зовётся напрямую: карточку печатает profile.php, а не
+// эндпоинт, и гонять её через handle_profile_stats() значило бы проверять
+// не тот код, который её строит.
 test('карточка собирается из users', function () {
     $pdo = test_db();
     ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', 'https://tr.rbxcdn.com/a.png');
-    [, $p] = ps_call($pdo, null);
+    $c = profile_card($pdo, PS_ME, PS_NOW);
 
-    assert_eq(true, $p['authed'], 'вошёл');
-    assert_eq('MKSVTN', $p['profile']['nick'], 'ник — display_name');
-    assert_eq('@mksvtn', $p['profile']['handle'], 'хендл — username со «собакой»');
-    assert_eq('https://tr.rbxcdn.com/a.png', $p['profile']['avatar'], 'аватар');
-    assert_eq('https://www.roblox.com/users/' . PS_ME . '/profile', $p['profile']['roblox'],
+    assert_true($c !== null, 'карточка есть');
+    assert_eq('MKSVTN', $c['nick'], 'ник — display_name');
+    assert_eq('@mksvtn', $c['handle'], 'хендл — username со «собакой»');
+    assert_eq('https://tr.rbxcdn.com/a.png', $c['avatar'], 'аватар');
+    assert_eq('https://www.roblox.com/users/' . PS_ME . '/profile', $c['roblox'],
         'ссылка на профиль в Roblox выводится из id, а не хранится');
+});
+
+// Карточка чужого человека собирается тем же кодом: своего и чужого профиль
+// различает только страница, решая, что вокруг карточки показать.
+test('карточка собирается на любого, а не только на себя', function () {
+    $pdo = ps_db();
+    ps_user($pdo, PS_OTHER, 'daniktor', 'DANIKTOR');
+    $c = profile_card($pdo, PS_OTHER, PS_NOW);
+    assert_eq('DANIKTOR', $c['nick'], 'ник соседа');
+    assert_eq('@daniktor', $c['handle'], 'его хендл');
+});
+
+// Человека с таким id может не быть вовсе — ссылка из чужого сообщения
+// переживает удаление аккаунта. Это не ошибка, а «профиля нет».
+test('несуществующий профиль — это null, а не пустая карточка', function () {
+    assert_eq(null, profile_card(ps_db(), '900009999', PS_NOW), 'нет такого');
+    assert_eq(null, profile_card(ps_db(), '', PS_NOW), 'пустой id тоже');
 });
 
 // display_name у Roblox может быть пустым. Показывать пустой заголовок нельзя
@@ -311,9 +342,9 @@ test('карточка собирается из users', function () {
 test('пустой display_name заменяется ником', function () {
     $pdo = test_db();
     ps_user($pdo, PS_ME, 'mksvtn', '');
-    [, $p] = ps_call($pdo, null);
-    assert_eq('mksvtn', $p['profile']['nick'], 'ник взят из username');
-    assert_eq('@mksvtn', $p['profile']['handle'], 'хендл на месте');
+    $c = profile_card($pdo, PS_ME, PS_NOW);
+    assert_eq('mksvtn', $c['nick'], 'ник взят из username');
+    assert_eq('@mksvtn', $c['handle'], 'хендл на месте');
 });
 
 // Аватар уходит в <img src>. roblox_touch_user() кладёт уже проверенный, но
@@ -329,13 +360,12 @@ test('аватар с чужого домена не отдаётся стран
     ] as $bad) {
         $pdo = test_db();
         ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', $bad);
-        [, $p] = ps_call($pdo, null);
-        assert_eq(null, $p['profile']['avatar'], 'отклонён аватар: ' . $bad);
+        assert_eq(null, profile_card($pdo, PS_ME, PS_NOW)['avatar'], 'отклонён аватар: ' . $bad);
     }
     $pdo = test_db();
     ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', 'https://tr.rbxcdn.com/ok.png');
-    [, $p] = ps_call($pdo, null);
-    assert_eq('https://tr.rbxcdn.com/ok.png', $p['profile']['avatar'], 'свой домен проходит');
+    assert_eq('https://tr.rbxcdn.com/ok.png', profile_card($pdo, PS_ME, PS_NOW)['avatar'],
+        'свой домен проходит');
 });
 
 // Статус ВЫЧИСЛЯЕТСЯ из last_login_at, а не хранится: хранимый пришлось бы
@@ -350,8 +380,7 @@ test('статус выводится из времени последнего �
     ] as [$seen, $want, $why]) {
         $pdo = test_db();
         ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', $seen);
-        [, $p] = ps_call($pdo, null);
-        assert_eq($want, $p['profile']['status'], $why);
+        assert_eq($want, profile_card($pdo, PS_ME, PS_NOW)['status'], $why);
     }
 });
 
@@ -371,12 +400,11 @@ test('карточка переживает отсутствие колонок 
     )");
     ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN');
 
-    [, $p] = ps_call($pdo, null);
-    assert_eq(true, $p['authed'], 'вошёл');
-    assert_eq('MKSVTN', $p['profile']['nick'], 'ник на месте');
-    assert_eq(0, $p['profile']['likes'], 'лайков ноль');
-    assert_eq(0, $p['profile']['dislikes'], 'дизлайков ноль');
-    assert_eq(null, $p['profile']['about'], '«о себе» пусто');
+    $c = profile_card($pdo, PS_ME, PS_NOW);
+    assert_eq('MKSVTN', $c['nick'], 'ник на месте');
+    assert_eq(0, $c['likes'], 'лайков ноль');
+    assert_eq(0, $c['dislikes'], 'дизлайков ноль');
+    assert_eq(null, $c['about'], '«о себе» пусто');
 });
 
 test('репутация и «о себе» отдаются, когда колонки есть', function () {
@@ -386,10 +414,10 @@ test('репутация и «о себе» отдаются, когда кол�
     $pdo->prepare('UPDATE users SET likes = ?, dislikes = ?, about = ? WHERE roblox_id = ?')
         ->execute([428, 11, 'Торгую с 2024', PS_ME]);
 
-    [, $p] = ps_call($pdo, null);
-    assert_eq(428, $p['profile']['likes'], 'лайки');
-    assert_eq(11, $p['profile']['dislikes'], 'дизлайки');
-    assert_eq('Торгую с 2024', $p['profile']['about'], 'о себе');
+    $c = profile_card($pdo, PS_ME, PS_NOW);
+    assert_eq(428, $c['likes'], 'лайки');
+    assert_eq(11, $c['dislikes'], 'дизлайки');
+    assert_eq('Торгую с 2024', $c['about'], 'о себе');
 });
 
 // Пустая строка в базе — это отсутствие значения, а не значение. Иначе на
@@ -397,8 +425,90 @@ test('репутация и «о себе» отдаются, когда кол�
 test('пустое «о себе» читается как отсутствие текста', function () {
     $pdo = ps_db();
     $pdo->prepare('UPDATE users SET about = ? WHERE roblox_id = ?')->execute(['   ', PS_ME]);
-    [, $p] = ps_call($pdo, null);
-    assert_eq(null, $p['profile']['about'], 'пробелы — это пусто');
+    assert_eq(null, profile_card($pdo, PS_ME, PS_NOW)['about'], 'пробелы — это пусто');
+});
+
+// --------------------------------------------------------------------------
+//  Чей профиль смотрим
+// --------------------------------------------------------------------------
+
+// ?id= приходит из адресной строки, то есть от кого угодно. Мусор молча
+// откатывается на свой профиль: ссылка из чужого сообщения могла оборваться
+// при копировании, и это не повод показывать ошибку.
+test('?id= разбирается тем же строгим правилом, что и сессия', function () {
+    foreach (['', '0abc', 'abc', '12 34', "1'--", '123456789012345678901',
+              null, [], true, 1.5] as $bad) {
+        assert_eq('', profile_target(['id' => $bad]), 'отклонено: ' . var_export($bad, true));
+    }
+    assert_eq('', profile_target([]), 'параметра нет — профиль свой');
+    assert_eq('900000002', profile_target(['id' => '900000002']), 'настоящий id принимается');
+    assert_eq('42', profile_target(['id' => 42]), 'число тоже');
+
+    // Ведущие нули срезаются: иначе ?id=007 и ?id=7 — два адреса одного
+    // профиля с разным canonical.
+    assert_eq('7', profile_target(['id' => '007']), 'нули срезаны');
+    assert_eq('7', profile_target(['id' => '00000000000000000007']), 'даже двадцать знаков');
+    assert_eq('', profile_target(['id' => '0']), 'ноль — не id');
+    assert_eq('', profile_target(['id' => '000']), 'и одни нули тоже');
+    assert_eq('7', profile_me(['user_id' => '007']), 'то же правило и для сессии');
+});
+
+// Корневая проверка чужих профилей: сделки обязаны приехать ТОГО, кого
+// смотрим, а не того, кто смотрит.
+test('?id= переключает график на чужого, не трогая личность зрителя', function () {
+    $pdo = ps_db();
+    ps_user($pdo, PS_OTHER, 'daniktor', 'DANIKTOR');
+    ps_make_table($pdo);
+    ps_add($pdo, '2026-07-10', 'ok', 100, 2, PS_ME);
+    ps_add($pdo, '2026-07-10', 'ok', 500, 7, PS_OTHER);
+
+    [, $mine] = ps_call($pdo, '2026-07');
+    assert_eq(2, $mine['totals']['ok'], 'без ?id= — свои');
+
+    [, $peer] = ps_call($pdo, '2026-07', null, ['id' => PS_OTHER]);
+    assert_eq(true, $peer['authed'], 'зритель по-прежнему вошедший');
+    assert_eq(7, $peer['totals']['ok'], 'с ?id= — чужие');
+    assert_eq(3500, $peer['totals']['sum'], 'и чужой оборот');
+});
+
+// Мусорный ?id= не должен ни ронять ответ, ни показывать пустоту вместо
+// своего профиля: человек пришёл по битой ссылке, а не в чужой аккаунт.
+test('мусорный ?id= откатывается на свой профиль', function () {
+    $pdo = ps_db();
+    ps_make_table($pdo);
+    ps_add($pdo, '2026-07-10', 'ok', 100, 2, PS_ME);
+    foreach ([['id' => 'abc'], ['id' => ['x']], ['id' => ''], []] as $get) {
+        [, $p] = ps_call($pdo, '2026-07', null, $get);
+        assert_eq(2, $p['totals']['ok'], 'показаны свои сделки: ' . json_encode($get));
+    }
+});
+
+// Смотреть чужой профиль можно только вошедшему: иначе ?id= превращается в
+// способ выкачать статистику по всему списку игроков без единого входа.
+test('анониму ?id= ничего не открывает', function () {
+    $pdo = ps_db();
+    ps_user($pdo, PS_OTHER, 'daniktor', 'DANIKTOR');
+    ps_make_table($pdo);
+    ps_add($pdo, '2026-07-10', 'ok', 500, 7, PS_OTHER);
+
+    [, $p] = ps_call($pdo, '2026-07', [], ['id' => PS_OTHER]);
+    assert_eq(false, $p['authed'], 'authed:false');
+    assert_eq(0, $p['totals']['ok'], 'чужих сделок не видно');
+    assert_eq(0, $p['lifetime']['total'], 'и счётчиков тоже');
+});
+
+// Профиля с таким id может не быть. Это не ошибка эндпоинта — о пропаже
+// сообщает страница; здесь достаточно пустого ответа вместо чьих-то чужих
+// цифр.
+test('?id= на несуществующего даёт пустую статистику, а не чужую', function () {
+    $pdo = ps_db();
+    ps_make_table($pdo);
+    ps_add($pdo, '2026-07-10', 'ok', 100, 5, PS_ME);
+
+    [, $p] = ps_call($pdo, '2026-07', null, ['id' => '900009999']);
+    assert_eq(true, $p['authed'], 'зритель вошёл');
+    assert_eq(0, $p['totals']['ok'], 'сделок нет');
+    assert_eq(0, $p['lifetime']['total'], 'и за всё время тоже');
 });
 
 // --------------------------------------------------------------------------

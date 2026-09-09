@@ -24,12 +24,10 @@
       "user.error":             "Не удалось войти — попробуйте ещё раз",
 
       "profile.login":          "Войдите через Roblox — кнопка входа в шапке справа",
-      "profile.nick":           "Игровой ник",
-      "profile.handle":         "@никнейм",
+      "profile.missing":        "Такого профиля нет — возможно, ссылка устарела",
 
       "profile.statusOnline":   "В сети",
       "profile.statusOffline":  "Не в сети",
-      "profile.statusUnknown":  "Статус неизвестен",
 
       "profile.likes":          "Положительных отзывов",
       "profile.dislikes":       "Отрицательных отзывов",
@@ -45,6 +43,7 @@
 
       "profile.aboutTitle":     "О себе",
       "profile.aboutEmpty":     "Опишите себя так, чтобы остальным захотелось с вами трейд ;)",
+      "profile.aboutNone":      "Здесь пока ничего не написано",
       "profile.aboutSave":      "Сохранить",
       "profile.aboutSaving":    "Сохраняем…",
       "profile.aboutSaved":     "Сохранено",
@@ -61,6 +60,7 @@
       "profile.chartHint":      "Поле графика: стрелками влево и вправо — значения по дням",
       "profile.chartNoMonth":   "В этом месяце сделок не было",
       "profile.chartNoData":    "Сделок пока нет — статистика появится после первого обмена",
+      "profile.chartNoDataPeer": "У этого игрока сделок пока нет",
       "profile.chartError":     "Не удалось загрузить статистику. Попробуйте обновить страницу.",
 
       "profile.statDeals":      "Сделки",
@@ -509,12 +509,10 @@
       "user.error":             "Could not log in — please try again",
 
       "profile.login":          "Log in with Roblox — the button is in the header",
-      "profile.nick":           "Player name",
-      "profile.handle":         "@username",
+      "profile.missing":        "No such profile — the link may be out of date",
 
       "profile.statusOnline":   "Online",
       "profile.statusOffline":  "Offline",
-      "profile.statusUnknown":  "Status unknown",
 
       "profile.likes":          "Positive reviews",
       "profile.dislikes":       "Negative reviews",
@@ -530,6 +528,7 @@
 
       "profile.aboutTitle":     "About",
       "profile.aboutEmpty":     "Describe yourself so others want to trade with you ;)",
+      "profile.aboutNone":      "Nothing here yet",
       "profile.aboutSave":      "Save",
       "profile.aboutSaving":    "Saving…",
       "profile.aboutSaved":     "Saved",
@@ -546,6 +545,7 @@
       "profile.chartHint":      "Chart area: left and right arrows read daily values",
       "profile.chartNoMonth":   "No trades this month",
       "profile.chartNoData":    "No trades yet — stats appear after your first swap",
+      "profile.chartNoDataPeer": "This player has no trades yet",
       "profile.chartError":     "Could not load the stats. Try reloading the page.",
 
       "profile.statDeals":      "Trades",

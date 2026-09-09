@@ -2,17 +2,20 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/profile.php';
 
-// Данные страницы профиля — /api/profile-stats.php?month=YYYY-MM
+// Статистика сделок для страницы профиля —
+// /api/profile-stats.php?month=YYYY-MM&id=<roblox_id>
 //
-// Отдаёт всё, что нужно странице, одним ответом: карточку (ник, аватар, «о
-// себе», статус, репутация) и статистику сделок. Одним, а не двумя запросами,
-// потому что это один экран: полкарточки с данными и полкарточки с
-// заглушками — состояние, которого быть не должно.
+// Карточку (ник, аватар, статус, репутация, «о себе») эндпоинт НЕ отдаёт:
+// её печатает сам profile.php из той же users, пока собирает страницу. Так у
+// карточки один источник вместо двух и нет промежуточного состояния, в
+// котором половина полей ещё подписи-заглушки. Здесь остаются только цифры
+// графика — их и правда незачем гнать в разметку, их количество зависит от
+// выбранного месяца.
 //
-// Профиль ВСЕГДА свой. Чужие профили по адресу пока не открываются, поэтому
-// чей это профиль, решает исключительно сессия (profile_me), а не параметр
-// запроса. Аноним получает authed:false и предложение войти — не пустую
-// карточку: пустая читалась бы как «у вас ничего нет».
+// ?id= — чей профиль смотрим; без него свой. Смотреть чужой можно только
+// вошедшему: заводить аккаунт всё равно придётся, чтобы торговать, а
+// открытый список профилей — это приглашение выкачать его целиком.
+// Аноним получает authed:false и предложение войти.
 //
 // Источник сделок — таблица profile_trades. В боевой базе её НЕТ и пока не
 // будет: сделки на сайте не заводятся (ни одного места, которое их пишет, в
@@ -85,13 +88,12 @@ function profile_stats_empty_days(int $days): array {
 
 // Ответ анониму и тому, чья сессия ссылается на исчезнувшего пользователя.
 // Каркас месяца в нём тот же, что у вошедшего: страница не должна знать два
-// разных формата ответа, иначе гейт и карточка разъедутся при первой правке.
+// разных формата ответа, иначе гейт и график разъедутся при первой правке.
 function profile_stats_guest(string $month, int $days, int $lastDay): array {
     return [200, [
         'ok'        => true,
         'authed'    => false,
         'available' => false,
-        'profile'   => null,
         'month'     => $month,
         'lastDay'   => $lastDay,
         'days'      => profile_stats_empty_days($days),
@@ -101,7 +103,7 @@ function profile_stats_guest(string $month, int $days, int $lastDay): array {
     ]];
 }
 
-function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, string $today, int $now): array {
+function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $monthRaw, string $today, int $now): array {
     $month = profile_stats_month($monthRaw, $today);
     $days  = profile_stats_days_in_month($month);
 
@@ -118,11 +120,18 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
     // Таблицы users может не быть вовсе (не выполнен schema.sql) — сайт от
     // этого не падает, а профиль честно отвечает «не вошли», как и шапка.
     try {
-        $card = profile_card($pdo, $me, $now);
+        $known = profile_exists($pdo, $me);
     } catch (PDOException $e) {
-        $card = null;
+        $known = false;
     }
-    if ($card === null) { return profile_stats_guest($month, $days, $lastDay); }
+    if (!$known) { return profile_stats_guest($month, $days, $lastDay); }
+
+    // Чей профиль смотрим. Проверять существование ЦЕЛИ незачем: у
+    // несуществующего человека сделок всё равно нет, и ответ выйдет пустым
+    // сам собой. О том, что профиля нет, сообщает страница — она это уже
+    // выяснила, когда печатала карточку.
+    $target = profile_target($get);
+    $who    = $target !== '' ? $target : $me;
 
     $series = profile_stats_empty_days($days);
 
@@ -131,7 +140,6 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
             'ok'        => true,
             'authed'    => true,
             'available' => false,
-            'profile'   => $card,
             'month'     => $month,
             'lastDay'   => $lastDay,
             'days'      => $series,
@@ -153,7 +161,7 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
           WHERE user_id = :me AND day >= :from AND day <= :to
        GROUP BY day, status'
     );
-    $stmt->execute([':me' => $me, ':from' => $from, ':to' => $to]);
+    $stmt->execute([':me' => $who, ':from' => $from, ':to' => $to]);
 
     $totalOk = 0; $totalNo = 0; $totalSum = 0;
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -190,7 +198,7 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
               WHERE user_id = :me AND status = 'ok'
            GROUP BY substr(day, 1, 7) ORDER BY v DESC LIMIT 1"
         );
-        $best->execute([':me' => $me]);
+        $best->execute([':me' => $who]);
         $scale = (int)$best->fetchColumn();
     } catch (PDOException $e) {
         $scale = $totalSum;   // диалект не понял substr — деградируем, а не падаем
@@ -202,7 +210,7 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
     // обнуляется первого числа.
     $life = ['ok' => 0, 'declined' => 0, 'total' => 0];
     $all  = $pdo->prepare('SELECT status, COUNT(*) AS n FROM profile_trades WHERE user_id = :me GROUP BY status');
-    $all->execute([':me' => $me]);
+    $all->execute([':me' => $who]);
     foreach ($all->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $n = (int)$row['n'];
         $life['total'] += $n;
@@ -218,7 +226,7 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
         $sel = $pdo->prepare(
             'SELECT DISTINCT substr(day, 1, 7) AS m FROM profile_trades WHERE user_id = :me ORDER BY m DESC'
         );
-        $sel->execute([':me' => $me]);
+        $sel->execute([':me' => $who]);
         $months = array_values(array_map('strval', $sel->fetchAll(PDO::FETCH_COLUMN)));
     } catch (PDOException $e) {
         $months = [];
@@ -246,7 +254,6 @@ function handle_profile_stats(PDO $pdo, array $session, ?string $monthRaw, strin
         'ok'        => true,
         'authed'    => true,
         'available' => true,
-        'profile'   => $card,
         'month'     => $month,
         'lastDay'   => $lastDay,
         'days'      => $series,
@@ -270,6 +277,6 @@ if (!defined('TESTING')) {
     // is_string, а не приведение: ?month[]=x даёт массив, и (string) на нём
     // печатает Warning ПЕРЕД телом ответа — JSON после этого не разбирается.
     $month = (isset($_GET['month']) && is_string($_GET['month'])) ? $_GET['month'] : null;
-    [$status, $payload] = handle_profile_stats(db(), $_SESSION, $month, date('Y-m-d'), time());
+    [$status, $payload] = handle_profile_stats(db(), $_SESSION, $_GET, $month, date('Y-m-d'), time());
     json_out($payload, $status);
 }

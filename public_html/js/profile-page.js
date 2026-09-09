@@ -20,9 +20,7 @@
   var aboutCount = $('pfAboutCount');
   var aboutState = $('pfAboutStatus');
 
-  var lastCard = null;
-  var savedAbout = '';
-  var aboutReady = false;
+  var savedAbout = aboutInput ? aboutInput.value : '';
 
   function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
@@ -36,85 +34,13 @@
     toggle.title = toggle.getAttribute('aria-label');
   }
 
-  function fill(node, value) {
-    if (!node || value === null || value === undefined || value === '') { return false; }
-    node.textContent = value;
-    node.removeAttribute('data-i18n');
-    return true;
-  }
-
-  var STATUS_KEYS = {
-    online:  'profile.statusOnline',
-    offline: 'profile.statusOffline'
-  };
-
-  function renderAvatar(url) {
-    var img = $('pfAvatar');
-    if (!img) { return; }
-    var box = img.parentNode;
-    if (url) {
-      img.referrerPolicy = 'no-referrer';
-      img.src = url;
-      img.alt = '';
-      img.hidden = false;
-      if (box) { box.classList.add('has-photo'); }
-      return;
-    }
-    img.hidden = true;
-    img.removeAttribute('src');
-    if (box) { box.classList.remove('has-photo'); }
-  }
-
-  function renderStatus(status) {
-    var node = $('pfStatus');
-    if (!node) { return; }
-    var known = Object.prototype.hasOwnProperty.call(STATUS_KEYS, status);
-    node.setAttribute('data-state', known ? status : '');
-    node.setAttribute('data-i18n-label', known ? STATUS_KEYS[status] : 'profile.statusUnknown');
-    node.setAttribute('aria-label', known
-      ? tx(STATUS_KEYS[status], status)
-      : tx('profile.statusUnknown', 'Статус неизвестен'));
-  }
-
-  function renderCard(p) {
-    if (!p) { return; }
-
-    fill($('pfNick'), p.nick);
-    fill($('pfHandle'), p.handle);
-    renderAvatar(p.avatar);
-    renderStatus(p.status);
-
-    var likes = $('pfLikes');
-    var dis   = $('pfDislikes');
-    if (likes) { likes.textContent = String(p.likes || 0); }
-    if (dis)   { dis.textContent   = String(p.dislikes || 0); }
-  }
-
-  function loadAbout(p) {
-    if (!aboutInput) { return; }
-    var text = (p && p.about) || '';
-    var dirty = aboutReady && aboutInput.value !== savedAbout;
-    savedAbout = text;
-    if (!dirty) {
-      aboutInput.value = text;
-      setAboutStatus('', '', false);
-    }
-    aboutInput.disabled = false;
-    aboutReady = true;
-    syncAbout();
-  }
-
   function renderAuth(authed) {
     if (gate) { gate.hidden = !!authed; }
     if (card) { card.hidden = !authed; }
   }
 
   document.addEventListener('mk:profiledata', function (e) {
-    var d = e.detail || {};
-    renderAuth(!!d.authed);
-    lastCard = d.profile || null;
-    renderCard(lastCard);
-    if (d.authed) { loadAbout(lastCard); }
+    renderAuth(!!(e.detail && e.detail.authed));
   });
 
   function aboutLength(text) {
@@ -252,7 +178,6 @@
       });
 
       syncMenuLabel();
-      renderCard(lastCard);
 
       document.dispatchEvent(new CustomEvent('mk:langchange', { detail: { lang: current } }));
     };

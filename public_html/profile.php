@@ -3,20 +3,29 @@ require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 require_once __DIR__ . '/api/lib/profile.php';
 
-// Профиль игрока — /profile (Figma «профиль», node 244:7400).
+// Профиль игрока — /profile и /profile?id=<roblox_id> (Figma «профиль», node
+// 244:7400). Разбор решений по вёрстке и данным — в docs/profile-page.md;
+// здесь их нет намеренно: комментарии из отдаваемых файлов уехали бы к
+// посетителю (политика коммита dcb9b8e).
 //
-// Профиль всегда СВОЙ: чужие по адресу не открываются, и чей это профиль
-// решает сессия, а не параметр запроса. Разбор решений по вёрстке и данным —
-// в docs/profile-page.md; здесь их нет намеренно, комментарии из отдаваемых
-// файлов уехали бы к посетителю (политика коммита dcb9b8e).
+// Без ?id= профиль свой. С ?id= — чужой, и тогда страница показывает то, что
+// имеет смысл показывать другому трейдеру: ник, аватар, репутацию, «о себе» и
+// историю сделок. Операции с аккаунтом (выход, смена, удаление) и правка «о
+// себе» остаются только на своём — их даже нет в разметке чужого профиля, а
+// не спрятаны стилями.
 //
-// Вошёл человек или нет, решаем ЗДЕСЬ, а не скриптом: иначе страница сначала
-// показала бы пустую карточку и только потом сменила её на предложение
-// войти — и наоборот. Данные при этом всё равно приезжают запросом
-// (/api/profile-stats.php): в базу страница не ходит, ей достаточно сессии.
+// Смотреть чужой профиль можно только вошедшему. Аккаунт всё равно нужен,
+// чтобы торговать, а открытый профиль по номеру — это приглашение выкачать
+// список целиком. Аноним видит предложение войти.
 //
-// noindex: профиль показывает личные данные вошедшего, а поисковому роботу
-// в него не войти — он увидел бы только гейт. По той же причине /profile нет
+// Карточку печатает СЕРВЕР, а не скрипт. Скриптом страница сначала показала
+// бы подписи-заглушки («Игровой ник») и только потом настоящий ник — на
+// каждой загрузке, а при не доехавшем ответе так бы и осталась. Ради этого
+// страница ходит в базу одним запросом; статистику графика по-прежнему
+// приносит /api/profile-stats.php, потому что её объём зависит от месяца.
+//
+// noindex: профиль показывает данные живого человека, а поисковому роботу
+// внутрь не войти — он увидел бы только гейт. По той же причине /profile нет
 // в sitemap.xml.
 //
 // Cache-Control тот же, что у остальных страниц: файл несёт номера версий
@@ -24,7 +33,51 @@ require_once __DIR__ . '/api/lib/profile.php';
 // старому коду.
 header('Cache-Control: no-cache, must-revalidate');
 start_site_session();
-$pfAuthed = profile_me($_SESSION) !== '';
+
+$pfMe   = profile_me($_SESSION);
+$pfId   = profile_target($_GET);
+$pfWho  = $pfId !== '' ? $pfId : $pfMe;
+$pfCard = null;
+
+if ($pfMe !== '') {
+    // Соединение открывается ВНЕ try: его отказ — это пятисотка, как на любой
+    // другой странице сайта, а не «такого профиля нет». Внутрь попадает
+    // только сам запрос.
+    $pfPdo = db();
+    try {
+        $pfCard = profile_card($pfPdo, $pfWho, time());
+    } catch (PDOException $e) {
+        // Таблицы users нет (не выполнен schema.sql) — сайт от этого не
+        // падает, страница просто предложит войти, как и шапка.
+        $pfCard = null;
+    }
+}
+
+// Три состояния, и они взаимоисключающие:
+//   gate    — не вошли (или сессия ссылается на удалённого пользователя);
+//   missing — вошли, но профиля с таким ?id= нет;
+//   card    — показываем карточку.
+$pfState = 'gate';
+if ($pfCard !== null)  { $pfState = 'card'; }
+elseif ($pfMe !== '' && $pfId !== '') { $pfState = 'missing'; }
+
+$pfSelf = $pfState === 'card' && $pfWho === $pfMe;
+
+// 404 у несуществующего профиля — настоящий, а не нарисованный: по ссылке из
+// чужого сообщения может прийти и робот, и краулер мессенджера, и «200 OK» на
+// пустой странице им сказало бы, что адрес рабочий.
+if ($pfState === 'missing') { http_response_code(404); }
+
+$pfNick  = $pfState === 'card' ? (string)($pfCard['nick'] ?? '') : '';
+
+// Ключ и русская подпись статуса считаются здесь, а не в разметке: выражение
+// прямо в data-i18n-label выглядело бы для проверок словаря как имя ключа.
+$pfOnline    = $pfState === 'card' && $pfCard['status'] === 'online';
+$pfStatusKey = $pfOnline ? 'profile.statusOnline' : 'profile.statusOffline';
+$pfStatusRu  = $pfOnline ? 'В сети' : 'Не в сети';
+$pfTitle = $pfNick !== ''
+    ? $pfNick . ' — профиль игрока | Maknemy Tier List'
+    : 'Профиль игрока | Maknemy Tier List';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -35,9 +88,11 @@ $pfAuthed = profile_me($_SESSION) !== '';
 
 <base href="/" />
 
-<title>Профиль игрока | Maknemy Tier List</title>
+<title><?= htmlspecialchars($pfTitle, ENT_QUOTES, 'UTF-8') ?></title>
 <meta name="description" content="Профиль игрока Maknemy: ник, статистика сделок и репутация." />
-<link rel="canonical" href="https://maknemy.com/profile" />
+<link rel="canonical" href="<?= htmlspecialchars($pfSelf || $pfState !== 'card'
+        ? 'https://maknemy.com/profile'
+        : 'https://maknemy.com/profile?id=' . $pfWho, ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="robots" content="noindex, follow" />
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -49,7 +104,7 @@ $pfAuthed = profile_me($_SESSION) !== '';
 <script src="js/auth.js?v=1" defer></script>
 <script src="js/topbar.js?v=6" defer></script>
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/profile.css?v=1" />
+<link rel="stylesheet" href="css/profile.css?v=2" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -118,15 +173,23 @@ $pfAuthed = profile_me($_SESSION) !== '';
   </header>
 
   <main class="pf-page">
-    <p class="pf-gate" id="pfGate" data-i18n="profile.login"<?php if ($pfAuthed): ?> hidden<?php endif; ?>>Войдите через Roblox — кнопка входа в шапке справа</p>
+    <p class="pf-gate" id="pfGate" data-i18n="profile.login"<?php if ($pfState !== 'gate'): ?> hidden<?php endif; ?>>Войдите через Roblox — кнопка входа в шапке справа</p>
 
-    <section class="pf-card" id="pfCard" aria-labelledby="pfNick"<?php if (!$pfAuthed): ?> hidden<?php endif; ?>>
+<?php if ($pfState === 'missing'): ?>
+    <p class="pf-gate" data-i18n="profile.missing">Такого профиля нет — возможно, ссылка устарела</p>
+<?php endif; ?>
 
-      <div class="pf-avatar">
-        <img id="pfAvatar" alt="" hidden />
+<?php if ($pfState === 'card'): ?>
+    <section class="pf-card" id="pfCard" aria-labelledby="pfNick">
+
+      <div class="pf-avatar<?= $pfCard['avatar'] !== null ? ' has-photo' : '' ?>">
+<?php if ($pfCard['avatar'] !== null): ?>
+        <img id="pfAvatar" src="<?= htmlspecialchars($pfCard['avatar'], ENT_QUOTES, 'UTF-8') ?>" alt="" referrerpolicy="no-referrer" />
+<?php endif; ?>
         <svg class="pf-avatar-empty" viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
       </div>
 
+<?php if ($pfSelf): ?>
       <nav class="pf-menu" data-i18n-label="profile.menuLabel" aria-label="Действия с аккаунтом">
         <button class="pf-menu-toggle" type="button" id="pfMenuToggle"
                 aria-expanded="true" aria-controls="pfMenuList"
@@ -141,31 +204,37 @@ $pfAuthed = profile_me($_SESSION) !== '';
           <li class="pf-menu-danger"><button class="pf-menu-item" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке" data-i18n="profile.menuDelete">Удалить аккаунт</button></li>
         </ul>
       </nav>
+<?php endif; ?>
 
-      <h1 class="pf-nick" id="pfNick" data-i18n="profile.nick">Игровой ник</h1>
-      <p class="pf-handle" id="pfHandle" data-i18n="profile.handle">@никнейм</p>
+      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars((string)$pfCard['nick'], ENT_QUOTES, 'UTF-8') ?></h1>
+<?php if ($pfCard['handle'] !== null): ?>
+      <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
+<?php endif; ?>
 
       <div class="pf-meta">
         <div class="pf-status" id="pfStatus" role="img"
-             data-i18n-label="profile.statusUnknown" aria-label="Статус неизвестен">
+             data-state="<?= htmlspecialchars($pfCard['status'], ENT_QUOTES, 'UTF-8') ?>"
+             data-i18n-label="<?= $pfStatusKey ?>"
+             aria-label="<?= $pfStatusRu ?>">
           <i data-state="online"></i><i data-state="offline"></i>
         </div>
 
         <p class="pf-react">
           <span class="pf-react-item">
             <svg viewBox="0 0 32 25" fill="none" aria-hidden="true"><path d="M16 24.5C16 24.5 1.5 16.2 1.5 8.2 1.5 4 4.8 1 8.7 1c2.9 0 5.6 1.7 7.3 4.3C17.7 2.7 20.4 1 23.3 1 27.2 1 30.5 4 30.5 8.2c0 8-14.5 16.3-14.5 16.3Z" fill="currentColor"/></svg>
-            <b id="pfLikes">0</b>
+            <b id="pfLikes"><?= (int)$pfCard['likes'] ?></b>
             <span class="pf-sr-only" data-i18n="profile.likes">Положительных отзывов</span>
           </span>
           <span class="pf-react-item">
             <svg viewBox="0 0 28 37" fill="none" aria-hidden="true"><path d="M14.6 12.2 11 8.4 15.4 1 12.2 0C8.9.4 6 2.4 4.4 5.3 2.4 8.9 3.3 13.2 5.6 16.4c2.4 3.4 6 6.2 8.4 8.1l-2.6 5.3 3.9-3.6 2.7 4.9-1.4-6.2c2.5-2.1 5.7-4.8 7.8-8 2-3.1 2.7-7.1.9-10.5" fill="currentColor"/></svg>
-            <b id="pfDislikes">0</b>
+            <b id="pfDislikes"><?= (int)$pfCard['dislikes'] ?></b>
             <span class="pf-sr-only" data-i18n="profile.dislikes">Отрицательных отзывов</span>
           </span>
         </p>
       </div>
 
-      <figure class="pf-chart" id="pfChart" aria-labelledby="pfChartTitle">
+      <figure class="pf-chart" id="pfChart" aria-labelledby="pfChartTitle"
+              data-profile="<?= htmlspecialchars($pfWho, ENT_QUOTES, 'UTF-8') ?>"<?= $pfSelf ? '' : ' data-peer="1"' ?>>
         <figcaption class="pf-chart-head">
           <span class="pf-chart-title" id="pfChartTitle" data-i18n="profile.chartTitle">Сделки по дням</span>
 
@@ -199,15 +268,21 @@ $pfAuthed = profile_me($_SESSION) !== '';
 
       <h2 class="pf-about-title" data-i18n="profile.aboutTitle">О себе</h2>
       <div class="pf-about">
+<?php if ($pfSelf): ?>
         <label class="pf-sr-only" for="pfAboutInput" data-i18n="profile.aboutTitle">О себе</label>
-        <textarea class="pf-about-input" id="pfAboutInput" rows="2" disabled
+        <textarea class="pf-about-input" id="pfAboutInput" rows="2"
                   data-i18n-placeholder="profile.aboutEmpty"
-                  placeholder="Опишите себя так, чтобы остальным захотелось с вами трейд ;)"></textarea>
+                  placeholder="Опишите себя так, чтобы остальным захотелось с вами трейд ;)"><?= htmlspecialchars((string)$pfCard['about'], ENT_QUOTES, 'UTF-8') ?></textarea>
         <p class="pf-about-foot">
           <span class="pf-about-status" id="pfAboutStatus" role="status" aria-live="polite"></span>
           <span class="pf-about-count" id="pfAboutCount">0 / 280</span>
           <button class="pf-about-save" type="button" id="pfAboutSave" data-i18n="profile.aboutSave" disabled>Сохранить</button>
         </p>
+<?php elseif ($pfCard['about'] !== null): ?>
+        <p class="pf-about-text"><?= htmlspecialchars($pfCard['about'], ENT_QUOTES, 'UTF-8') ?></p>
+<?php else: ?>
+        <p class="pf-about-text pf-about-none" data-i18n="profile.aboutNone">Здесь пока ничего не написано</p>
+<?php endif; ?>
       </div>
 
       <dl class="pf-stats">
@@ -227,6 +302,7 @@ $pfAuthed = profile_me($_SESSION) !== '';
 
       <p class="pf-stats-note" data-i18n="profile.statsNote">Чем больше сделок — тем выше опыт!</p>
     </section>
+<?php endif; ?>
   </main>
 
   <footer class="mk-foot">
@@ -242,7 +318,7 @@ $pfAuthed = profile_me($_SESSION) !== '';
   </footer>
 
   <script src="js/i18n.js?v=42"></script>
-  <script src="js/profile-page.js?v=1" defer></script>
-  <script src="js/profile-chart.js?v=1" defer></script>
+  <script src="js/profile-page.js?v=2" defer></script>
+  <script src="js/profile-chart.js?v=3" defer></script>
 </body>
 </html>

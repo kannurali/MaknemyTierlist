@@ -14,6 +14,9 @@
   const barMax   = document.getElementById('pfBarMax');
   const NS       = 'http://www.w3.org/2000/svg';
 
+  const WHO  = root.dataset.profile || '';
+  const PEER = root.dataset.peer === '1';
+
   const PAD = { l: 46, r: 14, t: 14, b: 30 };
 
   function geometry() {
@@ -137,9 +140,13 @@
     empty.hidden = any;
     if (!any) {
       const ever = data.lifetime && data.lifetime.total > 0;
-      empty.textContent = ever
-        ? tx('profile.chartNoMonth', 'В этом месяце сделок не было')
-        : tx('profile.chartNoData', 'Сделок пока нет — статистика появится после первого обмена');
+      if (ever) {
+        empty.textContent = tx('profile.chartNoMonth', 'В этом месяце сделок не было');
+      } else if (PEER) {
+        empty.textContent = tx('profile.chartNoDataPeer', 'У этого игрока сделок пока нет');
+      } else {
+        empty.textContent = tx('profile.chartNoData', 'Сделок пока нет — статистика появится после первого обмена');
+      }
     }
 
     const sum = data.totals.sum, scale = data.totals.scale;
@@ -273,7 +280,10 @@
     const mine = ++seq;
     root.classList.add('is-loading');
     try {
-      const url = '/api/profile-stats.php' + (month ? '?month=' + encodeURIComponent(month) : '');
+      const q = [];
+      if (WHO)   { q.push('id=' + encodeURIComponent(WHO)); }
+      if (month) { q.push('month=' + encodeURIComponent(month)); }
+      const url = '/api/profile-stats.php' + (q.length ? '?' + q.join('&') : '');
       const res = await fetch(url, { cache: 'no-store' });
       if (mine !== seq) { return; }
       if (res.status === 401 || res.status === 403) {

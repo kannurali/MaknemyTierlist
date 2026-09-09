@@ -449,6 +449,17 @@
 }
 
 
+.pf-about-text {
+  margin: 0;
+  font-family: var(--display);
+  font-size: calc(30 * var(--u));
+  line-height: calc(35 * var(--u));
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.pf-about-none { opacity: .78; }
+
 .pf-about-input {
   display: block;
   width: 100%;
@@ -466,7 +477,6 @@
   color: #fff;
 }
 
-.pf-about-input:disabled { opacity: .5; }
 
 .pf-about-input::placeholder {
   color: #fff;
@@ -723,6 +733,8 @@
     border-radius: 14px;
   }
 
+
+  .pf-about-text { font-size: 15px; line-height: 1.35; }
 
   .pf-about-input {
     min-height: 66px;

@@ -44,6 +44,212 @@ function pf_assert_key(string $i18n, string $key): void {
 }
 
 // --------------------------------------------------------------------------
+//  Настоящий рендер страницы
+// --------------------------------------------------------------------------
+//
+// Разметку профиля теперь собирает СЕРВЕР: он же решает, показать карточку,
+// предложение войти или «профиля нет». Проверять это чтением исходника
+// бессмысленно — там ветвление, а не готовый ответ. Поэтому страница
+// исполняется по-настоящему, в отдельном процессе, с подставленной сессией,
+// параметром ?id= и своей базой на SQLite.
+//
+// Отдельным процессом по тем же причинам, что в tests/metrika_test.php:
+// require исполняет страницу один раз на процесс, а её ветка «профиля нет»
+// меняет код ответа, который надо прочитать целиком.
+//
+// В коде дочернего php нет ни одной ДВОЙНОЙ кавычки: escapeshellarg() на
+// Windows оборачивает аргумент в двойные кавычки, а встреченные внутри
+// заменяет пробелами.
+
+const PF_MARK = '___NX_PROFILE_RENDER___';
+
+function pf_fixture_db(string $file): void {
+    @unlink($file);
+    $pdo = new PDO('sqlite:' . $file);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("CREATE TABLE users (
+        roblox_id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL DEFAULT '',
+        display_name TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        last_login_at INTEGER NOT NULL,
+        about TEXT NULL DEFAULT NULL,
+        likes INTEGER NOT NULL DEFAULT 0,
+        dislikes INTEGER NOT NULL DEFAULT 0
+    )");
+    $ins = $pdo->prepare('INSERT INTO users
+        (roblox_id, username, display_name, avatar_url, created_at, last_login_at, about, likes, dislikes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $now = time();
+    // Свой: онлайн, с аватаром, с текстом о себе и с репутацией.
+    $ins->execute(['900000001', 'mksvtn', 'MKSVTN', 'https://tr.rbxcdn.com/a.png',
+                   $now - 86400, $now, 'Меняю фрукты по тирлисту', 3, 1]);
+    // Чужой: офлайн, без аватара и без текста о себе.
+    $ins->execute(['900000004', 'thefool', 'The Fool', '', $now - 86400, $now - 100000, null, 0, 0]);
+    // Ник с разметкой: она обязана уехать на страницу экранированной.
+    $ins->execute(['900000009', 'xss', '<script>alert(1)</script>', '', $now - 86400, $now,
+                   'a <b>bold</b> claim', 0, 0]);
+}
+
+function pf_render(string $me, string $id): ?array {
+    if (!function_exists('shell_exec')) { return null; }
+    $php  = PHP_BINARY !== '' ? PHP_BINARY : 'php';
+    // Имя уникальное на процесс и на вызов: два прогона набора рядом (или
+    // прогон рядом с чьей-то копией репозитория) иначе затирали бы друг другу
+    // базу на полпути, и падение выглядело бы как плавающий дефект страницы.
+    $tmp  = sys_get_temp_dir();
+    $tag  = getmypid() . '_' . uniqid();
+    $dbf  = $tmp . '/nx_profile_' . $tag . '.sqlite';
+    $cfgf = $tmp . '/nx_profile_' . $tag . '_config.php';
+
+    pf_fixture_db($dbf);
+    file_put_contents($cfgf, "<?php return ['dsn' => 'sqlite:" . $dbf . "', 'db_user' => '', "
+        . "'db_pass' => '', 'admin_hash' => '', 'images_dir' => '', 'deploy_secret' => '', "
+        . "'deploy_repo' => '', 'deploy_path' => '', 'deploy_branch' => ''];\n");
+
+    // Маркер печатается ПОСЛЕ require, вместе с кодом ответа: ушла страница в
+    // exit или в фатал — маркера не будет, и мы это увидим, а не примем
+    // обрезанный вывод за разметку.
+    $code = 'define(' . var_export('CONFIG_PATH', true) . ', $argv[2]);'
+          . ' session_start(); $_SESSION[' . var_export('user_id', true) . '] = $argv[3];'
+          . ' $_GET[' . var_export('id', true) . '] = $argv[4];'
+          . ' require $argv[1];'
+          . ' echo ' . var_export(PF_MARK, true) . ' , http_response_code();';
+
+    $devnull = DIRECTORY_SEPARATOR === '/' ? '2>/dev/null' : '2>nul';
+    $cmd = escapeshellarg($php) . ' -r ' . escapeshellarg($code)
+         . ' ' . escapeshellarg(dirname(__DIR__) . '/public_html/profile.php')
+         . ' ' . escapeshellarg($cfgf)
+         . ' ' . escapeshellarg($me)
+         . ' ' . escapeshellarg($id)
+         . ' ' . $devnull;
+
+    $out = shell_exec($cmd);
+    @unlink($dbf); @unlink($cfgf);
+    if ($out === null || $out === false) { return null; }
+    $pos = strpos($out, PF_MARK);
+    if ($pos === false) { return null; }
+    return [
+        'html'   => substr($out, 0, $pos),
+        'status' => (int)(substr($out, $pos + strlen(PF_MARK)) ?: 200),
+    ];
+}
+
+test('аноним видит предложение войти и ни строчки карточки', function () {
+    $r = pf_render('', '');
+    assert_true($r !== null, 'страница отрендерилась до конца');
+    if ($r === null) { return; }
+    assert_eq(200, $r['status'], 'это не ошибка — просто не вошли');
+    assert_true(strpos($r['html'], 'data-i18n="profile.login"') !== false, 'гейт показан');
+    assert_eq(0, substr_count($r['html'], 'hidden>Войдите'), 'и не спрятан');
+    assert_eq(0, substr_count($r['html'], 'class="pf-card"'), 'карточки в разметке нет вовсе');
+    assert_eq(0, substr_count($r['html'], 'pfLogout'), 'операций с аккаунтом тоже');
+});
+
+test('свой профиль: карточка, меню аккаунта и правка «о себе»', function () {
+    $r = pf_render('900000001', '');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    $h = $r['html'];
+
+    assert_eq(200, $r['status'], 'ответ 200');
+    assert_true(strpos($h, '<h1 class="pf-nick" id="pfNick">MKSVTN</h1>') !== false, 'ник напечатан сервером');
+    assert_true(strpos($h, '>@mksvtn</p>') !== false, 'хендл на месте');
+    assert_true(strpos($h, '<title>MKSVTN — профиль игрока') !== false, 'ник попал в заголовок вкладки');
+    assert_true(strpos($h, 'src="https://tr.rbxcdn.com/a.png"') !== false, 'аватар подставлен');
+    assert_true(strpos($h, 'class="pf-avatar has-photo"') !== false, 'и заглушка-силуэт погашена');
+    assert_true(strpos($h, 'data-state="online"') !== false, 'статус посчитан');
+    assert_true(strpos($h, '<b id="pfLikes">3</b>') !== false, 'репутация напечатана');
+    assert_true(strpos($h, '<b id="pfDislikes">1</b>') !== false, 'обе половины');
+    assert_true(strpos($h, 'id="pfLogout"') !== false, 'выход только на своём профиле');
+    assert_true(strpos($h, 'id="pfAboutInput"') !== false, '«о себе» правится');
+    assert_true(strpos($h, '>Меняю фрукты по тирлисту</textarea>') !== false, 'и приезжает заполненным');
+    assert_true(strpos($h, 'canonical" href="https://maknemy.com/profile"') !== false,
+        'канонический адрес своего профиля — без ?id=');
+
+    // Ни одной подписи-заглушки: карточка приезжает готовой, а не
+    // достраивается скриптом.
+    assert_eq(0, substr_count($h, 'data-i18n="profile.nick"'), 'заглушки ника нет');
+    assert_eq(0, substr_count($h, 'data-i18n="profile.handle"'), 'заглушки хендла нет');
+});
+
+test('чужой профиль: те же данные, но без операций с аккаунтом', function () {
+    $r = pf_render('900000001', '900000004');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    $h = $r['html'];
+
+    assert_eq(200, $r['status'], 'ответ 200');
+    assert_true(strpos($h, '<h1 class="pf-nick" id="pfNick">The Fool</h1>') !== false, 'ник соседа');
+    assert_true(strpos($h, '<title>The Fool — профиль игрока') !== false, 'его же в заголовке');
+    assert_true(strpos($h, 'data-state="offline"') !== false, 'его статус, а не мой');
+    assert_true(strpos($h, 'canonical" href="https://maknemy.com/profile?id=900000004"') !== false,
+        'канонический адрес несёт ?id=');
+
+    // Всё, что относится к аккаунту, на чужом профиле ОТСУТСТВУЕТ в разметке,
+    // а не спрятано стилями: спрятанное видно в исходнике и возвращается
+    // одним снятым атрибутом.
+    foreach (['pfLogout', 'pfSwitch', 'pfMenuToggle', 'pf-menu-list',
+              'profile.menuDelete', 'pfAboutInput', 'pfAboutSave'] as $mark) {
+        assert_eq(0, substr_count($h, $mark), "на чужом профиле нет: $mark");
+    }
+    assert_true(strpos($h, 'data-i18n="profile.aboutNone"') !== false,
+        'пустое «о себе» соседа — своё состояние, а не подсказка «опишите себя»');
+});
+
+// График спрашивает статистику ТОГО ЖЕ человека, чью карточку напечатал
+// сервер. Раньше скрипт вытаскивал id из адреса сам — и расходился с сервером
+// на ?id=1&id=2 (PHP берёт последний, регулярка первый) и на любой другой
+// записи, которую эти два разборщика читают по-разному. Теперь адресат один
+// и приезжает из разметки.
+test('график берёт адресата из разметки, а не из адресной строки', function () use ($PUB) {
+    $js = pf_read($PUB . '/js/profile-chart.js');
+    assert_true(strpos($js, 'const WHO  = root.dataset.profile') !== false,
+        'id цели читается из data-атрибута');
+    assert_eq(0, preg_match('~location\.search~', $js), 'адресную строку скрипт не разбирает');
+
+    $mine = pf_render('900000001', '');
+    $peer = pf_render('900000001', '900000004');
+    assert_true($mine !== null && $peer !== null, 'обе страницы отрендерились');
+    if ($mine === null || $peer === null) { return; }
+    assert_true(strpos($mine['html'], 'data-profile="900000001"') !== false, 'свой id в разметке');
+    assert_eq(0, substr_count($mine['html'], 'data-peer'), 'и метки «чужой» на своём нет');
+    assert_true(strpos($peer['html'], 'data-profile="900000004"') !== false, 'чужой id в разметке');
+    assert_true(strpos($peer['html'], 'data-peer="1"') !== false, 'и метка «чужой» стоит');
+});
+
+test('свой профиль по своему же ?id= остаётся своим', function () {
+    $r = pf_render('900000001', '900000001');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    assert_true(strpos($r['html'], 'id="pfLogout"') !== false, 'меню аккаунта на месте');
+    assert_true(strpos($r['html'], 'id="pfAboutInput"') !== false, '«о себе» правится');
+});
+
+test('несуществующий профиль отвечает настоящим 404', function () {
+    $r = pf_render('900000001', '900009999');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    assert_eq(404, $r['status'], 'не 200 на пустой странице');
+    assert_true(strpos($r['html'], 'data-i18n="profile.missing"') !== false, 'и объяснение показано');
+    assert_eq(0, substr_count($r['html'], 'class="pf-card"'), 'карточки нет');
+});
+
+// Ник и «о себе» пишет человек. Всё, что он написал, обязано уехать на
+// страницу текстом, а не разметкой.
+test('ник и «о себе» экранируются', function () {
+    $r = pf_render('900000001', '900000009');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    $h = $r['html'];
+    assert_eq(0, substr_count($h, '<script>alert(1)</script>'), 'разметка из ника не исполнится');
+    assert_true(strpos($h, '&lt;script&gt;alert(1)&lt;/script&gt;') !== false, 'она экранирована');
+    assert_eq(0, substr_count($h, 'a <b>bold</b> claim'), 'и из «о себе» тоже');
+    assert_true(strpos($h, 'a &lt;b&gt;bold&lt;/b&gt; claim') !== false, 'экранирована');
+});
+
+// --------------------------------------------------------------------------
 //  Маршрут /profile
 // --------------------------------------------------------------------------
 
@@ -72,10 +278,15 @@ test('прямой /profile.php уводится на /profile, и только 
         $ht), 'редирект profile.php должен быть закрыт условием REDIRECT_STATUS');
 });
 
+// Канонический адрес зависит от того, чей профиль открыт, — значит и
+// проверяется он на отрендеренной странице (см. тесты рендера выше). Здесь
+// остаётся то, что от данных не зависит.
 test('профиль объявляет себя на /profile', function () use ($PUB) {
     $s = pf_read($PUB . '/profile.php');
-    assert_true(strpos($s, '<link rel="canonical" href="https://maknemy.com/profile" />') !== false,
-        'canonical профиля');
+    assert_true(strpos($s, "'https://maknemy.com/profile'") !== false,
+        'канонический адрес своего профиля');
+    assert_true(strpos($s, "'https://maknemy.com/profile?id=' . \$pfWho") !== false,
+        'и чужого — с ?id=');
 });
 
 // Профиль пуст и одинаков для всех, а когда появятся живые аккаунты,
@@ -253,7 +464,12 @@ test('под каждым data-i18n профиля есть строка в ru �
     $i18n = pf_read($PUB . '/js/i18n.js');
 
     preg_match_all('/data-i18n(?:-title|-label|-placeholder)?="([^"]+)"/', $s, $m);
-    $keys = array_values(array_unique($m[1]));
+    // Значение может быть подставлено PHP — например ключ статуса, который
+    // зависит от данных. Такие проверяются там, где решается их набор
+    // (см. тест про статус ниже), а сюда попадает не имя ключа, а кусок кода.
+    $keys = array_values(array_unique(array_filter($m[1], function ($k) {
+        return strpos($k, '<?') === false;
+    })));
     assert_true(count($keys) > 0, 'ключи в разметке нашлись');
 
     // Словарь — два блока подряд, ru и затем en. Ключ обязан встретиться в
@@ -544,14 +760,17 @@ test('невошедшему страница отдаёт предложени�
     $js = pf_read($PUB . '/js/profile-page.js');
 
     assert_true(strpos($s, "start_site_session();") !== false, 'страница открывает сессию');
-    assert_true(strpos($s, "\$pfAuthed = profile_me(\$_SESSION) !== '';") !== false,
+    assert_true(strpos($s, "\$pfMe   = profile_me(\$_SESSION);") !== false,
         'и спрашивает у неё, кто пришёл');
-    assert_true((bool)preg_match(
-        '/<p class="pf-gate" id="pfGate" data-i18n="profile\.login"<\?php if \(\$pfAuthed\): \?> hidden<\?php endif; \?>>/', $s),
-        'гейт скрыт только для вошедшего');
-    assert_true((bool)preg_match(
-        '/<section class="pf-card" id="pfCard" aria-labelledby="pfNick"<\?php if \(!\$pfAuthed\): \?> hidden<\?php endif; \?>>/', $s),
-        'карточка скрыта только для невошедшего');
+    assert_true(strpos($s, "\$pfId   = profile_target(\$_GET);") !== false,
+        'а у адреса — чей профиль открыт');
+
+    // Три состояния взаимоисключающие, и решает их сервер: карточки
+    // невошедшего в разметке нет вовсе, а не спрятана атрибутом.
+    assert_true(strpos($s, "if (\$pfState === 'missing') { http_response_code(404); }") !== false,
+        'пропавший профиль отвечает 404');
+    assert_true(strpos($s, "<?php if (\$pfState === 'card'): ?>") !== false,
+        'карточка печатается только при наличии данных');
 
     // Сессия может отвалиться между отдачей страницы и запросом данных —
     // тогда переключить обязан скрипт. Проверяем НАПРАВЛЕНИЕ, а не наличие
@@ -561,23 +780,15 @@ test('невошедшему страница отдаёт предложени�
         'гейт прячется, когда вошли');
     assert_true(strpos($js, 'if (card) { card.hidden = !authed; }') !== false,
         'карточка прячется, когда не вошли');
-    assert_true(strpos($js, 'renderAuth(!!d.authed);') !== false, 'по ответу API');
+    assert_true(strpos($js, "renderAuth(!!(e.detail && e.detail.authed));") !== false,
+        'по ответу API');
 
-    // Поле «о себе» приезжает выключенным и включается только с данными.
-    // Иначе при не доехавшем ответе человек напишет текст в пустое поле и
-    // сохранением сотрёт то, что лежит в базе.
-    assert_true((bool)preg_match('/<textarea class="pf-about-input" id="pfAboutInput" rows="2" disabled/', $s),
-        'поле выключено в разметке');
-    assert_true(strpos($js, 'aboutInput.disabled = false;') !== false,
-        'включается только в loadAbout, по пришедшим данным');
-    assert_eq(1, substr_count($js, 'aboutInput.disabled = false;'), 'ровно в одном месте');
-    assert_true(strpos($js, 'if (d.authed) { loadAbout(lastCard); }') !== false,
-        'и только вошедшему: невошедшему включать нечего и незачем');
-
-    // Черновик важнее повторного ответа: mk:profiledata приходит на КАЖДУЮ
-    // смену месяца в графике, и безусловная заливка стирала бы набранное.
-    assert_true(strpos($js, "var dirty = aboutReady && aboutInput.value !== savedAbout;") !== false,
-        'повторные данные не затирают правку');
+    // Текст «о себе» приезжает в разметке, а не заливается скриптом: заливка
+    // на каждом ответе стирала бы набранное, а до ответа поле было бы пустым.
+    assert_true(strpos($js, "var savedAbout = aboutInput ? aboutInput.value : '';") !== false,
+        'исходное значение берётся из разметки');
+    assert_eq(0, substr_count($js, 'loadAbout'),
+        'заливки поля по приходу данных больше нет вовсе');
     pf_assert_key(pf_read($PUB . '/js/i18n.js'), 'profile.login');
 });
 
@@ -612,74 +823,51 @@ test('на узких экранах раскладка переходит в л
 
 // Ник, аватар, «о себе», статус и репутация раньше были зашиты в разметку.
 // Теперь это подписи-заглушки, которые заменяются данными из API.
-test('поля карточки размечены точками привязки и заполняются скриптом', function () use ($PUB) {
-    $s  = pf_read($PUB . '/profile.php');
-    $js = pf_read($PUB . '/js/profile-page.js');
-    foreach (['pfNick', 'pfHandle', 'pfAboutInput', 'pfAvatar', 'pfStatus',
-              'pfLikes', 'pfDislikes'] as $id) {
-        assert_true(strpos($s, 'id="' . $id . '"') !== false, "$id размечен");
-        assert_true(strpos($js, $id) !== false, "$id заполняется скриптом");
+// Карточку печатает сервер, скрипт её не трогает. Точки привязки всё равно
+// нужны — по ним ходят и стили, и график, — но проверять их надо в
+// отрендеренной странице, а не в шаблоне.
+test('поля карточки размечены точками привязки', function () {
+    $r = pf_render('900000001', '');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    foreach (['pfNick', 'pfHandle', 'pfAvatar', 'pfStatus', 'pfLikes', 'pfDislikes'] as $id) {
+        assert_true(strpos($r['html'], 'id="' . $id . '"') !== false, "$id размечен");
     }
-    assert_true(strpos($js, 'mk:profiledata') !== false, 'карточка слушает данные');
 });
 
-// Живое значение обязано пережить смену языка. Пока на узле висит data-i18n,
-// общий проход applyLang() затрёт настоящий ник словом «Игровой ник».
-test('после подстановки данных ключ перевода с узла снимается', function () use ($PUB) {
+// Прежде карточку заполнял js/profile-page.js: страница показывала подписи
+// «Игровой ник» и «@никнейм», а настоящие значения подставлялись ответом
+// эндпоинта. Пути назад к этому быть не должно — два источника на одно поле
+// разъезжаются, а на экране мелькают заглушки.
+test('скрипт больше не собирает карточку', function () use ($PUB) {
     $js = pf_read($PUB . '/js/profile-page.js');
-    assert_true(strpos($js, "removeAttribute('data-i18n')") !== false,
-        'ключ снимается вместе с подстановкой значения');
-    // У статуса ключ не снимается, а ПЕРЕставляется на конкретное состояние:
-    // снятый оставлял подпись на языке, который был в момент прихода данных,
-    // и переключение на английский её больше не трогало.
-    assert_true(strpos($js, "setAttribute('data-i18n-label'") !== false,
-        'у статуса ключ подписи переставляется на текущее состояние');
-    assert_eq(0, substr_count($js, "removeAttribute('data-i18n-label')"),
-        'снимать ключ подписи нельзя — подпись перестала бы переводиться');
+    foreach (['renderCard', 'renderAvatar', 'renderStatus', 'STATUS_KEYS', 'lastCard'] as $gone) {
+        assert_eq(0, substr_count($js, $gone), "в скрипте не осталось $gone");
+    }
+    assert_true(strpos($js, 'mk:profiledata') !== false, 'событие он всё ещё слушает');
+    // Единственное, что осталось от карточки в скрипте, — переключение на
+    // гейт: по ответу эндпоинта и при 401 на сохранении «о себе».
+    assert_true(strpos($js, 'function renderAuth(authed)') !== false, 'функция на месте');
+    assert_eq(3, substr_count($js, 'renderAuth'), 'объявление и два вызова, больше карточке нечего делать');
 });
 
-// Аватар до прихода данных скрыт: <img> с пустым src нарисовал бы значок
-// битого файла поверх серого круга из макета.
-test('аватар скрыт, пока картинки нет', function () use ($PUB) {
-    $s  = pf_read($PUB . '/profile.php');
-    $js = pf_read($PUB . '/js/profile-page.js');
-    assert_true((bool)preg_match('/<img id="pfAvatar"[^>]*hidden/', $s), 'в разметке скрыт');
-    assert_true(strpos($js, 'img.hidden = false') !== false, 'показывается только с картинкой');
-});
+// Аватара может не быть: у Roblox он не обязателен, а битый URL мы и сами
+// отбрасываем. Тогда в круге остаётся силуэт из макета — и никакого пустого
+// <img>, который нарисовал бы значок сломанного файла.
+test('без аватара остаётся силуэт, с аватаром он гаснет', function () {
+    $with = pf_render('900000001', '');
+    $without = pf_render('900000001', '900000004');
+    assert_true($with !== null && $without !== null, 'обе страницы отрендерились');
+    if ($with === null || $without === null) { return; }
 
-// Три точки статуса в макете горели все сразу — индикатор, который ничего не
-// индицирует. Активна должна быть ровно одна, и состояние обязано называться
-// словами: цвет ничего не сообщает тому, кто его не видит.
-//
-// Точек ДВЕ, а не три: красная «занят» убрана вместе с этой правкой. Статус
-// вычисляется из last_login_at, и третьего значения оттуда взять неоткуда —
-// точка, которая не может загореться, это декорация.
-test('статус двухпозиционный, выводится из данных и назван словами', function () use ($PUB) {
-    $s    = pf_read($PUB . '/profile.php');
-    $css  = pf_read($PUB . '/css/profile.css');
-    $js   = pf_read($PUB . '/js/profile-page.js');
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    assert_true(strpos($with['html'], 'class="pf-avatar has-photo"') !== false, 'с картинкой — класс есть');
+    assert_true(strpos($with['html'], '<img id="pfAvatar"') !== false, 'и сам <img>');
+    assert_true(strpos($with['html'], 'referrerpolicy="no-referrer"') !== false,
+        'адрес нашей страницы не уходит на CDN Roblox');
 
-    foreach (['online', 'offline'] as $st) {
-        assert_true(strpos($s, 'data-state="' . $st . '"') !== false, "точка $st размечена");
-        assert_true(strpos($css, '.pf-status[data-state="' . $st . '"]') !== false,
-            "у состояния $st свой стиль");
-    }
-    assert_eq(0, substr_count($s, 'data-state="busy"'), 'точки без источника данных в разметке нет');
-    assert_eq(0, substr_count($css, 'busy'), 'и стиля под неё тоже');
-    assert_eq(0, substr_count($js, 'busy'), 'и скрипт про неё не знает');
-
-    assert_true(strpos($css, 'opacity: .26') !== false, 'неактивные приглушены');
-    foreach (['profile.statusOnline', 'profile.statusOffline', 'profile.statusUnknown'] as $k) {
-        pf_assert_key($i18n, $k);
-    }
-
-    // Хранимой колонки status нет намеренно: её пришлось бы кому-то
-    // сбрасывать. Окно молчания — то же, что у чата.
-    $lib = pf_read($PUB . '/api/lib/profile.php');
-    assert_true(strpos($lib, 'const PROFILE_ONLINE_WINDOW = 300;') !== false, 'окно объявлено');
-    assert_true(strpos($lib, "(\$now - \$seen) <= PROFILE_ONLINE_WINDOW) ? 'online' : 'offline'") !== false,
-        'статус считается из last_login_at');
+    assert_eq(0, substr_count($without['html'], '<img id="pfAvatar"'), 'без картинки <img> не печатается');
+    assert_true(strpos($without['html'], 'class="pf-avatar"') !== false, 'класса has-photo нет');
+    assert_true(strpos($without['html'], 'pf-avatar-empty') !== false, 'силуэт на месте');
 });
 
 // Значок без числа не отвечает на вопрос, счётчик это или кнопка. В макете
