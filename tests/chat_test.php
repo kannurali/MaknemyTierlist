@@ -25,6 +25,12 @@ function ch_db(): PDO {
     $pdo = test_db();
     // Колонки репутации приходят из test_db(): они описаны в schema.sql, как
     // и все остальные колонки, добавленные миграциями (см. news.likes).
+    //
+    // А присутствие — НЕ наша колонка: она приходит вместе со страницей
+    // профиля, и в schema.sql этой ветки её ещё нет. Чат её только читает,
+    // поэтому здесь она добавляется руками — ровно как появится на бою.
+    // Случай «колонки нет» проверяется отдельно, на чистом test_db().
+    $pdo->exec('ALTER TABLE users ADD COLUMN last_seen_at INTEGER NOT NULL DEFAULT 0');
     $pdo->exec('CREATE TABLE chat_threads (
         id      INTEGER PRIMARY KEY AUTOINCREMENT,
         a_id    INTEGER NOT NULL,
@@ -52,10 +58,16 @@ function ch_db(): PDO {
 }
 
 // Пользователь заводится так же, как его завёл бы вход через Roblox.
+//
+// $seenAgo — сколько секунд назад его в последний раз ВИДЕЛИ на сайте. Вход
+// при этом ставится заведомо давним: статус обязан считаться по присутствию, и
+// если бы он считался по входу, ни одна проверка ниже этого не заметила бы.
 function ch_user(PDO $p, string $robloxId, string $name, int $seenAgo = 0): string {
-    $st = $p->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at)
-                       VALUES (?, ?, ?, ?, ?, ?)');
-    $st->execute([$robloxId, strtolower($name), $name, '', CH_NOW - 86400, CH_NOW - $seenAgo]);
+    $st = $p->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url,
+                                          created_at, last_login_at, last_seen_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $st->execute([$robloxId, strtolower($name), $name, '',
+                  CH_NOW - 86400 * 30, CH_NOW - 86400 * 7, CH_NOW - $seenAgo]);
     return $robloxId;
 }
 
@@ -188,15 +200,66 @@ test('в списке только мои диалоги, свежие свер�
     assert_eq('B', $list[0]['peer']['nick'], 'собеседник определён верно');
 });
 
-// Статус попадает в атрибут на странице — значение из базы не должно
-// проходить непроверенным.
-test('неизвестный статус собеседника схлопывается в offline', function () {
+// Статус собеседника — единственное в списке диалогов, что меняется само по
+// себе. Считается он из ПРИСУТСТВИЯ (last_seen_at), а не из времени входа:
+// вход пишется один раз, и по нему человек, который прямо сейчас читает эту же
+// переписку, выглядел бы ушедшим.
+test('статус собеседника считается по присутствию, а не по входу', function () {
+    foreach ([
+        [0,                        'online',  'только что был на сайте'],
+        [CHAT_ONLINE_WINDOW,       'online',  'ровно на границе окна'],
+        [CHAT_ONLINE_WINDOW + 1,   'offline', 'секундой позже'],
+        [99999,                    'offline', 'вчера'],
+    ] as [$ago, $want, $why]) {
+        $pdo = ch_db();
+        // У всех вход заведомо давний (ch_user ставит неделю назад): если бы
+        // статус считался по нему, все четыре случая дали бы offline.
+        $me = ch_user($pdo, '11', 'ME');
+        $a  = ch_user($pdo, '22', 'A', $ago);
+        ch_thread($pdo, $me, $a, CH_NOW);
+        $list = chat_threads($pdo, $me, CH_NOW);
+        assert_eq($want, $list[0]['peer']['status'], $why);
+    }
+});
+
+// Вход — тоже присутствие, и притом достовернее старой отметки: человек
+// только что стоял у экрана.
+test('свежий вход перевешивает старую отметку присутствия', function () {
     $pdo = ch_db();
     $me = ch_user($pdo, '11', 'ME');
     $a  = ch_user($pdo, '22', 'A', 99999);
+    $pdo->prepare('UPDATE users SET last_login_at = ? WHERE roblox_id = ?')->execute([CH_NOW, $a]);
     ch_thread($pdo, $me, $a, CH_NOW);
     $list = chat_threads($pdo, $me, CH_NOW);
-    assert_eq('offline', $list[0]['peer']['status'], 'мусорный статус отброшен');
+    assert_eq('online', $list[0]['peer']['status'], 'вошёл только что — в сети');
+});
+
+// Колонки присутствия на бою может ещё не быть: её заводит миграция страницы
+// профиля, а миграции выполняются руками и отдельно от выкладки. Чат обязан
+// пережить это, а не показать пустой список диалогов.
+test('без колонки присутствия чат работает и считает статус по входу', function () {
+    $pdo = test_db();   // без ALTER: так выглядит база до миграции профиля
+    $pdo->exec('CREATE TABLE chat_threads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, a_id INTEGER NOT NULL,
+        b_id INTEGER NOT NULL, last_at INTEGER NOT NULL DEFAULT 0)');
+    $pdo->exec('CREATE TABLE chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, thread_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL)');
+    $pdo->exec('CREATE TABLE chat_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, thread_id INTEGER NOT NULL,
+        author_id INTEGER NOT NULL, target_id INTEGER NOT NULL, stars INTEGER NOT NULL,
+        body TEXT, created_at INTEGER NOT NULL, UNIQUE (thread_id, author_id))');
+
+    $ins = $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url,
+                                             created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)');
+    $ins->execute(['11', 'me', 'ME', '', CH_NOW - 86400, CH_NOW - 86400]);
+    $ins->execute(['22', 'a',  'A',  '', CH_NOW - 86400, CH_NOW]);
+    ch_thread($pdo, '11', '22', CH_NOW);
+
+    $list = chat_threads($pdo, '11', CH_NOW);
+    assert_eq(1, count($list), 'список диалогов не сломался');
+    assert_eq('A', $list[0]['peer']['nick'], 'собеседник прочитан');
+    assert_eq('online', $list[0]['peer']['status'], 'статус посчитан по входу');
 });
 
 // --------------------------------------------------------------------------
