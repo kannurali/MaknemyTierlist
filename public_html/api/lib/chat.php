@@ -44,8 +44,15 @@ const CHAT_ONLINE_WINDOW = 300;
  * чем угодно однажды подарило бы доступ.
  */
 function chat_me(array $session): string {
-    $id = (string)($session['user_id'] ?? '');
-    return preg_match('/^\d{1,20}\z/', $id) ? $id : '';
+    $raw = $session['user_id'] ?? '';
+    // Проверка типа, а не приведение. Массив в сессии (испорченная запись,
+    // чужой код, положивший туда список) дал бы «Array to string conversion»
+    // ПЕРЕД телом ответа, после чего JSON уже не разбирается. А true молча
+    // превратился бы в '1' — то есть в пользователя с roblox_id 1, вполне
+    // существующий номер. Личность — не то место, где уместны приведения.
+    if (!is_string($raw) && !is_int($raw)) { return ''; }
+    $id = (string)$raw;
+    return preg_match('/^\d{1,20}\z/', $id) === 1 ? $id : '';
 }
 
 // Есть ли таблицы чата. На бою их нет до запуска миграции — это штатное
@@ -308,8 +315,16 @@ function chat_recount_reputation(PDO $pdo, string $userId): void {
     $st->execute([':like' => CHAT_STARS_LIKE, ':dis' => CHAT_STARS_DISLIKE, ':u' => $userId]);
     $r = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    $pdo->prepare('UPDATE users SET likes = :l, dislikes = :d WHERE roblox_id = :u')
-        ->execute([':l' => (int)($r['up'] ?? 0), ':d' => (int)($r['down'] ?? 0), ':u' => $userId]);
+    // Репутация — денормализованный СЧЁТЧИК, а не сам отзыв: отзыв уже лежит
+    // в chat_reviews, и пересчёт не должен уметь уронить его сохранение.
+    // Колонок может не быть (миграция выполняется руками и отдельно от
+    // выкладки) — тогда счётчики просто останутся нулями, как и до неё.
+    try {
+        $pdo->prepare('UPDATE users SET likes = :l, dislikes = :d WHERE roblox_id = :u')
+            ->execute([':l' => (int)($r['up'] ?? 0), ':d' => (int)($r['down'] ?? 0), ':u' => $userId]);
+    } catch (PDOException $e) {
+        // колонок репутации ещё нет
+    }
 }
 
 /** Мой отзыв в этой ветке — форма открывается заполненной, если он уже есть. */

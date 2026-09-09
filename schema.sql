@@ -93,5 +93,15 @@ CREATE TABLE IF NOT EXISTS users (
   display_name  VARCHAR(64)  NOT NULL DEFAULT '',
   avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
   created_at    BIGINT UNSIGNED NOT NULL,
-  last_login_at BIGINT UNSIGNED NOT NULL
+  last_login_at BIGINT UNSIGNED NOT NULL,
+  -- Репутация из чатов: два счётчика, которые показывает профиль. Хранятся
+  -- денормализованно рядом с пользователем, а не считаются на лету — профиль
+  -- открывают чаще, чем пишут отзывы. Пересчитываются целиком при каждом
+  -- отзыве (chat_recount_reputation), а не инкрементом: правка оценки меняет
+  -- вклад с плюса на минус.
+  --
+  -- Для уже созданной боевой базы те же колонки заводит миграция
+  -- docs/migrations/2026-09-09-chat.sql; при чистой установке она не нужна.
+  likes         INT UNSIGNED NOT NULL DEFAULT 0,
+  dislikes      INT UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
