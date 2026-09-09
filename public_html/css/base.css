@@ -1,7 +1,7 @@
 
 @font-face {
   font-family: "Bootshaus";
-  src: url("../assets/fonts/Bootshaus/Bootshaus-Regular.ttf") format("truetype");
+  src: url("../assets/fonts/Bootshaus/Bootshaus-Regular.ttf?v=2") format("truetype");
   font-weight: normal;
   font-display: swap;
 }

@@ -201,7 +201,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=10" />
+<link rel="stylesheet" href="css/base.css?v=11" />
 <link rel="stylesheet" href="css/news.css?v=13" />
 
 <link rel="stylesheet" href="css/topbar.css?v=11" />

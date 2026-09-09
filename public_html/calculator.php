@@ -93,7 +93,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=10" />
+<link rel="stylesheet" href="css/base.css?v=11" />
 
 <link rel="stylesheet" href="css/topbar.css?v=11" />
 
