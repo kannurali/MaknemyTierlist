@@ -90,6 +90,8 @@ function pf_fixture_db(string $file): void {
     // Ник с разметкой: она обязана уехать на страницу экранированной.
     $ins->execute(['900000009', 'xss', '<script>alert(1)</script>', '', $now - 86400, $now,
                    'a <b>bold</b> claim', 0, 0]);
+    // Без имени вовсе: у Roblox не обязательны ни display_name, ни username.
+    $ins->execute(['900000011', '', '', '', $now - 86400, $now, null, 0, 0]);
 }
 
 function pf_render(string $me, string $id): ?array {
@@ -209,6 +211,16 @@ test('график берёт адресата из разметки, а не и
         'id цели читается из data-атрибута');
     assert_eq(0, preg_match('~location\.search~', $js), 'адресную строку скрипт не разбирает');
 
+    // Прочитать id мало — он обязан уехать В ЗАПРОС. Без этого под чужой
+    // карточкой рисовалась бы своя статистика: карточку печатает сервер, и
+    // подмены не видно ни по одному признаку на экране.
+    assert_true(strpos($js, "q.push('id=' + encodeURIComponent(WHO))") !== false,
+        'адресат попадает в адрес запроса');
+    $at = strpos($js, "const url = '/api/profile-stats.php'");
+    assert_true($at !== false, 'сборка адреса найдена');
+    assert_true(strpos(substr($js, max(0, $at - 260), 320), 'WHO') !== false,
+        'и попадает именно в ту сборку, которая идёт в fetch');
+
     $mine = pf_render('900000001', '');
     $peer = pf_render('900000001', '900000004');
     assert_true($mine !== null && $peer !== null, 'обе страницы отрендерились');
@@ -225,6 +237,62 @@ test('свой профиль по своему же ?id= остаётся св�
     if ($r === null) { return; }
     assert_true(strpos($r['html'], 'id="pfLogout"') !== false, 'меню аккаунта на месте');
     assert_true(strpos($r['html'], 'id="pfAboutInput"') !== false, '«о себе» правится');
+});
+
+// Сессия переживает удаление аккаунта. Свой профиль такому зрителю уже не
+// открывается — и чужой не должен: карточка чужого от личности смотрящего не
+// зависит, и без проверки зрителя удалённый пользователь сохранял бы доступ
+// ко всем профилям сайта.
+test('сессия удалённого пользователя не открывает и чужие профили', function () {
+    foreach (['', '900000004'] as $id) {
+        $r = pf_render('900009999', $id);
+        assert_true($r !== null, 'страница отрендерилась');
+        if ($r === null) { continue; }
+        assert_eq(200, $r['status'], 'это не 404: профиль-то есть, зрителя нет');
+        assert_true(strpos($r['html'], 'data-i18n="profile.login"') !== false,
+            'показано предложение войти, ?id=' . $id);
+        assert_eq(0, substr_count($r['html'], 'class="pf-card"'), 'карточки нет, ?id=' . $id);
+    }
+});
+
+// Ни display_name, ни username у Roblox не обязательны. Пустой <h1> оставил
+// бы карточку без доступного имени — заголовок, который нечем прочитать.
+test('профиль без имени показывает номер, а не пустой заголовок', function () {
+    $r = pf_render('900000001', '900000011');
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    assert_true(strpos($r['html'], '<h1 class="pf-nick" id="pfNick">#900000011</h1>') !== false,
+        'вместо пустоты — номер');
+    assert_eq(0, substr_count($r['html'], '<h1 class="pf-nick" id="pfNick"></h1>'), 'пустого заголовка нет');
+});
+
+// Подписи вокруг карточки написаны от первого лица. На чужом профиле «О себе»
+// и «чем больше сделок — тем выше опыт» звучат как обращение не к тому.
+test('подписи на чужом профиле не обращаются к его владельцу', function () use ($PUB) {
+    $mine = pf_render('900000001', '');
+    $peer = pf_render('900000001', '900000004');
+    assert_true($mine !== null && $peer !== null, 'обе страницы отрендерились');
+    if ($mine === null || $peer === null) { return; }
+
+    assert_true(strpos($mine['html'], 'data-i18n="profile.aboutTitle"') !== false, 'своё — «О себе»');
+    assert_true(strpos($peer['html'], 'data-i18n="profile.aboutTitlePeer"') !== false, 'чужое — «Об игроке»');
+    assert_true(strpos($mine['html'], 'data-i18n="profile.statsNote"') !== false, 'своя подпись под счётчиками');
+    assert_true(strpos($peer['html'], 'data-i18n="profile.statsNotePeer"') !== false, 'и чужая');
+
+    $i18n = pf_read($PUB . '/js/i18n.js');
+    foreach (['profile.aboutTitlePeer', 'profile.statsNotePeer'] as $k) { pf_assert_key($i18n, $k); }
+});
+
+// «О себе» пишет человек, и одно длинное слово (ссылка, набор символов) без
+// переноса уносит вбок всю страницу — у КАЖДОГО, кто её открыл.
+test('длинное слово в «о себе» переносится, а не ломает раскладку', function () use ($PUB) {
+    $css = pf_read($PUB . '/css/profile.css');
+    foreach (['.pf-about-text', '.pf-about-input'] as $sel) {
+        $at = strpos($css, $sel . ' {');
+        assert_true($at !== false, "правило $sel найдено");
+        $block = substr($css, $at, strpos($css, '}', $at) - $at);
+        assert_true(strpos($block, 'overflow-wrap: anywhere') !== false, "$sel переносит длинное слово");
+    }
 });
 
 test('несуществующий профиль отвечает настоящим 404', function () {
@@ -361,10 +429,15 @@ test('в меню пользователя есть пункт «Мой проф
 // Пункт, ведущий на текущую страницу, помечается aria-current — тем же
 // приёмом, что «Тирлист» на index.php. Меню строится скриптом на всех
 // страницах сразу, поэтому проверка идёт по условию в коде.
-test('пункт профиля помечен aria-current на самой странице профиля', function () use ($PUB) {
+// aria-current помечает пункт, ведущий на ТЕКУЩУЮ страницу. На /profile?id=
+// открыт чужой профиль, а пункт ведёт на свой — метка там врала бы о
+// местоположении, хотя pathname у обеих страниц один.
+test('пункт профиля помечен aria-current только на СВОЁМ профиле', function () use ($PUB) {
     $js = pf_read($PUB . '/js/topbar.js');
-    assert_true(strpos($js, 'if (location.pathname === PROFILE_PATH) mine.setAttribute("aria-current", "page");') !== false,
-        'aria-current ставится только на /profile');
+    assert_true(strpos($js, 'location.pathname === PROFILE_PATH && !/[?&]id=/.test(location.search)') !== false,
+        'чужой профиль под метку не попадает');
+    assert_true(strpos($js, 'if (onMine) mine.setAttribute("aria-current", "page");') !== false,
+        'и метка ставится по этому условию');
 });
 
 // --------------------------------------------------------------------------

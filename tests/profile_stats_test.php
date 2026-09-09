@@ -316,8 +316,9 @@ test('карточка собирается из users', function () {
     assert_eq('MKSVTN', $c['nick'], 'ник — display_name');
     assert_eq('@mksvtn', $c['handle'], 'хендл — username со «собакой»');
     assert_eq('https://tr.rbxcdn.com/a.png', $c['avatar'], 'аватар');
-    assert_eq('https://www.roblox.com/users/' . PS_ME . '/profile', $c['roblox'],
-        'ссылка на профиль в Roblox выводится из id, а не хранится');
+    // Ссылки на Roblox в карточке нет: её печатает меню пользователя в шапке
+    // (js/topbar.js), и второе место с тем же адресом было бы лишним.
+    assert_eq(false, array_key_exists('roblox', $c), 'лишних полей карточка не несёт');
 });
 
 // Карточка чужого человека собирается тем же кодом: своего и чужого профиль

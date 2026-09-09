@@ -183,7 +183,8 @@
     mine.href = PROFILE_PATH;
     mine.textContent = tx("user.mine");
     mine.setAttribute("data-i18n", "user.mine");
-    if (location.pathname === PROFILE_PATH) mine.setAttribute("aria-current", "page");
+    var onMine = location.pathname === PROFILE_PATH && !/[?&]id=/.test(location.search);
+    if (onMine) mine.setAttribute("aria-current", "page");
 
     var prof = document.createElement("a");
     prof.className = "mk-user-item";

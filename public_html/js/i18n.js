@@ -42,6 +42,7 @@
       "profile.menuExpand":     "Развернуть меню профиля",
 
       "profile.aboutTitle":     "О себе",
+      "profile.aboutTitlePeer": "Об игроке",
       "profile.aboutEmpty":     "Опишите себя так, чтобы остальным захотелось с вами трейд ;)",
       "profile.aboutNone":      "Здесь пока ничего не написано",
       "profile.aboutSave":      "Сохранить",
@@ -67,6 +68,7 @@
       "profile.statCreated":    "Созданные",
       "profile.statCancelled":  "Отменённые",
       "profile.statsNote":      "Чем больше сделок — тем выше опыт!",
+      "profile.statsNotePeer":  "Сделки за всё время",
 
       "nav.home":               "Главная",
       "nav.tierlist":           "Тирлист",
@@ -527,6 +529,7 @@
       "profile.menuExpand":     "Expand profile menu",
 
       "profile.aboutTitle":     "About",
+      "profile.aboutTitlePeer": "About the player",
       "profile.aboutEmpty":     "Describe yourself so others want to trade with you ;)",
       "profile.aboutNone":      "Nothing here yet",
       "profile.aboutSave":      "Save",
@@ -552,6 +555,7 @@
       "profile.statCreated":    "Created",
       "profile.statCancelled":  "Cancelled",
       "profile.statsNote":      "The more trades, the more experience!",
+      "profile.statsNotePeer":  "Trades all time",
 
       "nav.home":               "Home",
       "nav.tierlist":           "Tier list",

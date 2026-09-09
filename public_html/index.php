@@ -138,7 +138,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
 <script src="js/auth.js?v=1" defer></script>
-<script src="js/topbar.js?v=6" defer></script>
+<script src="js/topbar.js?v=7" defer></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
 
@@ -538,7 +538,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=42"></script>
+  <script src="js/i18n.js?v=43"></script>
   <script src="js/content.js?v=3"></script>
   <script src="js/tiers.js?v=2"></script>
 

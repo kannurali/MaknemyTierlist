@@ -451,6 +451,7 @@
 
 .pf-about-text {
   margin: 0;
+  overflow-wrap: anywhere;
   font-family: var(--display);
   font-size: calc(30 * var(--u));
   line-height: calc(35 * var(--u));
@@ -462,6 +463,7 @@
 
 .pf-about-input {
   display: block;
+  overflow-wrap: anywhere;
   width: 100%;
   min-height: calc(70 * var(--u));
   margin: 0;

@@ -45,10 +45,20 @@ if ($pfMe !== '') {
     // только сам запрос.
     $pfPdo = db();
     try {
-        $pfCard = profile_card($pfPdo, $pfWho, time());
+        // Сначала проверяем ЗРИТЕЛЯ, и только потом показываем карточку.
+        // Сессия переживает удаление аккаунта, а чужая карточка от личности
+        // смотрящего не зависит — без этой проверки удалённый пользователь
+        // продолжал бы открывать чужие профили по ?id=, хотя свой уже нет.
+        if (profile_exists($pfPdo, $pfMe)) {
+            $pfCard = profile_card($pfPdo, $pfWho, time());
+        } else {
+            $pfMe = '';
+        }
     } catch (PDOException $e) {
         // Таблицы users нет (не выполнен schema.sql) — сайт от этого не
-        // падает, страница просто предложит войти, как и шапка.
+        // падает, страница просто предложит войти, как и шапка. Именно
+        // предложит: «профиля нет» тут было бы враньём, профилей нет вообще.
+        $pfMe   = '';
         $pfCard = null;
     }
 }
@@ -68,7 +78,14 @@ $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 // пустой странице им сказало бы, что адрес рабочий.
 if ($pfState === 'missing') { http_response_code(404); }
 
-$pfNick  = $pfState === 'card' ? (string)($pfCard['nick'] ?? '') : '';
+// Ник может оказаться пустым: у Roblox не обязательны ни display_name, ни
+// username. Пустой <h1> оставил бы карточку без доступного имени, поэтому
+// подставляем номер — он есть всегда.
+$pfNick = '';
+if ($pfState === 'card') {
+    $pfNick = (string)($pfCard['nick'] ?? '');
+    if ($pfNick === '') { $pfNick = '#' . $pfWho; }
+}
 
 // Ключ и русская подпись статуса считаются здесь, а не в разметке: выражение
 // прямо в data-i18n-label выглядело бы для проверок словаря как имя ключа.
@@ -102,9 +119,9 @@ $pfTitle = $pfNick !== ''
 <link rel="stylesheet" href="css/base.css?v=11" />
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 <script src="js/auth.js?v=1" defer></script>
-<script src="js/topbar.js?v=6" defer></script>
+<script src="js/topbar.js?v=7" defer></script>
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/profile.css?v=2" />
+<link rel="stylesheet" href="css/profile.css?v=3" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -206,7 +223,7 @@ $pfTitle = $pfNick !== ''
       </nav>
 <?php endif; ?>
 
-      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars((string)$pfCard['nick'], ENT_QUOTES, 'UTF-8') ?></h1>
+      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?></h1>
 <?php if ($pfCard['handle'] !== null): ?>
       <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php endif; ?>
@@ -266,7 +283,7 @@ $pfTitle = $pfNick !== ''
         <table class="pf-sr-only" id="pfChartTable"></table>
       </figure>
 
-      <h2 class="pf-about-title" data-i18n="profile.aboutTitle">О себе</h2>
+      <h2 class="pf-about-title" data-i18n="<?= $pfSelf ? 'profile.aboutTitle' : 'profile.aboutTitlePeer' ?>"><?= $pfSelf ? 'О себе' : 'Об игроке' ?></h2>
       <div class="pf-about">
 <?php if ($pfSelf): ?>
         <label class="pf-sr-only" for="pfAboutInput" data-i18n="profile.aboutTitle">О себе</label>
@@ -300,7 +317,7 @@ $pfTitle = $pfNick !== ''
         </div>
       </dl>
 
-      <p class="pf-stats-note" data-i18n="profile.statsNote">Чем больше сделок — тем выше опыт!</p>
+      <p class="pf-stats-note" data-i18n="<?= $pfSelf ? 'profile.statsNote' : 'profile.statsNotePeer' ?>"><?= $pfSelf ? 'Чем больше сделок — тем выше опыт!' : 'Сделки за всё время' ?></p>
     </section>
 <?php endif; ?>
   </main>
@@ -317,7 +334,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=42"></script>
+  <script src="js/i18n.js?v=43"></script>
   <script src="js/profile-page.js?v=2" defer></script>
   <script src="js/profile-chart.js?v=3" defer></script>
 </body>

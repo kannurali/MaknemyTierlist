@@ -105,7 +105,6 @@ function profile_card(PDO $pdo, string $me, int $now): ?array {
         'status'   => ($seen > 0 && ($now - $seen) <= PROFILE_ONLINE_WINDOW) ? 'online' : 'offline',
         'likes'    => (int)($row['likes'] ?? 0),
         'dislikes' => (int)($row['dislikes'] ?? 0),
-        'roblox'   => roblox_profile_url($me),
     ];
 }
 
