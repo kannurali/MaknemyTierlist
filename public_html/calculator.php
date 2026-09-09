@@ -100,11 +100,11 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=5" defer></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/calculator.css?v=22" />
+<link rel="stylesheet" href="css/calculator.css?v=23" />
 
-<link rel="stylesheet" href="css/promo-dock.css?v=2" />
+<link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
-<link rel="stylesheet" href="css/promo-popup.css?v=2" />
+<link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
