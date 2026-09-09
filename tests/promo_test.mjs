@@ -10,12 +10,12 @@ const require = createRequire(import.meta.url);
 const PROMO = require('../public_html/js/promo.js');
 
 const {
-    SLOTS, MAX_STRIP_SLIDES,
-    safeHref, dayBoundsMsk, inWindow, eligible,
+    SLOTS, PAGES, MAX_STRIP_SLIDES,
+    safeHref, dayBoundsMsk, inWindow, eligible, onPage,
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, houseFor, popupPick
+    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, PLAYEROK, houseFor, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -637,4 +637,145 @@ test('migrateLegacyAd handles a text-only banner with no image', () => {
     assert.deepEqual(c.slots, []);
     assert.deepEqual(c.creatives, {});
     assert.equal(c.text, 'только текст');
+});
+// ============================================================================
+//  Привязка кампании к странице
+// ============================================================================
+
+test('PAGES перечисляет три страницы с рекламными местами', () => {
+    assert.deepEqual(PAGES, ['tierlist', 'news', 'calc']);
+});
+
+test('onPage: кампания без списка страниц идёт везде', () => {
+    const c = camp({ pages: [] });
+    for (const page of PAGES) {
+        assert.equal(onPage(c, page), true, `страница ${page}`);
+    }
+    // И без указания страницы тоже: так ведут себя все кампании до этой правки.
+    assert.equal(onPage(c, undefined), true);
+});
+
+test('onPage: кампания со списком идёт только на своих страницах', () => {
+    const c = camp({ pages: ['tierlist'] });
+    assert.equal(onPage(c, 'tierlist'), true);
+    assert.equal(onPage(c, 'news'), false);
+    assert.equal(onPage(c, 'calc'), false);
+});
+
+// Отбор закрытый, а не открытый: вызывающий, который забыл передать страницу,
+// не должен разливать таргетированную кампанию по всему сайту.
+test('onPage: без страницы таргетированная кампания не показывается', () => {
+    const c = camp({ pages: ['tierlist'] });
+    assert.equal(onPage(c, undefined), false);
+    assert.equal(onPage(c, ''), false);
+    assert.equal(onPage(c, 'unknown-page'), false);
+});
+
+test('normalizeDoc чистит список страниц так же, как список слотов', () => {
+    const c = camp({ pages: ['tierlist', 'tierlist', 'news', 'moon', '', 42] });
+    assert.deepEqual(c.pages, ['tierlist', 'news']);
+    // Поле необязательное: без него список пустой, то есть «везде».
+    assert.deepEqual(camp({}).pages, []);
+});
+
+test('eligible отсекает купленную кампанию на чужой странице', () => {
+    const now = Date.now();
+    const doc = {
+        campaigns: [{
+            id: 'paid-news', enabled: true, weight: 1, href: 'https://shop.example/',
+            pages: ['news'], slots: ['rail'],
+            creatives: { rail: { src: '/images/r.webp', w: 320, h: 1200 } }
+        }]
+    };
+    assert.deepEqual(eligible(doc, 'rail', now, 'news').map(c => c.id), ['paid-news']);
+    assert.deepEqual(eligible(doc, 'rail', now, 'tierlist'), []);
+    // Без страницы кампания с таргетингом тоже не выбирается.
+    assert.deepEqual(eligible(doc, 'rail', now), []);
+});
+
+// ============================================================================
+//  Playerok
+// ============================================================================
+
+test('PLAYEROK занимает все четыре места и только тирлист', () => {
+    assert.deepEqual(PLAYEROK.slots, ['strip', 'rail', 'dock', 'popup']);
+    assert.deepEqual(PLAYEROK.pages, ['tierlist']);
+    assert.equal(PLAYEROK.enabled, true);
+    assert.equal(safeHref(PLAYEROK.href), 'https://plrk.co/p/Maknemy0509');
+    assert.equal(PLAYEROK.advertiser, 'Playerok');
+    for (const slot of SLOTS) {
+        const cre = PROMO.creativeFor(PLAYEROK, slot);
+        assert.ok(cre, `у слота ${slot} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/playerok-'),
+            'макеты лежат в репозитории рядом с остальными');
+    }
+    // Текст окна — ключи словаря: интерфейс двуязычный, макет русский.
+    assert.ok(PLAYEROK.textKey && PLAYEROK.ctaKey);
+    // Чужую кампанию ограничиваем сильнее своей: три показа в неделю, не семь.
+    assert.equal(PLAYEROK.popup.maxPerWeek, 3);
+    // Свой счётчик показов: id обязан отличаться от всех остальных.
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY]) {
+        assert.notEqual(PLAYEROK.id, other.id);
+    }
+});
+
+test('houseFor отдаёт Playerok все места тирлиста', () => {
+    const now = Date.now();
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, now, 'tierlist').id, PLAYEROK.id, `слот ${slot}`);
+    }
+});
+
+test('houseFor оставляет ленте и калькулятору розыгрыш', () => {
+    const now = Date.now();
+    for (const page of ['news', 'calc']) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, now, page).id, HOUSE_GIVEAWAY.id,
+                `${page} / ${slot}`);
+        }
+    }
+});
+
+test('когда розыгрыш кончится, Playerok остаётся на тирлисте', () => {
+    const now = Date.now();
+    HOUSE_GIVEAWAY.enabled = false;
+    try {
+        assert.equal(houseFor('rail', now, 'tierlist').id, PLAYEROK.id);
+        assert.equal(houseFor('popup', now, 'tierlist').id, PLAYEROK.id);
+        // А лента возвращается к заглушке и объявлению о канале.
+        assert.equal(houseFor('rail', now, 'news').id, HOUSE_SLOT.id);
+        assert.equal(houseFor('popup', now, 'news').id, HOUSE_TG.id);
+    } finally {
+        HOUSE_GIVEAWAY.enabled = true;
+    }
+});
+
+test('дата окончания выключает Playerok сама, без правки кода', () => {
+    const now = Date.parse('2026-10-05T12:00:00Z');
+    PLAYEROK.end = '2026-10-04';
+    try {
+        assert.equal(houseFor('rail', now, 'tierlist').id, HOUSE_GIVEAWAY.id);
+        assert.equal(houseFor('popup', now, 'tierlist').id, HOUSE_GIVEAWAY.id);
+    } finally {
+        PLAYEROK.end = '';
+    }
+});
+
+test('в окне тирлиста Playerok, на остальных страницах — своё объявление', () => {
+    const now = Date.now();
+    assert.equal(popupPick({}, {}, now, 0, 'tierlist').id, PLAYEROK.id);
+    assert.equal(popupPick({}, {}, now, 0, 'news').id, HOUSE_GIVEAWAY.id);
+    assert.equal(popupPick({}, {}, now, 0, 'calc').id, HOUSE_GIVEAWAY.id);
+});
+
+test('купленная кампания всё ещё бьёт Playerok в окне тирлиста', () => {
+    const now = Date.now();
+    const doc = {
+        campaigns: [{
+            id: 'paid', enabled: true, weight: 1, href: 'https://shop.example/',
+            slots: ['popup'],
+            creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
+        }]
+    };
+    assert.equal(popupPick(doc, {}, now, 0, 'tierlist').id, 'paid');
 });

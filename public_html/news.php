@@ -355,18 +355,18 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=36"></script>
+  <script src="js/i18n.js?v=37"></script>
   <script src="js/news.js?v=5"></script>
   <script src="js/news-blocks.js?v=2"></script>
 
-  <script src="js/promo.js?v=7"></script>
+  <script src="js/promo.js?v=8"></script>
 
-  <script src="js/promo-dock.js?v=4"></script>
+  <script src="js/promo-dock.js?v=5"></script>
 
-  <script src="js/promo-popup.js?v=2"></script>
+  <script src="js/promo-popup.js?v=3"></script>
 
   <script src="js/protect.js?v=2"></script>
-  <script src="js/news-page.js?v=23"></script>
+  <script src="js/news-page.js?v=24"></script>
 </body>
 </html>
 <?php endif; ?>

@@ -145,7 +145,7 @@
 
     if (document.visibilityState !== "visible") { return; }
     var now = Date.now();
-    var pick = root.PROMO.popupPick(cfg.doc, readSeen(), now, Math.random());
+    var pick = root.PROMO.popupPick(cfg.doc, readSeen(), now, Math.random(), cfg.page);
     if (!pick) { return; }
     timer = setTimeout(function () { tryOpen(pick); }, pick.popup.delayMs);
   }
