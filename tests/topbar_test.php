@@ -83,15 +83,18 @@ test('профиль — кнопка data-soon внутри плашки нав
 
 // Каждая кнопка data-soon обязана объяснять, почему не ведёт никуда: title
 // для мыши и ключ словаря, чтобы объяснение переводилось вместе с сайтом.
-// «Калькулятор» больше не в их числе — у него есть страница, см. тест выше.
+// Ни «Калькулятора», ни чата среди них больше нет — у обоих есть свои
+// страницы (см. тесты выше). Осталось двое: «Трейдинг» (раздела нет) и
+// кнопка профиля, которую js/topbar.js по ответу /api/session.php превращает
+// во вход через Roblox или в меню пользователя.
 test('у каждой кнопки data-soon есть подпись и ключ перевода', function () use ($PUB, $PAGES) {
     $i18n = top_read($PUB . '/js/i18n.js');
     assert_true(strpos($i18n, '"topbar.soon"') !== false, 'ключ topbar.soon в словаре');
     foreach ($PAGES as $f) {
         $s = top_header($PUB, $f);
-        assert_eq(3, substr_count($s, 'data-soon'), "$f: трейдинг, чат и профиль");
-        assert_eq(3, substr_count($s, 'data-i18n-title="topbar.soon"'), "$f: ключ на всех трёх");
-        assert_eq(3, substr_count($s, 'title="В активной разработке"'), "$f: подпись на всех трёх");
+        assert_eq(2, substr_count($s, 'data-soon'), "$f: трейдинг и профиль");
+        assert_eq(2, substr_count($s, 'data-i18n-title="topbar.soon"'), "$f: ключ на обоих");
+        assert_eq(2, substr_count($s, 'title="В активной разработке"'), "$f: подпись на обоих");
     }
 });
 
@@ -191,18 +194,21 @@ test('на узких экранах шапка не сворачивается'
         'смена режима должна пересчитываться на лету');
 });
 
-// Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же
-// круг с градиентом, что и профиль, слева от него. Раздела ещё нет, поэтому
-// она такая же «в разработке», как «Трейдинг» и профиль.
-test('чат — кнопка data-soon рядом с профилем, а не ссылка', function () use ($PUB, $PAGES4) {
+// Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же круг
+// с градиентом, что и профиль, слева от него. Раздел получил страницу (/chat,
+// см. tests/chat_page_test.php) и вышел из «В активной разработке» тем же
+// путём, что «Калькулятор»: был <button data-soon>, стал ссылкой. Порядок в
+// плашке при этом обязан сохраниться.
+test('чат — рабочая ссылка на /chat перед профилем', function () use ($PUB, $PAGES4) {
     foreach ($PAGES4 as $f) {
         $s = top_header($PUB, $f);
-        assert_true((bool)preg_match(
-            '/<button class="mk-chat" type="button" aria-label="Чат" data-soon /', $s),
-            "$f: чат должен быть кнопкой data-soon");
+        assert_true((bool)preg_match('/<a class="mk-chat" href="\/chat"/', $s),
+            "$f: чат должен вести на /chat");
+        assert_eq(0, preg_match('/<button class="mk-chat"/', $s),
+            "$f: чат не должен оставаться кнопкой data-soon");
         // Порядок из макета: чат стоит ПЕРЕД профилем, оба внутри плашки.
         $bar  = strpos($s, '<nav class="mk-top-bar"');
-        $chat = strpos($s, '<button class="mk-chat"');
+        $chat = strpos($s, '<a class="mk-chat"');
         $av   = strpos($s, '<button class="mk-avatar"');
         $end  = strpos($s, '</nav>', $bar === false ? 0 : $bar);
         assert_true($bar !== false && $chat !== false && $bar < $chat && $chat < $av && $av < $end,
