@@ -133,7 +133,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="stylesheet" href="css/base.css?v=10" />
-<link rel="stylesheet" href="css/styles.css?v=55" />
+<link rel="stylesheet" href="css/styles.css?v=56" />
 
 <link rel="stylesheet" href="css/topbar.css?v=11" />
 

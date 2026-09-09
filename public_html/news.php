@@ -210,11 +210,11 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
 
-<link rel="stylesheet" href="css/news-design.css?v=17" />
+<link rel="stylesheet" href="css/news-design.css?v=18" />
 
-<link rel="stylesheet" href="css/promo-dock.css?v=2" />
+<link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
-<link rel="stylesheet" href="css/promo-popup.css?v=2" />
+<link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>

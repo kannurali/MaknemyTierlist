@@ -30,14 +30,14 @@
 @keyframes ptnPopIn { from { transform: translateY(8px); } to { transform: none; } }
 
 .ptn-pop-card .ptn-chip {
-  position: absolute; top: 7px; left: 7px;
+  position: absolute; top: 7px; left: 7px; right: auto;
   z-index: 1;
   font-family: var(--display);
-  font-size: 11px;
+  font-size: 9px;
   line-height: 1.6;
-  letter-spacing: 1px;
-  padding: 3px 10px 1px;
-  border-radius: 7px;
+  letter-spacing: .8px;
+  padding: 2px 7px 1px;
+  border-radius: 6px;
   color: #0a1226;
   background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
 }

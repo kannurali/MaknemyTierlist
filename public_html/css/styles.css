@@ -429,15 +429,15 @@
 }
 
 .ptn-chip {
-  position: absolute; top: .45cqw; left: .45cqw; z-index: 5;
+  position: absolute; top: .45cqw; right: .45cqw; z-index: 5;
   font-family: var(--display);
-  font-size: 1.2cqw;
+  font-size: .95cqw;
   line-height: 1.6;
-  letter-spacing: .1cqw;
+  letter-spacing: .08cqw;
   color: #0a1226;
   background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-  padding: .3cqw .8cqw .2cqw;
-  border-radius: .6cqw;
+  padding: .24cqw .62cqw .16cqw;
+  border-radius: .5cqw;
 }
 
 .ptn-erid {
@@ -613,15 +613,15 @@
   object-fit: cover;
 }
 .ptn-rail .ptn-chip {
-  position: absolute; top: 5px; left: 5px;
+  position: absolute; top: 5px; right: 5px;
   font-family: var(--display);
-  font-size: 10px;
+  font-size: 8px;
   line-height: 1.6;
-  letter-spacing: 1px;
+  letter-spacing: .8px;
   color: #0a1226;
   background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-  padding: 3px 8px 1px;
-  border-radius: 6px;
+  padding: 2px 6px 1px;
+  border-radius: 5px;
 }
 
 .ptn-rail .ptn-erid {
@@ -660,22 +660,22 @@
   }
 
   .ptn-dock .ptn-erid {
-    top: 0; right: 0; bottom: auto;
+    top: auto; right: 0; bottom: 0;
     font-size: 9px;
     line-height: 1.8;
     padding: 0 7px;
-    border-radius: 0 0 0 7px;
+    border-radius: 7px 0 0 0;
   }
   .ptn-dock .ptn-chip {
-    position: absolute; top: 4px; left: 4px;
+    position: absolute; top: 4px; right: 4px;
     font-family: var(--display);
-    font-size: 10px;
+    font-size: 8px;
     line-height: 1.6;
-    letter-spacing: 1px;
+    letter-spacing: .8px;
     color: #0a1226;
     background: linear-gradient(180deg, #6fd6ff, #2aa6e0);
-    padding: 3px 7px 1px;
-    border-radius: 6px;
+    padding: 2px 5px 1px;
+    border-radius: 5px;
     z-index: 1;
   }
 
@@ -717,11 +717,11 @@
 }
 @keyframes ptnPopIn { from { transform: translateY(8px); } to { transform: none; } }
 .ptn-pop-card .ptn-chip {
-  position: absolute; top: 7px; left: 7px;
-  font-size: 11px; letter-spacing: 1px;
+  position: absolute; top: 7px; left: 7px; right: auto;
+  font-size: 9px; letter-spacing: .8px;
   line-height: 1.6;
-  padding: 3px 10px 1px;
-  border-radius: 7px;
+  padding: 2px 7px 1px;
+  border-radius: 6px;
 }
 .ptn-pop-card .ptn-erid {
   font-size: 10px;
@@ -1221,7 +1221,7 @@ body.ptn-locked { overflow: hidden; }
   .cr-role { font-size: 2.3cqw; }
   .cr-name { font-size: 2.5cqw; }
   .ptn-text { font-size: 3.6cqw; }
-  .ptn-chip { font-size: 2cqw; }
+  .ptn-chip { font-size: 1.6cqw; }
 
   .ptn-img { max-height: 45cqw; }
 

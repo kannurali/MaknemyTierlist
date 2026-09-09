@@ -121,18 +121,18 @@
 .tc-rail .ptn-chip,
 .tc-rail .ptn-erid {
   position: absolute;
-  left: calc(10 * var(--u));
-  padding: calc(4 * var(--u)) calc(9 * var(--u));
-  border-radius: calc(6 * var(--u));
+  padding: calc(3 * var(--u)) calc(7 * var(--u));
+  border-radius: calc(5 * var(--u));
   background: rgba(0, 0, 0, 0.6);
   font-family: var(--ui);
-  font-size: calc(12 * var(--u));
+  font-size: calc(10 * var(--u));
   line-height: 1.2;
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.85);
 }
-.tc-rail .ptn-chip { top: calc(10 * var(--u)); }
+.tc-rail .ptn-chip { top: calc(10 * var(--u)); right: calc(10 * var(--u)); }
 .tc-rail .ptn-erid {
+  left: calc(10 * var(--u));
   bottom: calc(10 * var(--u));
   right: calc(10 * var(--u));
   font-size: calc(11 * var(--u));
