@@ -2,12 +2,18 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
-// Страница статичная (данные тирлиста запрашивает клиент через
-// GET /api/tierlist.php, см. js/calculator-page.js) — ни превью, собираемого
-// из базы, ни og:*-данных строить не из чего, поэтому здесь нет ничего похожего
-// на tierlist_og_data()/news_og_data() из index.php/news.php. Cache-Control тот
-// же, что у остальных страниц редизайна: файл несёт номера версий ?v= для
-// css/js, и закешированная копия намертво прибила бы посетителя к старому коду.
+// Чаты — /chat (Figma «трейдинг чат», node 244:5707).
+//
+// Разметка ниже — каркас: список диалогов, пузыри сообщений и форму отзыва
+// наполняет js/chat-page.js по ответу /api/chat.php. Кто пишет — берётся из
+// сессии Roblox, той же, что у api/session.php.
+//
+// Не вошедшему страница предлагает войти, а не делает вид, что переписки нет.
+// Пока таблиц чата нет (миграция docs/migrations/2026-09-09-chat.sql не
+// запущена) — тоже честное пустое состояние, а не 500.
+//
+// noindex, nofollow: переписка приватная, индексировать её нельзя, и ходить
+// по ссылкам из неё поисковику незачем. В sitemap.xml её нет.
 header('Cache-Control: no-cache, must-revalidate');
 ?>
 <!DOCTYPE html>
@@ -19,24 +25,12 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <base href="/" />
 
-<title>Калькулятор трейдов Blox Fruits — Maknemy | Макнеми калькулятор</title>
-<meta name="description" content="Калькулятор трейдов Blox Fruits от Maknemy (Макнеми): соберите обе стороны сделки по ценам нашего тирлиста и узнайте, выгодна ли она." />
-<link rel="canonical" href="https://maknemy.com/calculator" />
-<meta name="robots" content="index, follow, max-image-preview:large" />
+<title>Чаты | Maknemy Tier List</title>
+<meta name="description" content="Личные сообщения игроков Maknemy: переписка по сделкам и отзывы." />
+<link rel="canonical" href="https://maknemy.com/chat" />
+<meta name="robots" content="noindex, nofollow" />
 
-<meta property="og:type" content="website" />
-<meta property="og:site_name" content="Maknemy Tier List" />
-<meta property="og:locale" content="ru_RU" />
-<meta property="og:url" content="https://maknemy.com/calculator" />
-<meta property="og:title" content="Калькулятор трейдов Blox Fruits" />
-<meta property="og:description" content="Соберите обе стороны сделки по ценам тирлиста Maknemy и узнайте, выгодна ли она." />
 
-<meta property="og:image" content="https://maknemy.com/assets/og-calculator.jpg?v=1" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:alt" content="Калькулятор трейдов Blox Fruits" />
-<meta name="twitter:card" content="summary_large_image" />
 
 <script type="application/ld+json">
 {
@@ -93,19 +87,16 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=11" />
+<link rel="stylesheet" href="css/base.css?v=10" />
 
-<link rel="stylesheet" href="css/topbar.css?v=12" />
+<link rel="stylesheet" href="css/topbar.css?v=11" />
 
-<script src="js/auth.js?v=1" defer></script>
-<script src="js/topbar.js?v=7" defer></script>
+<script src="js/topbar.js?v=5" defer></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/calculator.css?v=23" />
+<link rel="stylesheet" href="css/chat.css?v=1" />
 
-<link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
-<link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -159,7 +150,7 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
       </ul>
 
-      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат">
+      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат" aria-current="page">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </a>
 
@@ -176,178 +167,61 @@ header('Cache-Control: no-cache, must-revalidate');
     </button>
   </header>
 
-  <main class="tc-page">
-    <div class="tc-frame">
+  <main class="ct-page">
+    <p class="ct-gate" id="ctGate" hidden></p>
 
-      <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
-        <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
-      </div>
-      <div class="tc-rail-slot tc-rail-slot-r" aria-hidden="true">
-        <aside class="tc-rail" id="tcRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
-      </div>
+    <div class="ct-shell" id="ctShell" hidden>
+      <aside class="ct-rail" aria-labelledby="ctRailTitle">
+        <h2 class="ct-sr-only" id="ctRailTitle" data-i18n="chat.threads">Диалоги</h2>
+        <ul class="ct-list" id="ctList" role="tablist" aria-orientation="vertical"></ul>
+        <p class="ct-rail-empty" id="ctRailEmpty" hidden></p>
+      </aside>
 
-      <div class="tc-gauge tc-gauge-l" id="tcGaugeL" data-state="none" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
-      <div class="tc-gauge tc-gauge-r" id="tcGaugeR" data-state="none" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
-
-      <div class="tc-board">
-
-        <div class="tc-hero">
-          <h1 class="tc-title" data-i18n="calc.title">Сравнить цены</h1>
-          <p class="tc-subtitle" data-i18n="calc.subtitle">Сравните цены фруктов в реальном времени!</p>
+      <section class="ct-room" id="ctRoom" role="tabpanel" aria-labelledby="ctRoomTitle">
+        <div class="ct-room-head">
+          <button class="ct-rail-toggle" type="button" id="ctRailToggle"
+                  aria-expanded="false" aria-controls="ctList"
+                  data-i18n-label="chat.showList" aria-label="Показать список диалогов">
+            <span></span><span></span><span></span>
+          </button>
+          <h1 class="ct-room-title" id="ctRoomTitle" data-i18n="chat.title">Чаты</h1>
         </div>
 
-        <div class="tc-marks" aria-hidden="true">
-          <span class="tc-arrow tc-arrow-l">
-            <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M32.155 11.5353H0L14.5132 8.72569L12.1752 0L32.155 11.5353Z" fill="url(#tcArrowGrad)"/>
-              <defs>
-                <linearGradient id="tcArrowGrad" x1="16.0775" y1="0" x2="16.0775" y2="11.5353" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </span>
-          <span class="tc-vs" data-i18n="calc.versus">VS</span>
-          <span class="tc-arrow tc-arrow-r">
-            <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M32.155 11.5353H0L14.5132 8.72569L12.1752 0L32.155 11.5353Z" fill="url(#tcArrowGrad)"/>
-            </svg>
-          </span>
-        </div>
+        <ol class="ct-log" id="ctLog" role="log" aria-live="polite" aria-relevant="additions"></ol>
+        <p class="ct-room-empty" id="ctRoomEmpty" hidden></p>
 
-        <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
-
-          <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">Я</span>
-
-          <ul class="tc-slots" data-side="left"></ul>
-
-          <div class="tc-meters">
-            <span class="tc-meter-bar">
-              <span class="tc-meter-mark" data-role="mark" aria-hidden="true">
-                <svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6.418 5.067 4.054 2.702 1.689 5.067" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </span>
-            </span>
-            <span class="tc-meter-icon tc-meter-icon-points" aria-hidden="true">
-              <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8.61375 3.54677L8.16057 2.64039C7.81725 1.95375 7.11546 1.52002 6.34778 1.52002H5.81285C5.04517 1.52002 4.34346 1.95359 4.00015 2.64022L3.54688 3.54677" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
-                <path d="M5.06694 10.6405H4.29131C3.28269 10.6405 2.42757 9.89885 2.28493 8.90037L1.768 5.2819C1.63719 4.36617 2.34776 3.54688 3.27279 3.54688H8.88787C9.8129 3.54688 10.5235 4.36617 10.3927 5.28191L10.2455 6.31225" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
-                <path d="M9.62704 9.12016C9.62704 9.95967 8.94648 10.6402 8.10698 10.6402C7.26747 10.6402 6.58691 9.95967 6.58691 9.12016C6.58691 8.28065 7.26747 7.6001 8.10698 7.6001C8.94648 7.6001 9.62704 8.28065 9.62704 9.12016Z" stroke="#fff" stroke-width="1.01337"/>
-              </svg>
-            </span>
-            <span class="tc-meter-label tc-meter-label-points" data-i18n="calc.pointsLabel">Пойнты</span>
-            <strong class="tc-meter-value tc-meter-value-points" data-role="points">0</strong>
-            <span class="tc-meter-icon tc-meter-icon-demand" aria-hidden="true">
-              <svg viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0.5 6.6 4.34 2.03 7.1 5.32 11.15 0.51" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M6.6 0.95 11.1 0.5 11.55 5.05" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span class="tc-meter-label tc-meter-label-demand" data-i18n="calc.demandLabel">Спрос</span>
-            <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
-          </div>
-        </section>
-
-        <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
-          <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ВЫ</span>
-
-          <ul class="tc-slots" data-side="right"></ul>
-
-          <div class="tc-meters">
-            <span class="tc-meter-bar">
-              <span class="tc-meter-mark" data-role="mark" aria-hidden="true">
-                <svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6.418 5.067 4.054 2.702 1.689 5.067" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </span>
-            </span>
-            <span class="tc-meter-icon tc-meter-icon-points" aria-hidden="true">
-              <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8.61375 3.54677L8.16057 2.64039C7.81725 1.95375 7.11546 1.52002 6.34778 1.52002H5.81285C5.04517 1.52002 4.34346 1.95359 4.00015 2.64022L3.54688 3.54677" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
-                <path d="M5.06694 10.6405H4.29131C3.28269 10.6405 2.42757 9.89885 2.28493 8.90037L1.768 5.2819C1.63719 4.36617 2.34776 3.54688 3.27279 3.54688H8.88787C9.8129 3.54688 10.5235 4.36617 10.3927 5.28191L10.2455 6.31225" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
-                <path d="M9.62704 9.12016C9.62704 9.95967 8.94648 10.6402 8.10698 10.6402C7.26747 10.6402 6.58691 9.95967 6.58691 9.12016C6.58691 8.28065 7.26747 7.6001 8.10698 7.6001C8.94648 7.6001 9.62704 8.28065 9.62704 9.12016Z" stroke="#fff" stroke-width="1.01337"/>
-              </svg>
-            </span>
-            <span class="tc-meter-label tc-meter-label-points" data-i18n="calc.pointsLabel">Пойнты</span>
-            <strong class="tc-meter-value tc-meter-value-points" data-role="points">0</strong>
-            <span class="tc-meter-icon tc-meter-icon-demand" aria-hidden="true">
-              <svg viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0.5 6.6 4.34 2.03 7.1 5.32 11.15 0.51" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M6.6 0.95 11.1 0.5 11.55 5.05" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span class="tc-meter-label tc-meter-label-demand" data-i18n="calc.demandLabel">Спрос</span>
-            <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
-          </div>
-        </section>
-
-        <div class="tc-total">
-          <span class="tc-total-line" aria-hidden="true"></span>
-          <span class="tc-total-eq" aria-hidden="true"></span>
-          <strong class="tc-total-num" id="tcTotalNum">0</strong>
-        </div>
-      </div>
-
-      <section class="tc-result" id="tcResult" role="status" aria-live="polite">
-        <span class="tc-result-badge" id="tcVerdictBadge" data-verdict="none" aria-hidden="true">
-
-          <svg viewBox="0 0 134 134" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="67" cy="67" r="39.5" stroke="#fff" stroke-width="5"/>
-            <g class="tc-face tc-face-none">
-              <circle cx="50.5" cy="62.5" r="8.5" fill="#d9d9d9"/>
-              <circle cx="84.5" cy="62.5" r="8.5" fill="#d9d9d9"/>
-              <path d="M55.5 81.5C55.5 81.5 59.5 88 67 88C74.5 88 78.5 81.5 78.5 81.5"
-                    stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-            </g>
-            <g class="tc-face tc-face-lose" stroke="#fff" stroke-width="5" stroke-linecap="round">
-              <path d="M75 63L88.5 66.69"/>
-              <path d="M45 66.66L58.52 63.03"/>
-              <path d="M57.03 87C57.03 87 55.98 79 66 79C76.02 79 74.97 87 74.97 87"/>
-            </g>
-            <g class="tc-face tc-face-win" stroke="#fff" stroke-width="5" stroke-linecap="round">
-              <path d="M45 66.62C45 66.62 46.5 62.53 50.5 61.46C54.5 60.39 58.52 62.99 58.52 62.99"/>
-              <path d="M87.97 66.48C87.97 66.48 86.53 62.55 82.68 61.52C78.84 60.49 74.97 62.99 74.97 62.99"/>
-              <path d="M74.97 78.96C74.97 78.96 76.02 86.96 66 86.96C55.98 86.96 57.03 78.96 57.03 78.96"/>
-            </g>
-            <g class="tc-face tc-face-fair" fill="#fff">
-              <rect x="47" y="59" width="7" height="7" rx="3.5"/>
-              <rect x="80" y="59" width="7" height="7" rx="3.5"/>
-              <rect x="47" y="71" width="40" height="7" rx="3.5"/>
-            </g>
-          </svg>
-        </span>
-        <div class="tc-result-card">
-          <h2 class="tc-verdict-heading" id="tcVerdictHeading" data-i18n="calc.verdictPrompt">Проверим?</h2>
-          <span class="tc-result-line" aria-hidden="true"></span>
-          <span class="tc-verdict-state" id="tcVerdictState"></span>
-          <strong class="tc-verdict-number" id="tcVerdictNumber">0%</strong>
-        </div>
+        <form class="ct-compose" id="ctCompose" hidden>
+          <label class="ct-sr-only" for="ctInput" data-i18n="chat.inputLabel">Сообщение</label>
+          <input class="ct-input" id="ctInput" type="text" autocomplete="off"
+                 maxlength="2000" data-i18n-placeholder="chat.placeholder"
+                 placeholder="Напишите сообщение…" />
+          <button class="ct-send" type="submit" data-i18n="chat.send">Отправить</button>
+        </form>
       </section>
+
+      <form class="ct-review" id="ctReview" hidden>
+        <span class="ct-review-label" data-i18n="chat.review">Отзыв</span>
+
+        <label class="ct-sr-only" for="ctReviewText" data-i18n="chat.reviewLabel">Текст отзыва</label>
+        <input class="ct-review-input" id="ctReviewText" type="text" autocomplete="off"
+               maxlength="500" data-i18n-placeholder="chat.reviewPlaceholder"
+               placeholder="Как прошла сделка?" />
+
+        <fieldset class="ct-stars" id="ctStars">
+          <legend class="ct-sr-only" data-i18n="chat.stars">Оценка</legend>
+          <label class="ct-star"><input type="radio" name="stars" value="1" /><span aria-hidden="true">★</span><span class="ct-sr-only">1</span></label>
+          <label class="ct-star"><input type="radio" name="stars" value="2" /><span aria-hidden="true">★</span><span class="ct-sr-only">2</span></label>
+          <label class="ct-star"><input type="radio" name="stars" value="3" /><span aria-hidden="true">★</span><span class="ct-sr-only">3</span></label>
+          <label class="ct-star"><input type="radio" name="stars" value="4" /><span aria-hidden="true">★</span><span class="ct-sr-only">4</span></label>
+          <label class="ct-star"><input type="radio" name="stars" value="5" /><span aria-hidden="true">★</span><span class="ct-sr-only">5</span></label>
+        </fieldset>
+
+        <button class="ct-review-send" type="submit" data-i18n="chat.reviewSend">Отправить</button>
+        <p class="ct-review-status" id="ctReviewStatus" role="status" aria-live="polite"></p>
+      </form>
     </div>
 
-    <div class="tc-extras">
-
-      <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
-
-      <p class="tc-demand-note" id="tcDemandNote" role="status" aria-live="polite" hidden></p>
-
-      <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
-      <p class="tc-disclaimer" data-i18n="calc.disclaimer">Значения — это оценка ценности по нашему тирлисту, а не игровое ограничение на обмен Blox Fruits. Решение — за вами.</p>
-
-      <div class="tc-actions">
-        <button type="button" class="tc-btn tc-btn-accent" id="tcShareBtn" data-i18n="calc.shareBtn">Скопировать ссылку</button>
-        <button type="button" class="tc-btn tc-btn-ghost" id="tcClearAllBtn" data-i18n="calc.clearAll">Очистить всё</button>
-      </div>
-      <p class="tc-sr-only" id="tcShareStatus" role="status" aria-live="polite"></p>
-    </div>
-
+    <p class="ct-empty" id="ctEmpty" hidden></p>
   </main>
 
     <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
@@ -415,13 +289,9 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=44"></script>
-  <script src="js/promo.js?v=9"></script>
+  <script src="js/i18n.js?v=40"></script>
+  <script src="js/chat-page.js?v=1" defer></script>
 
-  <script src="js/promo-dock.js?v=5"></script>
 
-  <script src="js/promo-popup.js?v=3"></script>
-  <script src="js/calc.js?v=8"></script>
-  <script src="js/calculator-page.js?v=18"></script>
 </body>
 </html>

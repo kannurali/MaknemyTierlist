@@ -116,6 +116,17 @@ RewriteRule ^profile\.php$ /profile [L,R=301]
 
 RewriteRule ^profile$ /profile.php [L]
 
+# ----------------------------------- Чаты -----------------------------------
+# Тот же приём, что у /calculator выше: пути внутри chat.php
+# документ-относительные, слэш снимается внешним 301, а не рероутом, и условие
+# на REDIRECT_STATUS не даёт внутреннему рероуту зациклиться.
+RewriteRule ^chat/$ /chat [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^chat\.php$ /chat [L,R=301]
+
+RewriteRule ^chat$ /chat.php [L]
+
 # /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
 # именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy
 # URL / Terms of Service URL), а там адрес меняется только через повторное
