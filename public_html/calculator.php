@@ -95,9 +95,10 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <link rel="stylesheet" href="css/base.css?v=11" />
 
-<link rel="stylesheet" href="css/topbar.css?v=11" />
+<link rel="stylesheet" href="css/topbar.css?v=12" />
 
-<script src="js/topbar.js?v=5" defer></script>
+<script src="js/auth.js?v=1" defer></script>
+<script src="js/topbar.js?v=6" defer></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
 <link rel="stylesheet" href="css/calculator.css?v=23" />
@@ -414,7 +415,7 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=40"></script>
+  <script src="js/i18n.js?v=42"></script>
   <script src="js/promo.js?v=9"></script>
 
   <script src="js/promo-dock.js?v=5"></script>

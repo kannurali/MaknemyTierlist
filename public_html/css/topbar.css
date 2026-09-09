@@ -359,6 +359,13 @@ a.mk-avatar { text-decoration: none; }
 .mk-user-item:focus-visible { outline: 2px solid #bfe6ff; outline-offset: -2px; }
 .mk-user-item[disabled] { opacity: .5; cursor: default; }
 
+.mk-user-out {
+  margin-top: 6px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 9px 9px;
+}
+
 .mk-soon {
   position: fixed;
   left: 50%;

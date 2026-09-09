@@ -12,6 +12,7 @@
 
     "user.login": "Войти через Roblox",
     "user.menu": "Меню профиля",
+    "user.mine": "Мой профиль",
     "user.profile": "Профиль в Roblox",
     "user.logout": "Выйти",
     "user.cancelled": "Вход отменён",
@@ -126,20 +127,17 @@
     showSoon();
   });
 
-  var AUTH_START  = "/api/roblox_start.php";
-  var AUTH_LOGOUT = "/api/logout.php";
-  var AUTH_STATE  = "/api/session.php";
+  var PROFILE_PATH = "/profile";
 
-  function here() {
-    var q = location.search.replace(/([?&])login=[^&]*(&|$)/, "$1").replace(/[?&]$/, "");
-    return location.pathname + q + location.hash;
-  }
+  var AUTH_STATE = "/api/session.php";
+
+  var auth = window.MKAuth;
 
   function takeLoginFlag() {
     var m = /[?&]login=([a-z]+)/.exec(location.search);
     if (!m) return "";
     if (window.history && history.replaceState) {
-      try { history.replaceState(null, "", here()); } catch (_) {}
+      try { history.replaceState(null, "", auth.here()); } catch (_) {}
     }
     return m[1];
   }
@@ -153,7 +151,7 @@
   function toLoginLink(btn) {
     var a = document.createElement("a");
     a.className = btn.className;
-    a.href = AUTH_START + "?return=" + encodeURIComponent(here());
+    a.href = auth.startUrl();
     a.innerHTML = btn.innerHTML;
     var label = tx("user.login");
     a.setAttribute("aria-label", label);
@@ -179,6 +177,14 @@
     nick.textContent = user.name ? "@" + user.name : "";
     name.appendChild(nick);
 
+    var mine = document.createElement("a");
+    mine.className = "mk-user-item";
+    mine.setAttribute("role", "menuitem");
+    mine.href = PROFILE_PATH;
+    mine.textContent = tx("user.mine");
+    mine.setAttribute("data-i18n", "user.mine");
+    if (location.pathname === PROFILE_PATH) mine.setAttribute("aria-current", "page");
+
     var prof = document.createElement("a");
     prof.className = "mk-user-item";
     prof.setAttribute("role", "menuitem");
@@ -190,7 +196,7 @@
     prof.setAttribute("data-i18n", "user.profile");
 
     var out = document.createElement("button");
-    out.className = "mk-user-item";
+    out.className = "mk-user-item mk-user-out";
     out.type = "button";
     out.setAttribute("role", "menuitem");
     out.textContent = tx("user.logout");
@@ -198,12 +204,11 @@
     out.addEventListener("click", function () {
       out.disabled = true;
 
-      fetch(AUTH_LOGOUT, { method: "POST", cache: "no-store" })
-        .catch(function () {})
-        .then(function () { location.reload(); });
+      auth.logout();
     });
 
     menu.appendChild(name);
+    menu.appendChild(mine);
     menu.appendChild(prof);
     menu.appendChild(out);
     document.body.appendChild(menu);
@@ -266,7 +271,7 @@
   }
 
   var avatarBtn = head ? head.querySelector(".mk-avatar") : null;
-  if (avatarBtn && window.fetch) {
+  if (avatarBtn && window.fetch && auth) {
     reportLogin(takeLoginFlag());
     fetch(AUTH_STATE, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })

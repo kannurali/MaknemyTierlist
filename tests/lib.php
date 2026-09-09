@@ -83,7 +83,9 @@ function test_db(): PDO {
         display_name TEXT NOT NULL DEFAULT '',
         avatar_url TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL,
-        last_login_at INTEGER NOT NULL
+        last_login_at INTEGER NOT NULL,
+        -- Зеркалит schema.sql: текст «о себе» со страницы профиля.
+        about TEXT NULL DEFAULT NULL
     )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");

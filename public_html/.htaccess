@@ -97,6 +97,25 @@ RewriteRule ^calculator\.php$ /calculator [L,R=301]
 
 RewriteRule ^calculator$ /calculator.php [L]
 
+# ------------------------------- Профиль игрока -------------------------------
+# Тот же приём, что у /calculator выше: внутри profile.php все пути
+# документ-относительные ("css/base.css", "js/…", "assets/…"). На /profile база
+# документа — корень, и они разрешаются как есть; на /profile/ база стала бы
+# "/profile/", и весь CSS с JS уехал бы в 404. Поэтому слэш снимается внешним
+# 301, а не внутренним рероутом: иначе в адресной строке остались бы два
+# рабочих адреса с одним содержимым.
+RewriteRule ^profile/$ /profile [L,R=301]
+
+# Прямой адрес файла — 301 на канонический /profile. Условие на
+# REDIRECT_STATUS обязательно: без него внутренний рероут /profile →
+# /profile.php строкой ниже сам попал бы под это правило, и получился бы
+# бесконечный редирект. У внутренних рероутов REDIRECT_STATUS уже выставлен, у
+# запроса из браузера он пуст — по этому и различаем.
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^profile\.php$ /profile [L,R=301]
+
+RewriteRule ^profile$ /profile.php [L]
+
 # /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
 # именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy
 # URL / Terms of Service URL), а там адрес меняется только через повторное

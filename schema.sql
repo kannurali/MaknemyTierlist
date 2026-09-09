@@ -93,5 +93,13 @@ CREATE TABLE IF NOT EXISTS users (
   display_name  VARCHAR(64)  NOT NULL DEFAULT '',
   avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
   created_at    BIGINT UNSIGNED NOT NULL,
-  last_login_at BIGINT UNSIGNED NOT NULL
+  last_login_at BIGINT UNSIGNED NOT NULL,
+  -- Текст «о себе» со страницы профиля. Пишет его сам человек
+  -- (POST /api/profile-about.php), длина ограничена и здесь, и в
+  -- PROFILE_ABOUT_MAX. Для уже созданной боевой базы есть отдельная миграция
+  -- docs/migrations/2026-09-09-profile.sql; при чистой установке она не нужна.
+  --
+  -- NULL — «человек ничего не написал». Пустая строка значила бы то же самое
+  -- вторым способом, поэтому profile_about_save() кладёт именно NULL.
+  about         VARCHAR(280) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
