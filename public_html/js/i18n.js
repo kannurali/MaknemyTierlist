@@ -226,6 +226,8 @@
 
       "promo.giveawayText":     "Розыгрыш в честь Update 30: 5 permanent Magnet и 50 Chromatic Box",
       "promo.giveawayCta":      "Участвовать",
+      "promo.playerokText":     "Фрукты, мутации, скины и донат — по лучшим ценам на Playerok",
+      "promo.playerokCta":      "Перейти на Playerok",
 
       "footer.addLinkBtn":      "＋ ссылка",
       "footer.urlPrompt":       "Ссылка (URL). Можно без https:// — подставится сам:",
@@ -658,6 +660,8 @@
       "promo.houseTgCta":       "Open the channel",
       "promo.giveawayText":     "Update 30 giveaway: 5 permanent Magnet and 50 Chromatic Box",
       "promo.giveawayCta":      "Enter the giveaway",
+      "promo.playerokText":     "Fruits, mutations, skins and top-ups at the best prices on Playerok",
+      "promo.playerokCta":      "Go to Playerok",
 
       "footer.addLinkBtn":      "＋ link",
       "footer.urlPrompt":       "Link (URL). You can omit https:// — it is added automatically:",

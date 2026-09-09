@@ -648,10 +648,32 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true(is_file($PUB . '/assets/promo/giveaway-' . $slot . '.webp'),
             "макет розыгрыша для слота $slot должен лежать в репозитории");
     }
+
+    // Playerok — платное размещение, и живёт оно там же, где свои кампании:
+    // в коде с макетами в репозитории. Отличие одно — список страниц, из-за
+    // которого оно занимает только тирлист.
+    assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
+    assert_true(strpos($promo, 'pages: ["tierlist"]') !== false,
+        'Playerok привязан к тирлисту, иначе он разольётся по всему сайту');
+    foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/playerok-' . $slot . '.webp'),
+            "макет Playerok для слота $slot должен лежать в репозитории");
+    }
+
+    // Страница обязана представиться: без неё houseFor() и eligible() не
+    // отдают таргетированную кампанию вообще, и тирлист молча остался бы
+    // на розыгрыше.
+    $pageIds = ['js/app.js' => 'tierlist', 'js/news-page.js' => 'news',
+                'js/calculator-page.js' => 'calc'];
+    foreach ($pageIds as $f => $id) {
+        assert_true(strpos(read_file_or_fail($PUB . '/' . $f),
+            'const PROMO_PAGE = "' . $id . '"') !== false,
+            "$f: должна объявлять свою страницу как $id");
+    }
     // Оба вызова идут из того же запроса, что и борта: документ один.
     foreach (['js/news-page.js', 'js/calculator-page.js'] as $f) {
         $js = read_file_or_fail($PUB . '/' . $f);
-        assert_true(strpos($js, 'NX_PROMO_DOCK.render(dock, doc)') !== false,
+        assert_true(strpos($js, 'NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE)') !== false,
             "$f: полоса рисуется тем же документом, что и борта");
     }
 });

@@ -731,7 +731,9 @@
 
   const promo = (typeof PROMO !== "undefined") ? PROMO : null;
 
-  const houseFor = slot => (promo ? promo.houseFor(slot, Date.now()) : null);
+  const PROMO_PAGE = "tierlist";
+
+  const houseFor = slot => (promo ? promo.houseFor(slot, Date.now(), PROMO_PAGE) : null);
 
   function legacyAdEmpty() {
     const ad = (state && state.ad) || {};
@@ -848,7 +850,7 @@
     if (!promo) return [];
     if (promoOrderCache && promoOrderRev === promoDoc.rev) return promoOrderCache;
     promoResetRnd();
-    const eligible = promo.eligible(promoDoc, "strip", Date.now());
+    const eligible = promo.eligible(promoDoc, "strip", Date.now(), PROMO_PAGE);
     promoOrderCache = promo.orderForCarousel(eligible, promoRnd, promo.MAX_STRIP_SLIDES);
     promoOrderRev = promoDoc.rev;
     promoIndex = 0;
@@ -1076,7 +1078,7 @@
     railTimer = null;
 
     const wide = railMQ ? railMQ.matches : false;
-    let list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now()) : [];
+    let list = (wide && promo) ? promo.eligible(promoDoc, "rail", Date.now(), PROMO_PAGE) : [];
 
     if (wide && promo && !list.length) {
       const house = houseFor("rail");
@@ -1130,7 +1132,7 @@
     const dock = $("#promoDock");
     if (!dock) return;
     const wide = dockMQ ? dockMQ.matches : false;
-    let list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now()) : [];
+    let list = (wide && promo) ? promo.eligible(promoDoc, "dock", Date.now(), PROMO_PAGE) : [];
 
     if (wide && promo && !list.length) {
       const house = houseFor("dock");
@@ -1252,7 +1254,7 @@
     if (document.visibilityState !== "visible") return;
     const now = Date.now();
 
-    const camp = promo.popupPick(promoDoc, readSeen(), now, Math.random());
+    const camp = promo.popupPick(promoDoc, readSeen(), now, Math.random(), PROMO_PAGE);
     if (!camp) return;
     popupTimer = setTimeout(() => tryOpenPromoPopup(camp), camp.popup.delayMs);
   }

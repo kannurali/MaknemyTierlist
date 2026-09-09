@@ -30,7 +30,7 @@
     if (ro) { ro.disconnect(); ro = null; }
   }
 
-  function render(el, doc) {
+  function render(el, doc, page) {
     var promo = root.PROMO;
     if (!el || !promo) { return false; }
 
@@ -45,10 +45,10 @@
     }
 
     var narrow = MQ ? MQ.matches : false;
-    var list = narrow ? promo.eligible(promo.normalizeDoc(doc), "dock", Date.now()) : [];
+    var list = narrow ? promo.eligible(promo.normalizeDoc(doc), "dock", Date.now(), page) : [];
 
     if (narrow && !list.length) {
-      var house = promo.houseFor("dock", Date.now());
+      var house = promo.houseFor("dock", Date.now(), page);
       if (house) { list = [house]; }
     }
     if (!list.length) { teardown(el); return false; }

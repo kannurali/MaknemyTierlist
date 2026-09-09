@@ -5,6 +5,8 @@
   const $ = sel => document.querySelector(sel);
   const sideRoot = side => document.querySelector('.tc-side[data-side="' + side + '"]');
 
+  const PROMO_PAGE = "calc";
+
   const LANG_KEY = "nexus-lang-v1";
 
   let lang = I18N.pickLang(
@@ -512,17 +514,17 @@
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null)
       .then(doc => {
-        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc);
+        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE);
 
         if (window.NX_PROMO_POPUP) {
-          window.NX_PROMO_POPUP.mount({ doc, busy: () => catalogState.open });
+          window.NX_PROMO_POPUP.mount({ doc, busy: () => catalogState.open, page: PROMO_PAGE });
         }
 
         if (!left || !right) return;
 
-        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now()) : [];
+        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now(), PROMO_PAGE) : [];
 
-        const house = promo.houseFor("rail", Date.now());
+        const house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
         const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
         if (!list.length) return;
         fillRail(left, list[0]);

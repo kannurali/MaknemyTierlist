@@ -8,6 +8,8 @@
   const filtersEl = $("#newsFilters");
   const noticeEl = $("#newsNotice");
 
+  const PROMO_PAGE = "news";
+
   const LANG_KEY = "nexus-lang-v1";
 
   const LINKED_POST_ID = (() => {
@@ -486,15 +488,15 @@
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null)
       .then(doc => {
-        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc);
+        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE);
 
-        if (window.NX_PROMO_POPUP) window.NX_PROMO_POPUP.mount({ doc, isAdmin });
+        if (window.NX_PROMO_POPUP) window.NX_PROMO_POPUP.mount({ doc, isAdmin, page: PROMO_PAGE });
 
         if (!left || !right) return;
 
-        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now()) : [];
+        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now(), PROMO_PAGE) : [];
 
-        const house = promo.houseFor("rail", Date.now());
+        const house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
         const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
         if (!list.length) return;
         fillNewsRail(left, list[0]);

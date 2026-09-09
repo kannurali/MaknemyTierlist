@@ -4,6 +4,8 @@
 
   var SLOTS = ["strip", "rail", "dock", "popup"];
 
+  var PAGES = ["tierlist", "news", "calc"];
+
   var MAX_STRIP_SLIDES = 8;
 
   var MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -78,7 +80,14 @@
     return String(c.src || "").trim() ? c : null;
   }
 
-  function eligible(doc, slot, nowMs) {
+  function onPage(campaign, page) {
+    if (!campaign) { return false; }
+    var list = campaign.pages;
+    if (!Array.isArray(list) || !list.length) { return true; }
+    return !!page && list.indexOf(String(page)) >= 0;
+  }
+
+  function eligible(doc, slot, nowMs, page) {
     var d = normalizeDoc(doc);
     if (SLOTS.indexOf(slot) < 0) { return []; }
     var out = [];
@@ -86,6 +95,7 @@
       var c = d.campaigns[i];
       if (!c.enabled) { continue; }
       if (c.slots.indexOf(slot) < 0) { continue; }
+      if (!onPage(c, page)) { continue; }
       if (!creativeFor(c, slot)) { continue; }
       if (!inWindow(c, nowMs)) { continue; }
       out.push(c);
@@ -273,6 +283,13 @@
         if (SLOTS.indexOf(sl) >= 0 && slots.indexOf(sl) < 0) { slots.push(sl); }
       }
 
+      var pages = [];
+      var rawPages = Array.isArray(c.pages) ? c.pages : [];
+      for (var p = 0; p < rawPages.length; p++) {
+        var pg = str(rawPages[p]);
+        if (PAGES.indexOf(pg) >= 0 && pages.indexOf(pg) < 0) { pages.push(pg); }
+      }
+
       var creatives = {};
       var rawCre = (c.creatives && typeof c.creatives === "object") ? c.creatives : {};
       for (var k = 0; k < SLOTS.length; k++) {
@@ -292,6 +309,7 @@
         text: str(c.text),
         cta: str(c.cta),
         erid: ERID_RE.test(str(c.erid)) ? str(c.erid) : "",
+        pages: pages,
         slots: slots,
         creatives: creatives,
         popup: popupCfg(c),
@@ -399,26 +417,59 @@
     notes: ""
   };
 
-  function houseFor(slot, nowMs) {
+  var PLAYEROK = {
+    id: "playerok-2026-09",
+    name: "playerok-2026-09",
+    advertiser: "Playerok",
+    enabled: true,
+    weight: 1,
+    start: "",
+    end: "",
+    href: "https://plrk.co/p/Maknemy0509",
+    text: "",
+    cta: "",
+    textKey: "promo.playerokText",
+    ctaKey: "promo.playerokCta",
+    erid: "",
+    pages: ["tierlist"],
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip: { src: "/assets/promo/playerok-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/playerok-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/playerok-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/playerok-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
+    notes: ""
+  };
+
+  function bookedFor(campaign, slot, now, page) {
+    return campaign.enabled
+      && onPage(campaign, page)
+      && inWindow(campaign, now)
+      && !!creativeFor(campaign, slot);
+  }
+
+  function houseFor(slot, nowMs, page) {
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
-    if (HOUSE_GIVEAWAY.enabled && inWindow(HOUSE_GIVEAWAY, now) && creativeFor(HOUSE_GIVEAWAY, slot)) {
-      return HOUSE_GIVEAWAY;
-    }
+    if (bookedFor(PLAYEROK, slot, now, page)) { return PLAYEROK; }
+    if (bookedFor(HOUSE_GIVEAWAY, slot, now, page)) { return HOUSE_GIVEAWAY; }
     if (slot === "popup") { return HOUSE_TG; }
     return creativeFor(HOUSE_SLOT, slot) ? HOUSE_SLOT : null;
   }
 
-  function popupPick(doc, seen, nowMs, rnd) {
-    var paid = eligible(doc, "popup", nowMs).filter(function (c) {
+  function popupPick(doc, seen, nowMs, rnd, page) {
+    var paid = eligible(doc, "popup", nowMs, page).filter(function (c) {
       return shouldShowPopup(c, seen, nowMs);
     });
     if (paid.length) { return pickWeighted(paid, rnd); }
-    var house = houseFor("popup", nowMs);
+    var house = houseFor("popup", nowMs, page);
     return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
 
   var api = {
     SLOTS: SLOTS,
+    PAGES: PAGES,
     MAX_STRIP_SLIDES: MAX_STRIP_SLIDES,
     MSK_OFFSET_MS: MSK_OFFSET_MS,
     POPUP_DEFAULTS: POPUP_DEFAULTS,
@@ -426,6 +477,7 @@
     dayBoundsMsk: dayBoundsMsk,
     inWindow: inWindow,
     creativeFor: creativeFor,
+    onPage: onPage,
     eligible: eligible,
     pickWeighted: pickWeighted,
     orderForCarousel: orderForCarousel,
@@ -433,6 +485,7 @@
     HOUSE_TG: HOUSE_TG,
     HOUSE_SLOT: HOUSE_SLOT,
     HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
+    PLAYEROK: PLAYEROK,
     houseFor: houseFor,
     popupPick: popupPick,
     recordPopupShown: recordPopupShown,
