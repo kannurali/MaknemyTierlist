@@ -84,6 +84,8 @@ function test_db(): PDO {
         avatar_url TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL,
         last_login_at INTEGER NOT NULL,
+        -- Зеркалит schema.sql: присутствие, отдельно от времени входа.
+        last_seen_at INTEGER NOT NULL DEFAULT 0,
         -- Зеркалит schema.sql: текст «о себе» со страницы профиля.
         about TEXT NULL DEFAULT NULL
     )");

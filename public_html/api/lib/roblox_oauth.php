@@ -193,11 +193,20 @@ function roblox_touch_user(PDO $pdo, array $profile, int $now): void {
     ]);
 }
 
-/** Строка пользователя для api/session.php. null — если запись пропала. */
+/**
+ * Строка пользователя для api/session.php. null — если запись пропала.
+ *
+ * SELECT * , а не перечисление колонок: last_seen_at приезжает миграцией и на
+ * боевой базе может её ещё не быть, а перечисленная колонка уронила бы запрос
+ * целиком — то есть выбила бы вход у всех до выполнения миграции. Звёздочка
+ * отдаёт то, что есть; таблица узкая, лишнего не приедет.
+ *
+ * seen — null, когда колонки нет. Это НЕ то же самое, что 0: ноль значит
+ * «колонка есть, но человека ещё не отмечали», и по нему стоит попробовать
+ * отметку, а по null пробовать нечего.
+ */
 function roblox_load_user(PDO $pdo, string $robloxId): ?array {
-    $stmt = $pdo->prepare(
-        "SELECT roblox_id, username, display_name, avatar_url FROM users WHERE roblox_id = :id"
-    );
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE roblox_id = :id");
     $stmt->execute([':id' => $robloxId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$row) { return null; }
@@ -207,7 +216,42 @@ function roblox_load_user(PDO $pdo, string $robloxId): ?array {
         'display' => (string)$row['display_name'],
         'avatar'  => (string)$row['avatar_url'],
         'profile' => roblox_profile_url((string)$row['roblox_id']),
+        'seen'    => array_key_exists('last_seen_at', $row) ? (int)$row['last_seen_at'] : null,
     ];
+}
+
+/**
+ * Отметка присутствия. last_login_at пишется только при ВХОДЕ, а сессия живёт
+ * долго: человек логинится раз и потом неделю ходит по сайту, оставаясь по
+ * этой колонке «офлайн». Поэтому присутствие — отдельная колонка, и обновляет
+ * её то, что происходит на каждой странице у каждого вошедшего: запрос
+ * состояния из шапки (api/session.php).
+ *
+ * Не чаще раза в минуту. Без порога это была бы запись в users на каждую
+ * загрузку страницы — плата, несоразмерная точности индикатора, который
+ * всё равно меряет минутами.
+ *
+ * false — отметки не было: рано, колонки нет или запись не удалась. Ронять
+ * из-за неё ответ шапки нельзя: присутствие это украшение, а не вход.
+ */
+const ROBLOX_SEEN_THROTTLE = 60;
+
+function roblox_touch_seen(PDO $pdo, array $user, int $now): bool {
+    if (!isset($user['id']) || !array_key_exists('seen', $user) || $user['seen'] === null) {
+        return false;
+    }
+    // Отрицательная разница — часы шагнули назад (перевод времени, поправка
+    // NTP). Пропускать такую отметку нельзя: она бы заморозилась, а статус
+    // намертво прилип к «в сети», пока настоящее время не догонит записанное.
+    $since = $now - (int)$user['seen'];
+    if ($since >= 0 && $since < ROBLOX_SEEN_THROTTLE) { return false; }
+    try {
+        $stmt = $pdo->prepare("UPDATE users SET last_seen_at = :n WHERE roblox_id = :id");
+        $stmt->execute([':n' => $now, ':id' => (string)$user['id']]);
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
 }
 
 // ---------------------------------------------------------------------------

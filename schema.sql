@@ -94,6 +94,18 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
   created_at    BIGINT UNSIGNED NOT NULL,
   last_login_at BIGINT UNSIGNED NOT NULL,
+  -- Присутствие. Отдельно от last_login_at намеренно: вход пишется РАЗ, а
+  -- сессия живёт долго, и по времени входа активный посетитель через час
+  -- выглядит ушедшим. Эту колонку обновляет api/session.php — запрос, который
+  -- шапка делает на каждой странице у каждого вошедшего, — не чаще раза в
+  -- минуту (ROBLOX_SEEN_THROTTLE).
+  --
+  -- DEFAULT 0 — «ещё не отмечали». Профиль в этом случае откатывается на
+  -- last_login_at, чтобы только что вошедший не выглядел офлайном.
+  --
+  -- Для уже созданной боевой базы колонку заводит миграция
+  -- docs/migrations/2026-09-10-last-seen.sql; при чистой установке она не нужна.
+  last_seen_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
   -- Текст «о себе» со страницы профиля. Пишет его сам человек
   -- (POST /api/profile-about.php), длина ограничена и здесь, и в
   -- PROFILE_ABOUT_MAX. Для уже созданной боевой базы есть отдельная миграция

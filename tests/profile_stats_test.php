@@ -33,11 +33,25 @@ function ps_db(): PDO {
     return $pdo;
 }
 
+// $login — время ВХОДА, $seen — время последней страницы. Разные вещи:
+// вход пишется раз, присутствие обновляется, пока человек ходит по сайту.
 function ps_user(PDO $pdo, string $id, string $name, string $display,
-                 string $avatar = '', ?int $seen = null): void {
-    $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at)
-                   VALUES (?, ?, ?, ?, ?, ?)')
-        ->execute([$id, $name, $display, $avatar, PS_NOW - 86400, $seen ?? PS_NOW]);
+                 string $avatar = '', ?int $login = null, ?int $seen = null): void {
+    $common = [$id, $name, $display, $avatar, PS_NOW - 86400, $login ?? PS_NOW];
+    try {
+        $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url,
+                                          created_at, last_login_at, last_seen_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)')
+            ->execute(array_merge($common, [$seen ?? 0]));
+    } catch (PDOException $e) {
+        // Схема без колонки присутствия — так выглядит боевая база до
+        // миграции. Часть тестов заводит именно её, и заводить пользователя
+        // там надо тем же помощником, а не вторым.
+        $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url,
+                                          created_at, last_login_at)
+                       VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute($common);
+    }
 }
 
 function ps_session(string $id = PS_ME): array { return ['user_id' => $id]; }
@@ -369,20 +383,90 @@ test('аватар с чужого домена не отдаётся стран
         'свой домен проходит');
 });
 
-// Статус ВЫЧИСЛЯЕТСЯ из last_login_at, а не хранится: хранимый пришлось бы
-// кому-то сбрасывать, и забытое «в сети» врало бы неделями.
-test('статус выводится из времени последнего входа', function () {
+// Статус ВЫЧИСЛЯЕТСЯ, а не хранится: хранимый пришлось бы кому-то сбрасывать,
+// и забытое «в сети» врало бы неделями. Считается он из ПРИСУТСТВИЯ
+// (last_seen_at), которое обновляет каждая открытая страница, а не из времени
+// входа: вход пишется один раз, и по нему человек, который прямо сейчас
+// читает эту страницу, выглядел бы ушедшим.
+test('статус выводится из времени последней страницы', function () {
     foreach ([
-        [PS_NOW,                            'online',  'вошёл только что'],
+        [PS_NOW,                            'online',  'только что был на сайте'],
         [PS_NOW - PROFILE_ONLINE_WINDOW,    'online',  'ровно на границе окна — ещё в сети'],
         [PS_NOW - PROFILE_ONLINE_WINDOW - 1,'offline', 'секундой позже — уже нет'],
         [PS_NOW - 86400,                    'offline', 'вчера'],
-        [0,                                 'offline', 'не входил ни разу'],
     ] as [$seen, $want, $why]) {
         $pdo = test_db();
-        ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', $seen);
+        // Вход при этом давний: если бы статус считался по нему, все четыре
+        // случая дали бы 'offline' и проверка ничего не доказывала бы.
+        ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', PS_NOW - 86400 * 7, $seen);
         assert_eq($want, profile_card($pdo, PS_ME, PS_NOW)['status'], $why);
     }
+});
+
+// Ровно тот случай, ради которого колонка и заведена: вошёл неделю назад,
+// сессия жива, страницу открыл только что.
+test('давно вошедший, но только что заходивший — в сети', function () {
+    $pdo = test_db();
+    ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', PS_NOW - 86400 * 7, PS_NOW - 10);
+    assert_eq('online', profile_card($pdo, PS_ME, PS_NOW)['status'], 'в сети по присутствию');
+});
+
+// Вход — тоже присутствие, и притом достовернее старой отметки. Берём позднее
+// из двух: иначе только что вошедший показывался бы «не в сети» до первого
+// запроса состояния из шапки — а после миграции отметка у всех непустая, и
+// проверка «отметки нет» тут не спасла бы.
+test('свежий вход перевешивает старую отметку присутствия', function () {
+    $pdo = test_db();
+    ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', PS_NOW, PS_NOW - 86400);
+    assert_eq('online', profile_card($pdo, PS_ME, PS_NOW)['status'],
+        'вошёл только что, отметка вчерашняя — в сети');
+
+    $pdo = test_db();
+    ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', PS_NOW - 86400, PS_NOW);
+    assert_eq('online', profile_card($pdo, PS_ME, PS_NOW)['status'],
+        'и наоборот: вход вчерашний, отметка свежая');
+
+    $pdo = test_db();
+    ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', PS_NOW - 86400, PS_NOW - 86400);
+    assert_eq('offline', profile_card($pdo, PS_ME, PS_NOW)['status'],
+        'оба давние — не в сети');
+});
+
+// Ноль — «ещё не отмечали»: колонка только появилась, или человек вошёл и
+// первой страницы ещё не открыл. Откатываемся на вход, иначе только что
+// вошедший выглядел бы ушедшим.
+test('без отметки присутствия статус берётся от входа', function () {
+    foreach ([
+        [PS_NOW,         'online',  'вошёл только что'],
+        [PS_NOW - 86400, 'offline', 'вошёл вчера'],
+        [0,              'offline', 'не входил ни разу'],
+    ] as [$login, $want, $why]) {
+        $pdo = test_db();
+        ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', $login, 0);
+        assert_eq($want, profile_card($pdo, PS_ME, PS_NOW)['status'], $why);
+    }
+});
+
+// На боевой базе колонки может ещё не быть — миграция выполняется руками и
+// отдельно от выкладки. Профиль обязан пережить это, а не показать всем
+// «не в сети».
+test('без колонки присутствия статус тоже считается — по входу', function () {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->exec("CREATE TABLE users (
+        roblox_id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL DEFAULT '',
+        display_name TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        last_login_at INTEGER NOT NULL
+    )");
+    ps_user($pdo, PS_ME, 'mksvtn', 'MKSVTN', '', PS_NOW);
+    assert_eq('online', profile_card($pdo, PS_ME, PS_NOW)['status'], 'только что вошёл');
+
+    $pdo->prepare('UPDATE users SET last_login_at = ? WHERE roblox_id = ?')
+        ->execute([PS_NOW - 86400, PS_ME]);
+    assert_eq('offline', profile_card($pdo, PS_ME, PS_NOW)['status'], 'вошёл вчера');
 });
 
 // Колонки likes/dislikes приезжают миграцией ЧАТОВ, about — миграцией

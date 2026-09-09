@@ -74,24 +74,30 @@ function pf_fixture_db(string $file): void {
         avatar_url TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL,
         last_login_at INTEGER NOT NULL,
+        last_seen_at INTEGER NOT NULL DEFAULT 0,
         about TEXT NULL DEFAULT NULL,
         likes INTEGER NOT NULL DEFAULT 0,
         dislikes INTEGER NOT NULL DEFAULT 0
     )");
     $ins = $pdo->prepare('INSERT INTO users
-        (roblox_id, username, display_name, avatar_url, created_at, last_login_at, about, likes, dislikes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        (roblox_id, username, display_name, avatar_url, created_at, last_login_at,
+         last_seen_at, about, likes, dislikes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $now = time();
     // Свой: онлайн, с аватаром, с текстом о себе и с репутацией.
+    // Свой: вход и присутствие ДАВНИЕ. Если бы «в сети» на своём профиле
+    // бралось из базы, тест поймал бы 'offline' — он и ловил, пока страница
+    // не начала знать, что владелец её только что открыл.
     $ins->execute(['900000001', 'mksvtn', 'MKSVTN', 'https://tr.rbxcdn.com/a.png',
-                   $now - 86400, $now, 'Меняю фрукты по тирлисту', 3, 1]);
+                   $now - 86400, $now - 86400, $now - 86400, 'Меняю фрукты по тирлисту', 3, 1]);
     // Чужой: офлайн, без аватара и без текста о себе.
-    $ins->execute(['900000004', 'thefool', 'The Fool', '', $now - 86400, $now - 100000, null, 0, 0]);
+    $ins->execute(['900000004', 'thefool', 'The Fool', '', $now - 86400, $now - 100000,
+                   $now - 100000, null, 0, 0]);
     // Ник с разметкой: она обязана уехать на страницу экранированной.
     $ins->execute(['900000009', 'xss', '<script>alert(1)</script>', '', $now - 86400, $now,
-                   'a <b>bold</b> claim', 0, 0]);
+                   $now, 'a <b>bold</b> claim', 0, 0]);
     // Без имени вовсе: у Roblox не обязательны ни display_name, ни username.
-    $ins->execute(['900000011', '', '', '', $now - 86400, $now, null, 0, 0]);
+    $ins->execute(['900000011', '', '', '', $now - 86400, $now, $now, null, 0, 0]);
 }
 
 function pf_render(string $me, string $id): ?array {
@@ -229,6 +235,26 @@ test('график берёт адресата из разметки, а не и
     assert_eq(0, substr_count($mine['html'], 'data-peer'), 'и метки «чужой» на своём нет');
     assert_true(strpos($peer['html'], 'data-profile="900000004"') !== false, 'чужой id в разметке');
     assert_true(strpos($peer['html'], 'data-peer="1"') !== false, 'и метка «чужой» стоит');
+});
+
+// Отметку присутствия ставит запрос состояния из шапки, и он случается ПОСЛЕ
+// того, как страница отрисована. Без отдельного правила собственный профиль
+// после перерыва открывался бы с «не в сети» — и это видел бы ровно тот, про
+// кого написано.
+test('свой профиль всегда показывает «в сети» — страницу открыл сам владелец', function () {
+    $mine = pf_render('900000001', '');
+    assert_true($mine !== null, 'страница отрендерилась');
+    if ($mine === null) { return; }
+    assert_true(strpos($mine['html'], 'data-i18n-label="profile.statusOnline"') !== false,
+        'свой статус — в сети');
+
+    // У чужого статус настоящий: в тестовой базе The Fool последний раз
+    // заходил давно.
+    $peer = pf_render('900000001', '900000004');
+    assert_true($peer !== null, 'и чужая страница тоже');
+    if ($peer === null) { return; }
+    assert_true(strpos($peer['html'], 'data-i18n-label="profile.statusOffline"') !== false,
+        'чужой статус берётся из данных, а не подставляется');
 });
 
 test('свой профиль по своему же ?id= остаётся своим', function () {

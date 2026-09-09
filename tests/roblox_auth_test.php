@@ -260,4 +260,207 @@ test('админская сессия не путается с пользова�
     assert_eq(null, $s['user'], 'но не игрок Roblox');
 });
 
+// --------------------------------------------------------------------------
+//  Присутствие
+// --------------------------------------------------------------------------
+
+// last_login_at пишется РОВНО ОДИН РАЗ — при возврате с roblox.com, — а
+// сессия живёт долго. Считать по нему «в сети» значит гасить индикатор через
+// пять минут после логина у человека, который всю неделю ходит по сайту.
+// Поэтому присутствие отмечается отдельно, и отмечает его запрос состояния из
+// шапки: он и так случается на каждой странице у каждого вошедшего.
+
+function ra_seen(PDO $db, string $id): int {
+    $st = $db->prepare('SELECT last_seen_at FROM users WHERE roblox_id = ?');
+    $st->execute([$id]);
+    return (int)$st->fetchColumn();
+}
+
+function ra_user(PDO $db, string $id = '42', int $at = 1000): void {
+    roblox_touch_user($db, [
+        'roblox_id' => $id, 'username' => 'mak', 'display_name' => 'Mak',
+        'avatar_url' => 'https://tr.rbxcdn.com/a.png',
+    ], $at);
+}
+
+test('отметка присутствия ставится не чаще раза в минуту', function () {
+    $db = test_db();
+    ra_user($db);
+    $u = roblox_load_user($db, '42');
+    assert_eq(0, $u['seen'], 'вход отметку присутствия не ставит');
+
+    assert_true(roblox_touch_seen($db, $u, 5000), 'первая отметка проходит');
+    assert_eq(5000, ra_seen($db, '42'), 'записана');
+
+    $u = roblox_load_user($db, '42');
+    assert_eq(false, roblox_touch_seen($db, $u, 5000 + ROBLOX_SEEN_THROTTLE - 1),
+        'секундой раньше порога — не пишем');
+    assert_eq(5000, ra_seen($db, '42'), 'значение не тронуто');
+
+    assert_true(roblox_touch_seen($db, $u, 5000 + ROBLOX_SEEN_THROTTLE),
+        'ровно на пороге — пишем');
+    assert_eq(5000 + ROBLOX_SEEN_THROTTLE, ra_seen($db, '42'), 'обновлено');
+});
+
+test('отметка не трогает чужие строки и не создаёт своих', function () {
+    $db = test_db();
+    ra_user($db, '42');
+    ra_user($db, '43');
+    roblox_touch_seen($db, roblox_load_user($db, '42'), 5000);
+    assert_eq(5000, ra_seen($db, '42'), 'своя строка отмечена');
+    assert_eq(0, ra_seen($db, '43'), 'соседняя — нет');
+    assert_eq(2, (int)$db->query('SELECT COUNT(*) FROM users')->fetchColumn(), 'строк не прибавилось');
+});
+
+// Колонки на боевой базе может ещё не быть: миграция выполняется руками и
+// отдельно от выкладки. Отметка обязана в этом случае промолчать, а не уронить
+// ответ шапки — присутствие это украшение, а не вход.
+test('без колонки присутствия отметка молчит, а вход работает', function () use ($CFG_ON) {
+    $db = new PDO('sqlite::memory:');
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db->exec("CREATE TABLE users (
+        roblox_id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL DEFAULT '',
+        display_name TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        last_login_at INTEGER NOT NULL
+    )");
+    ra_user($db);
+
+    $u = roblox_load_user($db, '42');
+    assert_true($u !== null, 'пользователь читается');
+    assert_eq(null, $u['seen'], 'присутствия нет — и это не ноль, а «нечего отмечать»');
+    assert_eq(false, roblox_touch_seen($db, $u, 9999), 'отметка не делается');
+
+    // Предыдущая строка отказывает по стражу на null и до базы не доходит.
+    // Здесь отметку подставляем руками, чтобы страж пропустил, и запрос
+    // ДОШЁЛ до несуществующей колонки: без try/catch это исключение уронило бы
+    // ответ шапки, то есть выбило бы вход у всех до выполнения миграции.
+    assert_eq(false, roblox_touch_seen($db, ['id' => '42', 'seen' => 0], 9999),
+        'запрос в несуществующую колонку не роняет ответ');
+
+    $s = handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON, 9999);
+    assert_eq('42', $s['user']['id'], 'шапка по-прежнему видит вошедшего');
+});
+
+test('ручка состояния отмечает присутствие сама', function () use ($CFG_ON) {
+    $db = test_db();
+    ra_user($db);
+
+    handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON, 7000);
+    assert_eq(7000, ra_seen($db, '42'), 'отметка поставлена при обычном запросе состояния');
+
+    handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON, 7030);
+    assert_eq(7000, ra_seen($db, '42'), 'через полминуты второй записи нет');
+
+    handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON, 7060);
+    assert_eq(7060, ra_seen($db, '42'), 'через минуту — есть');
+});
+
+// В бою handle_session() зовётся без $now — время берётся внутри. Подстановку
+// надо проверить отдельно: все остальные проверки передают время сами и
+// сломанный time() в них не виден.
+test('без переданного времени отметка берёт текущее', function () use ($CFG_ON) {
+    $db = test_db();
+    ra_user($db);
+    $before = time();
+    handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON);
+    $after = time();
+
+    $seen = ra_seen($db, '42');
+    assert_true($seen >= $before && $seen <= $after,
+        "отметка $seen лежит между $before и $after");
+});
+
+test('анониму присутствие не отмечается и база не открывается', function () use ($CFG_ON) {
+    $opened = false;
+    handle_session(function () use (&$opened) { $opened = true; return test_db(); }, [], $CFG_ON, 7000);
+    assert_eq(false, $opened, 'соединения не было');
+});
+
+test('сессия на удалённого пользователя ничего не отмечает', function () use ($CFG_ON) {
+    $db = test_db();
+    $s = handle_session(function () use ($db) { return $db; }, ['user_id' => '999'], $CFG_ON, 7000);
+    assert_eq(null, $s['user'], 'не вошёл');
+    assert_eq(0, (int)$db->query('SELECT COUNT(*) FROM users')->fetchColumn(), 'строка не завелась');
+});
+
+// seen — внутреннее поле отметки. Шапке оно не нужно, а лишнее поле в JSON
+// это лишнее обещание: сегодня им никто не пользуется, завтра кто-нибудь
+// начнёт, и убрать его будет уже нельзя.
+test('время присутствия не уезжает в ответ шапки', function () use ($CFG_ON) {
+    $db = test_db();
+    ra_user($db);
+    $s = handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON, 7000);
+    assert_eq(false, array_key_exists('seen', $s['user']), 'поля seen в ответе нет');
+    assert_eq(['id', 'name', 'display', 'avatar', 'profile'], array_keys($s['user']),
+        'ответ несёт ровно то, что нужно шапке');
+});
+
+// --------------------------------------------------------------------------
+//  Схема и её зеркало в тестах
+// --------------------------------------------------------------------------
+
+// test_db() повторяет schema.sql руками, и разъезжаются они молча: тест на
+// забытой колонке остаётся зелёным, а бой падает. Так уже могло случиться с
+// about и last_seen_at — обе приехали миграциями и в оба места вписывались
+// отдельно.
+//
+// Сравниваются НАБОРЫ имён колонок, а не текст: типы у MySQL и SQLite разные
+// по определению (BIGINT UNSIGNED против INTEGER), и требовать их совпадения
+// значило бы требовать невозможного.
+function ra_columns(string $sql, string $create): array {
+    $at = strpos($sql, $create);
+    if ($at === false) { return []; }
+    $body = substr($sql, $at + strlen($create));
+    // Закрывающая скобка стоит в начале строки: в schema.sql за ней идёт
+    // ENGINE=InnoDB, в tests/lib.php — кавычка с точкой с запятой, и искать
+    // конкретный хвост значило бы завязываться на оба диалекта сразу.
+    if (!preg_match('/\n\s*\)/', $body, $m, PREG_OFFSET_CAPTURE)) { return []; }
+    $body = substr($body, 0, $m[0][1]);
+    $out = [];
+    foreach (explode("\n", $body) as $line) {
+        $line = trim($line);
+        if ($line === '' || strpos($line, '--') === 0) { continue; }
+        if (preg_match('/^([a-z_]+)\s/i', $line, $m)) {
+            $name = strtolower($m[1]);
+            if (in_array($name, ['primary', 'unique', 'key', 'index', 'constraint'], true)) { continue; }
+            $out[] = $name;
+        }
+    }
+    sort($out);
+    return array_values(array_unique($out));
+}
+
+test('users в test_db() несёт ровно те же колонки, что и schema.sql', function () {
+    $root   = dirname(__DIR__);
+    $schema = ra_columns((string)file_get_contents($root . '/schema.sql'),
+                         "CREATE TABLE IF NOT EXISTS users (");
+    $mirror = ra_columns((string)file_get_contents($root . '/tests/lib.php'),
+                         'CREATE TABLE users (');
+
+    assert_true(count($schema) > 0, 'колонки в schema.sql нашлись');
+    assert_true(in_array('last_seen_at', $schema, true), 'присутствие описано в schema.sql');
+    assert_eq($schema, $mirror, 'наборы колонок совпадают');
+});
+
+// Колонка, добавленная миграцией, обязана быть и в schema.sql: миграция — для
+// уже созданной боевой базы, а чистая установка идёт по схеме. Забыть второе
+// значит завести пользователя без колонки и упереться в неё на первой же
+// странице профиля.
+test('миграция присутствия согласована со схемой', function () {
+    $root = dirname(__DIR__);
+    $mig  = (string)file_get_contents($root . '/docs/migrations/2026-09-10-last-seen.sql');
+    assert_true(strpos($mig, 'ADD COLUMN last_seen_at') !== false, 'миграция заводит колонку');
+    assert_true(strpos($mig, 'WHERE last_seen_at = 0') !== false,
+        'перенос не откатывает уже проставленные отметки при повторном запуске');
+
+    $schema = (string)file_get_contents($root . '/schema.sql');
+    assert_true(strpos($schema, 'last_seen_at  BIGINT UNSIGNED NOT NULL DEFAULT 0') !== false,
+        'та же колонка описана в schema.sql');
+    assert_true(strpos($mig, 'BIGINT UNSIGNED NOT NULL DEFAULT 0') !== false,
+        'и тем же типом');
+});
+
 run_tests();
