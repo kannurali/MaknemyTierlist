@@ -224,7 +224,7 @@
       "promo.houseTgText":      "Свежие цены, розыгрыши и новости Blox Fruits — в нашем телеграм-канале",
       "promo.houseTgCta":       "Открыть канал",
 
-      "promo.giveawayText":     "Розыгрыш в честь Update 30: 5 permanent Magnet. До итогов осталось 2000 участников",
+      "promo.giveawayText":     "Розыгрыш в честь Update 30: 5 permanent Magnet. До итогов осталось 500 участников",
       "promo.giveawayCta":      "Участвовать",
       "promo.playerokText":     "Фрукты, мутации, скины и донат — по лучшим ценам на Playerok",
       "promo.playerokCta":      "Перейти на Playerok",
@@ -658,7 +658,7 @@
       "promo.cta":              "Open",
       "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
       "promo.houseTgCta":       "Open the channel",
-      "promo.giveawayText":     "Update 30 giveaway: 5 permanent Magnet. 2000 participants to go",
+      "promo.giveawayText":     "Update 30 giveaway: 5 permanent Magnet. 500 participants to go",
       "promo.giveawayCta":      "Enter the giveaway",
       "promo.playerokText":     "Fruits, mutations, skins and top-ups at the best prices on Playerok",
       "promo.playerokCta":      "Go to Playerok",
