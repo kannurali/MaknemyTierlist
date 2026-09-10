@@ -26,6 +26,10 @@
 
   var state = { me: '', threads: [], thread: 0, ready: false, authed: false };
 
+  var PROFILE_PATH = '/profile';
+
+  var withProfile = shell ? shell.dataset.profile === '1' : false;
+
   function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
   function when(sec) {
@@ -102,14 +106,33 @@
     });
   }
 
+  function roomTitleFor(peer) {
+    roomTitle.textContent = '';
+    if (!peer) {
+      roomTitle.textContent = tx('chat.title', 'Чаты');
+      roomTitle.setAttribute('data-i18n', 'chat.title');
+      return;
+    }
+    roomTitle.removeAttribute('data-i18n');
+    roomTitle.appendChild(document.createTextNode(tx('chat.with', 'Чат с') + ' '));
+
+    if (!withProfile) {
+      roomTitle.appendChild(document.createTextNode(peer.nick));
+      return;
+    }
+    var a = document.createElement('a');
+    a.className = 'ct-peer-link';
+    a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);
+    a.textContent = peer.nick;
+    a.setAttribute('aria-label', tx('chat.peerProfile', 'Профиль игрока') + ' ' + peer.nick);
+    a.title = tx('chat.peerProfile', 'Профиль игрока');
+    roomTitle.appendChild(a);
+  }
+
   function renderRoom(messages, peer) {
     log.textContent = '';
 
-    roomTitle.textContent = peer
-      ? tx('chat.with', 'Чат с') + ' ' + peer.nick
-      : tx('chat.title', 'Чаты');
-    if (peer) { roomTitle.removeAttribute('data-i18n'); }
-    else { roomTitle.setAttribute('data-i18n', 'chat.title'); }
+    roomTitleFor(peer);
 
     var open = !!peer;
     compose.hidden = !open;
