@@ -62,7 +62,7 @@ T_PRIZE = "5 PERMANENT MAGNET"
 T_PRIZE2 = ["5 PERMANENT", "MAGNET"]
 T_COUNT_LEAD = "ДО ИТОГОВ ОСТАЛОСЬ"
 T_COUNT_LEAD2 = ["ДО ИТОГОВ", "ОСТАЛОСЬ"]
-COUNT = "2000"
+COUNT = "500"
 COUNT_UNIT = "УЧАСТНИКОВ"
 T_BTN = "УЧАСТВОВАТЬ"
 
