@@ -295,7 +295,7 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=40"></script>
+  <script src="js/i18n.js?v=41"></script>
   <script src="js/chat-page.js?v=2" defer></script>
 
 
