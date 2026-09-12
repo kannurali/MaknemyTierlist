@@ -9,17 +9,17 @@
 Размеры берутся из CREATIVE_SPECS в api/lib/images.php: файл, который не влез
 в потолок слота, сервер либо ужмёт (still), либо отвергнет (анимация).
 
-Исходники — tools/art/giveaway-chromatic.webp и giveaway-robot.webp: сундук
-Chromatic и робот Update 30, обрезанные по альфе. Значок «x50» нарисован
-внутри самого арта сундука, поэтому числом приза макет не занимается.
+Исходник один — tools/art/giveaway-chromatic.webp: сундук Chromatic, обрезанный
+по альфе. Значок «x50» нарисован внутри самого арта, поэтому числом приза макет
+не занимается.
 
-Приз один, и в макете осталось ровно две вещи: что разыгрывают и куда нажать.
-Освободившееся от счётчика место отдано арту — приз должен быть самым крупным
-пятном во всех четырёх местах.
+В кадре ровно три вещи: что разыгрывают, приз и куда нажать. Робот Update 30
+(giveaway-robot.webp) из макета убран — рядом с сундуком он читался как второй
+приз, а приз здесь один.
 
-Вариант со счётчиком «до итогов осталось N участников», вариант с двумя
-призами (Magnet + Chromatic Box) и три ранних макета («дуэт», «билет», «босс»)
-лежат в истории git до этого коммита.
+Вариант с роботом, вариант со счётчиком «до итогов осталось N участников»,
+вариант с двумя призами (Magnet + Chromatic Box) и три ранних макета («дуэт»,
+«билет», «босс») лежат в истории git до этого коммита.
 
 Нужен Pillow.
 """
@@ -196,13 +196,12 @@ def bg(w, h):
 def creative(slot, w, h):
     img = bg(w, h)
     chest = art("giveaway-chromatic.webp")
-    robot = art("giveaway-robot.webp")
 
     if slot in ("strip", "dock"):
-        r = scaled(robot, h=int(h * 0.96))
-        drop(img, r, int(w * 0.50), int(h * 0.02))
-        c = scaled(chest, h=int(h * 0.82))
-        drop(img, c, w - c.width - int(w * 0.03), int(h * 0.11))
+        # Сундук — единственный предмет в кадре, поэтому он стоит по центру
+        # правой половины, а не жмётся к краю, как жался рядом с роботом.
+        c = scaled(chest, h=int(h * 0.88))
+        drop(img, c, int(w * 0.76) - c.width // 2, (h - c.height) // 2)
 
         # Затемнение слева, чтобы текст лёг на арт.
         veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -223,34 +222,32 @@ def creative(slot, w, h):
         return img
 
     if slot == "rail":
-        # Предметы каскадом; ниже 1020 начинается вуаль с кнопкой, и наезжать
-        # на неё арту нельзя.
-        r = scaled(robot, w=int(w * 1.12))
-        drop(img, r, (w - r.width) // 2, 352)
-        c = scaled(chest, w=int(w * 0.98))
-        drop(img, c, (w - c.width) // 2, 702)
+        # Борт шириной 320 — сундук в него шире не влезет, а резать его по
+        # краям нельзя: значок «x50» нарисован у правого нижнего угла арта.
+        # Поэтому предмет стоит ровно посередине свободной полосы между
+        # заголовком и кнопкой, а не растягивается на всю её высоту.
+        c = scaled(chest, w=w)
+        drop(img, c, 0, 520)
 
         veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        ImageDraw.Draw(veil).rectangle([0, 0, w, 300], fill=(4, 8, 22, 196))
-        ImageDraw.Draw(veil).rectangle([0, h - 180, w, h], fill=(4, 8, 22, 218))
+        ImageDraw.Draw(veil).rectangle([0, 0, w, 360], fill=(4, 8, 22, 196))
+        ImageDraw.Draw(veil).rectangle([0, h - 230, w, h], fill=(4, 8, 22, 218))
         img.alpha_composite(veil.filter(ImageFilter.GaussianBlur(28)))
 
         d = ImageDraw.Draw(img)
-        d.text((w / 2, 62), "МЕГА", font=fit(d, "МЕГА", w - 60, 68), fill=CYAN + (255,), anchor="mm")
-        text_glow(img, (w / 2, 136), T_HEAD, fit(d, T_HEAD, w - 30, 78), INK, CYAN, 12, anchor="mm")
+        d.text((w / 2, 78), "МЕГА", font=fit(d, "МЕГА", w - 50, 76), fill=CYAN + (255,), anchor="mm")
+        text_glow(img, (w / 2, 168), T_HEAD, fit(d, T_HEAD, w - 24, 92), INK, CYAN, 13, anchor="mm")
         d = ImageDraw.Draw(img)
         for i, line in enumerate(T_PRIZE2):
-            d.text((w / 2, 204 + i * 46), line, font=fit(d, line, w - 40, 48),
+            d.text((w / 2, 256 + i * 54), line, font=fit(d, line, w - 36, 54),
                    fill=INK + (255,), anchor="mm")
 
-        button(img, [22, h - 108, w - 22, h - 34])
+        button(img, [20, h - 150, w - 20, h - 50])
         return img
 
     # popup 800×800
-    r = scaled(robot, h=348)
-    drop(img, r, (w - r.width) // 2, 172)
-    c = scaled(chest, h=300)
-    drop(img, c, 14, 318)
+    c = scaled(chest, h=430)
+    drop(img, c, (w - c.width) // 2, 205)
 
     veil = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     ImageDraw.Draw(veil).rectangle([0, 0, w, 196], fill=(4, 8, 22, 206))
