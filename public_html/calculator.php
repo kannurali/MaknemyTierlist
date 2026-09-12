@@ -414,8 +414,8 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=40"></script>
-  <script src="js/promo.js?v=9"></script>
+  <script src="js/i18n.js?v=41"></script>
+  <script src="js/promo.js?v=10"></script>
 
   <script src="js/promo-dock.js?v=5"></script>
 
