@@ -494,8 +494,6 @@ test('карточка переживает отсутствие колонок 
 
 test('репутация и «о себе» отдаются, когда колонки есть', function () {
     $pdo = ps_db();
-    $pdo->exec('ALTER TABLE users ADD COLUMN likes INTEGER NOT NULL DEFAULT 0');
-    $pdo->exec('ALTER TABLE users ADD COLUMN dislikes INTEGER NOT NULL DEFAULT 0');
     $pdo->prepare('UPDATE users SET likes = ?, dislikes = ?, about = ? WHERE roblox_id = ?')
         ->execute([428, 11, 'Торгую с 2024', PS_ME]);
 

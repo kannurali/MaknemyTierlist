@@ -280,19 +280,10 @@ test('имя собеседника ведёт на его профиль, ес�
     $js   = cp_read($PUB . '/js/chat-page.js');
     $i18n = cp_read($PUB . '/js/i18n.js');
 
-    assert_true(strpos($page, "\$ctProfile = is_file(__DIR__ . '/profile.php');") !== false,
-        'наличие страницы профиля проверяется, а не задаётся флагом руками');
-    assert_true(strpos($page, '<?= $ctProfile ? \' data-profile="1"\' : \'\' ?>') !== false,
-        'и уезжает в разметку признаком');
-
-    assert_true(strpos($js, "shell.dataset.profile === '1'") !== false,
-        'скрипт читает признак с сервера, а не решает сам');
     assert_true(strpos($js, "a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);") !== false,
         'ссылка ведёт на профиль собеседника');
     assert_true(strpos($js, "var PROFILE_PATH = '/profile';") !== false, 'адрес объявлен один раз');
-
-    // Без признака имя остаётся текстом — ссылки в никуда быть не должно.
-    assert_true(strpos($js, 'if (!withProfile) {') !== false, 'ветка без профиля есть');
+    assert_true(strpos($page, 'id="ctRoomTitle"') !== false, 'заголовок комнаты на месте');
 
     // Ник — пользовательский текст. Он ставится textContent, а не разметкой:
     // innerHTML во всём файле запрещён отдельной проверкой выше.

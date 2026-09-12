@@ -15,12 +15,6 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // noindex, nofollow: переписка приватная, индексировать её нельзя, и ходить
 // по ссылкам из неё поисковику незачем. В sitemap.xml её нет.
 header('Cache-Control: no-cache, must-revalidate');
-
-// Есть ли на сайте страница профиля. Она приезжает отдельной веткой, и до неё
-// имя собеседника ссылкой быть не должно: ссылка в 404 хуже её отсутствия.
-// Проверяем наличие файла, а не пишем флаг руками: так порядок вливания веток
-// перестаёт иметь значение — появился profile.php, заработали и ссылки.
-$ctProfile = is_file(__DIR__ . '/profile.php');
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -176,7 +170,7 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
   <main class="ct-page">
     <p class="ct-gate" id="ctGate" hidden></p>
 
-    <div class="ct-shell" id="ctShell"<?= $ctProfile ? ' data-profile="1"' : '' ?> hidden>
+    <div class="ct-shell" id="ctShell" hidden>
       <aside class="ct-rail" id="ctRail" aria-labelledby="ctRailTitle">
         <h2 class="ct-sr-only" id="ctRailTitle" data-i18n="chat.threads">Диалоги</h2>
         <ul class="ct-list" id="ctList" role="tablist" aria-orientation="vertical"></ul>
@@ -306,7 +300,7 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
   </div>
 
   <script src="js/i18n.js?v=44"></script>
-  <script src="js/chat-page.js?v=7" defer></script>
+  <script src="js/chat-page.js?v=8" defer></script>
 
 
 </body>

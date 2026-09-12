@@ -1078,10 +1078,8 @@ test('в отдаваемых файлах профиля нет пояснит�
 test('с чужого профиля можно написать человеку', function () use ($PUB) {
     $page = pf_read($PUB . '/profile.php');
 
-    assert_true(strpos($page, "\$pfChat = is_file(__DIR__ . '/chat.php');") !== false,
-        'наличие чата проверяется, а не задаётся флагом руками');
-    assert_true(strpos($page, '<?php if (!$pfSelf && $pfChat): ?>') !== false,
-        'кнопка только на чужом профиле и только когда чат есть');
+    assert_true(strpos($page, '<?php if (!$pfSelf): ?>') !== false,
+        'кнопка только на чужом профиле');
     assert_true(strpos($page, 'href="/chat?to=<?= htmlspecialchars($pfWho, ENT_QUOTES, \'UTF-8\') ?>"') !== false,
         'ведёт в переписку именно с этим человеком, и номер экранирован');
     pf_assert_key(pf_read($PUB . '/js/i18n.js'), 'profile.write');

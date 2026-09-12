@@ -34,12 +34,6 @@ require_once __DIR__ . '/api/lib/profile.php';
 header('Cache-Control: no-cache, must-revalidate');
 start_site_session();
 
-// Есть ли на сайте чат. Он приезжает отдельной веткой, и до него кнопка
-// «Написать» вела бы в 404: ссылка в никуда хуже её отсутствия. Проверяем
-// наличие файла, а не пишем флаг руками — так порядок вливания веток
-// перестаёт иметь значение.
-$pfChat = is_file(__DIR__ . '/chat.php');
-
 $pfMe   = profile_me($_SESSION);
 $pfId   = profile_target($_GET);
 $pfWho  = $pfId !== '' ? $pfId : $pfMe;
@@ -133,7 +127,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" defer></script>
 <script src="js/topbar.js?v=7" defer></script>
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/profile.css?v=4" />
+<link rel="stylesheet" href="css/profile.css?v=5" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -240,7 +234,7 @@ $pfTitle = $pfNick !== ''
       <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php endif; ?>
 
-<?php if (!$pfSelf && $pfChat): ?>
+<?php if (!$pfSelf): ?>
       <p class="pf-write">
         <a class="pf-write-link" href="/chat?to=<?= htmlspecialchars($pfWho, ENT_QUOTES, 'UTF-8') ?>"
            data-i18n="profile.write">Написать</a>

@@ -38,7 +38,6 @@
 
   var EMOJI = '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🤫 🤔 🤐 🤨 😐 😑 😶 😶‍🌫️ 😏 😒 🙄 😬 😮‍💨 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊';
 
-  var withProfile = shell ? shell.dataset.profile === '1' : false;
 
   function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
@@ -129,10 +128,6 @@
     roomTitle.removeAttribute('data-i18n');
     roomTitle.appendChild(document.createTextNode(tx('chat.with', 'Чат с') + ' '));
 
-    if (!withProfile) {
-      roomTitle.appendChild(document.createTextNode(peer.nick));
-      return;
-    }
     var a = document.createElement('a');
     a.className = 'ct-peer-link';
     a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);
