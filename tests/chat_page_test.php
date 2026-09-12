@@ -307,4 +307,368 @@ test('имя собеседника ведёт на его профиль, ес�
         'и свой стиль: ссылку видно, что она ссылка');
 });
 
+// --------------------------------------------------------------------------
+//  Смайлики
+// --------------------------------------------------------------------------
+
+// Набор живёт одной строкой в скрипте, а не сотней кнопок в разметке: панель
+// открывают не в каждом визите, а одиннадцать килобайт разметки приезжали бы
+// всем и всегда. Кнопки строятся при первом открытии.
+function cp_emoji_list(string $js): array {
+    if (!preg_match("/var EMOJI = '([^']+)';/u", $js, $m)) { return []; }
+    return explode(' ', $m[1]);
+}
+
+test('панель смайликов подключена к кнопке и объявляет своё состояние', function () use ($PUB) {
+    $s = cp_markup(cp_read($PUB . '/chat.php'));
+
+    assert_true((bool)preg_match(
+        '/<button class="ct-emoji-btn" type="button" id="ctEmojiBtn"\s+aria-expanded="false" aria-controls="ctEmoji"/u', $s),
+        'кнопка связана с панелью и говорит, раскрыта ли она');
+    assert_true(strpos($s, 'data-i18n-label="chat.emoji"') !== false, 'подпись кнопки переводится');
+    assert_true((bool)preg_match('/<div class="ct-emoji" id="ctEmoji" role="group"[^>]*hidden>/u', $s),
+        'панель по умолчанию скрыта');
+
+    // Панель лежит ВНУТРИ формы отправки: она позиционируется от неё, и
+    // вынесенная наружу уехала бы в угол страницы.
+    $form = strpos($s, '<form class="ct-compose"');
+    $panel = strpos($s, 'id="ctEmoji"');
+    $end  = strpos($s, '</form>', $form === false ? 0 : $form);
+    assert_true($form !== false && $panel !== false && $form < $panel && $panel < $end,
+        'панель внутри формы отправки');
+
+    cp_assert_key(cp_read($PUB . '/js/i18n.js'), 'chat.emoji');
+});
+
+test('набор смайликов без повторов и без пустых мест', function () use ($PUB) {
+    $list = cp_emoji_list(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(count($list) > 100, 'набор из макета, а не три штуки для вида');
+    assert_eq(count($list), count(array_unique($list)), 'повторов нет');
+    foreach ($list as $e) {
+        assert_true($e !== '', 'пустых мест нет');
+        // Разделитель — пробел, поэтому ни один смайлик не должен его содержать:
+        // иначе один символ развалился бы на два «смайлика».
+        assert_eq(0, preg_match('/\s/u', $e), 'внутри смайлика нет пробелов');
+    }
+});
+
+// Панель — сетка из сотни с лишним кнопок. Без своей клавиатурной модели она
+// означала бы 118 остановок по Tab между полем ввода и кнопкой «Отправить».
+test('по панели ходят стрелками, а не Tab-ом', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    assert_true(strpos($js, "b.tabIndex = i === 0 ? 0 : -1;") !== false,
+        'в обходе по Tab остаётся ровно одна кнопка');
+    assert_true(strpos($js, "all[k].tabIndex = k === emojiAt ? 0 : -1;") !== false,
+        'и она переезжает вслед за фокусом');
+    foreach (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'] as $key) {
+        assert_true(strpos($js, "'" . $key . "'") !== false, "стрелка $key обслуживается");
+    }
+    // Число колонок считается по раскладке, а не задано числом: на узком
+    // экране их шесть, на широком восемь, и «вниз» обязано попадать в тот же
+    // столбец.
+    assert_true(strpos($js, 'function emojiColumns()') !== false, 'колонки считаются по факту');
+    assert_true(strpos($js, 'offsetTop') !== false, 'по раскладке, а не по числу в коде');
+
+    assert_true(strpos($js, "e.key !== 'Escape'") !== false, 'Escape закрывает панель');
+    assert_true(strpos($js, 'emojiBtn.focus();') !== false, 'и возвращает фокус на кнопку');
+});
+
+// Смайлик вставляется в место курсора, а не приписывается в конец: человек
+// правит середину сообщения, и «в конец» означало бы переписывать хвост.
+test('смайлик встаёт в место курсора и не переполняет сообщение', function () use ($PUB) {
+    $js  = cp_read($PUB . '/js/chat-page.js');
+    $lib = cp_read($PUB . '/api/lib/chat.php');
+
+    assert_true(strpos($js, 'input.selectionStart') !== false, 'позиция курсора учитывается');
+    // Проверяем саму склейку, а не упоминание selectionStart: приписать
+    // смайлик в конец можно и не тронув эту строку.
+    assert_true(strpos($js, 'input.value.slice(0, start) + ch + input.value.slice(end)') !== false,
+        'текст склеивается вокруг выделения, а не дописывается в хвост');
+    assert_true(strpos($js, 'input.setSelectionRange(caret, caret);') !== false,
+        'после вставки курсор стоит за смайликом');
+    assert_true(strpos($js, 'input.focus();') !== false, 'фокус возвращается в поле');
+
+    // Предел тот же, что на сервере, и считается ТАК ЖЕ — в символах.
+    // maxlength у поля меряет единицы UTF-16, и по нему эмодзи весит два.
+    assert_true(strpos($js, 'if (Array.from(next).length > BODY_MAX) { return; }') !== false,
+        'вставка не переполняет сообщение');
+    assert_true((bool)preg_match('/var BODY_MAX = (\d+);/u', $js, $a), 'предел объявлен в скрипте');
+    assert_true((bool)preg_match('/const CHAT_BODY_MAX\s+= (\d+);/u', $lib, $b), 'и на сервере');
+    assert_eq($b[1], $a[1], 'пределы совпадают');
+    assert_true(strpos($lib, 'mb_strlen($body) > CHAT_BODY_MAX') !== false,
+        'сервер тоже считает символы, а не байты');
+});
+
+// Вся геометрия панели на десктопе построена на --u (единице макета). На 375px
+// та даёт 0.26px: без своих метрик панель схлопнулась бы до 89px с
+// десятипиксельными смайликами. Ровно это и случилось при первой проверке.
+test('на узких экранах у панели свои метрики, а не макетная единица', function () use ($PUB) {
+    $css = cp_read($PUB . '/css/chat.css');
+    $at  = strpos($css, '@media (max-width: 900px)');
+    assert_true($at !== false, 'медиазапрос найден');
+    $mobile = substr($css, $at);
+
+    foreach (['.ct-emoji-btn', '.ct-emoji {', '.ct-emoji-item'] as $sel) {
+        assert_true(strpos($mobile, $sel) !== false, "$sel переопределён для узких экранов");
+    }
+    // Зона нажатия: 40px против 24 по WCAG 2.5.8 — пальцем в сетку из ста
+    // кнопок иначе не попасть.
+    assert_true(strpos($mobile, '.ct-emoji-item { width: auto; height: 40px;') !== false,
+        'у смайлика на телефоне палец-совместимая высота');
+    assert_true(strpos($mobile, 'max-height: 46vh') !== false,
+        'панель не занимает весь экран и оставляет видимой переписку');
+});
+
+// --------------------------------------------------------------------------
+//  Чат обновляется сам
+// --------------------------------------------------------------------------
+
+// Без этого раздел не был чатом: страница читала переписку ОДИН раз, и ответ
+// собеседника не появлялся, пока человек не нажмёт F5. Проверить это глазами
+// нельзя — пустой экран выглядит как «он просто не ответил».
+test('переписка перечитывается сама, пока вкладка открыта', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+
+    assert_true((bool)preg_match('/var POLL_MS = (\d+);/u', $js, $m), 'период опроса объявлен');
+    assert_true((int)$m[1] >= 5000, 'не чаще раза в пять секунд: это общий хостинг');
+    assert_true(strpos($js, 'pollTimer = setTimeout(pollNow, POLL_MS);') !== false, 'опрос повторяется');
+    assert_true(strpos($js, 'load(state.thread, true)') !== false, 'перечитывает открытый диалог');
+
+    // Скрытая вкладка не должна долбить сервер. И обязана догнать пропущенное,
+    // как только на неё вернулись.
+    assert_true(strpos($js, "if (document.hidden || !state.authed) { return; }") !== false,
+        'в скрытой вкладке опрос стоит');
+    assert_true(strpos($js, "document.addEventListener('visibilitychange'") !== false,
+        'возврат на вкладку отслеживается');
+    assert_true(strpos($js, 'if (document.hidden) { clearTimeout(pollTimer); return; }') !== false,
+        'уход со вкладки гасит таймер');
+});
+
+// Тихая перечитка обязана быть ТИХОЙ: она случается каждые несколько секунд, и
+// любой её побочный эффект человек поймает пальцами — посреди набора текста.
+test('фоновая перечитка ничего не сбрасывает', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+
+    assert_true(strpos($js, 'var mine = quiet ? seq : ++seq;') !== false,
+        'фоновая перечитка уступает нажатию человека, а не наоборот');
+    assert_true(strpos($js, "if (!quiet) { shell.classList.add('is-loading'); }") !== false,
+        'без мигания загрузки');
+    assert_true(strpos($js, 'if (quiet && sig === lastSig) { return; }') !== false,
+        'ничего не перерисовывается, пока ничего не изменилось');
+    // Проверяем именно блок отзыва: «if (!quiet) {» в файле не одно.
+    assert_true(strpos($js, "if (!quiet) {\n        var kept = reviewDrafts[state.thread];") !== false,
+        'форму отзыва трогает только «громкая» перечитка');
+    assert_true(strpos($js, "setStars(kept ? kept.stars : (d.review ? d.review.stars : 0));") !== false,
+        'и даже она уступает начатому отзыву');
+    assert_true(strpos($js, 'if (mine !== seq || quiet) { return; }') !== false,
+        'сетевая осечка в фоне не сносит страницу');
+
+    // Человек отлистал историю вверх — перечитка не должна дёргать его вниз.
+    assert_true(strpos($js, 'log.scrollTop = (keepScroll && !atBottom) ? keepAt : log.scrollHeight;') !== false,
+        'прокрутка сохраняется, если человек читает старое');
+});
+
+// Черновик принадлежит ДИАЛОГУ, а не полю ввода. Общий на всех он означал бы,
+// что начатое одному человеку сообщение уезжает другому — молча, одним
+// нажатием «Отправить».
+test('черновик остаётся в своём диалоге', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    assert_true(strpos($js, 'var drafts = {};') !== false, 'черновики хранятся по диалогам');
+    assert_true(strpos($js, 'drafts[state.thread] = input.value;') !== false,
+        'при уходе из диалога черновик запоминается');
+    assert_true(strpos($js, "input.value = drafts[state.thread] || '';") !== false,
+        'при возврате — восстанавливается');
+    assert_true(strpos($js, "drafts[state.thread] = '';") !== false,
+        'после отправки черновик пуст');
+    assert_true(strpos($js, 'drafts[state.thread] = text;') !== false,
+        'а если не отправилось — текст возвращается на место');
+});
+
+// Вход в переписку с конкретным человеком: /chat?to=<roblox_id>. Отсюда чат
+// становится чатом — до этого диалог нельзя было начать вообще.
+test('/chat?to= открывает переписку с человеком', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+
+    assert_true((bool)preg_match("~/\[\?&\]to=~", $js) || strpos($js, "to=(\\d{1,20})") !== false,
+        'номер собеседника читается из адреса');
+    assert_true(strpos($js, "post('/api/chat_open.php', { to: peer })") !== false,
+        'ветка заводится POST-ом, а не GET-ом с параметром');
+
+    // Параметр из адреса убирается: иначе перезагрузка и «назад» повторяли бы
+    // открытие, а адрес в строке врал бы про то, что сейчас открыто.
+    assert_true(strpos($js, "history.replaceState(null, '', location.pathname)") !== false,
+        'параметр не остаётся в адресной строке');
+
+    // Не открылось — страница всё равно работает, просто со своим списком.
+    assert_true(strpos($js, 'load(0).then(pollLater, pollLater);') !== false,
+        'осечка не оставляет страницу пустой');
+
+    $api = cp_read($PUB . '/api/chat_open.php');
+    assert_true(strpos($api, 'require_post();') !== false, 'ручка только POST');
+    assert_true(strpos($api, "rate_limit_allow('chat_open'") !== false, 'и с ограничением частоты');
+    assert_true(strpos($api, "header('Cache-Control: no-store');") !== false, 'ответ не кешируется');
+});
+
+// Список диалогов объявлен как role="tablist" — значит и вести себя обязан
+// как он: по вкладкам ходят стрелками, а Tab перескакивает список целиком.
+// Иначе у человека с полусотней переписок до поля ввода полсотни нажатий.
+test('по списку диалогов ходят стрелками', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    assert_true(strpos($js, "b.tabIndex = t.id === state.thread ? 0 : -1;") !== false,
+        'в обходе по Tab остаётся только открытый диалог');
+    assert_true(strpos($js, "tabs.forEach(function (t, i) { t.tabIndex = i === next ? 0 : -1; });") !== false,
+        'и метка переезжает вслед за фокусом');
+    foreach (['ArrowDown', 'ArrowUp', 'Home', 'End'] as $key) {
+        assert_true(strpos($js, "'" . $key . "'") !== false, "стрелка $key обслуживается");
+    }
+    // Вкладка обязана называть панель, которой управляет.
+    assert_true(strpos($js, "b.setAttribute('aria-controls', 'ctRoom');") !== false,
+        'вкладка связана с панелью переписки');
+    assert_true(strpos(cp_markup(cp_read($PUB . '/chat.php')), 'id="ctRoom"') !== false,
+        'и панель с таким id существует');
+});
+
+// Аватар приезжает с CDN Roblox. Без no-referrer каждый показ списка диалогов
+// сообщает чужому домену адрес нашей страницы.
+test('аватары в списке не сообщают Roblox, откуда их грузят', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    $at = strpos($js, "img.src = t.peer.avatar;");
+    assert_true($at !== false, 'аватар подставляется');
+    assert_true(strpos(substr($js, max(0, $at - 120), 160), "referrerPolicy = 'no-referrer'") !== false,
+        'и перед этим выставлен no-referrer');
+});
+
+// Половину текстов чата пишет скрипт: пустые состояния, приглашение войти,
+// заголовок комнаты. Общий проход по [data-i18n] до них не достаёт — у этих
+// узлов ключа в разметке нет. Без отдельной перерисовки переключатель языка
+// менял бы только половину страницы.
+test('смена языка перерисовывает и то, что пишет скрипт', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    $at = strpos($js, "document.querySelectorAll('#langSwitch [data-lang]')");
+    assert_true($at !== false, 'общий проход по языку найден');
+    $after = substr($js, $at, 1200);
+
+    assert_true(strpos($after, 'renderList();') !== false, 'список диалогов перерисовывается');
+    assert_true(strpos($after, 'renderRoom(state.messages,') !== false,
+        'и переписка — вместе с заголовком и пустым состоянием');
+    assert_true(strpos($after, "gate.textContent = tx('chat.login'") !== false,
+        'приглашение войти переводится');
+    assert_true(strpos($after, "pageEmpty.textContent = tx('chat.notReady'") !== false,
+        'и «чаты появятся вместе с аккаунтами» тоже');
+
+    // Заголовок комнаты строится одной функцией — иначе смена языка затёрла
+    // бы ссылку на профиль собеседника обычным текстом.
+    assert_eq(2, substr_count($js, 'roomTitle.textContent'),
+        'заголовок пишется только внутри roomTitleFor');
+    assert_true(strpos($js, 'state.messages = d.messages || [];') !== false,
+        'последняя переписка сохранена — иначе перерисовывать нечем');
+});
+
+// --------------------------------------------------------------------------
+//  Что чат обязан пережить
+// --------------------------------------------------------------------------
+
+// Обрыв сети посреди отправки. fetch при этом не возвращает ответ, а БРОСАЕТ:
+// без перехвата поле ввода оставалось выключенным навсегда, набранный текст
+// исчезал, и на экране не появлялось ни слова о том, что случилось.
+test('обрыв сети при отправке не запирает поле и не съедает текст', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+
+    $at = strpos($js, 'async function post(url, payload)');
+    assert_true($at !== false, 'отправщик найден');
+    $body = substr($js, $at, 700);
+    assert_true(strpos($body, 'try {') !== false, 'сетевая осечка перехвачена');
+    assert_true(strpos($body, 'return { ok: false, status: 0, data: null };') !== false,
+        'и превращается в обычный неуспех, а не в исключение');
+
+    // Дальше по неуспеху отрабатывает общая ветка: текст возвращается в поле,
+    // человеку пишут, что не отправилось.
+    assert_true(strpos($js, 'input.disabled = false;') !== false, 'поле разблокируется');
+    assert_true(strpos($js, "input.value = text;") !== false, 'текст возвращается');
+    assert_true(strpos($js, "tx('chat.sendFailed'") !== false, 'и человеку об этом говорят');
+});
+
+// Отзыв — такой же черновик, как сообщение, и терять его нельзя: человек
+// ставит оценку, дописывает реплику в чат, отправляет — и оценка откатывалась
+// к сохранённой на сервере, молча и незаметно (фокус в это время в поле ввода).
+test('начатый отзыв переживает отправку сообщения и смену диалога', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    assert_true(strpos($js, 'var reviewDrafts = {};') !== false, 'черновики отзывов хранятся');
+    assert_true(strpos($js, 'reviewDrafts[state.thread] = { stars: n, body: reviewTxt.value };') !== false,
+        'начатый отзыв запоминается');
+    assert_true(strpos($js, 'delete reviewDrafts[state.thread];') !== false,
+        'а сохранённый — забывается, иначе правка из другой вкладки никогда не подтянется');
+    assert_true(strpos($js, 'function keepDrafts()') !== false, 'черновики снимаются одним местом');
+
+    // Отправка сообщения перечитывает страницу ТИХО: иначе она же и затирала
+    // бы всё, что человек набрал, пока летел ответ.
+    assert_true(strpos($js, "      keepDrafts();\n      load(state.thread, true);") !== false,
+        'после отправки перечитка тихая');
+});
+
+// На телефоне список диалогов выезжает поверх переписки. Закрыть его было
+// нечем: он накрывал собственную кнопку, и человек оставался в нём заперт.
+test('список диалогов на телефоне закрывается', function () use ($PUB) {
+    $js  = cp_read($PUB . '/js/chat-page.js');
+    $css = cp_read($PUB . '/css/chat.css');
+
+    assert_true(strpos($js, 'function railOpen(next)') !== false, 'открытие и закрытие в одном месте');
+    assert_true(strpos($js, "list.addEventListener('click', function () { railOpen(false); });") !== false,
+        'выбор диалога закрывает список');
+    assert_true(strpos($js, 'if (rail.contains(e.target) || railToggle.contains(e.target)) { return; }') !== false,
+        'клик мимо списка закрывает его');
+    assert_true(strpos($js, "if (e.key === 'Escape' && shell.classList.contains('rail-open'))") !== false,
+        'и Escape тоже');
+
+    // И главное: панель больше не лежит поверх своей кнопки.
+    $at = strpos($css, '@media (max-width: 900px)');
+    assert_true($at !== false, 'медиазапрос найден');
+    assert_true(strpos(substr($css, $at), 'inset: 58px auto 10px 10px;') !== false,
+        'список начинается ниже шапки комнаты, где стоит кнопка');
+});
+
+// Шапка /chat собрана по образцу calculator.php — вместе с пометкой текущей
+// страницы, которая осталась на «Калькуляторе». Скринридер на /chat объявлял
+// бы текущим разделом калькулятор.
+test('текущей страницей в шапке помечен чат, и только он', function () use ($PUB) {
+    $s = cp_markup(cp_read($PUB . '/chat.php'));
+    $head = substr($s, strpos($s, '<header class="mk-top">'));
+    $head = substr($head, 0, strpos($head, '</header>'));
+
+    assert_eq(1, substr_count($head, 'aria-current="page"'), 'пометка ровно одна');
+    assert_true((bool)preg_match('/<a class="mk-chat" href="\/chat"[^>]*aria-current="page"/u', $head),
+        'и стоит она на чате');
+    assert_eq(0, preg_match('/href="\/calculator" aria-current/u', $head),
+        'на калькуляторе её нет');
+});
+
+// Лента объявлена как role="log" aria-live="polite": всё, что в неё попадает,
+// скринридер читает вслух. Полная пересборка на каждой фоновой перечитке —
+// это весь диалог заново, каждые десять секунд. Дописываем только новое.
+test('фоновая перечитка дописывает сообщения, а не пересобирает ленту', function () use ($PUB) {
+    $js = cp_read($PUB . '/js/chat-page.js');
+    $s  = cp_markup(cp_read($PUB . '/chat.php'));
+
+    assert_true(strpos($s, 'role="log"') !== false, 'лента объявлена как журнал');
+    assert_true(strpos($s, 'aria-live="polite"') !== false, 'и читается вслух');
+
+    assert_true(strpos($js, 'function sameHead(messages)') !== false,
+        'уже показанное сверяется с пришедшим');
+    // И сверка действительно применяется: объявить её и не позвать — ровно та
+    // правка, после которой лента снова пересобиралась бы целиком.
+    assert_true(strpos($js, 'var from = keepScroll && peer ? sameHead(messages) : -1;') !== false,
+        'сверка применяется при тихой перерисовке');
+    assert_true(strpos($js, 'if (from >= 0) {') !== false, 'и решает, дописывать или пересобирать');
+    assert_true(strpos($js, "if (shown[i].dataset.id !== String(messages[i].id)) { return -1; }") !== false,
+        'сверка по настоящим номерам сообщений, а не по количеству');
+    assert_true(strpos($js, 'li.dataset.id = String(m.id);') !== false, 'номер есть на каждом пузыре');
+    assert_true(strpos($js, 'for (var k = from; k < messages.length; k++) { log.appendChild(bubble(messages[k])); }') !== false,
+        'дописывается только хвост');
+
+    // Заголовок комнаты при этом пересобирается всегда: он зависит от языка.
+    $at = strpos($js, 'function renderRoom(');
+    assert_true($at !== false && strpos(substr($js, $at, 400), 'roomTitleFor(peer);') !== false,
+        'заголовок обновляется до ветки с дописыванием');
+});
+
 run_tests();
