@@ -1046,4 +1046,27 @@ test('в отдаваемых файлах профиля нет пояснит�
     }
 });
 
+// Профиль показывает репутацию и «о себе» затем, чтобы понять, иметь ли с
+// человеком дело. Следующий шаг — написать ему, и путь туда должен быть на
+// той же странице, а не в памяти о том, что у сайта есть /chat.
+test('с чужого профиля можно написать человеку', function () use ($PUB) {
+    $page = pf_read($PUB . '/profile.php');
+
+    assert_true(strpos($page, "\$pfChat = is_file(__DIR__ . '/chat.php');") !== false,
+        'наличие чата проверяется, а не задаётся флагом руками');
+    assert_true(strpos($page, '<?php if (!$pfSelf && $pfChat): ?>') !== false,
+        'кнопка только на чужом профиле и только когда чат есть');
+    assert_true(strpos($page, 'href="/chat?to=<?= htmlspecialchars($pfWho, ENT_QUOTES, \'UTF-8\') ?>"') !== false,
+        'ведёт в переписку именно с этим человеком, и номер экранирован');
+    pf_assert_key(pf_read($PUB . '/js/i18n.js'), 'profile.write');
+    assert_true(strpos(pf_read($PUB . '/css/profile.css'), '.pf-write-link') !== false,
+        'и у неё есть свой вид');
+
+    // Свой профиль такой кнопки не несёт: писать самому себе некуда.
+    $mine = pf_render('900000001', '');
+    assert_true($mine !== null, 'своя страница отрендерилась');
+    if ($mine === null) { return; }
+    assert_eq(0, substr_count($mine['html'], 'pf-write'), 'на своём профиле кнопки нет');
+});
+
 run_tests();

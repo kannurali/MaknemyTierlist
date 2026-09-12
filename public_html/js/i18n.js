@@ -43,6 +43,7 @@
 
       "profile.aboutTitle":     "О себе",
       "profile.aboutTitlePeer": "Об игроке",
+      "profile.write":          "Написать",
       "profile.aboutEmpty":     "Опишите себя так, чтобы остальным захотелось с вами трейд ;)",
       "profile.aboutNone":      "Здесь пока ничего не написано",
       "profile.aboutSave":      "Сохранить",
@@ -530,6 +531,7 @@
 
       "profile.aboutTitle":     "About",
       "profile.aboutTitlePeer": "About the player",
+      "profile.write":          "Message",
       "profile.aboutEmpty":     "Describe yourself so others want to trade with you ;)",
       "profile.aboutNone":      "Nothing here yet",
       "profile.aboutSave":      "Save",

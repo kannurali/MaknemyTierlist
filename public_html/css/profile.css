@@ -110,6 +110,27 @@
   box-shadow: 0 0 calc(9 * var(--u)) currentColor;
 }
 
+.pf-write {
+  margin: calc(14 * var(--u)) 0 0;
+  text-align: center;
+}
+
+.pf-write-link {
+  display: inline-block;
+  padding: calc(10 * var(--u)) calc(26 * var(--u));
+  border-radius: calc(40 * var(--u));
+  background: var(--pf-grad);
+  font-family: "Oswald", var(--ui);
+  font-size: max(14px, calc(18 * var(--u)));
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #fff;
+  transition: opacity .16s ease;
+}
+
+.pf-write-link:hover { opacity: .88; }
+
 .pf-meta { position: static; }
 
 .pf-react {
@@ -724,6 +745,9 @@
     font-size: 17px;
     line-height: 1.35;
   }
+
+  .pf-write { margin-top: 12px; }
+  .pf-write-link { padding: 10px 22px; border-radius: 999px; font-size: 15px; }
 
   .pf-about-title { margin-top: 22px; font-size: 19px; line-height: 1.2; }
 
