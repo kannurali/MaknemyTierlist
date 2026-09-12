@@ -100,7 +100,7 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
 <script src="js/topbar.js?v=5" defer></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/chat.css?v=2" />
+<link rel="stylesheet" href="css/chat.css?v=5" />
 
 
 
@@ -143,7 +143,7 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
         </li>
         <li>
 
-          <a class="mk-pill" href="/calculator" aria-current="page">
+          <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
           </a>
@@ -177,7 +177,7 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
     <p class="ct-gate" id="ctGate" hidden></p>
 
     <div class="ct-shell" id="ctShell"<?= $ctProfile ? ' data-profile="1"' : '' ?> hidden>
-      <aside class="ct-rail" aria-labelledby="ctRailTitle">
+      <aside class="ct-rail" id="ctRail" aria-labelledby="ctRailTitle">
         <h2 class="ct-sr-only" id="ctRailTitle" data-i18n="chat.threads">Диалоги</h2>
         <ul class="ct-list" id="ctList" role="tablist" aria-orientation="vertical"></ul>
         <p class="ct-rail-empty" id="ctRailEmpty" hidden></p>
@@ -197,6 +197,16 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
         <p class="ct-room-empty" id="ctRoomEmpty" hidden></p>
 
         <form class="ct-compose" id="ctCompose" hidden>
+          <button class="ct-emoji-btn" type="button" id="ctEmojiBtn"
+                  aria-expanded="false" aria-controls="ctEmoji"
+                  data-i18n-label="chat.emoji" aria-label="Смайлики"
+                  data-i18n-title="chat.emoji" title="Смайлики">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M8.3 14.2c.9 1.3 2.2 2 3.7 2s2.8-.7 3.7-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.1" cy="9.8" r="1.25" fill="currentColor"/><circle cx="14.9" cy="9.8" r="1.25" fill="currentColor"/></svg>
+          </button>
+
+          <div class="ct-emoji" id="ctEmoji" role="group"
+               data-i18n-label="chat.emoji" aria-label="Смайлики" hidden></div>
+
           <label class="ct-sr-only" for="ctInput" data-i18n="chat.inputLabel">Сообщение</label>
           <input class="ct-input" id="ctInput" type="text" autocomplete="off"
                  maxlength="2000" data-i18n-placeholder="chat.placeholder"
@@ -295,8 +305,8 @@ $ctProfile = is_file(__DIR__ . '/profile.php');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=41"></script>
-  <script src="js/chat-page.js?v=2" defer></script>
+  <script src="js/i18n.js?v=42"></script>
+  <script src="js/chat-page.js?v=7" defer></script>
 
 
 </body>

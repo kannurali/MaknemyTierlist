@@ -454,4 +454,99 @@ test('без колонок репутации отзыв всё равно со
     assert_eq(5, (int)$row['stars'], 'и лёг в свою таблицу');
 });
 
+// --------------------------------------------------------------------------
+//  Начало диалога
+// --------------------------------------------------------------------------
+
+// Без этого чат был только для чтения: ветки заводила одна сеялка, то есть на
+// бою список диалогов оставался пустым навсегда, и написать было некому.
+
+test('диалог заводится и второй раз не заводится', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    $a  = ch_user($pdo, '22', 'A');
+
+    [$st, $p] = chat_open($pdo, $me, $a, CH_NOW);
+    assert_eq(200, $st, 'ответ 200');
+    assert_eq(true, $p['ok'], 'ok');
+    assert_true($p['thread'] > 0, 'ветка заведена');
+
+    [$st2, $p2] = chat_open($pdo, $me, $a, CH_NOW);
+    assert_eq($p['thread'], $p2['thread'], 'та же ветка, а не вторая');
+    assert_eq(1, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'строка одна');
+
+    // И с другой стороны — тоже она же: пара нормализована.
+    [, $p3] = chat_open($pdo, $a, $me, CH_NOW);
+    assert_eq($p['thread'], $p3['thread'], 'собеседник попадает в тот же диалог');
+    assert_eq(1, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'и строка по-прежнему одна');
+});
+
+// Пустая ветка не должна вытеснять из списка те, где люди действительно
+// говорили: список сортируется по времени последнего сообщения.
+test('новый диалог не лезет вперёд разговоров', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    $a  = ch_user($pdo, '22', 'A');
+    $b  = ch_user($pdo, '33', 'B');
+    $old = ch_thread($pdo, $me, $a, CH_NOW - 100);
+    chat_send($pdo, $me, $old, 'давний разговор', CH_NOW - 100);
+
+    [, $p] = chat_open($pdo, $me, $b, CH_NOW);
+    $list = chat_threads($pdo, $me, CH_NOW);
+    assert_eq(2, count($list), 'оба диалога в списке');
+    assert_eq($old, $list[0]['id'], 'сверху тот, где говорили');
+    assert_eq($p['thread'], $list[1]['id'], 'пустой ниже');
+});
+
+test('диалог сам с собой не заводится', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    [$st, $p] = chat_open($pdo, $me, $me, CH_NOW);
+    assert_eq(400, $st, 'отказ');
+    assert_eq('bad_peer', $p['error'], 'причина названа');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'строки нет');
+});
+
+// Иначе перебором ?to= заводятся ветки с несуществующими номерами: мусор,
+// который никто не увидит и никто не уберёт.
+test('диалог с несуществующим человеком не заводится', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    [$st, $p] = chat_open($pdo, $me, '999', CH_NOW);
+    assert_eq(404, $st, 'такого нет');
+    assert_eq('no_peer', $p['error'], 'причина названа');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'строки нет');
+});
+
+test('мусор вместо номера собеседника отклоняется', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    ch_user($pdo, '22', 'A');
+    foreach (['', 'abc', '2a', ' 22', '22 ', '-22', '2.2', '123456789012345678901'] as $bad) {
+        [$st] = chat_open($pdo, $me, $bad, CH_NOW);
+        assert_eq(400, $st, 'отклонено: ' . var_export($bad, true));
+    }
+    // Ведущие нули срезаются — как и везде, где номер приходит из адреса.
+    [$st, $p] = chat_open($pdo, $me, '022', CH_NOW);
+    assert_eq(200, $st, 'нули не мешают');
+    assert_true(chat_is_member($pdo, '22', $p['thread']), 'открылся диалог именно с 22');
+});
+
+test('анониму диалог не завести', function () {
+    $pdo = ch_db();
+    ch_user($pdo, '22', 'A');
+    [$st, $p] = chat_open($pdo, '', '22', CH_NOW);
+    assert_eq(401, $st, '401');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'строки нет');
+});
+
+// Таблиц чата на бою может не быть до миграции. Тогда «открыть диалог» —
+// не ошибка кода, а «раздел ещё не включён».
+test('без таблиц чата открытие честно отвечает 503', function () {
+    $pdo = test_db();
+    [$st, $p] = chat_open($pdo, '11', '22', CH_NOW);
+    assert_eq(503, $st, 'не пятисотка и не молчание');
+    assert_eq('unavailable', $p['error'], 'причина названа');
+});
+
 run_tests();

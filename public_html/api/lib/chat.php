@@ -212,6 +212,56 @@ function chat_last_messages(PDO $pdo, array $threadIds): array {
  * Проверка обязана быть у КАЖДОГО обращения к переписке. Без неё достаточно
  * подобрать номер ветки в адресе, чтобы читать и писать в чужой диалог.
  */
+/**
+ * Открыть диалог с человеком: вернуть существующий или завести новый.
+ * [код, тело] — как у остальных обработчиков.
+ *
+ * Единственное место, где ветки вообще появляются. До него переписку можно
+ * было только читать: ветки заводила лишь сеялка, то есть на бою чат был
+ * пуст навсегда.
+ *
+ * Собеседник обязан существовать в users. Иначе перебором ?to= заводились бы
+ * ветки с несуществующими номерами — мусор в базе, который никто не увидит и
+ * никто не уберёт.
+ *
+ * Сам с собой — нет. Пара нормализуется как a_id < b_id (chat_pair), и для
+ * такой «пары» обе колонки совпали бы: диалог с собой прошёл бы проверку
+ * членства и выглядел бы как обычный, но собеседника в нём нет.
+ */
+function chat_open(PDO $pdo, string $me, string $peerRaw, int $now): array {
+    if ($me === '') { return [401, ['ok' => false, 'error' => 'unauthorized']]; }
+    if (!chat_ready($pdo)) { return [503, ['ok' => false, 'error' => 'unavailable']]; }
+
+    $peer = preg_match('/^\d{1,20}\z/', $peerRaw) === 1 ? ltrim($peerRaw, '0') : '';
+    if ($peer === '' || $peer === $me) { return [400, ['ok' => false, 'error' => 'bad_peer']]; }
+
+    $st = $pdo->prepare('SELECT 1 FROM users WHERE roblox_id = :id');
+    $st->execute([':id' => $peer]);
+    if ($st->fetchColumn() === false) { return [404, ['ok' => false, 'error' => 'no_peer']]; }
+
+    [$a, $b] = chat_pair($me, $peer);
+
+    $sel = $pdo->prepare('SELECT id FROM chat_threads WHERE a_id = :a AND b_id = :b');
+    $sel->execute([':a' => $a, ':b' => $b]);
+    $id = $sel->fetchColumn();
+    if ($id !== false) { return [200, ['ok' => true, 'thread' => (int)$id]]; }
+
+    // last_at нулевой: переписки ещё нет, и пустая ветка не должна вытеснять
+    // из списка те, где people действительно говорили.
+    try {
+        $ins = $pdo->prepare('INSERT INTO chat_threads (a_id, b_id, last_at) VALUES (:a, :b, 0)');
+        $ins->execute([':a' => $a, ':b' => $b]);
+        return [200, ['ok' => true, 'thread' => (int)$pdo->lastInsertId()]];
+    } catch (PDOException $e) {
+        // Гонка двух вкладок: UNIQUE(a_id, b_id) не дал завести вторую ветку.
+        // Это не ошибка — нужная ветка уже есть, её и возвращаем.
+        $sel->execute([':a' => $a, ':b' => $b]);
+        $id = $sel->fetchColumn();
+        if ($id !== false) { return [200, ['ok' => true, 'thread' => (int)$id]]; }
+        return [500, ['ok' => false, 'error' => 'failed']];
+    }
+}
+
 function chat_is_member(PDO $pdo, string $me, int $threadId): bool {
     if ($me === '' || $threadId <= 0) { return false; }
     $st = $pdo->prepare('SELECT 1 FROM chat_threads WHERE id = :t AND (a_id = :me OR b_id = :me)');
