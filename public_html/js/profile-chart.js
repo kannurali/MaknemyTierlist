@@ -149,10 +149,12 @@
       }
     }
 
-    const sum = data.totals.sum, scale = data.totals.scale;
-    barFill.style.width = scale > 0 ? Math.max(0, Math.min(100, (sum / scale) * 100)) + '%' : '0%';
-    barNow.textContent  = fmt(sum);
-    barMax.textContent  = fmt(scale);
+    if (barFill && barNow && barMax) {
+      const sum = data.totals.sum || 0, scale = data.totals.scale || 0;
+      barFill.style.width = scale > 0 ? Math.max(0, Math.min(100, (sum / scale) * 100)) + '%' : '0%';
+      barNow.textContent  = fmt(sum);
+      barMax.textContent  = fmt(scale);
+    }
     root.classList.toggle('is-empty', !any);
 
     if (table) { renderTable(data, days); }
@@ -177,11 +179,14 @@
     caption.textContent = monthLabel(data.month);
     table.appendChild(caption);
 
+    const money = days.some(d => d.sum !== undefined);
+    const cols  = [tx('profile.chartDay', 'День'), tx('profile.chartOk', 'Успешно'),
+                   tx('profile.chartFail', 'Отказ')];
+    if (money) { cols.push(tx('profile.chartSum', 'Оборот')); }
+
     const head = document.createElement('thead');
     const hrow = document.createElement('tr');
-    [tx('profile.chartDay', 'День'), tx('profile.chartOk', 'Успешно'),
-     tx('profile.chartFail', 'Отказ'), tx('profile.chartSum', 'Оборот')]
-      .forEach(t => hrow.appendChild(cell('th', t, 'col')));
+    cols.forEach(t => hrow.appendChild(cell('th', t, 'col')));
     head.appendChild(hrow);
     table.appendChild(head);
 
@@ -190,7 +195,7 @@
     if (!rows.length) {
       const tr = document.createElement('tr');
       const td = cell('td', '—');
-      td.colSpan = 4;
+      td.colSpan = cols.length;
       tr.appendChild(td);
       body.appendChild(tr);
     } else {
@@ -199,7 +204,7 @@
         tr.appendChild(cell('th', String(d.day), 'row'));
         tr.appendChild(cell('td', String(d.ok)));
         tr.appendChild(cell('td', String(d.declined)));
-        tr.appendChild(cell('td', fmt(d.sum)));
+        if (money) { tr.appendChild(cell('td', fmt(d.sum))); }
         body.appendChild(tr);
       });
     }
@@ -243,10 +248,13 @@
     readout.hidden = false;
     const mi = Number(state.month.split('-')[1]) - 1;
     const dayMonth = lang() === 'en' ? MONTHS_EN[mi] + ' ' + d.day : d.day + ' ' + MONTHS_RU_GEN[mi];
-    readout.textContent = `${dayMonth} · `
-      + `${tx('profile.chartOk', 'Успешно')} ${d.ok} · `
-      + `${tx('profile.chartFail', 'Отказ')} ${d.declined} · `
-      + `${tx('profile.chartSum', 'Оборот')} ${fmt(d.sum)}`;
+    const parts = [dayMonth,
+      `${tx('profile.chartOk', 'Успешно')} ${d.ok}`,
+      `${tx('profile.chartFail', 'Отказ')} ${d.declined}`];
+    if (d.sum !== undefined) {
+      parts.push(`${tx('profile.chartSum', 'Оборот')} ${fmt(d.sum)}`);
+    }
+    readout.textContent = parts.join(' · ');
   }
 
   function hide() {
@@ -319,12 +327,11 @@
       failed = true;
       if (state && monthSel) { monthSel.value = state.month; }
       if (state) {
-        render({
-          ...state,
-          available: false,
-          days: state.days.map(d => ({ day: d.day, ok: 0, declined: 0, sum: 0 })),
-          totals: { ok: 0, declined: 0, sum: 0, scale: 0 },
-        });
+        const blank = o => Object.keys(o).reduce((n, k) => {
+          n[k] = k === 'day' ? o[k] : 0;
+          return n;
+        }, {});
+        render({ ...state, days: state.days.map(blank), totals: blank(state.totals) });
       }
       showError();
     } finally {
@@ -352,7 +359,10 @@
   let resizeTimer = null;
   window.addEventListener('resize', () => {
     if (resizeTimer) { clearTimeout(resizeTimer); }
-    resizeTimer = setTimeout(() => { if (state) { render(state); } }, 150);
+    resizeTimer = setTimeout(() => {
+      if (state) { render(state); }
+      if (failed) { showError(); }
+    }, 150);
   });
 
   load(null);

@@ -144,6 +144,27 @@ function pf_render(string $me, string $id): ?array {
     ];
 }
 
+// Содержимое блока <div>, открытого строкой $open, — со счётом вложенности.
+// Простое «искать следующий </div>» закрыло бы блок на первом же вложенном
+// узле, и проверка «лежит внутри» проходила бы для чего угодно ниже по
+// странице.
+function pf_inside(string $html, string $open): ?string {
+    $from = strpos($html, $open);
+    if ($from === false) { return null; }
+    $i = $from + strlen($open);
+    $depth = 1;
+    while ($depth > 0) {
+        $next  = strpos($html, '<div', $i);
+        $close = strpos($html, '</div>', $i);
+        if ($close === false) { return null; }
+        if ($next !== false && $next < $close) { $depth++; $i = $next + 4; continue; }
+        $depth--;
+        if ($depth === 0) { return substr($html, $from + strlen($open), $close - $from - strlen($open)); }
+        $i = $close + 6;
+    }
+    return null;
+}
+
 test('аноним видит предложение войти и ни строчки карточки', function () {
     $r = pf_render('', '');
     assert_true($r !== null, 'страница отрендерилась до конца');
@@ -199,7 +220,9 @@ test('чужой профиль: те же данные, но без опера�
     // а не спрятано стилями: спрятанное видно в исходнике и возвращается
     // одним снятым атрибутом.
     foreach (['pfLogout', 'pfSwitch', 'pfMenuToggle', 'pf-menu-list',
-              'profile.menuDelete', 'pfAboutInput', 'pfAboutSave'] as $mark) {
+              'profile.menuDelete', 'pfAboutInput', 'pfAboutSave',
+              'pf-bar-row', 'pfBarNow', 'pfBarFill', 'pfBarMax',
+              'profile.chartSum'] as $mark) {
         assert_eq(0, substr_count($h, $mark), "на чужом профиле нет: $mark");
     }
     assert_true(strpos($h, 'data-i18n="profile.aboutNone"') !== false,
@@ -263,6 +286,78 @@ test('свой профиль по своему же ?id= остаётся св�
     if ($r === null) { return; }
     assert_true(strpos($r['html'], 'id="pfLogout"') !== false, 'меню аккаунта на месте');
     assert_true(strpos($r['html'], 'id="pfAboutInput"') !== false, '«о себе» правится');
+    assert_true(strpos($r['html'], 'class="pf-bar-row"') !== false, 'и полоса оборота тоже');
+});
+
+// --------------------------------------------------------------------------
+//  Оборот — только своему
+// --------------------------------------------------------------------------
+
+// Число сделок работает сигналом доверия и на чужом профиле остаётся.
+// Оборот говорит другое — насколько ДОРОГИЕ у человека трейды, — и это ровно
+// тот признак, по которому выбирают, кого обманывать.
+//
+// Решает это СЕРВЕР, а не стили и не скрипт: спрятанное стилями видно в
+// исходнике и возвращается одним снятым атрибутом. Здесь проверяется именно
+// отрендеренная разметка, а не текст profile.php — в исходнике блок никуда
+// не делся, он просто стоит под `if ($pfSelf)`.
+test('полосу оборота печатает только свой профиль', function () use ($PUB) {
+    $mine = pf_render('900000001', '');
+    $peer = pf_render('900000001', '900000004');
+    assert_true($mine !== null && $peer !== null, 'обе страницы отрендерились');
+    if ($mine === null || $peer === null) { return; }
+
+    assert_true(strpos($mine['html'], 'class="pf-bar-row"') !== false, 'у себя полоса есть');
+    assert_true(strpos($mine['html'], 'data-i18n="profile.chartSum"') !== false, 'и подписана');
+    assert_true(strpos($mine['html'], 'id="pfBarFill"') !== false, 'и заполняется');
+
+    assert_eq(0, substr_count($peer['html'], 'pf-bar'), 'у чужого — ни следа');
+    assert_eq(0, substr_count($peer['html'], 'Оборот'), 'и самого слова тоже');
+
+    // График при этом на месте у обоих: убран оборот, а не статистика.
+    foreach (['mine' => $mine, 'peer' => $peer] as $who => $r) {
+        assert_true(strpos($r['html'], 'id="pfPlot"') !== false, "$who: поле графика");
+        assert_true(strpos($r['html'], 'id="pfStatDeals"') !== false, "$who: счётчик сделок");
+    }
+
+    // Ключ profile.chartSum остаётся живым (он подписывает полосу СВОЕГО
+    // профиля и печатается в подсказке по дню js/profile-chart.js) — без
+    // этой проверки его удаление или опечатка при следующей правке словаря
+    // прошли бы незамеченными: сама разметка использует его только на своём
+    // профиле, а тест выше это уже проверяет отдельно от словаря.
+    $i18n = pf_read($PUB . '/js/i18n.js');
+    pf_assert_key($i18n, 'profile.chartSum');
+});
+
+// Пустое состояние — абсолютное, и его содержащим блоком была вся фигура:
+// поле графика ему брат, а не родитель. Поэтому «сделок не было»
+// центрировалось по фигуре ЦЕЛИКОМ, вместе с шапкой и полосой оборота, и
+// стояло выше центра поля. Стоило убрать полосу с чужого профиля — промах
+// вырос вчетверо, причём именно там, где пустое состояние и видно всегда:
+// таблицы сделок на бою нет.
+//
+// Внутрь самой .pf-plot сообщение положить нельзя — render() начинается с
+// plot.textContent = '' и стёр бы его на первой перерисовке.
+test('сообщение о пустом месяце центрируется по полю графика', function () use ($PUB) {
+    $css = pf_read($PUB . '/css/profile.css');
+    assert_true((bool)preg_match('/\.pf-plot-wrap\s*\{[^}]*position:\s*relative/', $css),
+        'обёртка поля — содержащий блок для абсолютного сообщения');
+
+    // Обёртка одинакова на своём и на чужом: расхождение здесь было бы ещё
+    // одной причиной, по которой две страницы разъезжаются.
+    foreach (['' => 'свой', '900000004' => 'чужой'] as $id => $what) {
+        $r = pf_render('900000001', (string)$id);
+        assert_true($r !== null, "$what: страница отрендерилась");
+        if ($r === null) { continue; }
+        $inside = pf_inside($r['html'], '<div class="pf-plot-wrap">');
+        assert_true($inside !== null, "$what: обёртка поля есть и закрыта");
+        if ($inside === null) { continue; }
+        assert_true(strpos($inside, 'id="pfPlot"') !== false, "$what: поле внутри обёртки");
+        assert_true(strpos($inside, 'id="pfChartEmpty"') !== false,
+            "$what: сообщение о пустоте внутри той же обёртки");
+        assert_eq(0, substr_count($inside, 'id="pfReadout"'),
+            "$what: подсказка по дню снаружи — иначе высота обёртки перестанет равняться полю");
+    }
 });
 
 // Сессия переживает удаление аккаунта. Свой профиль такому зрителю уже не
@@ -1067,7 +1162,8 @@ test('в отдаваемых файлах профиля нет пояснит�
     // Знание из вырезанных комментариев не должно пропасть: контраст, поводы
     // для расхождений с макетом и уже случившиеся регрессии описаны в docs.
     $doc = pf_read($ROOT . '/docs/profile-page.md');
-    foreach (['244:7400', '--u', '7.39:1', 'line-height', 'order'] as $mark) {
+    foreach (['244:7400', '--u', '7.39:1', 'line-height', 'order',
+              'pf-bar-row', 'pf-plot-wrap'] as $mark) {
         assert_true(strpos($doc, $mark) !== false, "docs/profile-page.md помнит про «{$mark}»");
     }
 });

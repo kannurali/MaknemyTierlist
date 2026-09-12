@@ -312,6 +312,8 @@
 
 .pf-chart-month-select option { color: #111; background: #fff; }
 
+.pf-plot-wrap { position: relative; }
+
 .pf-plot {
   position: relative;
   height: calc(230 * var(--u));

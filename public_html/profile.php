@@ -127,7 +127,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" defer></script>
 <script src="js/topbar.js?v=7" defer></script>
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/profile.css?v=5" />
+<link rel="stylesheet" href="css/profile.css?v=6" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -279,19 +279,23 @@ $pfTitle = $pfNick !== ''
           </label>
         </figcaption>
 
-        <div class="pf-plot" id="pfPlot" tabindex="0"
-             data-i18n-label="profile.chartHint"
-             aria-label="Поле графика: стрелками влево и вправо — значения по дням"></div>
+        <div class="pf-plot-wrap">
+          <div class="pf-plot" id="pfPlot" tabindex="0"
+               data-i18n-label="profile.chartHint"
+               aria-label="Поле графика: стрелками влево и вправо — значения по дням"></div>
+          <p class="pf-chart-empty" id="pfChartEmpty" hidden></p>
+        </div>
 
         <p class="pf-chart-readout" id="pfReadout" role="status" aria-live="polite" hidden></p>
-        <p class="pf-chart-empty" id="pfChartEmpty" hidden></p>
 
+<?php if ($pfSelf): ?>
         <div class="pf-bar-row">
           <span class="pf-bar-label" data-i18n="profile.chartSum">Оборот</span>
           <span class="pf-bar-now" id="pfBarNow">0</span>
           <div class="pf-bar" role="presentation"><i class="pf-bar-fill" id="pfBarFill"></i></div>
           <span class="pf-bar-max" id="pfBarMax">0</span>
         </div>
+<?php endif; ?>
 
         <table class="pf-sr-only" id="pfChartTable"></table>
       </figure>
@@ -349,6 +353,6 @@ $pfTitle = $pfNick !== ''
 
   <script src="js/i18n.js?v=44"></script>
   <script src="js/profile-page.js?v=2" defer></script>
-  <script src="js/profile-chart.js?v=3" defer></script>
+  <script src="js/profile-chart.js?v=4" defer></script>
 </body>
 </html>

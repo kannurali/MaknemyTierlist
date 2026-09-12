@@ -78,12 +78,35 @@ function profile_stats_table_exists(PDO $pdo): bool {
 // Пустой каркас месяца. Строится ВСЕГДА и до похода в базу: у графика по оси
 // X все дни месяца, включая те, в которые сделок не было. Без этого линия
 // склеивала бы 3-е число с 17-м и врала о плотности.
-function profile_stats_empty_days(int $days): array {
+//
+// $self — свой ли это профиль. У чужого ключа 'sum' в дне НЕТ вовсе: не ноль,
+// а отсутствие. Ноль — это то же самое прятание значением, от которого
+// избавляет весь остальной код профиля: он утверждает «оборот есть, и он
+// нулевой», читается как правда и возвращается одной строкой при следующей
+// правке. Отсутствующий ключ утверждать нечего.
+function profile_stats_empty_days(int $days, bool $self): array {
     $series = [];
     for ($d = 1; $d <= $days; $d++) {
-        $series[] = ['day' => $d, 'ok' => 0, 'declined' => 0, 'sum' => 0];
+        $day = ['day' => $d, 'ok' => 0, 'declined' => 0];
+        if ($self) { $day['sum'] = 0; }
+        $series[] = $day;
     }
     return $series;
+}
+
+// Итоги месяца. Форму собирает одна функция на все три ветки ответа: она
+// решает, какие ключи вообще существуют, и разъехаться ветки не могут.
+//
+// Денежные поля — только своему. Число сделок работает сигналом доверия и
+// остаётся на чужом профиле; оборот же говорит, насколько ДОРОГИЕ у человека
+// трейды, а это ровно тот признак, по которому выбирают, кого обманывать.
+function profile_stats_totals(int $ok, int $declined, int $sum, int $scale, bool $self): array {
+    $totals = ['ok' => $ok, 'declined' => $declined];
+    if ($self) {
+        $totals['sum']   = $sum;
+        $totals['scale'] = $scale;
+    }
+    return $totals;
 }
 
 // Ответ анониму и тому, чья сессия ссылается на исчезнувшего пользователя.
@@ -96,8 +119,8 @@ function profile_stats_guest(string $month, int $days, int $lastDay): array {
         'available' => false,
         'month'     => $month,
         'lastDay'   => $lastDay,
-        'days'      => profile_stats_empty_days($days),
-        'totals'    => ['ok' => 0, 'declined' => 0, 'sum' => 0, 'scale' => 0],
+        'days'      => profile_stats_empty_days($days, true),
+        'totals'    => profile_stats_totals(0, 0, 0, 0, true),
         'lifetime'  => ['ok' => 0, 'declined' => 0, 'total' => 0],
         'months'    => [],
     ]];
@@ -133,7 +156,15 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
     $target = profile_target($get);
     $who    = $target !== '' ? $target : $me;
 
-    $series = profile_stats_empty_days($days);
+    // Свой ли профиль — сравнением НОМЕРОВ, а не наличием ?id=. Страница
+    // печатает адресата графика всегда (data-profile на .pf-chart), поэтому
+    // ?id= приходит и со своего профиля тоже: проверка «параметр задан»
+    // отобрала бы оборот у владельца. То же правило, что у $pfSelf в
+    // profile.php, и по тем же нормализованным строкам (profile_id срезает
+    // ведущие нули, иначе ?id=007 перестал бы быть своим).
+    $self = ($who === $me);
+
+    $series = profile_stats_empty_days($days, $self);
 
     if (!profile_stats_table_exists($pdo)) {
         return [200, [
@@ -143,7 +174,7 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
             'month'     => $month,
             'lastDay'   => $lastDay,
             'days'      => $series,
-            'totals'    => ['ok' => 0, 'declined' => 0, 'sum' => 0, 'scale' => 0],
+            'totals'    => profile_stats_totals(0, 0, 0, 0, $self),
             'lifetime'  => ['ok' => 0, 'declined' => 0, 'total' => 0],
             'months'    => [],
         ]];
@@ -155,8 +186,11 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
     $from = $month . '-01';
     $to   = sprintf('%s-%02d', $month, $days);
 
-    $stmt = $pdo->prepare(
-        'SELECT day, status, COUNT(*) AS n, SUM(value) AS v
+    // SUM(value) запрашиваем только там, где он поедет в ответ: чужому
+    // профилю оборот не нужен, и незачем поднимать его из базы.
+    $money = $self ? ', SUM(value) AS v' : '';
+    $stmt  = $pdo->prepare(
+        'SELECT day, status, COUNT(*) AS n' . $money . '
            FROM profile_trades
           WHERE user_id = :me AND day >= :from AND day <= :to
        GROUP BY day, status'
@@ -168,12 +202,14 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
         $d = (int)substr((string)$row['day'], 8, 2);
         if ($d < 1 || $d > $days) { continue; }
         $n = (int)$row['n'];
-        $v = (int)$row['v'];
+        $v = $self ? (int)$row['v'] : 0;
         if ((string)$row['status'] === 'ok') {
             $series[$d - 1]['ok'] += $n;
-            // Оборот считаем только по состоявшимся сделкам: отменённая не
-            // принесла ничего, и включать её сумму — приписывать оборот.
-            $series[$d - 1]['sum'] += $v;
+            if ($self) {
+                // Оборот считаем только по состоявшимся сделкам: отменённая не
+                // принесла ничего, и включать её сумму — приписывать оборот.
+                $series[$d - 1]['sum'] += $v;
+            }
             $totalOk  += $n;
             $totalSum += $v;
         } else {
@@ -191,19 +227,25 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
     // сделок нет вовсе; в этом случае полосу нечем масштабировать, и клиент
     // её не рисует. В макете под полосой стояли «0.3» и «180000» без
     // объяснения, что это; здесь границы — настоящие: 0 и лучший месяц.
+    //
+    // Чужому шкала не отдаётся, и запроса за ней не делаем вовсе: это
+    // САМОЕ дорогое из всего оборота — не месяц, а потолок за всю историю,
+    // то есть максимум, на который человек когда-либо торговал.
     $scale = 0;
-    try {
-        $best = $pdo->prepare(
-            "SELECT SUM(value) AS v FROM profile_trades
-              WHERE user_id = :me AND status = 'ok'
-           GROUP BY substr(day, 1, 7) ORDER BY v DESC LIMIT 1"
-        );
-        $best->execute([':me' => $who]);
-        $scale = (int)$best->fetchColumn();
-    } catch (PDOException $e) {
-        $scale = $totalSum;   // диалект не понял substr — деградируем, а не падаем
+    if ($self) {
+        try {
+            $best = $pdo->prepare(
+                "SELECT SUM(value) AS v FROM profile_trades
+                  WHERE user_id = :me AND status = 'ok'
+               GROUP BY substr(day, 1, 7) ORDER BY v DESC LIMIT 1"
+            );
+            $best->execute([':me' => $who]);
+            $scale = (int)$best->fetchColumn();
+        } catch (PDOException $e) {
+            $scale = $totalSum;   // диалект не понял substr — деградируем, а не падаем
+        }
+        if ($scale < $totalSum) { $scale = $totalSum; }
     }
-    if ($scale < $totalSum) { $scale = $totalSum; }
 
     // Счётчики под графиком — за всё время, а не за месяц: подпись под ними
     // говорит «чем больше сделок — тем выше опыт», а опыт по определению не
@@ -257,12 +299,7 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
         'month'     => $month,
         'lastDay'   => $lastDay,
         'days'      => $series,
-        'totals'    => [
-            'ok'       => $totalOk,
-            'declined' => $totalNo,
-            'sum'      => $totalSum,
-            'scale'    => $scale,
-        ],
+        'totals'    => profile_stats_totals($totalOk, $totalNo, $totalSum, $scale, $self),
         'lifetime'  => $life,
         'months'    => $months,
     ]];
