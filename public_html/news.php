@@ -360,7 +360,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/news.js?v=5"></script>
   <script src="js/news-blocks.js?v=2"></script>
 
-  <script src="js/promo.js?v=9"></script>
+  <script src="js/promo.js?v=10"></script>
 
   <script src="js/promo-dock.js?v=5"></script>
 
