@@ -3,9 +3,10 @@
 //   node tools/check-item-glow-ui.mjs [http://127.0.0.1:8880]
 //
 // tests/tags_test.php pins the markup, the dictionary and the CSS as text.
-// This drives the real page: the editor field and its live preview, the
-// published payload, the colour under hover, the phone size, and that the
-// PNG export still produces a file.
+// This drives the real page: every glow colour on the card, the legacy
+// `glow: true` left by the gold-only release (PR #71), the editor field and
+// its live preview, the published payload, the colour under hover, the phone
+// size, and that the PNG export still produces a file.
 //
 // The tier list comes from a fixture: api/tierlist.php, api/state.php,
 // api/promo.php and api/save.php are answered here, so the check needs no
@@ -22,28 +23,37 @@ import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
 
 const BASE = process.argv[2] || 'http://127.0.0.1:8880';
-const GOLD = '255, 226, 127';
+// Ядро свечения каждого цвета так, как его отдаёт getComputedStyle.
+const CORE = { gold: '255, 226, 127', green: '93, 255, 106', red: '255, 74, 74' };
+const COLORS = Object.keys(CORE);
 const CYAN = '79, 214, 255';
 
-const item = (id, name, value, extra = {}) => ({
-    id, name, value, icon: 'assets/icon-sample.png', type: 'f', demand: 'green', trend: '',
+const item = (id, value, extra = {}) => ({
+    id, name: id, value, icon: 'assets/icon-sample.png', type: 'f', demand: 'green', trend: '',
     desc: '', descEn: '', terms: '', termsEn: '', tag: '', tagEn: '', flag: false, wip: false,
     ...extra,
 });
 
-// «old» — предмет из сохранения, сделанного до появления поля glow.
+// legacy — так сохранял PR #71, nope — его «выключено», weird — цвета нет в
+// списке, old — сохранение, сделанное до появления поля.
+const EXPECT = { gold: 'gold', green: 'green', red: 'red', legacy: 'gold', off: '', nope: '', weird: '', old: '' };
 const FIXTURE = {
     title: 'MAKNEMY\nTIER LIST',
-    date: '16.09.2026',
+    date: '17.09.2026',
     autoSort: false,
     filters: { configurators: true, fruits: true, perms: false, passes: true },
     ad: { text: '', image: '', link: '' },
     tiers: [{
         id: 't1', label: 'MK', logo: 'assets/logo-mk.png',
         items: [
-            item('lit', 'Glowing', '3000', { glow: true }),
-            item('off', 'Plain', '2000', { glow: false }),
-            item('old', 'Legacy', '1000'),
+            item('gold', '8000', { glow: 'gold' }),
+            item('green', '7000', { glow: 'green' }),
+            item('red', '6000', { glow: 'red' }),
+            item('legacy', '5000', { glow: true }),
+            item('off', '4000', { glow: '' }),
+            item('nope', '3000', { glow: false }),
+            item('weird', '2000', { glow: 'blue' }),
+            item('old', '1000'),
         ],
     }],
     _rev: 1,
@@ -97,34 +107,36 @@ async function session(name, { admin = false, mobile = false }, body) {
 
 const iconFilter = (page, id) =>
     page.$eval(`.cell[data-id="${id}"] .cell-icon img`, el => getComputedStyle(el).filter);
-const glowing = (page, id) =>
-    page.$eval(`.cell[data-id="${id}"]`, el => el.classList.contains('glow'));
 const cellWidth = (page, id) =>
     page.$eval(`.cell[data-id="${id}"]`, el => el.getBoundingClientRect().width);
-
-// Размытие золотого ядра в px. Делённое на ширину ячейки, оно сравнимо
-// между компьютером и телефоном.
+// Только классы свечения, отсортированные: «glow glow-red» или пусто.
+const glowClasses = (page, sel) =>
+    page.$eval(sel, el => [...el.classList].filter(c => c === 'glow' || c.startsWith('glow-')).sort().join(' '));
+const expectClasses = color => (color ? ['glow', 'glow-' + color].sort().join(' ') : '');
+const coreOf = filter => COLORS.find(c => filter.includes(CORE[c])) || '';
+// Размытие первого слоя (ядра) в px. Делённое на ширину ячейки, оно
+// сравнимо между компьютером и телефоном.
 const coreBlur = filter => {
-    const m = new RegExp(`drop-shadow\\(rgba?\\(${GOLD}[^)]*\\) 0px 0px ([\\d.]+)px\\)`).exec(filter);
+    const m = /^drop-shadow\(rgba?\([^)]*\) 0px 0px ([\d.]+)px\)/.exec(filter);
     return m ? Number(m[1]) : NaN;
 };
 
 let deskRatio = NaN;
 
 await session('компьютер', {}, async page => {
-    check('класс glow только у предмета со свечением',
-        (await glowing(page, 'lit')) && !(await glowing(page, 'off')) && !(await glowing(page, 'old')), null);
-    const lit = await iconFilter(page, 'lit');
-    check('свечение золотое', lit.includes(GOLD), lit);
-    deskRatio = coreBlur(lit) / (await cellWidth(page, 'lit'));
-    const off = await iconFilter(page, 'off');
-    check('у остальных золота нет', !off.includes(GOLD), off);
+    for (const [id, color] of Object.entries(EXPECT)) {
+        const cls = await glowClasses(page, `.cell[data-id="${id}"]`);
+        const f = await iconFilter(page, id);
+        check(`${id}: свечение «${color || 'нет'}»`, cls === expectClasses(color) && coreOf(f) === color, { cls, f });
+    }
+    deskRatio = coreBlur(await iconFilter(page, 'gold')) / (await cellWidth(page, 'gold'));
 
-    await page.hover('.cell[data-id="lit"]');
-    await page.waitForTimeout(300);
-    const hovered = await iconFilter(page, 'lit');
-    check('при наведении свечение остаётся золотым', hovered.includes(GOLD) && !hovered.includes(CYAN), hovered);
-
+    for (const id of COLORS) {
+        await page.hover(`.cell[data-id="${id}"]`);
+        await page.waitForTimeout(300);
+        const f = await iconFilter(page, id);
+        check(`${id}: при наведении цвет не меняется`, coreOf(f) === id && !f.includes(CYAN), f);
+    }
     await page.hover('.cell[data-id="off"]');
     await page.waitForTimeout(300);
     const plain = await iconFilter(page, 'off');
@@ -132,12 +144,12 @@ await session('компьютер', {}, async page => {
 });
 
 await session('телефон', { mobile: true }, async page => {
-    const lit = await iconFilter(page, 'lit');
-    check('телефон: свечение золотое', lit.includes(GOLD), lit);
-    const ratio = coreBlur(lit) / (await cellWidth(page, 'lit'));
+    for (const [id, color] of Object.entries(EXPECT)) {
+        const f = await iconFilter(page, id);
+        check(`телефон: ${id} — свечение «${color || 'нет'}»`, color ? coreOf(f) === color : f === 'none', f);
+    }
+    const ratio = coreBlur(await iconFilter(page, 'gold')) / (await cellWidth(page, 'gold'));
     check('телефон: свечение заметнее, чем на компьютере', ratio > deskRatio * 1.3, { ratio, deskRatio });
-    const off = await iconFilter(page, 'off');
-    check('телефон: у остальных фильтра нет', off === 'none', off);
 });
 
 await session('админка', { admin: true }, async (page, saved) => {
@@ -149,46 +161,60 @@ await session('админка', { admin: true }, async (page, saved) => {
     });
     await page.waitForSelector('#stage.editing');
 
-    const active = v => page.$eval(`#mGlow button[data-v="${v}"]`, b => b.classList.contains('active'));
-    const preview = () => page.$eval('.icon-preview', el => el.classList.contains('glow'));
+    const selected = () => page.$eval('#mGlow button.active', b => b.dataset.v);
+    const preview = () => glowClasses(page, '.icon-preview');
+    const previewCore = async () => coreOf(await page.$eval('#mIconPreview', el => getComputedStyle(el).filter));
+    const cardClasses = id => glowClasses(page, `.cell[data-id="${id}"]`);
     const openItem = async id => {
         await page.click(`.cell[data-id="${id}"]`);
         await page.waitForSelector('#modal:not([hidden])');
     };
+    const pick = v => page.click(`#mGlow button[data-v="${v}"]`);
 
-    await openItem('lit');
-    check('окно: у светящегося выбрано «Свечение»', (await active('on')) && !(await active('')), null);
-    check('окно: превью светится', await preview(), null);
-    const pf = await page.$eval('#mIconPreview', el => getComputedStyle(el).filter);
-    check('окно: превью золотое', pf.includes(GOLD), pf);
+    await openItem('legacy');
+    const buttons = await page.$$eval('#mGlow button', bs => bs.map(b => b.dataset.v));
+    check('окно: кнопки «—» и три цвета', JSON.stringify(buttons) === JSON.stringify(['', ...COLORS]), buttons);
+    for (const c of COLORS) {
+        const color = await page.$eval(`#mGlow button[data-v="${c}"]`, b => getComputedStyle(b).color);
+        check(`окно: кнопка ${c} подписана своим цветом`, color.includes(CORE[c]), color);
+    }
+    check('окно: старое true открывается «Золотым»', (await selected()) === 'gold', await selected());
+    check('окно: превью золотое',
+        (await preview()) === expectClasses('gold') && (await previewCore()) === 'gold', await preview());
+    await pick('red');
+    check('окно: «Красное» сразу перекрашивает превью',
+        (await preview()) === expectClasses('red') && (await previewCore()) === 'red', await preview());
+    await page.click('#modalClose');
+    check('крестик без «Готово» ничего не меняет', (await cardClasses('legacy')) === expectClasses('gold'), await cardClasses('legacy'));
+
+    await openItem('legacy');
+    check('окно: превью сбрасывается при новом открытии', (await preview()) === expectClasses('gold'), await preview());
+    await page.click('#mSave');
+    check('«Готово» без правок оставляет старое true золотым', (await cardClasses('legacy')) === expectClasses('gold'), await cardClasses('legacy'));
+
+    await openItem('weird');
+    check('окно: неизвестный цвет открывается как «—»', (await selected()) === '' && (await preview()) === '', await selected());
     await page.click('#modalClose');
 
     await openItem('off');
-    check('окно: у обычного выбрано «—»', (await active('')) && !(await active('on')), null);
-    check('окно: превью обычного не светится', !(await preview()), null);
-    await page.click('#mGlow button[data-v="on"]');
-    check('окно: щелчок сразу зажигает превью', await preview(), null);
-    await page.click('#modalClose');
-    check('крестик без «Готово» свечение не ставит', !(await glowing(page, 'off')), null);
-
-    await openItem('off');
-    check('окно: превью сбрасывается при новом открытии', !(await preview()), null);
-    await page.click('#mGlow button[data-v="on"]');
+    await pick('green');
     await page.click('#mSave');
-    check('«Готово» зажигает предмет', await glowing(page, 'off'), null);
+    check('«Готово» зажигает зелёным', (await cardClasses('off')) === expectClasses('green'), await cardClasses('off'));
 
-    await openItem('lit');
-    await page.click('#mGlow button[data-v=""]');
-    check('окно: «—» гасит превью', !(await preview()), null);
+    await openItem('gold');
+    await pick('');
+    check('окно: «—» гасит превью', (await preview()) === '', await preview());
     await page.click('#mSave');
-    check('«Готово» гасит предмет', !(await glowing(page, 'lit')), null);
+    check('«Готово» снимает свечение', (await cardClasses('gold')) === '', await cardClasses('gold'));
 
     await page.click('#btnSave');
     await page.waitForFunction(() => document.querySelector('#btnSave').classList.contains('clean'));
     const last = saved[saved.length - 1];
-    const glowById = last ? Object.fromEntries(last.tiers[0].items.map(i => [i.id, i.glow])) : null;
-    check('публикация уносит поле glow',
-        !!glowById && glowById.off === true && glowById.lit === false, glowById);
+    const items = last ? last.tiers[0].items : [];
+    const glowById = Object.fromEntries(items.map(i => [i.id, 'glow' in i ? i.glow : '(нет поля)']));
+    const want = { gold: '', green: 'green', red: 'red', legacy: 'gold', off: 'green', nope: false, weird: 'blue', old: '(нет поля)' };
+    check('публикация уносит строки цветов, нетронутые предметы как были',
+        JSON.stringify(glowById) === JSON.stringify(want), glowById);
 
     const [download] = await Promise.all([
         page.waitForEvent('download', { timeout: 60000 }),
