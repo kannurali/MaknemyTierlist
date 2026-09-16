@@ -334,30 +334,39 @@ test('выделение: цвета в модалке, словаре и app.js
         'openModal сбрасывает превью под открытый предмет');
 });
 
-// Свечение — золотой контур по форме иконки. Правило стоит ПОСЛЕ голубого
-// правила наведения: специфичность у них одна, и иначе при наведении голубое
-// перебивало бы золотое. На телефоне свои размеры: пропорциональное
-// десктопному свечение там почти не видно. Телефонное «filter: none» у
-// иконок менее специфично и свечение не гасит.
-test('свечение предмета: золотой контур, наведение не гасит, на телефоне сильнее', function () use ($PUB) {
-    $css  = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
-    $rule = '/\.cell\.glow \.cell-icon img \{\n\s*filter: drop-shadow\(0 0 ([\d.]+)cqw #ffe27f\) drop-shadow\(0 0 ([\d.]+)cqw rgba\(255,190,40,\.95\)\);\n\s*\}/';
+// Свечение — контур по форме иконки. Размеры общие, цвет приходит из
+// переменных: золото стоит и на голом .glow (класс без цвета из первой
+// версии), зелёный и красный переопределяют его ниже. Правило свечения стоит
+// ПОСЛЕ голубого правила наведения: специфичность у них одна, и иначе при
+// наведении голубое перебивало бы цветное. На телефоне свои размеры:
+// пропорциональное десктопному свечение там почти не видно.
+test('свечение предмета: цвета через переменные, наведение не гасит, на телефоне сильнее', function () use ($PUB) {
+    $css = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
+
+    $gold  = strpos($css, '.glow, .glow-gold { --glow-core: #ffe27f; --glow-halo: rgba(255,190,40,.95); }');
+    $green = strpos($css, '.glow-green { --glow-core: #5dff6a; --glow-halo: rgb(0,255,64); }');
+    $red   = strpos($css, '.glow-red { --glow-core: #ff4a4a; --glow-halo: rgb(255,0,0); }');
+    assert_true($gold !== false && $green !== false && $red !== false, 'три цвета заданы переменными');
+    assert_true($gold < $green && $gold < $red, 'золото объявлено раньше и не перебивает остальные');
+    assert_eq(1, substr_count($css, '#ffe27f'), 'золото записано в одном месте');
+
+    $rule = '/\.cell\.glow \.cell-icon img \{\n\s*filter: drop-shadow\(0 0 ([\d.]+)cqw var\(--glow-core\)\) drop-shadow\(0 0 ([\d.]+)cqw var\(--glow-halo\)\);\n\s*\}/';
     assert_eq(2, preg_match_all($rule, $css, $m, PREG_OFFSET_CAPTURE), 'одно правило для компьютера, одно для телефона');
     if (count($m[0]) !== 2) { return; }
 
     $hover = strpos($css, '.cell:hover .cell-icon img {');
     $phone = strpos($css, '@media (max-width: 640px)');
     $none  = strpos($css, '  .cell-icon img { filter: none; }');
-    assert_true($m[0][0][1] > $hover, 'золотое правило стоит после голубого наведения');
+    assert_true($m[0][0][1] > $hover, 'правило свечения стоит после голубого наведения');
     assert_true($m[0][0][1] < $phone, 'правило для компьютера — вне телефонных блоков');
     assert_true($m[0][1][1] > $none, 'правило для телефона — после телефонного filter: none');
     assert_eq(['.15', '.42'], [$m[1][0][0], $m[1][1][0]], 'ядро: компьютер, телефон');
     assert_eq(['.45', '1.27'], [$m[2][0][0], $m[2][1][0]], 'ореол: компьютер, телефон');
 
-    assert_true(strpos($css, '.icon-preview.glow img { filter: drop-shadow(0 0 1.5px #ffe27f) drop-shadow(0 0 4.5px rgba(255,190,40,.95)); }') !== false,
-        'превью в окне светится тем же золотом');
-    assert_true(strpos($css, '.seg .seg-glow { color: #ffe27f;') !== false,
-        'кнопка «Свечение» подписана золотым');
+    assert_true(strpos($css, '.icon-preview.glow img { filter: drop-shadow(0 0 1.5px var(--glow-core)) drop-shadow(0 0 4.5px var(--glow-halo)); }') !== false,
+        'превью в окне светится выбранным цветом');
+    assert_true(strpos($css, '.seg .seg-glow { color: var(--glow-core); text-shadow: 0 0 6px var(--glow-halo); }') !== false,
+        'кнопка цвета подписана своим цветом');
 });
 
 // --------------------------------------------------------------------------
