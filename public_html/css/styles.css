@@ -289,6 +289,9 @@
   image-rendering: auto;
   pointer-events: none;
 }
+.cell.glow .cell-icon img {
+  filter: drop-shadow(0 0 .15cqw #ffe27f) drop-shadow(0 0 .45cqw rgba(255,190,40,.95));
+}
 
 .cell-strip {
   position: relative;
@@ -925,6 +928,7 @@ body.ptn-locked { overflow: hidden; }
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .icon-preview img { max-width: 90%; max-height: 80%; }
+.icon-preview.glow img { filter: drop-shadow(0 0 1.5px #ffe27f) drop-shadow(0 0 4.5px rgba(255,190,40,.95)); }
 .icon-actions { display: flex; flex-direction: column; gap: 8px; }
 
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -944,6 +948,7 @@ body.ptn-locked { overflow: hidden; }
 .seg .trend.tr-swap { width: 22px; }
 
 .seg .trend.tr-new { width: 34px; }
+.seg .seg-glow { color: #ffe27f; text-shadow: 0 0 6px rgba(255,190,40,.8); }
 
 .seg button[class*="t-"] {
   background: rgba(8,16,32,.6); color: #cfe2ff; min-width: auto; height: 38px;
@@ -1143,6 +1148,9 @@ body.ptn-locked { overflow: hidden; }
   }
 
   .cell-icon img { filter: none; }
+  .cell.glow .cell-icon img {
+    filter: drop-shadow(0 0 .42cqw #ffe27f) drop-shadow(0 0 1.27cqw rgba(255,190,40,.95));
+  }
 
   .like-fab, .donate-fab {
     transition: transform .22s ease, opacity .22s ease,
