@@ -21,7 +21,7 @@
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
       desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "",
-      flag: false, wip: false,
+      flag: false, wip: false, glow: false,
     });
     return {
       title: "MAKNEMY\nTIER LIST",
@@ -623,7 +623,7 @@
 
   function renderCell(item, tier) {
     const cell = document.createElement("div");
-    cell.className = "cell";
+    cell.className = item.glow ? "cell glow" : "cell";
     cell.dataset.id = item.id;
     cell.dataset.group = groupOf(item.type);
     cell.draggable = true;
@@ -1555,7 +1555,7 @@
     if (!t) return;
     const item = {
       id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "",
-      desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "", flag: true, wip: false,
+      desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "", flag: true, wip: false, glow: false,
     };
     t.items.push(item);
     save(); render();
@@ -1650,6 +1650,8 @@
     setType(it.type || "f");
     setSeg("#mDemand", it.demand || "");
     setSeg("#mTrend", it.trend || "");
+    setSeg("#mGlow", it.glow ? "on" : "");
+    syncGlowPreview();
     modal.hidden = false;
     setTimeout(() => $("#mName").focus(), 30);
   }
@@ -1717,6 +1719,7 @@
   const flagBtn = name => $(`#mTrend button[data-flag="${name}"]`);
   function setFlag(name, on) { flagBtn(name).classList.toggle("active", !!on); }
   function getFlag(name) { return flagBtn(name).classList.contains("active"); }
+  function syncGlowPreview() { $(".icon-preview").classList.toggle("glow", getSeg("#mGlow") === "on"); }
 
   const CATEGORIES = ["cs", "cm", "ms", "cr", "gp", "vh"];
 
@@ -1758,7 +1761,7 @@
     }
   });
 
-  ["#mDemand", "#mTrend"].forEach(sel => {
+  ["#mDemand", "#mTrend", "#mGlow"].forEach(sel => {
     $(sel).addEventListener("click", e => {
       const btn = e.target.closest("button");
       if (!btn) return;
@@ -1768,6 +1771,7 @@
       btn.classList.add("active");
     });
   });
+  $("#mGlow").addEventListener("click", syncGlowPreview);
 
   $("#mIconFile").addEventListener("change", e => {
     const file = e.target.files[0];
@@ -1794,6 +1798,7 @@
     it.tagEn = $("#mTagEn").value.trim();
     it.flag = getFlag("flag");
     it.wip = getFlag("wip");
+    it.glow = getSeg("#mGlow") === "on";
     it.icon = $("#mIconPreview").src;
     it.type = getType();
     it.demand = getSeg("#mDemand");

@@ -133,7 +133,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="stylesheet" href="css/base.css?v=10" />
-<link rel="stylesheet" href="css/styles.css?v=56" />
+<link rel="stylesheet" href="css/styles.css?v=57" />
 
 <link rel="stylesheet" href="css/topbar.css?v=11" />
 
@@ -444,6 +444,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
             <button data-flag="flag" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="NEW" /></button>
           </div>
         </div>
+        <div class="field">
+          <label data-i18n="modal.glow">Выделение</label>
+          <div class="seg" id="mGlow">
+            <button data-v="" class="active">—</button>
+            <button data-v="on" class="seg-glow" data-i18n="modal.glowOn" data-i18n-title="modal.glowTitle" title="Золотое свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Свечение</button>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button class="btn danger" id="mDelete" data-i18n="modal.delete">Удалить</button>
@@ -537,13 +544,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=41"></script>
+  <script src="js/i18n.js?v=45"></script>
   <script src="js/content.js?v=3"></script>
   <script src="js/tiers.js?v=2"></script>
 
   <script src="js/promo.js?v=10"></script>
 
   <script src="js/protect.js?v=2"></script>
-  <script src="js/app.js?v=73"></script>
+  <script src="js/app.js?v=74"></script>
 </body>
 </html>
