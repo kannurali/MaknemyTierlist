@@ -328,7 +328,7 @@
   width: 1.27cqw;
   z-index: 3;
 }
-.cell .trend.tr-swap { width: 1.27cqw; }
+.cell .trend.tr-swap { width: 1.74cqw; top: 3.46cqw; }
 
 .cell-edit {
   position: absolute; top: -.4cqw; right: -.4cqw;
@@ -1196,6 +1196,7 @@ body.ptn-locked { overflow: hidden; }
   .cell .tbadge { height: 3.3cqw; }
   .cell .dot { width: 2.5cqw; height: 2.5cqw; }
   .cell .trend { width: 2.5cqw; }
+  .cell .trend.tr-swap { width: 3.43cqw; top: 6.58cqw; }
 
   .tier-band { height: 8.4cqw; border-radius: 2.5cqw; }
   .band-logo { height: 5.6cqw; }
