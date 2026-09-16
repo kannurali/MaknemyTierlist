@@ -535,11 +535,35 @@ test('значки тренда в ячейке — те же картинки, 
     }
 
     // Ниже по файлу лежит общее .trend.tr-swap для легенды и модалки той же
-    // специфичности. Без своей строки у ячейки оно перебивало бы её, и круглый
-    // значок выходил вдвое шире стрелок, наезжая на цену.
-    $css = tag_read($PUB . '/css/styles.css');
-    assert_true(strpos($css, '.cell .trend.tr-swap { width: 1.27cqw; }') !== false,
-        'ячейке нужна своя ширина swap');
+    // специфичности, что .cell .trend, поэтому у ячейки своя строка. Ширина —
+    // как в легенде: круглый значок 37×43 в 37/27 раза шире стрелок 27×32,
+    // иначе при той же ширине он читается мельче них. Верх сдвинут так, чтобы
+    // низ совпал с низом стрелок и значок не наезжал на цену. На телефоне
+    // строка своя: десктопная специфичнее телефонного .cell .trend и держала
+    // значок вдвое меньше стрелок.
+    $css = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
+    $n   = '([\d.]+)';
+    assert_true((bool)preg_match('/\n\.cell \.trend \{\n\s*position: absolute; top: ' . $n . 'cqw; left: \.1cqw;\n\s*width: ' . $n . 'cqw;/', $css, $arrowD),
+        'стрелка на компьютере');
+    assert_true((bool)preg_match('/\n\.cell \.trend\.tr-swap \{ width: ' . $n . 'cqw; top: ' . $n . 'cqw; \}/', $css, $swapD),
+        'своя строка перерассмотра на компьютере');
+    assert_true((bool)preg_match('/\n  \.cell \.trend \{ top: ' . $n . 'cqw; \}/', $css, $topM),
+        'верх стрелки на телефоне');
+    assert_true((bool)preg_match('/\n  \.cell \.trend \{ width: ' . $n . 'cqw; \}/', $css, $widthM, PREG_OFFSET_CAPTURE),
+        'ширина стрелки на телефоне');
+    assert_true((bool)preg_match('/\n  \.cell \.trend\.tr-swap \{ width: ' . $n . 'cqw; top: ' . $n . 'cqw; \}/', $css, $swapM, PREG_OFFSET_CAPTURE),
+        'своя строка перерассмотра на телефоне');
+    if (!$arrowD || !$swapD || !$topM || !$widthM || !$swapM) { return; }
+    assert_true($swapM[0][1] > $widthM[0][1], 'строка перерассмотра на телефоне стоит после ширины стрелки');
+
+    $fits = function (string $where, float $arrowW, float $arrowTop, float $swapW, float $swapTop) {
+        assert_true(abs($swapW / $arrowW - 37 / 27) < 0.01, "$where: перерассмотр в 37/27 раза шире стрелки");
+        $arrowBottom = $arrowTop + $arrowW * 32 / 27;
+        $swapBottom  = $swapTop + $swapW * 43 / 37;
+        assert_true(abs($arrowBottom - $swapBottom) < 0.02, "$where: низ перерассмотра на уровне стрелки");
+    };
+    $fits('компьютер', (float)$arrowD[2], (float)$arrowD[1], (float)$swapD[1], (float)$swapD[2]);
+    $fits('телефон', (float)$widthM[1][0], (float)$topM[1], (float)$swapM[1][0], (float)$swapM[2][0]);
 });
 
 // Пока едут данные, зритель видел defaultState() целиком — фальшивый тирлист
