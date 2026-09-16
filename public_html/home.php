@@ -353,7 +353,7 @@ header('Cache-Control: no-cache, must-revalidate');
     </p>
 </footer>
 
-<script src="js/i18n.js?v=45"></script>
+<script src="js/i18n.js?v=46"></script>
 <script src="js/home.js?v=5"></script>
 </body>
 </html>

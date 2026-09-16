@@ -277,39 +277,50 @@ test('в тренде стрелки — один выбор, «?» и NEW — �
 });
 
 // Выделение — самостоятельный флаг предмета, как NEW и «?», но своим полем:
-// к тренду оно не относится, и в легенде его нет. Поле, которое забыли
-// прочитать при открытии окна или записать при сохранении, теряется молча:
-// админ включает свечение, жмёт «Готово», а предмет не светится.
-test('выделение: поле в модалке, чтение, сохранение, класс на карточке', function () use ($PUB) {
+// к тренду оно не относится, и в легенде его нет. Поле хранит цвет. Цвет,
+// который забыли в разметке, словаре или GLOW_COLORS, теряется молча: админ
+// жмёт кнопку, а предмет не светится или светится не тем.
+test('выделение: цвета в модалке, словаре и app.js совпадают', function () use ($PUB) {
     $s    = tag_read($PUB . '/index.php');
     $from = strpos($s, '<div class="seg" id="mGlow">');
     assert_true($from !== false, 'нужен сегмент выделения');
     assert_true($from > strpos($s, '<div class="seg" id="mTrend">'), 'выделение стоит после тренда');
     $seg  = substr($s, (int)$from, strpos($s, '</div>', (int)$from) - (int)$from);
     preg_match_all('/data-v="([^"]*)"/', $seg, $v);
-    assert_eq(['', 'on'], $v[1], 'два состояния: выключено и включено');
-    assert_true(strpos($seg, 'data-i18n="modal.glowOn"') !== false, 'кнопка подписана ключом словаря');
-    assert_true(strpos($seg, 'data-i18n-title="modal.glowTitle"') !== false, 'у кнопки есть подсказка');
+    assert_eq(['', 'gold', 'green', 'red'], $v[1], 'выключено и три цвета');
     assert_true(strpos($s, '<label data-i18n="modal.glow">') !== false, 'поле подписано');
 
     $i18n = tag_read($PUB . '/js/i18n.js');
-    foreach (['modal.glow', 'modal.glowOn', 'modal.glowTitle'] as $key) {
+    foreach (['gold', 'green', 'red'] as $c) {
+        $key = 'modal.glow' . ucfirst($c);
+        assert_true(strpos($seg, 'data-v="' . $c . '" class="seg-glow glow-' . $c . '" data-i18n="' . $key . '" data-i18n-title="modal.glowTitle"') !== false,
+            "кнопка $c: свой класс цвета, подпись и подсказка");
         assert_eq(2, preg_match_all('/"' . preg_quote($key, '/') . '":/', $i18n), "$key нужен на обоих языках");
     }
+    foreach (['modal.glow', 'modal.glowTitle'] as $key) {
+        assert_eq(2, preg_match_all('/"' . preg_quote($key, '/') . '":/', $i18n), "$key нужен на обоих языках");
+    }
+    assert_eq(0, preg_match_all('/"modal\.glowOn":/', $i18n), 'кнопки «Свечение» без цвета больше нет');
 
     $js = tag_read($PUB . '/js/app.js');
-    assert_true(strpos($js, 'cell.className = item.glow ? "cell glow" : "cell";') !== false,
-        'карточка получает класс glow');
-    assert_true(strpos($js, 'flag: false, wip: false, glow: false,') !== false,
-        'предметы шаблона без свечения');
-    assert_true(strpos($js, 'flag: true, wip: false, glow: false,') !== false,
-        'новый предмет без свечения');
-    assert_true(strpos($js, 'it.glow = getSeg("#mGlow") === "on";') !== false,
-        'сохранение забирает выделение');
+    assert_true(strpos($js, 'const GLOW_COLORS = ["gold", "green", "red"];') !== false,
+        'список цветов в app.js совпадает с кнопками');
+    assert_true(strpos($js, 'if (item.glow === true) return "gold";') !== false,
+        'true из первой версии — это золото');
+    assert_true(strpos($js, 'return GLOW_COLORS.includes(item.glow) ? item.glow : "";') !== false,
+        'неизвестный цвет — без свечения');
+    assert_true(strpos($js, 'cell.className = glow ? "cell glow glow-" + glow : "cell";') !== false,
+        'карточка получает классы цвета');
+    assert_true(strpos($js, 'flag: false, wip: false, glow: "",') !== false, 'предметы шаблона без свечения');
+    assert_true(strpos($js, 'flag: true, wip: false, glow: "",') !== false, 'новый предмет без свечения');
+    assert_true(strpos($js, 'it.glow = getSeg("#mGlow");') !== false, 'сохранение пишет цвет строкой');
+    assert_eq(0, preg_match_all('/=== "on"/', $js), 'старого значения "on" не осталось');
     assert_true(strpos($js, '["#mDemand", "#mTrend", "#mGlow"]') !== false,
         'щелчок по сегменту выделения переключает кнопки');
-    assert_true(strpos($js, 'function syncGlowPreview() { $(".icon-preview").classList.toggle("glow", getSeg("#mGlow") === "on"); }') !== false,
-        'превью в окне следует за сегментом');
+    assert_true(strpos($js, 'box.classList.remove("glow", ...GLOW_COLORS.map(c => "glow-" + c));') !== false,
+        'превью снимает прежний цвет');
+    assert_true(strpos($js, 'if (glow) box.classList.add("glow", "glow-" + glow);') !== false,
+        'превью берёт выбранный цвет');
     assert_true(strpos($js, '$("#mGlow").addEventListener("click", syncGlowPreview);') !== false,
         'щелчок сразу обновляет превью');
 
@@ -317,36 +328,45 @@ test('выделение: поле в модалке, чтение, сохран
     $b    = strpos($js, 'function closeModal(', (int)$a);
     assert_true($a !== false && $b !== false, 'нужны openModal и closeModal');
     $open = substr($js, (int)$a, (int)$b - (int)$a);
-    assert_true(strpos($open, 'setSeg("#mGlow", it.glow ? "on" : "");') !== false,
-        'openModal ставит выделение по предмету');
+    assert_true(strpos($open, 'setSeg("#mGlow", glowOf(it));') !== false,
+        'openModal ставит цвет через glowOf');
     assert_true(strpos($open, 'syncGlowPreview();') !== false,
         'openModal сбрасывает превью под открытый предмет');
 });
 
-// Свечение — золотой контур по форме иконки. Правило стоит ПОСЛЕ голубого
-// правила наведения: специфичность у них одна, и иначе при наведении голубое
-// перебивало бы золотое. На телефоне свои размеры: пропорциональное
-// десктопному свечение там почти не видно. Телефонное «filter: none» у
-// иконок менее специфично и свечение не гасит.
-test('свечение предмета: золотой контур, наведение не гасит, на телефоне сильнее', function () use ($PUB) {
-    $css  = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
-    $rule = '/\.cell\.glow \.cell-icon img \{\n\s*filter: drop-shadow\(0 0 ([\d.]+)cqw #ffe27f\) drop-shadow\(0 0 ([\d.]+)cqw rgba\(255,190,40,\.95\)\);\n\s*\}/';
+// Свечение — контур по форме иконки. Размеры общие, цвет приходит из
+// переменных: золото стоит и на голом .glow (класс без цвета из первой
+// версии), зелёный и красный переопределяют его ниже. Правило свечения стоит
+// ПОСЛЕ голубого правила наведения: специфичность у них одна, и иначе при
+// наведении голубое перебивало бы цветное. На телефоне свои размеры:
+// пропорциональное десктопному свечение там почти не видно.
+test('свечение предмета: цвета через переменные, наведение не гасит, на телефоне сильнее', function () use ($PUB) {
+    $css = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
+
+    $gold  = strpos($css, '.glow, .glow-gold { --glow-core: #ffe27f; --glow-halo: rgba(255,190,40,.95); }');
+    $green = strpos($css, '.glow-green { --glow-core: #5dff6a; --glow-halo: rgb(0,255,64); }');
+    $red   = strpos($css, '.glow-red { --glow-core: #ff4a4a; --glow-halo: rgb(255,0,0); }');
+    assert_true($gold !== false && $green !== false && $red !== false, 'три цвета заданы переменными');
+    assert_true($gold < $green && $gold < $red, 'золото объявлено раньше и не перебивает остальные');
+    assert_eq(1, substr_count($css, '#ffe27f'), 'золото записано в одном месте');
+
+    $rule = '/\.cell\.glow \.cell-icon img \{\n\s*filter: drop-shadow\(0 0 ([\d.]+)cqw var\(--glow-core\)\) drop-shadow\(0 0 ([\d.]+)cqw var\(--glow-halo\)\);\n\s*\}/';
     assert_eq(2, preg_match_all($rule, $css, $m, PREG_OFFSET_CAPTURE), 'одно правило для компьютера, одно для телефона');
     if (count($m[0]) !== 2) { return; }
 
     $hover = strpos($css, '.cell:hover .cell-icon img {');
     $phone = strpos($css, '@media (max-width: 640px)');
     $none  = strpos($css, '  .cell-icon img { filter: none; }');
-    assert_true($m[0][0][1] > $hover, 'золотое правило стоит после голубого наведения');
+    assert_true($m[0][0][1] > $hover, 'правило свечения стоит после голубого наведения');
     assert_true($m[0][0][1] < $phone, 'правило для компьютера — вне телефонных блоков');
     assert_true($m[0][1][1] > $none, 'правило для телефона — после телефонного filter: none');
     assert_eq(['.15', '.42'], [$m[1][0][0], $m[1][1][0]], 'ядро: компьютер, телефон');
     assert_eq(['.45', '1.27'], [$m[2][0][0], $m[2][1][0]], 'ореол: компьютер, телефон');
 
-    assert_true(strpos($css, '.icon-preview.glow img { filter: drop-shadow(0 0 1.5px #ffe27f) drop-shadow(0 0 4.5px rgba(255,190,40,.95)); }') !== false,
-        'превью в окне светится тем же золотом');
-    assert_true(strpos($css, '.seg .seg-glow { color: #ffe27f;') !== false,
-        'кнопка «Свечение» подписана золотым');
+    assert_true(strpos($css, '.icon-preview.glow img { filter: drop-shadow(0 0 1.5px var(--glow-core)) drop-shadow(0 0 4.5px var(--glow-halo)); }') !== false,
+        'превью в окне светится выбранным цветом');
+    assert_true(strpos($css, '.seg .seg-glow { color: var(--glow-core); text-shadow: 0 0 6px var(--glow-halo); }') !== false,
+        'кнопка цвета подписана своим цветом');
 });
 
 // --------------------------------------------------------------------------
