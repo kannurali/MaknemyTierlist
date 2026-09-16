@@ -448,7 +448,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <label data-i18n="modal.glow">Выделение</label>
           <div class="seg" id="mGlow">
             <button data-v="" class="active">—</button>
-            <button data-v="on" class="seg-glow" data-i18n="modal.glowOn" data-i18n-title="modal.glowTitle" title="Золотое свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Свечение</button>
+            <button data-v="gold" class="seg-glow glow-gold" data-i18n="modal.glowGold" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Золотое</button>
+            <button data-v="green" class="seg-glow glow-green" data-i18n="modal.glowGreen" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Зелёное</button>
+            <button data-v="red" class="seg-glow glow-red" data-i18n="modal.glowRed" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Красное</button>
           </div>
         </div>
       </div>

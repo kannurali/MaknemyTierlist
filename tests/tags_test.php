@@ -277,39 +277,50 @@ test('в тренде стрелки — один выбор, «?» и NEW — �
 });
 
 // Выделение — самостоятельный флаг предмета, как NEW и «?», но своим полем:
-// к тренду оно не относится, и в легенде его нет. Поле, которое забыли
-// прочитать при открытии окна или записать при сохранении, теряется молча:
-// админ включает свечение, жмёт «Готово», а предмет не светится.
-test('выделение: поле в модалке, чтение, сохранение, класс на карточке', function () use ($PUB) {
+// к тренду оно не относится, и в легенде его нет. Поле хранит цвет. Цвет,
+// который забыли в разметке, словаре или GLOW_COLORS, теряется молча: админ
+// жмёт кнопку, а предмет не светится или светится не тем.
+test('выделение: цвета в модалке, словаре и app.js совпадают', function () use ($PUB) {
     $s    = tag_read($PUB . '/index.php');
     $from = strpos($s, '<div class="seg" id="mGlow">');
     assert_true($from !== false, 'нужен сегмент выделения');
     assert_true($from > strpos($s, '<div class="seg" id="mTrend">'), 'выделение стоит после тренда');
     $seg  = substr($s, (int)$from, strpos($s, '</div>', (int)$from) - (int)$from);
     preg_match_all('/data-v="([^"]*)"/', $seg, $v);
-    assert_eq(['', 'on'], $v[1], 'два состояния: выключено и включено');
-    assert_true(strpos($seg, 'data-i18n="modal.glowOn"') !== false, 'кнопка подписана ключом словаря');
-    assert_true(strpos($seg, 'data-i18n-title="modal.glowTitle"') !== false, 'у кнопки есть подсказка');
+    assert_eq(['', 'gold', 'green', 'red'], $v[1], 'выключено и три цвета');
     assert_true(strpos($s, '<label data-i18n="modal.glow">') !== false, 'поле подписано');
 
     $i18n = tag_read($PUB . '/js/i18n.js');
-    foreach (['modal.glow', 'modal.glowOn', 'modal.glowTitle'] as $key) {
+    foreach (['gold', 'green', 'red'] as $c) {
+        $key = 'modal.glow' . ucfirst($c);
+        assert_true(strpos($seg, 'data-v="' . $c . '" class="seg-glow glow-' . $c . '" data-i18n="' . $key . '" data-i18n-title="modal.glowTitle"') !== false,
+            "кнопка $c: свой класс цвета, подпись и подсказка");
         assert_eq(2, preg_match_all('/"' . preg_quote($key, '/') . '":/', $i18n), "$key нужен на обоих языках");
     }
+    foreach (['modal.glow', 'modal.glowTitle'] as $key) {
+        assert_eq(2, preg_match_all('/"' . preg_quote($key, '/') . '":/', $i18n), "$key нужен на обоих языках");
+    }
+    assert_eq(0, preg_match_all('/"modal\.glowOn":/', $i18n), 'кнопки «Свечение» без цвета больше нет');
 
     $js = tag_read($PUB . '/js/app.js');
-    assert_true(strpos($js, 'cell.className = item.glow ? "cell glow" : "cell";') !== false,
-        'карточка получает класс glow');
-    assert_true(strpos($js, 'flag: false, wip: false, glow: false,') !== false,
-        'предметы шаблона без свечения');
-    assert_true(strpos($js, 'flag: true, wip: false, glow: false,') !== false,
-        'новый предмет без свечения');
-    assert_true(strpos($js, 'it.glow = getSeg("#mGlow") === "on";') !== false,
-        'сохранение забирает выделение');
+    assert_true(strpos($js, 'const GLOW_COLORS = ["gold", "green", "red"];') !== false,
+        'список цветов в app.js совпадает с кнопками');
+    assert_true(strpos($js, 'if (item.glow === true) return "gold";') !== false,
+        'true из первой версии — это золото');
+    assert_true(strpos($js, 'return GLOW_COLORS.includes(item.glow) ? item.glow : "";') !== false,
+        'неизвестный цвет — без свечения');
+    assert_true(strpos($js, 'cell.className = glow ? "cell glow glow-" + glow : "cell";') !== false,
+        'карточка получает классы цвета');
+    assert_true(strpos($js, 'flag: false, wip: false, glow: "",') !== false, 'предметы шаблона без свечения');
+    assert_true(strpos($js, 'flag: true, wip: false, glow: "",') !== false, 'новый предмет без свечения');
+    assert_true(strpos($js, 'it.glow = getSeg("#mGlow");') !== false, 'сохранение пишет цвет строкой');
+    assert_eq(0, preg_match_all('/=== "on"/', $js), 'старого значения "on" не осталось');
     assert_true(strpos($js, '["#mDemand", "#mTrend", "#mGlow"]') !== false,
         'щелчок по сегменту выделения переключает кнопки');
-    assert_true(strpos($js, 'function syncGlowPreview() { $(".icon-preview").classList.toggle("glow", getSeg("#mGlow") === "on"); }') !== false,
-        'превью в окне следует за сегментом');
+    assert_true(strpos($js, 'box.classList.remove("glow", ...GLOW_COLORS.map(c => "glow-" + c));') !== false,
+        'превью снимает прежний цвет');
+    assert_true(strpos($js, 'if (glow) box.classList.add("glow", "glow-" + glow);') !== false,
+        'превью берёт выбранный цвет');
     assert_true(strpos($js, '$("#mGlow").addEventListener("click", syncGlowPreview);') !== false,
         'щелчок сразу обновляет превью');
 
@@ -317,8 +328,8 @@ test('выделение: поле в модалке, чтение, сохран
     $b    = strpos($js, 'function closeModal(', (int)$a);
     assert_true($a !== false && $b !== false, 'нужны openModal и closeModal');
     $open = substr($js, (int)$a, (int)$b - (int)$a);
-    assert_true(strpos($open, 'setSeg("#mGlow", it.glow ? "on" : "");') !== false,
-        'openModal ставит выделение по предмету');
+    assert_true(strpos($open, 'setSeg("#mGlow", glowOf(it));') !== false,
+        'openModal ставит цвет через glowOf');
     assert_true(strpos($open, 'syncGlowPreview();') !== false,
         'openModal сбрасывает превью под открытый предмет');
 });
