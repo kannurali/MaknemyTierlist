@@ -444,6 +444,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
             <button data-flag="flag" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="NEW" /></button>
           </div>
         </div>
+        <div class="field">
+          <label data-i18n="modal.glow">Выделение</label>
+          <div class="seg" id="mGlow">
+            <button data-v="" class="active">—</button>
+            <button data-v="on" class="seg-glow" data-i18n="modal.glowOn" data-i18n-title="modal.glowTitle" title="Золотое свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Свечение</button>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button class="btn danger" id="mDelete" data-i18n="modal.delete">Удалить</button>
