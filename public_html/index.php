@@ -553,6 +553,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/promo.js?v=10"></script>
 
   <script src="js/protect.js?v=2"></script>
-  <script src="js/app.js?v=75"></script>
+  <script src="js/app.js?v=76"></script>
 </body>
 </html>
