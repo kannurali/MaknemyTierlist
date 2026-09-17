@@ -9,6 +9,8 @@ require_once __DIR__ . '/lib/roblox_oauth.php';
  *   roblox — заведено ли вообще приложение в Roblox. По нему шапка решает,
  *            показывать кнопку входа или оставить прежнюю заглушку: пока
  *            client_id не прописан, кнопка вела бы на 503.
+ *   roblox_public — открыт ли вход всем. Пока нет, кнопку видят только
+ *            пришедшие по ссылке с ?signin (см. roblox_login_public()).
  *
  * База открывается через $pdo() и только когда в сессии есть вошедший.
  * Ручку теперь дёргает шапка на каждой странице сайта, а не одна админка,
@@ -28,9 +30,10 @@ function handle_session(callable $pdo, array $session, array $cfg): array {
         }
     }
     return [
-        'admin'  => !empty($session['admin']),
-        'user'   => $user,
-        'roblox' => roblox_oauth_enabled($cfg),
+        'admin'         => !empty($session['admin']),
+        'user'          => $user,
+        'roblox'        => roblox_oauth_enabled($cfg),
+        'roblox_public' => roblox_login_public($cfg),
     ];
 }
 
