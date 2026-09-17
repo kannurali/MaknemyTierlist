@@ -137,7 +137,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
 <link rel="stylesheet" href="css/topbar.css?v=11" />
 
-<script src="js/topbar.js?v=8" defer></script>
+<script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
 
@@ -546,13 +546,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=46"></script>
-  <script src="js/content.js?v=3"></script>
-  <script src="js/tiers.js?v=2"></script>
+  <script src="js/i18n.js?v=46" fetchpriority="high"></script>
+  <script src="js/content.js?v=3" fetchpriority="high"></script>
+  <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=10"></script>
+  <script src="js/promo.js?v=10" fetchpriority="high"></script>
 
-  <script src="js/protect.js?v=2"></script>
-  <script src="js/app.js?v=76"></script>
+  <script src="js/protect.js?v=2" fetchpriority="high"></script>
+  <script src="js/app.js?v=76" fetchpriority="high"></script>
 </body>
 </html>

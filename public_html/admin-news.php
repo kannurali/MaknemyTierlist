@@ -191,9 +191,11 @@ $html = str_replace(
 // читателю не нужны ни модалка на восемь полей, ни кроп-канвас. Подключается
 // ПОСЛЕ news-page.js: тот в конце объявляет window.NEWSPAGE, из которого
 // редактор берёт cardFor/reload/getLang — до объявления шва он бы не нашёл
-// ничего и молча ничего не сделал.
+// ничего и молча ничего не сделал. Тег ищется с любыми атрибутами после
+// src: у публичных скриптов есть fetchpriority, и поиск точного
+// `"></script>` промахивался бы молча.
 $html = preg_replace(
-    '~(<script src="/js/news-page\.js[^"]*"></script>)~',
+    '~(<script src="/js/news-page\.js[^"]*"[^>]*></script>)~',
     '$1' . "\n  " . '<script src="/js/news-editor.js?v=2"></script>',
     $html,
     1
