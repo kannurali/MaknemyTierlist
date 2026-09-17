@@ -150,6 +150,21 @@
     else if (flag === "error") showToast(tx("user.error"));
   }
 
+  var INVITE_KEY = "nexus-signin-v1";
+  var INVITE_RE = /([?&])signin(=[^&]*)?(&|$)/;
+
+  function takeInvite() {
+    if (!INVITE_RE.test(location.search)) {
+      try { return localStorage.getItem(INVITE_KEY) === "1"; } catch (_) { return false; }
+    }
+    try { localStorage.setItem(INVITE_KEY, "1"); } catch (_) {}
+    if (window.history && history.replaceState) {
+      var q = location.search.replace(INVITE_RE, "$1").replace(/[?&]$/, "");
+      try { history.replaceState(null, "", location.pathname + q + location.hash); } catch (_) {}
+    }
+    return true;
+  }
+
   function toLoginLink(btn) {
     var a = document.createElement("a");
     a.className = btn.className;
@@ -271,9 +286,10 @@
     fetch(AUTH_STATE, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (s) {
+        var invited = takeInvite();
         if (!s || !s.roblox) return;
         if (s.user) initUserMenu(avatarBtn, s.user);
-        else toLoginLink(avatarBtn);
+        else if (s.roblox_public || invited) toLoginLink(avatarBtn);
       })
       .catch(function () {});
   }
