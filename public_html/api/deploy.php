@@ -6,10 +6,13 @@
 // root, git-ignored) — the repository is public, so a secret committed here
 // would be a secret handed to everybody.
 //
-// It deliberately does NOT call cPanel's own deploy queue: doing the two steps
+// It deliberately does NOT call cPanel's own deploy queue: doing the steps
 // directly keeps the whole thing synchronous and debuggable, and needs no
-// cPanel API token. The steps mirror .cpanel.yml exactly — an additive copy,
-// never a delete-sync, because admin-uploaded images live only on the server.
+// cPanel API token. Publishing follows .cpanel.yml — an additive copy, never a
+// delete-sync, because admin-uploaded images live only on the server, and
+// static directories before pages — but runs in PHP rather than cp, so every
+// changed file lands atomically and unchanged files keep their mtime (see
+// deploy_publish()).
 
 require_once __DIR__ . '/_bootstrap.php';
 
@@ -89,6 +92,83 @@ function deploy_log_line(string $file, string $msg): void {
     @file_put_contents($file, gmdate('c') . ' ' . $msg . "\n", FILE_APPEND | LOCK_EX);
 }
 
+// --- publishing ------------------------------------------------------------
+
+// Published before everything else. Pages reference these files as
+// name.js?v=N and .htaccess lets browsers keep such an address for a year, so
+// a page that went live first could send a visitor for a new ?v= address while
+// the old file was still on disk — and the old bytes would stay cached under
+// the new address.
+const DEPLOY_FIRST_DIRS = ['assets', 'css', 'js'];
+
+function deploy_publish_order(array $entries): array {
+    $entries = array_values(array_diff($entries, ['.', '..']));
+    $first = array_values(array_intersect(DEPLOY_FIRST_DIRS, $entries));
+    $rest = array_values(array_diff($entries, DEPLOY_FIRST_DIRS));
+    sort($rest, SORT_STRING);
+    return array_merge($first, $rest);
+}
+
+// Copies the tree at $src over $dst. Nothing on the target is ever deleted.
+// A changed file is written under a temporary name next to its target and
+// renamed over it: cp truncates in place, and a request that caught the file
+// half-written would be cached for a year. A file whose bytes already match
+// is left alone, so its mtime — and the Last-Modified the server derives from
+// it — survives the deploy and revalidations keep ending in 304.
+function deploy_publish(string $src, string $dst): array {
+    $src = rtrim($src, '/');
+    $dst = rtrim($dst, '/');
+    if (!is_dir($dst)) {
+        throw new RuntimeException("target is not a directory: $dst");
+    }
+    $entries = scandir($src);
+    if ($entries === false) {
+        throw new RuntimeException("cannot read $src");
+    }
+    $result = ['copied' => [], 'same' => 0];
+    foreach (deploy_publish_order($entries) as $name) {
+        deploy_publish_path($src . '/' . $name, $dst . '/' . $name, $name, $result);
+    }
+    return $result;
+}
+
+function deploy_publish_path(string $src, string $dst, string $rel, array &$result): void {
+    if (is_link($src)) {
+        throw new RuntimeException("symlink in the repository: $rel");
+    }
+    if (is_dir($src)) {
+        if (!is_dir($dst) && (file_exists($dst) || !mkdir($dst, 0755))) {
+            throw new RuntimeException("cannot create directory: $rel");
+        }
+        $names = scandir($src);
+        if ($names === false) {
+            throw new RuntimeException("cannot read: $rel");
+        }
+        foreach ($names as $name) {
+            if ($name === '.' || $name === '..') { continue; }
+            deploy_publish_path($src . '/' . $name, $dst . '/' . $name, $rel . '/' . $name, $result);
+        }
+        return;
+    }
+    if (is_dir($dst)) {
+        throw new RuntimeException("a directory is in the way: $rel");
+    }
+    if (is_file($dst) && filesize($dst) === filesize($src) && sha1_file($dst) === sha1_file($src)) {
+        $result['same']++;
+        return;
+    }
+    $tmp = dirname($dst) . '/.deploy-' . bin2hex(random_bytes(6)) . '.tmp';
+    if (!copy($src, $tmp)) {
+        @unlink($tmp);
+        throw new RuntimeException("cannot copy: $rel");
+    }
+    if (!rename($tmp, $dst)) {
+        @unlink($tmp);
+        throw new RuntimeException("cannot replace: $rel");
+    }
+    $result['copied'][] = $rel;
+}
+
 // --- request handling ------------------------------------------------------
 
 if (!defined('TESTING')) {
@@ -147,8 +227,6 @@ if (!defined('TESTING')) {
     $steps = [
         'fetch'  => $g . ' fetch --quiet origin ' . escapeshellarg($branch),
         'merge'  => $g . ' merge --ff-only FETCH_HEAD',
-        'publish' => '/bin/cp -R ' . escapeshellarg(rtrim($repo, '/') . '/public_html/.')
-                   . ' ' . escapeshellarg(rtrim($target, '/') . '/'),
     ];
 
     foreach ($steps as $name => $cmd) {
@@ -160,8 +238,18 @@ if (!defined('TESTING')) {
         }
     }
 
+    try {
+        $published = deploy_publish(rtrim($repo, '/') . '/public_html', $target);
+    } catch (Throwable $e) {
+        deploy_log_line($log, 'FAIL publish: ' . $e->getMessage());
+        json_out(['ok' => false, 'error' => 'step_failed', 'step' => 'publish'], 500);
+        exit;
+    }
+
     $head = deploy_run_cmd($g . ' rev-parse HEAD')['out'];
     $secs = round(microtime(true) - $started, 2);
-    deploy_log_line($log, "OK {$verdict['reason']} head=$head in {$secs}s");
-    json_out(['ok' => true, 'deployed' => true, 'head' => $head, 'seconds' => $secs], 200);
+    $copied = count($published['copied']);
+    deploy_log_line($log, "OK {$verdict['reason']} head=$head copied=$copied same={$published['same']} in {$secs}s"
+        . ($copied ? ': ' . implode(' ', $published['copied']) : ''));
+    json_out(['ok' => true, 'deployed' => true, 'head' => $head, 'copied' => $copied, 'seconds' => $secs], 200);
 }
