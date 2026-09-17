@@ -1994,7 +1994,7 @@
     if (!h2cPromise) {
       h2cPromise = new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = "js/html2canvas.min.js";
+        s.src = "js/html2canvas.min.js?v=1";
         s.onload = () => resolve(window.html2canvas);
         s.onerror = () => { h2cPromise = null; reject(new Error(tx("msg.h2cFailed"))); };
         document.head.appendChild(s);
