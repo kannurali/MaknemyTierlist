@@ -90,7 +90,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <link rel="stylesheet" href="css/topbar.css?v=11" />
 
-<script src="js/topbar.js?v=5" defer></script>
+<script src="js/topbar.js?v=8" defer></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
 <link rel="stylesheet" href="css/home.css?v=15" />
