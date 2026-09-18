@@ -18,6 +18,7 @@
 // localStorage, и ревьюер Roblox (англоязычный) обязан увидеть английскую
 // версию без единого клика.
 
+require_once __DIR__ . '/../_bootstrap.php';
 require_once __DIR__ . '/metrika.php';
 
 /**
@@ -36,6 +37,7 @@ function legal_page_open(string $slug, string $title, string $description): void
     // номера версий ?v= для css/js, и закешированная копия прибила бы
     // посетителя к старому коду.
     header('Cache-Control: no-cache, must-revalidate');
+    page_lscache();
     echo <<<HTML
 <!DOCTYPE html>
 <html lang="ru">

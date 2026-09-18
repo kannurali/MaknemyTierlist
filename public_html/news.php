@@ -154,7 +154,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     } catch (Throwable $e) {
         error_log('news.php: og preview fallback: ' . $e->getMessage());
     }
-    if ($notFound) { http_response_code(404); }
+    // 404 в кеш LiteSpeed не кладётся: иначе перебор несуществующих id
+    // наполнял бы его копиями ленты. Живой пост и сама лента — на минуту,
+    // см. page_lscache() в api/_bootstrap.php.
+    if ($notFound) { http_response_code(404); } else { page_lscache(); }
 }
 
 // Канонический адрес — свой у каждого поста (иначе /news/<id> и /news были

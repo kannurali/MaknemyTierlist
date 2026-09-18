@@ -29,7 +29,7 @@ if (!defined('TESTING')) {
     // операторов мобильной связи и школьных сетей сидят сотни игроков, и
     // лимит уровня «десяток в час» отрезал бы их всех. 60 в час душит только
     // скрипт, дёргающий вход по кругу.
-    $key = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $key = client_key();
     if (!rate_limit_allow('roblox_start', $key, 60, 3600, time())) {
         json_out(['error' => 'rate_limited'], 429);
         exit;

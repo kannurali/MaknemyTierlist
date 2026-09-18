@@ -51,4 +51,23 @@ test('expired lock resets the counter instead of instantly re-locking', function
     throttle_clear($k);
 });
 
+// --- login.php: порядок шагов ----------------------------------------------
+// Сам диспетчер юнит-тестом не вызвать, а порядок в нём и есть защита: общий
+// потолок и блокировка по адресу — до bcrypt (иначе поток неверных паролей
+// съедает единственное ядро), сессия — только после верного пароля (иначе
+// файл сессии на каждый запрос), и никакого сна: пауза держала процесс PHP,
+// а их на тарифе двадцать.
+test('login.php checks the limits before bcrypt and starts a session only after it', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/api/login.php');
+    $retry  = strpos($src, 'throttle_retry_after(');
+    $global = strpos($src, "rate_limit_allow('login_checks'");
+    $verify = strpos($src, 'verify_admin_password($password');
+    $sess   = strpos($src, 'start_site_session();');
+    assert_true($retry !== false && $global !== false && $verify !== false && $sess !== false, 'all steps present');
+    assert_true($retry < $verify && $global < $verify, 'limits before the password check');
+    assert_true($verify < $sess, 'session only after a correct password');
+    assert_eq(false, strpos($src, 'usleep('), 'no sleeping while holding a PHP process');
+    assert_eq(false, strpos($src, 'start_admin_session'), 'no session before the check');
+});
+
 run_tests();

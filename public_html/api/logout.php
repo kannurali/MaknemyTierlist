@@ -3,8 +3,10 @@ require_once __DIR__ . '/_bootstrap.php';
 
 if (!defined('TESTING')) {
     require_post();
-    start_admin_session();
-    $_SESSION = [];
-    session_destroy();
+    // Без куки закрывать нечего: не заводим сессию, чтобы тут же её убить.
+    if (resume_site_session()) {
+        $_SESSION = [];
+        session_destroy();
+    }
     json_out(['ok' => true], 200);
 }

@@ -259,24 +259,56 @@ function handle_promo_save(PDO $pdo, array $doc, string $imagesDir, int $revMs, 
     return [200, ['ok' => true, 'rev' => $revMs]];
 }
 
+// GET /api/promo.php — та же схема, что у api/tierlist.php. Документ для
+// посетителей отдаётся только по адресу текущей ревизии ?rev=<n>: ответ
+// одинаков для всех и не меняется, его держат и браузер, и кеш LiteSpeed.
+// Без ?rev= или со старой ревизией — 302 на текущую. Исключение — админ без
+// ?rev=: так ходит только панель, и ей нужен полный документ с notes.
+//
+// rev сначала читается отдельно: для редиректа (флуд случайными ?rev=)
+// разбирать весь документ незачем. Если между двумя чтениями кампании
+// пересохранили, документ уже новее запрошенного адреса — тогда тоже
+// редирект, иначе новые данные навсегда легли бы под старую ревизию.
+function promo_route(PDO $pdo, $rawRev, bool $admin): array {
+    $hasRev = $rawRev !== null && $rawRev !== '';
+    if (promo_admin_view_allowed($admin, $hasRev)) {
+        return handle_promo_get($pdo, true);
+    }
+    $current = promo_rev($pdo);
+    if (parse_rev_param($rawRev) === $current) {
+        $doc = promo_load($pdo);
+        if ($doc['rev'] === $current) { return [200, promo_public_view($doc)]; }
+        $current = $doc['rev'];
+    }
+    return [302, ['location' => '/api/promo.php?rev=' . $current]];
+}
+
 if (!defined('TESTING')) {
-    start_admin_session();
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
-        // Same cache split as tierlist.php: a ?rev= URL never changes its
-        // bytes, so it can be cached forever and a repeat poll costs nothing.
-        $hasRev = isset($_GET['rev']) && $_GET['rev'] !== '';
-        if ($hasRev) {
-            header('Cache-Control: public, max-age=31536000, immutable');
-        } else {
-            header('Cache-Control: no-cache');
-            // The body of this one depends on the session cookie.
-            header('Vary: Cookie');
+        $rawRev = $_GET['rev'] ?? null;
+        // Сессия нужна только чтобы узнать админа, а админский документ бывает
+        // только без ?rev=. Остальные запросы идут без сессии: без файла на
+        // каждый запрос и без Set-Cookie, с которым LiteSpeed ответ не кеширует.
+        $admin = ($rawRev === null || $rawRev === '') && resume_site_session() && is_admin();
+        [$status, $payload] = promo_route(db(), $rawRev, $admin);
+        if ($status === 302) {
+            header('Cache-Control: no-store');
+            lscache_off();
+            header('Location: ' . $payload['location'], true, 302);
+            exit;
         }
-        [$status, $payload] = handle_promo_get(db(), promo_admin_view_allowed(is_admin(), $hasRev));
+        if ($admin) {
+            // Коммерческие условия рекламодателя — ни в какой кеш.
+            header('Cache-Control: no-store');
+            lscache_off();
+        } else {
+            header('Cache-Control: public, max-age=31536000, immutable');
+            lscache_public(86400);
+        }
     } else {
         require_post();
         require_admin();
-        if (!rate_limit_allow('promo_save', (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 30, 60, time())) {
+        if (!rate_limit_allow('promo_save', client_key(), 30, 60, time())) {
             json_out(['ok' => false, 'error' => 'rate_limited'], 429);
             exit;
         }
