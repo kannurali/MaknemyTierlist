@@ -143,6 +143,7 @@ assets/              картинки макета + шрифты
   bf-logo-trim.png   логотип Blox Fruits прошлого макета (не подключён)
   dot-*.png / trend-*.png   точки спроса и тренды на карточках предметов и в модалке
   dot-neon.png              точка «оверпрайс» — единственная с переливом, кадр из неонового градиента
+  dot-{red,orange,yellow,green}.png   остальные точки, 72x72 как неон; рисует tools/make-demand-dots.py
   icon-sample.png    стандартная иконка предмета
   fonts/Bootshaus/Bootshaus-Regular.ttf   шрифт легенды и подвала
   fonts/ProtoSans56.otf                   шрифт заголовка и даты
