@@ -821,12 +821,11 @@ body.ptn-locked { overflow: hidden; }
   border-radius: 50%;
   background: var(--dc);
 }
-.d-green { --dc: #1aff00; }
-.d-yellow { --dc: #fff200; }
-.d-orange { --dc: #ffa100; }
-.d-red { --dc: #ff0000; }
-
 .d-neon { --dc: url("../assets/dot-neon.png") center / cover no-repeat; }
+.d-green { --dc: url("../assets/dot-green.png") center / cover no-repeat; }
+.d-yellow { --dc: url("../assets/dot-yellow.png") center / cover no-repeat; }
+.d-orange { --dc: url("../assets/dot-orange.png") center / cover no-repeat; }
+.d-red { --dc: url("../assets/dot-red.png") center / cover no-repeat; }
 
 .lc-trends .trend { justify-self: end; }
 .lc-trends .tr-wip { width: 2.23cqw; height: 3.25cqw; }

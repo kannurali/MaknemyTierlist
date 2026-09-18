@@ -454,10 +454,10 @@
 }
 
 .tc-demand-dot[data-demand="neon"]   { background: url("../assets/dot-neon.png") center / cover no-repeat; }
-.tc-demand-dot[data-demand="green"]  { background: var(--d-green); }
-.tc-demand-dot[data-demand="yellow"] { background: var(--d-yellow); }
-.tc-demand-dot[data-demand="orange"] { background: var(--d-orange); }
-.tc-demand-dot[data-demand="red"]    { background: var(--d-red); }
+.tc-demand-dot[data-demand="green"]  { background: url("../assets/dot-green.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="yellow"] { background: url("../assets/dot-yellow.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="orange"] { background: url("../assets/dot-orange.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="red"]    { background: url("../assets/dot-red.png") center / cover no-repeat; }
 
 .tc-total-line {
   left: calc(44 * var(--u));
