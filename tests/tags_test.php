@@ -235,6 +235,13 @@ test('точка «оверпрайс» есть в легенде, в мода�
     foreach (['green', 'yellow', 'orange', 'red', 'neon'] as $d) {
         assert_true(is_file($PUB . '/assets/dot-' . $d . '.png'), "нет assets/dot-$d.png");
     }
+    // Не мельче оверпрайса: 30-пиксельные точки при увеличении щипком на
+    // телефоне растягивались и мылились рядом с чётким неоном 72x72.
+    // Цветные рисует tools/make-demand-dots.py.
+    foreach (['green', 'yellow', 'orange', 'red', 'neon'] as $d) {
+        [$w, $h] = getimagesize($PUB . '/assets/dot-' . $d . '.png');
+        assert_true($w === $h && $w >= 72, "assets/dot-$d.png должна быть квадратом от 72 px, сейчас {$w}x{$h}");
+    }
     // Легенда и индикатор «Спрос стороны» в калькуляторе рисуют те же файлы,
     // что и карточка: заливка цветом в CSS разошлась бы с картинкой.
     $css  = tag_read($PUB . '/css/styles.css');
