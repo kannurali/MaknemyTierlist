@@ -355,8 +355,8 @@
       "calc.giveLabel":         "Вы отдаёте",
       "calc.getLabel":          "Вы получаете",
 
-      "calc.givePill":          "Я",
-      "calc.getPill":           "ВЫ",
+      "calc.givePill":          "ДАЮ",
+      "calc.getPill":           "ХОЧУ",
       "calc.searchLabel":       "Поиск предмета",
       "calc.searchPlaceholder": "Название предмета…",
       "calc.searchNoResults":   "Ничего не найдено",

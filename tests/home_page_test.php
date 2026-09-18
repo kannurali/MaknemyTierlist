@@ -252,6 +252,75 @@ test('общий design-page.css подключён с одной версией
     assert_eq(1, count(array_unique($v)), 'версии design-page.css должны совпадать');
 });
 
+// На компьютере фон едет вместе со страницей: картинка по макетной
+// геометрии, а к 2700 единицам макета её гасит затемнение. На телефоне
+// страница в разы выше относительно ширины, и картинка той же геометрии
+// кончается на первом экране (у iPhone 13 — на 731px из 2670 у тирлиста).
+// Растягивать её нельзя: раньше правило для телефона подменяло два слоя
+// одним url(), картинке доставался размер затемнения «100% 100%», и она
+// вытягивалась на всю страницу со швом под шапкой. Поэтому на телефоне фон
+// прибит к экрану, как на ленте новостей, а страница едет поверх.
+test('на телефоне фон прибит к экрану и не растягивается', function () use ($PUB) {
+    $css = read_file_or_fail($PUB . '/css/design-page.css');
+    $layers = function (string $v): int {
+        $depth = 0;
+        $n = 1;
+        foreach (str_split($v) as $ch) {
+            if ($ch === '(') $depth++;
+            elseif ($ch === ')') $depth--;
+            elseif ($ch === ',' && $depth === 0) $n++;
+        }
+        return $n;
+    };
+
+    assert_true((bool)preg_match('/^body \{([^}]*)\}/m', $css, $base), 'основное правило body');
+    assert_true((bool)preg_match('/background-image:([^;]*);/', $base[1], $baseImg), 'слои фона');
+    assert_true((bool)preg_match('/background-size:([^;]*);/', $base[1], $baseSize), 'размеры слоёв');
+    assert_eq($layers($baseSize[1]), $layers($baseImg[1]), 'на каждый слой свой размер');
+
+    $at = strpos($css, '@media (max-width: 760px) {');
+    assert_true($at !== false, 'правила для телефона');
+    $phone = substr($css, $at, strpos($css, "\n}", $at) - $at);
+
+    // Заливку body снимаем совсем: у html свой фон, и непрозрачный фон body
+    // закрыл бы слой с z-index: -1 (так уже было на ленте, см. tags_test).
+    assert_true((bool)preg_match('/body \{ background: none; \}/', $phone),
+        'фон body на телефоне снят');
+    assert_true((bool)preg_match('/body::before \{([^}]*)\}/', $phone, $layer), 'слой фона');
+    foreach ([
+        'position: fixed;',
+        'inset: 0;',
+        'z-index: -1;',
+        'url("../assets/design/page-bg-m.webp")',
+        'background-size: calc(1983 * var(--pu)) auto;',
+        'background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));',
+    ] as $decl) {
+        assert_true(strpos($layer[1], $decl) !== false, "слой фона: $decl");
+    }
+    assert_eq(0, preg_match('/background-image:[^;]*,/', $layer[1]),
+        'у прибитого слоя одна картинка, затемнение к низу ему не нужно');
+
+    // Шапка липкая, а на телефоне не сворачивается, и её собственная копия
+    // фона — единственное, что закрывает прокручиваемую под ней страницу.
+    // Прятать её нельзя: текст поплыл бы сквозь шапку. Шов ей не грозит:
+    // шапка стоит у верхнего края экрана, как и прибитый слой, и рисует
+    // тот же файл в той же геометрии. Поэтому и cover для высоких экранов
+    // здесь нет: он разошёлся бы с шапкой, а низ картинки и так почти
+    // чёрный и сливается с заливкой.
+    assert_eq(0, preg_match('/\.mk-top::before \{[^}]*display: none;/', $phone),
+        'копия фона в шапке остаётся');
+    assert_eq(0, substr_count($phone, 'cover'), 'геометрия слоя та же, что у шапки');
+    $top = read_file_or_fail($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-top::before \{([^}]*)\}/', $top, $copy), 'копия фона в шапке');
+    $plain = fn(string $s): string => preg_replace(['/, calc\(100vw \/ 1443\)\)/', '/\s+/'], [')', ' '], $s);
+    assert_true(strpos($plain($copy[1]), 'background-size: calc(1983 * var(--pu)) auto;') !== false,
+        'шапка масштабирует картинку как слой');
+    assert_true(strpos($plain($copy[1]), 'background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));') !== false,
+        'шапка ставит картинку в ту же точку');
+    assert_true((bool)preg_match('/@media \(max-width: 760px\) \{[^@]*\.mk-top::before \{ background-image: url\("\.\.\/assets\/design\/page-bg-m\.webp"\); \}/', $top),
+        'и на телефоне берёт тот же файл');
+});
+
 // Переключатель языка — пара RU|EN на ЛЮБОЙ ширине, по правке заказчика.
 // Раньше на телефоне вторая кнопка пряталась через :has(), и на ленте это
 // делало переключатель мёртвым: её обработчик (news-page.js) про схлопывание
@@ -839,6 +908,54 @@ test('оформление полосы прокрутки не отключае
     // достались бы горизонтальной прокрутке карточек на телефоне.
     assert_true(strpos($css, 'html::-webkit-scrollbar-thumb') !== false,
         'правила должны быть привязаны к html');
+});
+
+// --------------------------------------------------------------------------
+//  «Немного о важном»: ответ раскрывается плавно.
+// --------------------------------------------------------------------------
+
+// display: none не анимируется, поэтому ответ раньше выскакивал рывком.
+// Теперь ответ — сетка из одной строки, и переход 0fr ↔ 1fr меняет его
+// высоту от нуля до содержимого без замеров в скрипте. Строку сжимает
+// только обёртка без собственных отступов (min-height: 0 и overflow:
+// hidden): отступ не даёт блоку стать ниже себя, поэтому поля ответа
+// сжимаются отдельным переходом.
+test('ответ в «Немного о важном» раскрывается плавно', function () use ($PUB) {
+    $home = read_file_or_fail($PUB . '/home.php');
+    preg_match_all('/<div class="hm-faq-a">\s*<div class="hm-faq-a-in">(.*?)<\/div>\s*<\/div>/s', $home, $m);
+    assert_eq(7, substr_count($home, '<div class="hm-faq-a">'), 'семь вопросов');
+    assert_eq(7, count($m[1]), 'текст каждого ответа лежит в обёртке');
+    foreach ($m[1] as $i => $body) {
+        assert_eq(0, preg_match('/<div/', $body), 'в обёртке ответа ' . ($i + 1) . ' только абзацы');
+    }
+
+    $css = read_file_or_fail($PUB . '/css/home.css');
+    assert_eq(0, preg_match('/\.hm-faq-a \{[^}]*display: none;/', $css), 'display: none анимацию убивает');
+    assert_eq(0, preg_match('/\+ \.hm-faq-a \{[^}]*display: none;/', $css), 'и у закрытого ответа тоже');
+    assert_true((bool)preg_match('/\.hm-faq-a \{[^}]*display: grid;[^}]*grid-template-rows: 1fr;[^}]*transition:[^}]*grid-template-rows/s', $css),
+        'открытый ответ — строка 1fr с переходом');
+    assert_true((bool)preg_match('/\.hm-faq-a-in \{[^}]*min-height: 0;[^}]*overflow: hidden;/s', $css),
+        'обёртка сжимается до нуля и обрезает текст');
+    assert_eq(0, preg_match('/\.hm-faq-a-in \{[^}]*padding/s', $css), 'у обёртки нет отступов');
+
+    assert_true((bool)preg_match('/\.hm-faq-q\[aria-expanded="false"\] \+ \.hm-faq-a \{([^}]*)\}/', $css, $closed),
+        'правило закрытого ответа');
+    assert_true(strpos($closed[1], 'grid-template-rows: 0fr;') !== false, 'закрытый ответ сжат до нуля');
+    assert_true(strpos($closed[1], 'padding-top: 0;') !== false && strpos($closed[1], 'padding-bottom: 0;') !== false,
+        'поля закрытого ответа тоже сжаты');
+    // Скрыт и от чтения с экрана, но только когда схлопнется: задержка
+    // visibility равна длительности сворачивания.
+    assert_true(strpos($closed[1], 'visibility: hidden;') !== false, 'закрытый ответ скрыт');
+    assert_true((bool)preg_match('/grid-template-rows (\.\d+)s[^;]*visibility 0s (\.\d+)s;/s', $closed[1], $t)
+        && $t[1] === $t[2], 'текст прячется ровно по окончании сворачивания');
+
+    assert_true((bool)preg_match('/@media \(prefers-reduced-motion: reduce\) \{[^@]*\.hm-faq-a-in[^@]*transition: none;/s', $css),
+        'при «меньше движения» ответ открывается без анимации');
+
+    // Переключает ответ по-прежнему aria-expanded у кнопки.
+    $js = read_file_or_fail($PUB . '/js/home.js');
+    assert_true(strpos($js, "btn.setAttribute('aria-expanded', open ? 'false' : 'true');") !== false,
+        'кнопка переключает aria-expanded');
 });
 
 run_tests();

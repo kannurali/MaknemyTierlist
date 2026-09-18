@@ -144,7 +144,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/design-page.css?v=33" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
