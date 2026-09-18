@@ -144,7 +144,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/design-page.css?v=33" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -551,7 +551,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=46" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=47" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
