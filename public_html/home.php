@@ -94,7 +94,7 @@ page_lscache();
 
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/design-page.css?v=33" />
 <link rel="stylesheet" href="css/home.css?v=15" />
 
 <?php echo metrika_counter_html(); ?>

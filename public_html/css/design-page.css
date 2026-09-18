@@ -17,7 +17,19 @@ body {
 }
 
 @media (max-width: 760px) {
-  body { background-image: url("../assets/design/page-bg-m.webp"); }
+  body { background: none; }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: #05070d;
+    background-image: url("../assets/design/page-bg-m.webp");
+    background-repeat: no-repeat;
+    background-size: calc(1983 * var(--pu)) auto;
+    background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));
+  }
 }
 
 html::-webkit-scrollbar {

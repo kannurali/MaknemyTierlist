@@ -252,6 +252,75 @@ test('общий design-page.css подключён с одной версией
     assert_eq(1, count(array_unique($v)), 'версии design-page.css должны совпадать');
 });
 
+// На компьютере фон едет вместе со страницей: картинка по макетной
+// геометрии, а к 2700 единицам макета её гасит затемнение. На телефоне
+// страница в разы выше относительно ширины, и картинка той же геометрии
+// кончается на первом экране (у iPhone 13 — на 731px из 2670 у тирлиста).
+// Растягивать её нельзя: раньше правило для телефона подменяло два слоя
+// одним url(), картинке доставался размер затемнения «100% 100%», и она
+// вытягивалась на всю страницу со швом под шапкой. Поэтому на телефоне фон
+// прибит к экрану, как на ленте новостей, а страница едет поверх.
+test('на телефоне фон прибит к экрану и не растягивается', function () use ($PUB) {
+    $css = read_file_or_fail($PUB . '/css/design-page.css');
+    $layers = function (string $v): int {
+        $depth = 0;
+        $n = 1;
+        foreach (str_split($v) as $ch) {
+            if ($ch === '(') $depth++;
+            elseif ($ch === ')') $depth--;
+            elseif ($ch === ',' && $depth === 0) $n++;
+        }
+        return $n;
+    };
+
+    assert_true((bool)preg_match('/^body \{([^}]*)\}/m', $css, $base), 'основное правило body');
+    assert_true((bool)preg_match('/background-image:([^;]*);/', $base[1], $baseImg), 'слои фона');
+    assert_true((bool)preg_match('/background-size:([^;]*);/', $base[1], $baseSize), 'размеры слоёв');
+    assert_eq($layers($baseSize[1]), $layers($baseImg[1]), 'на каждый слой свой размер');
+
+    $at = strpos($css, '@media (max-width: 760px) {');
+    assert_true($at !== false, 'правила для телефона');
+    $phone = substr($css, $at, strpos($css, "\n}", $at) - $at);
+
+    // Заливку body снимаем совсем: у html свой фон, и непрозрачный фон body
+    // закрыл бы слой с z-index: -1 (так уже было на ленте, см. tags_test).
+    assert_true((bool)preg_match('/body \{ background: none; \}/', $phone),
+        'фон body на телефоне снят');
+    assert_true((bool)preg_match('/body::before \{([^}]*)\}/', $phone, $layer), 'слой фона');
+    foreach ([
+        'position: fixed;',
+        'inset: 0;',
+        'z-index: -1;',
+        'url("../assets/design/page-bg-m.webp")',
+        'background-size: calc(1983 * var(--pu)) auto;',
+        'background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));',
+    ] as $decl) {
+        assert_true(strpos($layer[1], $decl) !== false, "слой фона: $decl");
+    }
+    assert_eq(0, preg_match('/background-image:[^;]*,/', $layer[1]),
+        'у прибитого слоя одна картинка, затемнение к низу ему не нужно');
+
+    // Шапка липкая, а на телефоне не сворачивается, и её собственная копия
+    // фона — единственное, что закрывает прокручиваемую под ней страницу.
+    // Прятать её нельзя: текст поплыл бы сквозь шапку. Шов ей не грозит:
+    // шапка стоит у верхнего края экрана, как и прибитый слой, и рисует
+    // тот же файл в той же геометрии. Поэтому и cover для высоких экранов
+    // здесь нет: он разошёлся бы с шапкой, а низ картинки и так почти
+    // чёрный и сливается с заливкой.
+    assert_eq(0, preg_match('/\.mk-top::before \{[^}]*display: none;/', $phone),
+        'копия фона в шапке остаётся');
+    assert_eq(0, substr_count($phone, 'cover'), 'геометрия слоя та же, что у шапки');
+    $top = read_file_or_fail($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-top::before \{([^}]*)\}/', $top, $copy), 'копия фона в шапке');
+    $plain = fn(string $s): string => preg_replace(['/, calc\(100vw \/ 1443\)\)/', '/\s+/'], [')', ' '], $s);
+    assert_true(strpos($plain($copy[1]), 'background-size: calc(1983 * var(--pu)) auto;') !== false,
+        'шапка масштабирует картинку как слой');
+    assert_true(strpos($plain($copy[1]), 'background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));') !== false,
+        'шапка ставит картинку в ту же точку');
+    assert_true((bool)preg_match('/@media \(max-width: 760px\) \{[^@]*\.mk-top::before \{ background-image: url\("\.\.\/assets\/design\/page-bg-m\.webp"\); \}/', $top),
+        'и на телефоне берёт тот же файл');
+});
+
 // Переключатель языка — пара RU|EN на ЛЮБОЙ ширине, по правке заказчика.
 // Раньше на телефоне вторая кнопка пряталась через :has(), и на ленте это
 // делало переключатель мёртвым: её обработчик (news-page.js) про схлопывание
