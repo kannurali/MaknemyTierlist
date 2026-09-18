@@ -910,4 +910,52 @@ test('оформление полосы прокрутки не отключае
         'правила должны быть привязаны к html');
 });
 
+// --------------------------------------------------------------------------
+//  «Немного о важном»: ответ раскрывается плавно.
+// --------------------------------------------------------------------------
+
+// display: none не анимируется, поэтому ответ раньше выскакивал рывком.
+// Теперь ответ — сетка из одной строки, и переход 0fr ↔ 1fr меняет его
+// высоту от нуля до содержимого без замеров в скрипте. Строку сжимает
+// только обёртка без собственных отступов (min-height: 0 и overflow:
+// hidden): отступ не даёт блоку стать ниже себя, поэтому поля ответа
+// сжимаются отдельным переходом.
+test('ответ в «Немного о важном» раскрывается плавно', function () use ($PUB) {
+    $home = read_file_or_fail($PUB . '/home.php');
+    preg_match_all('/<div class="hm-faq-a">\s*<div class="hm-faq-a-in">(.*?)<\/div>\s*<\/div>/s', $home, $m);
+    assert_eq(7, substr_count($home, '<div class="hm-faq-a">'), 'семь вопросов');
+    assert_eq(7, count($m[1]), 'текст каждого ответа лежит в обёртке');
+    foreach ($m[1] as $i => $body) {
+        assert_eq(0, preg_match('/<div/', $body), 'в обёртке ответа ' . ($i + 1) . ' только абзацы');
+    }
+
+    $css = read_file_or_fail($PUB . '/css/home.css');
+    assert_eq(0, preg_match('/\.hm-faq-a \{[^}]*display: none;/', $css), 'display: none анимацию убивает');
+    assert_eq(0, preg_match('/\+ \.hm-faq-a \{[^}]*display: none;/', $css), 'и у закрытого ответа тоже');
+    assert_true((bool)preg_match('/\.hm-faq-a \{[^}]*display: grid;[^}]*grid-template-rows: 1fr;[^}]*transition:[^}]*grid-template-rows/s', $css),
+        'открытый ответ — строка 1fr с переходом');
+    assert_true((bool)preg_match('/\.hm-faq-a-in \{[^}]*min-height: 0;[^}]*overflow: hidden;/s', $css),
+        'обёртка сжимается до нуля и обрезает текст');
+    assert_eq(0, preg_match('/\.hm-faq-a-in \{[^}]*padding/s', $css), 'у обёртки нет отступов');
+
+    assert_true((bool)preg_match('/\.hm-faq-q\[aria-expanded="false"\] \+ \.hm-faq-a \{([^}]*)\}/', $css, $closed),
+        'правило закрытого ответа');
+    assert_true(strpos($closed[1], 'grid-template-rows: 0fr;') !== false, 'закрытый ответ сжат до нуля');
+    assert_true(strpos($closed[1], 'padding-top: 0;') !== false && strpos($closed[1], 'padding-bottom: 0;') !== false,
+        'поля закрытого ответа тоже сжаты');
+    // Скрыт и от чтения с экрана, но только когда схлопнется: задержка
+    // visibility равна длительности сворачивания.
+    assert_true(strpos($closed[1], 'visibility: hidden;') !== false, 'закрытый ответ скрыт');
+    assert_true((bool)preg_match('/grid-template-rows (\.\d+)s[^;]*visibility 0s (\.\d+)s;/s', $closed[1], $t)
+        && $t[1] === $t[2], 'текст прячется ровно по окончании сворачивания');
+
+    assert_true((bool)preg_match('/@media \(prefers-reduced-motion: reduce\) \{[^@]*\.hm-faq-a-in[^@]*transition: none;/s', $css),
+        'при «меньше движения» ответ открывается без анимации');
+
+    // Переключает ответ по-прежнему aria-expanded у кнопки.
+    $js = read_file_or_fail($PUB . '/js/home.js');
+    assert_true(strpos($js, "btn.setAttribute('aria-expanded', open ? 'false' : 'true');") !== false,
+        'кнопка переключает aria-expanded');
+});
+
 run_tests();
