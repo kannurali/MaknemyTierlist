@@ -77,7 +77,7 @@ $editor = <<<'HTML'
           <input type="text" id="neTitleRu" maxlength="200" />
         </div>
         <div class="field">
-          <label for="neTitleEn" data-i18n="news.fieldTitleEn">Заголовок (EN, необязательно)</label>
+          <label for="neTitleEn" data-i18n="news.fieldTitleEn">Заголовок (EN, необязательно — пустой переведётся сам)</label>
           <input type="text" id="neTitleEn" maxlength="200" />
         </div>
         <!-- Тело поста — список блоков (абзац, цитата, список, код, картинка,
@@ -89,7 +89,7 @@ $editor = <<<'HTML'
             <label data-i18n="news.fieldBody">Текст поста</label>
             <div class="ne-lang-seg" id="neLang" role="group" data-i18n-label="news.fieldBodyLang" aria-label="Язык текста">
               <button type="button" data-v="ru" class="active">RU</button>
-              <button type="button" data-v="en">EN</button>
+              <button type="button" data-v="en" data-i18n-title="news.enAutoHint" title="Пустой английский текст переведётся автоматически при публикации">EN</button>
             </div>
           </div>
           <div class="ne-blocks" id="neBlocks"></div>
@@ -196,7 +196,7 @@ $html = str_replace(
 // `"></script>` промахивался бы молча.
 $html = preg_replace(
     '~(<script src="/js/news-page\.js[^"]*"[^>]*></script>)~',
-    '$1' . "\n  " . '<script src="/js/news-editor.js?v=2"></script>',
+    '$1' . "\n  " . '<script src="/js/news-editor.js?v=3"></script>',
     $html,
     1
 );
