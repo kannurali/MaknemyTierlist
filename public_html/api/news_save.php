@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/news_blocks.php';
+require_once __DIR__ . '/lib/translate.php';
 
 // Допустимые категории. Тот же список лежит в js/news.js — если добавляется
 // четвёртая, править надо оба места, иначе редактор предложит то, что сервер
@@ -122,7 +123,10 @@ function validate_news_post(array $b): array {
     ]];
 }
 
-function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
+// $translate — функция «русский текст → английский или null» для
+// автоперевода пустых EN-полей (api/lib/translate.php). На бою это
+// tr_google_request(); null (так зовут тесты) — без перевода, как было.
+function handle_news_save(PDO $pdo, array $body, int $nowMs, ?callable $translate = null): array {
     $v = validate_news_post($body);
     if (!$v['ok']) { return [400, ['ok' => false, 'error' => $v['error']]]; }
     $p = $v['post'];
@@ -131,9 +135,11 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
     // записи), а не ошибка: тогда $bodyJson остаётся null и колонка body_json
     // не заполняется.
     $bodyJson = null;
+    $blocks = null;
     if (array_key_exists('body_json', $body) && $body['body_json'] !== null) {
         $vb = news_blocks_validate($body['body_json']);
         if (!$vb['ok']) { return [400, ['ok' => false, 'error' => $vb['error']]]; }
+        $blocks = $vb['blocks'];
 
         // Кодируем СРАЗУ и меряем байты того, что реально ляжет в колонку:
         // мерить исходную строку запроса нельзя — она может отличаться
@@ -174,6 +180,62 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
         ? (int)$body['published_at']
         : $nowMs;
 
+    // Ключ 'id' в теле есть, но read_row_id вернул 0 — значит это не
+    // отсутствие id (тогда это создание нового поста), а мусор вместо id
+    // ("1abc", true, [1,2,3], -5, дробь...). Такое — 400, а не молчаливая
+    // вставка новой записи вместо ожидаемого апдейта.
+    $id = read_row_id($body);
+    if ($id <= 0 && array_key_exists('id', $body)) {
+        return [400, ['ok' => false, 'error' => 'bad id']];
+    }
+    // Существование проверяется отдельным SELECT, а не по rowCount()
+    // апдейта: MySQL считает изменённые строки, а не найденные, и
+    // сохранение без правок вернуло бы 0 — то есть ложный 404. Прежние
+    // тексты нужны автопереводу: по ним видно, какой EN устарел.
+    $old = null;
+    if ($id > 0) {
+        $chk = $pdo->prepare("SELECT title_ru, title_en, body_ru, body_en, body_json FROM news WHERE id = :id");
+        $chk->execute([':id' => $id]);
+        $old = $chk->fetch(PDO::FETCH_ASSOC);
+        if ($old === false) {
+            return [404, ['ok' => false, 'error' => 'not found']];
+        }
+    }
+
+    // Автоперевод идёт ПОСЛЕ всех проверок: они уже прошли на том, что
+    // прислал редактор, а перевод только дописывает EN. Если дописанное не
+    // влезает в пределы, сохраняется непереведённая версия, а не ошибка:
+    // пост важнее перевода. Счётчики уходят в ответ — по translate_failed
+    // редактор говорит админу, что английский не получился.
+    $trStats = [];
+    if ($translate !== null) {
+        $tr = news_autotranslate($p, $blocks, $old, $translate);
+        $failed = $tr['failed'];
+        $p['title_en'] = $tr['post']['title_en'];
+        if (mb_strlen($p['title_en']) > NEWS_TITLE_MAX) {
+            $p['title_en'] = '';
+            $failed++;
+        }
+        if ($blocks !== null) {
+            $check = news_blocks_validate(['v' => NB_DOC_VERSION, 'blocks' => $tr['blocks']]);
+            $enc = $check['ok'] ? json_encode($tr['blocks'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : false;
+            $ru = news_blocks_plain($tr['blocks'], 'ru');
+            $en = news_blocks_plain($tr['blocks'], 'en');
+            if ($enc !== false && strlen($enc) <= NB_LIMIT_JSON && $ru !== '' && mb_strlen($en) <= NEWS_BODY_MAX) {
+                $bodyJson = '{"v":' . NB_DOC_VERSION . ',"blocks":' . $enc . '}';
+                $p['body_ru'] = $ru;
+                $p['body_en'] = $en;
+            } else {
+                $failed++;
+            }
+        } elseif (mb_strlen($tr['post']['body_en']) <= NEWS_BODY_MAX) {
+            $p['body_en'] = $tr['post']['body_en'];
+        } else {
+            $failed++;
+        }
+        $trStats = ['translated' => $tr['filled'], 'translate_failed' => $failed];
+    }
+
     $params = [
         ':c'   => $p['category'],
         ':tr'  => $p['title_ru'],
@@ -190,23 +252,7 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
         ':pa'  => $publishedAt,
     ];
 
-    // Ключ 'id' в теле есть, но read_row_id вернул 0 — значит это не
-    // отсутствие id (тогда это создание нового поста), а мусор вместо id
-    // ("1abc", true, [1,2,3], -5, дробь...). Такое — 400, а не молчаливая
-    // вставка новой записи вместо ожидаемого апдейта.
-    $id = read_row_id($body);
-    if ($id <= 0 && array_key_exists('id', $body)) {
-        return [400, ['ok' => false, 'error' => 'bad id']];
-    }
     if ($id > 0) {
-        // Существование проверяется отдельным SELECT, а не по rowCount()
-        // апдейта: MySQL считает изменённые строки, а не найденные, и
-        // сохранение без правок вернуло бы 0 — то есть ложный 404.
-        $chk = $pdo->prepare("SELECT COUNT(*) FROM news WHERE id = :id");
-        $chk->execute([':id' => $id]);
-        if ((int)$chk->fetchColumn() === 0) {
-            return [404, ['ok' => false, 'error' => 'not found']];
-        }
         $stmt = $pdo->prepare(
             "UPDATE news
                 SET category = :c, title_ru = :tr, title_en = :te,
@@ -217,7 +263,7 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
               WHERE id = :id"
         );
         $stmt->execute($params + [':id' => $id]);
-        return [200, ['ok' => true, 'id' => $id]];
+        return [200, ['ok' => true, 'id' => $id] + $trStats];
     }
 
     $stmt = $pdo->prepare(
@@ -226,13 +272,13 @@ function handle_news_save(PDO $pdo, array $body, int $nowMs): array {
          VALUES (:c, :tr, :te, :br, :be, :img, :pct, :al, :wr, :iw, :ih, :bj, :pa)"
     );
     $stmt->execute($params);
-    return [200, ['ok' => true, 'id' => (int)$pdo->lastInsertId()]];
+    return [200, ['ok' => true, 'id' => (int)$pdo->lastInsertId()] + $trStats];
 }
 
 if (!defined('TESTING')) {
     require_post();
     require_admin();
     $nowMs = (int)round(microtime(true) * 1000);
-    [$status, $payload] = handle_news_save(db(), read_json_body(), $nowMs);
+    [$status, $payload] = handle_news_save(db(), read_json_body(), $nowMs, 'tr_google_request');
     json_out($payload, $status);
 }
