@@ -249,6 +249,10 @@
 .tc-pill-r {
   position: absolute;
   top: calc(-35 * var(--u));
+  padding-top: 0.2em;
+  font-family: var(--display);
+  font-size: calc(17 * var(--u));
+  letter-spacing: 0.03em;
 }
 .tc-pill-l { left: 0; }
 .tc-pill-r { right: 0; }
@@ -258,8 +262,8 @@
   height: calc(12 * var(--u));
   top: calc(169 * var(--u));
 }
-.tc-arrow-l { left: calc(111 * var(--u)); }
-.tc-arrow-r { left: calc(598 * var(--u)); transform: scaleX(-1); }
+.tc-arrow-l { left: calc(104 * var(--u)); }
+.tc-arrow-r { left: calc(606 * var(--u)); transform: scaleX(-1); }
 .tc-arrow svg { display: block; width: 100%; height: 100%; }
 
 .tc-vs {
