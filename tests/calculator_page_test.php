@@ -234,7 +234,8 @@ test('все calc.* ключи, использованные в разметке
 
 test('интерактивные элементы калькулятора получают видимый focus-visible', function () use ($PUB) {
     $css = calc_read($PUB . '/css/calculator.css');
-    foreach (['.tc-search-input:focus-visible', '.tc-btn:focus-visible', '.tc-slot:focus-visible'] as $sel) {
+    foreach (['.tc-search-input:focus-visible', '.tc-btn:focus-visible', '.tc-slot:focus-visible',
+              '.tc-cat-filters .chip:focus-visible'] as $sel) {
         assert_true(strpos($css, $sel) !== false, "нет правила $sel");
     }
     assert_true(strpos($css, '@media (prefers-reduced-motion: reduce)') !== false,
@@ -528,6 +529,22 @@ test('каталог сортируется по значку и фильтру�
         'сетка — через фильтр и поиск из calc.js');
     assert_true(strpos($js, 'CALC.toggleFilter(catalogFilters, chip.dataset.f)') !== false,
         'кнопки переключают группы по правилам тирлиста');
+});
+
+// «Как в тирлисте» — и на вид: включённая кнопка каталога залита тем же
+// градиентом и обведена тем же кольцом, что кнопка фильтра тирлиста.
+test('включённая кнопка фильтра каталога выглядит как в тирлисте', function () use ($PUB) {
+    $calc = calc_read($PUB . '/css/calculator.css');
+    $page = calc_read($PUB . '/css/design-page.css');
+    $rule = '/%s \.chip\[aria-pressed="true"\] \{([^}]*)\}/';
+    assert_true((bool)preg_match(sprintf($rule, '\.toolbar'), $page, $a), 'правило включённой кнопки тирлиста');
+    assert_true((bool)preg_match(sprintf($rule, '\.tc-cat-filters'), $calc, $b), 'правило включённой кнопки каталога');
+    foreach (['background', 'box-shadow'] as $prop) {
+        preg_match('/' . $prop . ': ([^;]+);/', $a[1], $x);
+        preg_match('/' . $prop . ': ([^;]+);/', $b[1], $y);
+        assert_true(!empty($x[1]) && !empty($y[1]), "$prop задан в обоих правилах");
+        assert_eq($x[1], $y[1], "$prop включённой кнопки тот же, что в тирлисте");
+    }
 });
 
 run_tests();

@@ -100,7 +100,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/calculator.css?v=23" />
+<link rel="stylesheet" href="css/calculator.css?v=24" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
