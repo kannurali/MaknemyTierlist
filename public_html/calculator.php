@@ -420,7 +420,7 @@ header('Cache-Control: no-cache, must-revalidate');
   <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
-  <script src="js/calc.js?v=8" fetchpriority="high"></script>
+  <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/calculator-page.js?v=18" fetchpriority="high"></script>
 </body>
 </html>
