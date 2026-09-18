@@ -13,7 +13,7 @@
   background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));
 }
 
-@media (max-aspect-ratio: 1443/2703) {
+@media (min-width: 761px) and (max-aspect-ratio: 1443/2703) {
   .news-bg::before {
     background-size: cover;
     background-position: center top;
@@ -24,7 +24,9 @@
   .news-bg::before { background-image: url("../assets/design/page-bg-m.webp"); }
 }
 
-.news-bg .mk-top::before { display: none; }
+@media (min-width: 761px) {
+  .news-bg .mk-top::before { display: none; }
+}
 
 .nw-page {
   --u: min(1px, calc(100vw / 1443));
