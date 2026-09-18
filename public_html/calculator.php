@@ -9,6 +9,8 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // же, что у остальных страниц редизайна: файл несёт номера версий ?v= для
 // css/js, и закешированная копия намертво прибила бы посетителя к старому коду.
 header('Cache-Control: no-cache, must-revalidate');
+// И минута в кеше LiteSpeed: см. page_lscache() в api/_bootstrap.php.
+page_lscache();
 ?>
 <!DOCTYPE html>
 <html lang="ru">

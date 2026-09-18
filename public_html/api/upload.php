@@ -92,7 +92,7 @@ if (!defined('TESTING')) {
     require_admin();
     // Admin-only, but an admin session plus a stuck retry loop can still fill
     // the disk with sha1-named files; nothing throttled this endpoint before.
-    if (!rate_limit_allow('upload', (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 60, 60, time())) {
+    if (!rate_limit_allow('upload', client_key(), 60, 60, time())) {
         json_out(['error' => 'rate_limited'], 429);
         exit;
     }

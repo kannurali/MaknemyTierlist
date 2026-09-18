@@ -19,8 +19,7 @@ if (!defined('TESTING')) {
     // one script could pump the counter to any value. 20 toggles/hour per IP —
     // far above real use (a visitor flips like/unlike a couple of times).
     // 429 → the client's sendLike() sees !r.ok and rolls the UI back.
-    $key = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-    if (!rate_limit_allow('like', $key, 20, 3600, time())) {
+    if (!rate_limit_allow('like', client_key(), 20, 3600, time())) {
         json_out(['ok' => false, 'error' => 'rate_limited'], 429);
         exit;
     }

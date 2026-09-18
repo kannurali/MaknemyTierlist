@@ -295,4 +295,51 @@ test('an unusable inline creative fails the save loudly', function () {
     assert_eq(0, (int)$pdo->query("SELECT COUNT(*) FROM promo")->fetchColumn(), 'nothing stored');
 });
 
+// ------------------------------------------------------------ routing by rev
+// Та же схема, что у api/tierlist.php: документ для посетителей — только по
+// адресу текущей ревизии, всё прочее — 302 туда. Иначе случайный ?rev=
+// обходил бы любой кеш.
+
+test('the current revision serves the public document', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign(), tmp_dir_p(), 5000);
+    [$status, $doc] = promo_route($pdo, '5000', false);
+    assert_eq(200, $status, 'served');
+    assert_eq('c_shop', $doc['campaigns'][0]['id'], 'the campaign');
+    assert_eq(false, isset($doc['campaigns'][0]['notes']), 'no notes in the cacheable response');
+});
+
+test('an admin asking by revision still gets the public document', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign(), tmp_dir_p(), 5000);
+    [$status, $doc] = promo_route($pdo, '5000', true);
+    assert_eq(200, $status, 'served');
+    assert_eq(false, isset($doc['campaigns'][0]['notes']), 'the ?rev= answer is shared by everyone');
+});
+
+test('the panel (admin, no revision) gets the full document without a redirect', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign(), tmp_dir_p(), 5000);
+    [$status, $doc] = promo_route($pdo, null, true);
+    assert_eq(200, $status, 'no redirect for the panel');
+    assert_true(isset($doc['campaigns'][0]['notes']), 'notes for the admin');
+});
+
+test('a missing or wrong revision is redirected to the current one', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign(), tmp_dir_p(), 5000);
+    foreach ([null, '', '4999', '1', 'x', '5000x'] as $raw) {
+        assert_eq([302, ['location' => '/api/promo.php?rev=5000']], promo_route($pdo, $raw, false),
+            'redirect for ' . var_export($raw, true));
+    }
+});
+
+test('no campaigns yet: rev 0 serves an empty document', function () {
+    $pdo = test_db();
+    assert_eq([302, ['location' => '/api/promo.php?rev=0']], promo_route($pdo, null, false), 'redirect');
+    [$status, $doc] = promo_route($pdo, '0', false);
+    assert_eq(200, $status, 'served');
+    assert_eq([], $doc['campaigns'], 'empty');
+});
+
 run_tests();

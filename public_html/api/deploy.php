@@ -251,5 +251,12 @@ if (!defined('TESTING')) {
     $copied = count($published['copied']);
     deploy_log_line($log, "OK {$verdict['reason']} head=$head copied=$copied same={$published['same']} in {$secs}s"
         . ($copied ? ': ' . implode(' ', $published['copied']) : ''));
+    // Сбросить кеш LiteSpeed целиком. Страницы лежат там по минуте, и в эту
+    // минуту новый посетитель получил бы старый HTML со старыми ?v= у js/css,
+    // а под этими адресами уже отдаются новые файлы: разметка одной версии,
+    // скрипты другой. Заголовок обрабатывает сам LiteSpeed, чей бы запрос ни
+    // пришёл, — здесь это запрос GitHub. Первый деплой с этой строкой
+    // выполняет ещё старый deploy.php, но и кеша до него не было.
+    header('X-LiteSpeed-Purge: *');
     json_out(['ok' => true, 'deployed' => true, 'head' => $head, 'copied' => $copied, 'seconds' => $secs], 200);
 }

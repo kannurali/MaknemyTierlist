@@ -140,6 +140,7 @@ if (!defined('TESTING')) {
             while (ob_get_level() > 0) { ob_end_clean(); }
             header('Content-Type: image/png');
             header('Cache-Control: public, max-age=31536000, immutable');
+            lscache_public(86400);
             readfile($cachePath);
             exit;
         }

@@ -81,6 +81,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     } catch (Throwable $e) {
         error_log('index.php: og preview fallback: ' . $e->getMessage());
     }
+    // Минута в кеше LiteSpeed — см. page_lscache() в api/_bootstrap.php.
+    // window.NX_REV из закешированной копии может отстать от ревизии на эту
+    // минуту — тогда app.js получит данные через редирект tierlist.php на
+    // текущую ревизию, а следующий опрос state.php всё выровняет.
+    page_lscache();
 }
 ?>
 <!DOCTYPE html>

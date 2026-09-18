@@ -39,6 +39,10 @@ function handle_session(callable $pdo, array $session, array $cfg): array {
 
 if (!defined('TESTING')) {
     header('Cache-Control: no-store');
-    start_site_session();
-    json_out(handle_session('db', $_SESSION, app_config()), 200);
+    // Анонимному посетителю сессия не заводится: раньше каждый первый заход
+    // на любую страницу оставлял на сервере файл сессии и получал куку, хотя
+    // хранить в ней было нечего. Сессию заводят вход через Roblox и вход в
+    // админку.
+    $session = resume_site_session() ? $_SESSION : [];
+    json_out(handle_session('db', $session, app_config()), 200);
 }

@@ -22,7 +22,9 @@ function admin_page_headers(): void {
 // WWW-Authenticate header is malformed, and some shared hosts swap the body
 // for their own ErrorDocument, which would replace the form with a stock page.
 function admin_page_guard(string $title): void {
-    start_admin_session();
+    // Без куки админом быть нельзя — форма входа отдаётся без новой сессии,
+    // иначе каждый заход на /admin оставлял бы на сервере файл сессии.
+    resume_site_session();
     admin_page_headers();
     if (is_admin()) { return; }
     admin_login_page($title);
