@@ -102,7 +102,7 @@ page_lscache();
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/calculator.css?v=24" />
+<link rel="stylesheet" href="css/calculator.css?v=25" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -223,7 +223,7 @@ page_lscache();
         <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
 
           <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">Я</span>
+          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">ДАЮ</span>
 
           <ul class="tc-slots" data-side="left"></ul>
 
@@ -257,7 +257,7 @@ page_lscache();
 
         <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
           <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ВЫ</span>
+          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ХОЧУ</span>
 
           <ul class="tc-slots" data-side="right"></ul>
 
@@ -423,7 +423,7 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=46" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=47" fetchpriority="high"></script>
   <script src="js/promo.js?v=10" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>

@@ -355,7 +355,7 @@ page_lscache();
     </p>
 </footer>
 
-<script src="js/i18n.js?v=46" fetchpriority="high"></script>
+<script src="js/i18n.js?v=47" fetchpriority="high"></script>
 <script src="js/home.js?v=5" fetchpriority="high"></script>
 </body>
 </html>
