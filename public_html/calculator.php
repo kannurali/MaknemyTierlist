@@ -368,6 +368,13 @@ header('Cache-Control: no-cache, must-revalidate');
         </div>
         <div class="tc-cat-sub">
           <span class="tc-pill" id="tcCatalogTitle" data-i18n="calc.catalogPill">Каталог</span>
+          <div class="tc-cat-filters" id="tcCatalogFilters" role="group" data-i18n-label="news.filterGroupLabel" aria-label="Фильтр по категориям">
+            <button type="button" class="chip" data-f="fruits" data-i18n="filters.fruits" data-i18n-title="filters.fruitsTitle" title="Обычные фрукты" aria-pressed="true">Фрукты</button>
+            <button type="button" class="chip" data-f="configurators" data-i18n="filters.configurators" data-i18n-title="filters.configuratorsTitle" title="Скины, мутации, конфигурации и хроматики" aria-pressed="true">Конфигураторы</button>
+            <button type="button" class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="Перманентные фрукты" aria-pressed="true">Пермы</button>
+            <button type="button" class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="Геймпассы и воучеры" aria-pressed="true">Пассы</button>
+            <button type="button" class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="Показать всё" aria-pressed="true">Все</button>
+          </div>
           <button type="button" class="tc-cat-close" id="tcCatalogClose" data-i18n-label="calc.catalogClose" aria-label="Закрыть каталог">✕</button>
         </div>
         <p class="tc-cat-status" id="tcCatalogStatus" role="status" aria-live="polite"></p>
@@ -421,6 +428,6 @@ header('Cache-Control: no-cache, must-revalidate');
 
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/calculator-page.js?v=18" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=19" fetchpriority="high"></script>
 </body>
 </html>

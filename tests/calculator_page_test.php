@@ -489,4 +489,45 @@ test('ползунок каталога такой же ширины, как с�
     assert_eq($d[1], $c[1], 'радиус ползунка один на обе полосы');
 });
 
+// --------------------------------------------------------------------------
+//  Каталог: порядок по значку и фильтр тирлиста
+//  (docs/superpowers/specs/2026-09-18-calc-catalog-sort-filter-design.md)
+// --------------------------------------------------------------------------
+
+// Кнопки те же, что у тирлиста (#filters в index.php), но идут в порядке
+// карточек: фрукты первыми. При загрузке включено всё — без пермов в
+// калькуляторе не собрать сделку.
+test('в каталоге фильтр тирлиста: пять кнопок в порядке карточек', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    assert_true((bool)preg_match('/<div class="tc-cat-filters" id="tcCatalogFilters" role="group"[^>]*>(.*?)<\/div>/s', $calc, $m),
+        'в каталоге должна быть группа кнопок фильтра');
+    preg_match_all('/data-f="([a-z]+)"/', $m[1], $keys);
+    assert_eq(['fruits', 'configurators', 'perms', 'passes', 'all'], $keys[1], 'кнопки и их порядок');
+    assert_eq(5, substr_count($m[1], 'aria-pressed="true"'), 'при загрузке включено всё');
+    $filters = strpos($calc, 'id="tcCatalogFilters"');
+    assert_true(strpos($calc, 'id="tcCatalogTitle"') < $filters && $filters < strpos($calc, 'id="tcCatalogClose"'),
+        'фильтр стоит в строке «Каталог», перед крестиком');
+});
+
+test('подписи фильтра каталога есть в словаре на обоих языках', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    $i18n = calc_read($PUB . '/js/i18n.js');
+    assert_true((bool)preg_match('/<div class="tc-cat-filters".*?<\/div>/s', $calc, $m), 'группа кнопок фильтра');
+    preg_match_all('/data-i18n(?:-title|-label)?="([a-zA-Z.]+)"/', $m[0], $keys);
+    assert_eq(11, count(array_unique($keys[1])), 'подпись и подсказка у каждой из пяти кнопок и название группы');
+    foreach (array_unique($keys[1]) as $key) {
+        assert_eq(2, substr_count($i18n, '"' . $key . '"'), "ключ $key должен быть и в ru, и в en");
+    }
+});
+
+test('каталог сортируется по значку и фильтруется функциями calc.js', function () use ($PUB) {
+    $js = calc_read($PUB . '/js/calculator-page.js');
+    assert_true(strpos($js, 'CALC.sortCatalog(CALC.flattenTierlist(doc))') !== false,
+        'порядок по значку при каждой загрузке тирлиста');
+    assert_true(strpos($js, 'CALC.filterCatalog(catalog, catalogFilters, query)') !== false,
+        'сетка — через фильтр и поиск из calc.js');
+    assert_true(strpos($js, 'CALC.toggleFilter(catalogFilters, chip.dataset.f)') !== false,
+        'кнопки переключают группы по правилам тирлиста');
+});
+
 run_tests();
