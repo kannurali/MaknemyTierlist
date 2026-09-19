@@ -448,16 +448,14 @@
 
 .hm-about-inner {
   box-sizing: border-box;
-  max-width: calc(920 * var(--u));
-  margin: 0 auto;
-  padding: calc(52 * var(--u)) calc(64 * var(--u)) calc(56 * var(--u));
+  padding: calc(52 * var(--u)) calc(126.5 * var(--u)) calc(48 * var(--u));
   border-radius: calc(42 * var(--u));
   background: var(--hm-panel);
 }
 
 .hm-about-title {
   margin: 0 0 calc(28 * var(--u));
-  font-size: calc(36 * var(--u));
+  font-size: calc(40 * var(--u));
   line-height: 1.1;
 }
 
@@ -915,12 +913,11 @@
   }
 
   .hm-about-inner {
-    max-width: none;
     padding: 24px 16px 20px;
     border-radius: 20px;
   }
 
-  .hm-about-title { margin-bottom: 16px; font-size: 22px; line-height: 1.15; }
+  .hm-about-title { margin-bottom: 16px; font-size: 24px; line-height: 1.1; }
 
   .hm-about-body p { font-size: 15px; }
   .hm-about-body p + p { margin-top: 12px; }
