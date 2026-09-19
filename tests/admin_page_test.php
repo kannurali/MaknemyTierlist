@@ -137,6 +137,12 @@ test('/admin/news (admin-news.php) реально отдаёт разметку 
     assert_true(strlen($html) > 5000, 'это лента плюс модалка редактора, а не заглушка');
     assert_true(strpos($html, 'id="feed"') !== false, 'лента новостей присутствует');
     assert_true(strpos($html, 'id="newsEditor"') !== false, 'модалка редактора поста вставлена');
+    // Скрипт редактора встаёт сразу за news-page.js: тот объявляет
+    // window.NEWSPAGE, без которого редактор молча ничего не делает. Сама
+    // модалка при этом на месте, так что проверка выше такую поломку не видит.
+    assert_true((bool)preg_match(
+        '~<script\b[^>]*\bsrc="/js/news-page\.js[^"]*"[^>]*></script>\s*<script src="/js/news-editor\.js\?v=\d+"></script>~',
+        $html), 'news-editor.js подключён сразу после news-page.js');
     assert_true(strpos($html, 'window.NX_ADMIN_PAGE = true') !== false, 'флаг роли выставлен');
     assert_true(strpos($html, 'adm-nav') !== false, 'шапка админки вставлена');
 

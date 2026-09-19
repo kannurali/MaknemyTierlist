@@ -12,7 +12,17 @@
 #
 # config.php is not touched: it lives one level above the web root and is
 # git-ignored, so it survives every deploy.
+#
+# assets/, css/ and js/ go first. Pages load those files as name.js?v=N and
+# .htaccess lets browsers cache such an address for a year; a page published
+# before its files would let a visitor cache the old file under the new
+# number. --preserve=timestamps keeps Last-Modified of unchanged files stable,
+# so revalidation after a deploy still answers 304. This is the manual
+# fallback: the webhook (public_html/api/deploy.php) does the same in PHP and
+# additionally never rewrites identical files and swaps changed ones
+# atomically.
 deployment:
   tasks:
     - export DEPLOYPATH=/home/maknemyt/public_html
-    - /bin/cp -R public_html/. $DEPLOYPATH/
+    - /bin/cp -R --preserve=timestamps public_html/assets public_html/css public_html/js $DEPLOYPATH/
+    - /bin/cp -R --preserve=timestamps public_html/. $DEPLOYPATH/

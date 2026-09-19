@@ -44,6 +44,23 @@ function roblox_oauth_enabled(array $cfg): bool {
     return roblox_oauth_config($cfg) !== [];
 }
 
+/**
+ * Открыт ли вход всем посетителям.
+ *
+ * Пока приложение в Roblox не прошло ревью, войти могут только 10 разных
+ * аккаунтов, и кнопка, видимая всем, раздала бы эти места первым встречным.
+ * Поэтому по умолчанию её видят только пришедшие по ссылке с ?signin
+ * (js/topbar.js), а после одобрения в config.php ставится
+ * roblox_login_public => true.
+ *
+ * FILTER_VALIDATE_BOOLEAN, а не !empty(): конфиг правят руками в cPanel, и
+ * строка 'false' в кавычках не должна молча открыть вход.
+ */
+function roblox_login_public(array $cfg): bool {
+    if (!roblox_oauth_enabled($cfg)) { return false; }
+    return filter_var($cfg['roblox_login_public'] ?? false, FILTER_VALIDATE_BOOLEAN);
+}
+
 /** Случайная строка в base64url — годится и для state, и для code_verifier. */
 function roblox_random_token(int $bytes = 32): string {
     return rtrim(strtr(base64_encode(random_bytes($bytes)), '+/', '-_'), '=');

@@ -249,16 +249,20 @@
 .tc-pill-r {
   position: absolute;
   top: calc(-35 * var(--u));
+  padding-top: 0.2em;
+  font-family: var(--display);
+  font-size: calc(17 * var(--u));
+  letter-spacing: 0.03em;
 }
 .tc-pill-l { left: 0; }
-.tc-pill-r { left: calc(262 * var(--u)); }
+.tc-pill-r { right: 0; }
 
 .tc-arrow {
   width: calc(32 * var(--u));
   height: calc(12 * var(--u));
   top: calc(169 * var(--u));
 }
-.tc-arrow-l { left: calc(97 * var(--u)); }
+.tc-arrow-l { left: calc(104 * var(--u)); }
 .tc-arrow-r { left: calc(606 * var(--u)); transform: scaleX(-1); }
 .tc-arrow svg { display: block; width: 100%; height: 100%; }
 
@@ -450,10 +454,10 @@
 }
 
 .tc-demand-dot[data-demand="neon"]   { background: url("../assets/dot-neon.png") center / cover no-repeat; }
-.tc-demand-dot[data-demand="green"]  { background: var(--d-green); }
-.tc-demand-dot[data-demand="yellow"] { background: var(--d-yellow); }
-.tc-demand-dot[data-demand="orange"] { background: var(--d-orange); }
-.tc-demand-dot[data-demand="red"]    { background: var(--d-red); }
+.tc-demand-dot[data-demand="green"]  { background: url("../assets/dot-green.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="yellow"] { background: url("../assets/dot-yellow.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="orange"] { background: url("../assets/dot-orange.png") center / cover no-repeat; }
+.tc-demand-dot[data-demand="red"]    { background: url("../assets/dot-red.png") center / cover no-repeat; }
 
 .tc-total-line {
   left: calc(44 * var(--u));
@@ -781,6 +785,39 @@
 }
 .tc-cat-close:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
+.tc-cat-filters {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -5px 0;
+  padding: 5px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.tc-cat-filters::-webkit-scrollbar { display: none; }
+.tc-cat-filters .chip {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: #fff;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+  transition: background .15s, box-shadow .15s;
+}
+.tc-cat-filters .chip[aria-pressed="true"] {
+  background: linear-gradient(255deg, #61b5e9 0%, #2d4aed 100%);
+  box-shadow: 0 0 0 5px rgba(136, 176, 255, 0.32);
+}
+.tc-cat-filters .chip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
 .tc-cat-status {
   margin: 0;
   min-height: 1em;
@@ -949,6 +986,7 @@
   .tc-btn-accent:hover { filter: brightness(1.1); background: var(--tc-grad); }
   .tc-cat-close:hover { background: rgba(255, 90, 80, .28); color: #ffb4ae; }
   .tc-cat-card:not(.is-full):hover .tc-cat-inner { box-shadow: inset 0 0 0 2px var(--cyan); }
+  .tc-cat-filters .chip:not([aria-pressed="true"]):hover { background: rgba(255, 255, 255, .08); }
   .tc-rail.has-link:hover { filter: brightness(1.05); }
 }
 
@@ -977,6 +1015,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tc-page * { transition: none !important; }
+  .tc-cat-filters .chip { transition: none; }
   .tc-cat-backdrop,
   .tc-cat,
   .tc-slot.is-just-added { animation: none; transition: none; }
@@ -1206,6 +1245,10 @@
 
   .tc-cat .tc-pill { height: 28px; padding: 0 16px; font-size: 14px; }
   .tc-cat-close { width: 30px; height: 30px; font-size: 13px; }
+  .tc-cat-sub { flex-wrap: wrap; row-gap: 10px; }
+  .tc-cat-filters { order: 1; flex: 1 1 100%; margin: -5px; gap: 6px; }
+  .tc-cat-filters .chip { padding: 7px; font-size: 13px; }
+  .tc-cat-filters .chip[aria-pressed="true"] { box-shadow: 0 0 0 3px rgba(136, 176, 255, 0.32); }
   .tc-cat-search-btn { width: 30px; height: 30px; }
   .tc-cat-search-icon { width: 17px; height: 17px; }
   .tc-search-input { height: 32px; padding: 0 14px; font-size: 14px; }
@@ -1238,6 +1281,8 @@
   .tc-cat-dot { width: 14px; height: 14px; }
   .tc-cat .tc-pill { height: 32px; padding: 0 20px; font-size: 16px; }
   .tc-cat-close { width: 35px; height: 35px; font-size: 15px; }
+  .tc-cat-filters { gap: 8px; }
+  .tc-cat-filters .chip { padding: 8px 12px; font-size: 15px; }
   .tc-cat-search-btn { width: 35px; height: 35px; }
   .tc-cat-search-icon { width: 20px; height: 20px; }
   .tc-search-input { height: 35px; padding: 0 20px; font-size: 15px; }

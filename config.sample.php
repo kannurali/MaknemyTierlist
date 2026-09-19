@@ -22,6 +22,11 @@ return [
     // приложения у Roblox. Задан явно, а не собран из $_SERVER['HTTP_HOST']:
     // заголовок Host приходит от клиента и подделывается.
     'roblox_redirect_uri'  => 'https://maknemy.com/api/roblox_callback.php',
+    // Кнопку входа видят все посетители только при true. Пока приложение в
+    // Roblox не прошло ревью, войти могут лишь 10 разных аккаунтов, поэтому
+    // до одобрения здесь false: кнопку показывают только тем, кто открыл
+    // сайт по ссылке https://maknemy.com/?signin (она же — Entry Link).
+    'roblox_login_public'  => false,
 
     // --- GitHub push webhook (api/deploy.php) ---------------------------
     // Leave 'deploy_secret' empty to keep the endpoint disabled: it then

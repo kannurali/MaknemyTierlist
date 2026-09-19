@@ -9,6 +9,8 @@ require_once __DIR__ . '/lib/roblox_oauth.php';
  *   roblox — заведено ли вообще приложение в Roblox. По нему шапка решает,
  *            показывать кнопку входа или оставить прежнюю заглушку: пока
  *            client_id не прописан, кнопка вела бы на 503.
+ *   roblox_public — открыт ли вход всем. Пока нет, кнопку видят только
+ *            пришедшие по ссылке с ?signin (см. roblox_login_public()).
  *
  * База открывается через $pdo() и только когда в сессии есть вошедший.
  * Ручку теперь дёргает шапка на каждой странице сайта, а не одна админка,
@@ -51,14 +53,19 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
     if ($user !== null) { unset($user['seen']); }
 
     return [
-        'admin'  => !empty($session['admin']),
-        'user'   => $user,
-        'roblox' => roblox_oauth_enabled($cfg),
+        'admin'         => !empty($session['admin']),
+        'user'          => $user,
+        'roblox'        => roblox_oauth_enabled($cfg),
+        'roblox_public' => roblox_login_public($cfg),
     ];
 }
 
 if (!defined('TESTING')) {
     header('Cache-Control: no-store');
-    start_site_session();
-    json_out(handle_session('db', $_SESSION, app_config()), 200);
+    // Анонимному посетителю сессия не заводится: раньше каждый первый заход
+    // на любую страницу оставлял на сервере файл сессии и получал куку, хотя
+    // хранить в ней было нечего. Сессию заводят вход через Roblox и вход в
+    // админку.
+    $session = resume_site_session() ? $_SESSION : [];
+    json_out(handle_session('db', $session, app_config()), 200);
 }

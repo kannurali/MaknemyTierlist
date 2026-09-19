@@ -496,3 +496,124 @@ test('каждый тип из тирлиста даёт код с сущест�
         );
     }
 });
+
+// --------------------------------------------------------------------------
+//  Каталог: порядок по значку и фильтр по группам тирлиста
+//  (docs/superpowers/specs/2026-09-18-calc-catalog-sort-filter-design.md)
+// --------------------------------------------------------------------------
+
+const { sortCatalog, filterGroupOf, allFiltersOn, toggleFilter, filterCatalog, CATALOG_ORDER, FILTER_GROUPS } = CALC;
+
+function typed(id, type, value) {
+    return { id, name: id, value: String(value), icon: '/images/x.webp', type, demand: 'green' };
+}
+
+test('sortCatalog ставит значки в порядке FR, CS, CM, MS, CR, PM, GP, VH', () => {
+    const shuffled = [
+        typed('vh', 'vh', 100), typed('pm', 'p', 900), typed('cr', 'cr', 50000),
+        typed('gp', 'gp', 5400), typed('ms', 'ms', 19250), typed('fr', 'f', 1),
+        typed('cm', 'cm', 1600), typed('cs', 's', 20500),
+    ];
+    assert.deepEqual(sortCatalog(shuffled).map(it => it.id), ['fr', 'cs', 'cm', 'ms', 'cr', 'pm', 'gp', 'vh']);
+    assert.deepEqual(CATALOG_ORDER, ['fr', 'cs', 'cm', 'ms', 'cr', 'pm', 'gp', 'vh']);
+});
+
+test('внутри значка дорогие выше', () => {
+    const items = [typed('dark', 'f', '0.3'), typed('meme', 'f', 9000), typed('kitsune', 'f', 800)];
+    assert.deepEqual(sortCatalog(items).map(it => it.id), ['meme', 'kitsune', 'dark']);
+});
+
+test('при равной цене остаётся порядок тирлиста', () => {
+    const items = [typed('tiger', 'p', 7800), typed('yeti', 'p', 7800), typed('gas', 'p', 6250)];
+    assert.deepEqual(sortCatalog(items).map(it => it.id), ['tiger', 'yeti', 'gas']);
+    assert.deepEqual(sortCatalog([items[1], items[0], items[2]]).map(it => it.id), ['yeti', 'tiger', 'gas']);
+});
+
+// «0,4» у Eagle Fruit на бою: parseValue запятую намеренно не читает, так
+// что предмет стоит 0 — и уходит в конец фруктов, а не всего каталога.
+test('нечитаемая цена уходит в конец своего значка, а не всего каталога', () => {
+    const items = [typed('eagle', 'f', '0,4'), typed('dark', 'f', '0.3'), typed('perm', 'p', 1)];
+    assert.deepEqual(sortCatalog(items).map(it => it.id), ['dark', 'eagle', 'perm']);
+});
+
+test('sortCatalog не меняет входной массив и не падает на пустом', () => {
+    const items = [typed('b', 'p', 1), typed('a', 'f', 1)];
+    const sorted = sortCatalog(items);
+    assert.deepEqual(items.map(it => it.id), ['b', 'a']);
+    assert.deepEqual(sorted.map(it => it.id), ['a', 'b']);
+    assert.notEqual(sorted, items);
+    assert.deepEqual(sortCatalog([]), []);
+    assert.deepEqual(sortCatalog(null), []);
+    assert.deepEqual(sortCatalog(undefined), []);
+});
+
+test('неизвестный тип встаёт к фруктам — туда же, куда его значок', () => {
+    const items = [typed('cs', 's', 5), typed('odd', 'nope', 1)];
+    assert.deepEqual(sortCatalog(items).map(it => it.id), ['odd', 'cs']);
+    assert.equal(filterGroupOf('nope'), 'fruits');
+});
+
+// Группы обязаны совпадать с тирлистом, иначе «Пермы» в каталоге и в
+// тирлисте покажут разное. groupOf берётся из самого app.js: поменяют
+// группы тирлиста — этот тест упадёт.
+test('filterGroupOf делит типы из боевых данных так же, как groupOf тирлиста', () => {
+    const app = readFileSync(new URL('../public_html/js/app.js', import.meta.url), 'utf8');
+    const src = app.match(/function groupOf\(type\) \{[\s\S]*?\n {2}\}/);
+    assert.ok(src, 'groupOf не найден в app.js — поправить тест вслед за тирлистом');
+    const tierlistGroupOf = new Function('return ' + src[0])();
+    for (const type of ['f', '', 'p', 's', 'm', 'cs', 'cm', 'ms', 'cr', 'gp', 'vh', 'v']) {
+        assert.equal(filterGroupOf(type), tierlistGroupOf(type), `тип "${type}"`);
+    }
+    assert.deepEqual(FILTER_GROUPS, ['fruits', 'configurators', 'perms', 'passes']);
+});
+
+test('toggleFilter выключает и включает группу, не трогая остальные', () => {
+    const off = toggleFilter(allFiltersOn(), 'perms');
+    assert.deepEqual(off, { fruits: true, configurators: true, perms: false, passes: true });
+    assert.deepEqual(toggleFilter(off, 'perms'), allFiltersOn());
+});
+
+test('последнюю включённую группу выключить нельзя — как в тирлисте', () => {
+    const only = { fruits: true, configurators: false, perms: false, passes: false };
+    assert.deepEqual(toggleFilter(only, 'fruits'), only);
+});
+
+test('«Все» включает все группы', () => {
+    const only = { fruits: false, configurators: false, perms: true, passes: false };
+    assert.deepEqual(toggleFilter(only, 'all'), allFiltersOn());
+    assert.deepEqual(allFiltersOn(), { fruits: true, configurators: true, perms: true, passes: true });
+});
+
+test('toggleFilter возвращает новый объект и не меняет старый', () => {
+    const start = allFiltersOn();
+    const next = toggleFilter(start, 'fruits');
+    assert.notEqual(next, start);
+    assert.deepEqual(start, allFiltersOn());
+    assert.notEqual(allFiltersOn(), allFiltersOn(), 'каждый вызов — свой объект');
+});
+
+test('filterCatalog оставляет только включённые группы', () => {
+    const items = [typed('meme', 'f', 9000), typed('slayer', 'cs', 20500), typed('pkitsune', 'p', 12500), typed('notifier', 'gp', 5400)];
+    const noPerms = toggleFilter(allFiltersOn(), 'perms');
+    assert.deepEqual(filterCatalog(items, noPerms, '').map(it => it.id), ['meme', 'slayer', 'notifier']);
+    assert.deepEqual(filterCatalog(items, allFiltersOn(), '').map(it => it.id), ['meme', 'slayer', 'pkitsune', 'notifier']);
+});
+
+test('поиск работает внутри включённых групп, без учёта регистра и пробелов по краям', () => {
+    const items = [
+        { ...typed('a', 'f', 1), name: 'Dragon (West) Fruit' },
+        { ...typed('b', 'p', 1), name: 'Permanent Dragon (West + East)' },
+        { ...typed('c', 'f', 1), name: 'Magnet Fruit' },
+    ];
+    const fruitsOnly = { fruits: true, configurators: false, perms: false, passes: false };
+    assert.deepEqual(filterCatalog(items, fruitsOnly, '  DRAGON ').map(it => it.id), ['a']);
+    assert.deepEqual(filterCatalog(items, allFiltersOn(), 'dragon').map(it => it.id), ['a', 'b']);
+    assert.deepEqual(filterCatalog(items, fruitsOnly, 'kitsune'), []);
+});
+
+test('filterCatalog сохраняет порядок и не падает на пустом', () => {
+    const items = sortCatalog([typed('p1', 'p', 5), typed('f1', 'f', 1), typed('f2', 'f', 2)]);
+    assert.deepEqual(filterCatalog(items, allFiltersOn(), '').map(it => it.id), ['f2', 'f1', 'p1']);
+    assert.deepEqual(filterCatalog(null, allFiltersOn(), 'x'), []);
+    assert.deepEqual(filterCatalog(items, undefined, '').map(it => it.id), ['f2', 'f1', 'p1'], 'без фильтра — всё');
+});

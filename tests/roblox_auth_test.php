@@ -37,6 +37,36 @@ test('полный конфиг включает вход', function () {
     assert_eq('123', roblox_oauth_config($cfg)['client_id'], 'пробелы обрезаны');
 });
 
+// Пока приложение в Roblox не прошло ревью, войти могут только 10 разных
+// аккаунтов. Кнопка, видимая всем, раздала бы эти места первым встречным,
+// поэтому всем вход открывает только явный ключ в config.php, а до него
+// кнопку видят пришедшие по ссылке с ?signin (js/topbar.js).
+test('вход открыт всем только явным ключом', function () {
+    $on = [
+        'roblox_client_id' => '1', 'roblox_client_secret' => '2',
+        'roblox_redirect_uri' => 'https://maknemy.com/api/roblox_callback.php',
+    ];
+    assert_eq(false, roblox_login_public($on), 'ключа нет — только по приглашению');
+    assert_eq(true, roblox_login_public($on + ['roblox_login_public' => true]), 'true');
+    assert_eq(false, roblox_login_public($on + ['roblox_login_public' => false]), 'false');
+    // Конфиг правят руками в cPanel, и кавычки вокруг значения не должны
+    // его переворачивать: !empty('false') открыл бы вход.
+    assert_eq(true, roblox_login_public($on + ['roblox_login_public' => 'true']), "'true'");
+    assert_eq(false, roblox_login_public($on + ['roblox_login_public' => 'false']), "'false'");
+    assert_eq(true, roblox_login_public($on + ['roblox_login_public' => 1]), '1');
+    assert_eq(false, roblox_login_public($on + ['roblox_login_public' => '0']), "'0'");
+    assert_eq(false, roblox_login_public($on + ['roblox_login_public' => '']), 'пустая строка');
+    assert_eq(false, roblox_login_public(['roblox_login_public' => true]),
+        'без ключей приложения открывать нечего');
+});
+
+// Образец копируют на бой как есть — вход в нём обязан стоять закрытым.
+test('в образце конфига вход закрыт для всех', function () {
+    $sample = require __DIR__ . '/../config.sample.php';
+    assert_true(array_key_exists('roblox_login_public', $sample), 'ключ описан в образце');
+    assert_eq(false, $sample['roblox_login_public'] ?? null, 'и равен false');
+});
+
 // --------------------------------------------------------------------------
 //  PKCE
 // --------------------------------------------------------------------------
@@ -252,6 +282,16 @@ test('без таблицы users сайт не падает', function () use (
 test('вход выключен — шапка узнаёт об этом', function () {
     $s = handle_session(function () { return test_db(); }, [], []);
     assert_eq(false, $s['roblox'], 'client_id не прописан');
+});
+
+test('шапка узнаёт, открыт ли вход всем', function () use ($CFG_ON) {
+    $db = function () { return test_db(); };
+    assert_eq(false, handle_session($db, [], $CFG_ON)['roblox_public'] ?? null,
+        'по умолчанию — только по приглашению');
+    assert_eq(true, handle_session($db, [], $CFG_ON + ['roblox_login_public' => true])['roblox_public'] ?? null,
+        'ключ открыл вход');
+    assert_eq(false, handle_session($db, [], ['roblox_login_public' => true])['roblox_public'] ?? null,
+        'без приложения открывать нечего');
 });
 
 test('админская сессия не путается с пользовательской', function () use ($CFG_ON) {

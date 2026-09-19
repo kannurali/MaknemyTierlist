@@ -10,7 +10,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     exit;
 }
 
-start_admin_session();
+// Без куки выходить не из чего: не заводим сессию, чтобы тут же её убить.
+if (!resume_site_session()) {
+    header('Cache-Control: no-store');
+    header('Location: /', true, 303);
+    exit;
+}
 $_SESSION = [];
 // session_destroy() чистит хранилище, но куку оставляет: браузер продолжит
 // слать мёртвый идентификатор до закрытия вкладки. Гасим её явно.

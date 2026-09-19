@@ -211,7 +211,15 @@
 
   const catalogState = { open: false, side: null, triggerEl: null, slotIndex: -1 };
 
-  function norm(s) { return String(s || "").toLowerCase(); }
+  let catalogFilters = CALC.allFiltersOn();
+
+  function renderCatalogFilters() {
+    const allOn = CALC.FILTER_GROUPS.every(key => catalogFilters[key]);
+    document.querySelectorAll("#tcCatalogFilters .chip").forEach(chip => {
+      const key = chip.dataset.f;
+      chip.setAttribute("aria-pressed", String(key === "all" ? allOn : !!catalogFilters[key]));
+    });
+  }
 
   function buildCatalogCard(it) {
     const li = document.createElement("li");
@@ -285,9 +293,8 @@
 
   function renderCatalogGrid(query) {
     const grid = $("#tcCatalogGrid");
-    const q = norm(query).trim();
     grid.textContent = "";
-    const matches = q ? catalog.filter(it => norm(it.name).includes(q)) : catalog;
+    const matches = CALC.filterCatalog(catalog, catalogFilters, query);
     if (!matches.length) {
       const li = document.createElement("li");
       li.className = "tc-cat-empty";
@@ -415,6 +422,17 @@
 
   function wireCatalog() {
     $("#tcCatalogSearch").addEventListener("input", e => queueCatalogRender(e.target.value));
+    $("#tcCatalogFilters").addEventListener("click", e => {
+      const chip = e.target.closest(".chip");
+      if (!chip) return;
+      const next = CALC.toggleFilter(catalogFilters, chip.dataset.f);
+      if (CALC.FILTER_GROUPS.every(key => next[key] === catalogFilters[key])) return;
+      catalogFilters = next;
+      renderCatalogFilters();
+      cancelQueuedRender();
+      renderCatalogGrid($("#tcCatalogSearch").value);
+      $("#tcCatalogGrid").scrollTop = 0;
+    });
     $("#tcCatalogClose").addEventListener("click", closeCatalog);
     $("#tcCatalogBackdrop").addEventListener("click", e => {
       if (e.target === $("#tcCatalogBackdrop")) closeCatalog();
@@ -572,7 +590,7 @@
   let pollTimer = null;
 
   function applyTierlist(doc) {
-    catalog = CALC.flattenTierlist(doc);
+    catalog = CALC.sortCatalog(CALC.flattenTierlist(doc));
     catalogIndex = CALC.buildCatalogIndex(catalog);
   }
 
@@ -658,6 +676,7 @@
   wireSlots("left");
   wireSlots("right");
   wireCatalog();
+  renderCatalogFilters();
   wireActions();
   applyLang();
   load();

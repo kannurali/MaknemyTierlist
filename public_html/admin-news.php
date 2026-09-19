@@ -77,7 +77,7 @@ $editor = <<<'HTML'
           <input type="text" id="neTitleRu" maxlength="200" />
         </div>
         <div class="field">
-          <label for="neTitleEn" data-i18n="news.fieldTitleEn">Заголовок (EN, необязательно)</label>
+          <label for="neTitleEn" data-i18n="news.fieldTitleEn">Заголовок (EN, необязательно — пустой переведётся сам)</label>
           <input type="text" id="neTitleEn" maxlength="200" />
         </div>
         <!-- Тело поста — список блоков (абзац, цитата, список, код, картинка,
@@ -89,7 +89,7 @@ $editor = <<<'HTML'
             <label data-i18n="news.fieldBody">Текст поста</label>
             <div class="ne-lang-seg" id="neLang" role="group" data-i18n-label="news.fieldBodyLang" aria-label="Язык текста">
               <button type="button" data-v="ru" class="active">RU</button>
-              <button type="button" data-v="en">EN</button>
+              <button type="button" data-v="en" data-i18n-title="news.enAutoHint" title="Пустой английский текст переведётся автоматически при публикации">EN</button>
             </div>
           </div>
           <div class="ne-blocks" id="neBlocks"></div>
@@ -191,10 +191,12 @@ $html = str_replace(
 // читателю не нужны ни модалка на восемь полей, ни кроп-канвас. Подключается
 // ПОСЛЕ news-page.js: тот в конце объявляет window.NEWSPAGE, из которого
 // редактор берёт cardFor/reload/getLang — до объявления шва он бы не нашёл
-// ничего и молча ничего не сделал.
+// ничего и молча ничего не сделал. Тег ищется с любыми атрибутами после
+// src: у публичных скриптов есть fetchpriority, и поиск точного
+// `"></script>` промахивался бы молча.
 $html = preg_replace(
-    '~(<script src="/js/news-page\.js[^"]*"></script>)~',
-    '$1' . "\n  " . '<script src="/js/news-editor.js?v=2"></script>',
+    '~(<script src="/js/news-page\.js[^"]*"[^>]*></script>)~',
+    '$1' . "\n  " . '<script src="/js/news-editor.js?v=3"></script>',
     $html,
     1
 );

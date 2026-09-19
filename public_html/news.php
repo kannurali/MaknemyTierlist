@@ -154,7 +154,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     } catch (Throwable $e) {
         error_log('news.php: og preview fallback: ' . $e->getMessage());
     }
-    if ($notFound) { http_response_code(404); }
+    // 404 в кеш LiteSpeed не кладётся: иначе перебор несуществующих id
+    // наполнял бы его копиями ленты. Живой пост и сама лента — на минуту,
+    // см. page_lscache() в api/_bootstrap.php.
+    if ($notFound) { http_response_code(404); } else { page_lscache(); }
 }
 
 // Канонический адрес — свой у каждого поста (иначе /news/<id> и /news были
@@ -206,12 +209,12 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
-<script src="js/auth.js?v=1" defer></script>
-<script src="js/topbar.js?v=7" defer></script>
+<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/design-page.css?v=33" />
 
-<link rel="stylesheet" href="css/news-design.css?v=18" />
+<link rel="stylesheet" href="css/news-design.css?v=19" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -356,18 +359,18 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=44"></script>
-  <script src="js/news.js?v=5"></script>
-  <script src="js/news-blocks.js?v=2"></script>
+  <script src="js/i18n.js?v=49" fetchpriority="high"></script>
+  <script src="js/news.js?v=5" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=10"></script>
+  <script src="js/promo.js?v=10" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=5"></script>
+  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
 
-  <script src="js/promo-popup.js?v=3"></script>
+  <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
 
-  <script src="js/protect.js?v=2"></script>
-  <script src="js/news-page.js?v=24"></script>
+  <script src="js/protect.js?v=2" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=24" fetchpriority="high"></script>
 </body>
 </html>
 <?php endif; ?>

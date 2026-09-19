@@ -21,7 +21,7 @@
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
       desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "",
-      flag: false, wip: false,
+      flag: false, wip: false, glow: "",
     });
     return {
       title: "MAKNEMY\nTIER LIST",
@@ -392,6 +392,12 @@
     return "fruits";
   }
 
+  const GLOW_COLORS = ["gold", "green", "red"];
+  function glowOf(item) {
+    if (item.glow === true) return "gold";
+    return GLOW_COLORS.includes(item.glow) ? item.glow : "";
+  }
+
   function normalizeFilters(saved, defaults) {
     const out = Object.assign({}, defaults, saved || {});
     const s = saved || {};
@@ -623,7 +629,8 @@
 
   function renderCell(item, tier) {
     const cell = document.createElement("div");
-    cell.className = "cell";
+    const glow = glowOf(item);
+    cell.className = glow ? "cell glow glow-" + glow : "cell";
     cell.dataset.id = item.id;
     cell.dataset.group = groupOf(item.type);
     cell.draggable = true;
@@ -1555,7 +1562,7 @@
     if (!t) return;
     const item = {
       id: uid(), name: "Item", value: "0", icon: DEFAULT_ICON, type: "f", demand: "", trend: "",
-      desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "", flag: true, wip: false,
+      desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "", flag: true, wip: false, glow: "",
     };
     t.items.push(item);
     save(); render();
@@ -1650,6 +1657,8 @@
     setType(it.type || "f");
     setSeg("#mDemand", it.demand || "");
     setSeg("#mTrend", it.trend || "");
+    setSeg("#mGlow", glowOf(it));
+    syncGlowPreview();
     modal.hidden = false;
     setTimeout(() => $("#mName").focus(), 30);
   }
@@ -1717,6 +1726,12 @@
   const flagBtn = name => $(`#mTrend button[data-flag="${name}"]`);
   function setFlag(name, on) { flagBtn(name).classList.toggle("active", !!on); }
   function getFlag(name) { return flagBtn(name).classList.contains("active"); }
+  function syncGlowPreview() {
+    const glow = getSeg("#mGlow");
+    const box = $(".icon-preview");
+    box.classList.remove("glow", ...GLOW_COLORS.map(c => "glow-" + c));
+    if (glow) box.classList.add("glow", "glow-" + glow);
+  }
 
   const CATEGORIES = ["cs", "cm", "ms", "cr", "gp", "vh"];
 
@@ -1758,7 +1773,7 @@
     }
   });
 
-  ["#mDemand", "#mTrend"].forEach(sel => {
+  ["#mDemand", "#mTrend", "#mGlow"].forEach(sel => {
     $(sel).addEventListener("click", e => {
       const btn = e.target.closest("button");
       if (!btn) return;
@@ -1768,6 +1783,7 @@
       btn.classList.add("active");
     });
   });
+  $("#mGlow").addEventListener("click", syncGlowPreview);
 
   $("#mIconFile").addEventListener("change", e => {
     const file = e.target.files[0];
@@ -1794,6 +1810,7 @@
     it.tagEn = $("#mTagEn").value.trim();
     it.flag = getFlag("flag");
     it.wip = getFlag("wip");
+    it.glow = getSeg("#mGlow");
     it.icon = $("#mIconPreview").src;
     it.type = getType();
     it.demand = getSeg("#mDemand");
@@ -1977,7 +1994,7 @@
     if (!h2cPromise) {
       h2cPromise = new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = "js/html2canvas.min.js";
+        s.src = "js/html2canvas.min.js?v=1";
         s.onload = () => resolve(window.html2canvas);
         s.onerror = () => { h2cPromise = null; reject(new Error(tx("msg.h2cFailed"))); };
         document.head.appendChild(s);

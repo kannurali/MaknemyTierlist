@@ -93,6 +93,56 @@
     return Object.prototype.hasOwnProperty.call(RAW_TYPE_TO_BADGE, t) ? RAW_TYPE_TO_BADGE[t] : "fr";
   }
 
+  var CATALOG_ORDER = ["fr", "cs", "cm", "ms", "cr", "pm", "gp", "vh"];
+
+  function sortCatalog(items) {
+    return (items || [])
+      .map(function (it, i) {
+        return { it: it, i: i, rank: CATALOG_ORDER.indexOf(badgeCodeFor(it && it.type)), value: itemValue(it) };
+      })
+      .sort(function (a, b) {
+        return (a.rank - b.rank) || (b.value - a.value) || (a.i - b.i);
+      })
+      .map(function (row) { return row.it; });
+  }
+
+  var FILTER_GROUPS = ["fruits", "configurators", "perms", "passes"];
+  var BADGE_TO_GROUP = {
+    fr: "fruits",
+    cs: "configurators", cm: "configurators", ms: "configurators", cr: "configurators",
+    pm: "perms",
+    gp: "passes", vh: "passes"
+  };
+
+  function filterGroupOf(type) {
+    return BADGE_TO_GROUP[badgeCodeFor(type)];
+  }
+
+  function allFiltersOn() {
+    var out = {};
+    FILTER_GROUPS.forEach(function (g) { out[g] = true; });
+    return out;
+  }
+
+  function toggleFilter(filters, key) {
+    if (key === "all") { return allFiltersOn(); }
+    var next = {};
+    FILTER_GROUPS.forEach(function (g) { next[g] = !!(filters && filters[g]); });
+    if (FILTER_GROUPS.indexOf(key) < 0) { return next; }
+    next[key] = !next[key];
+    if (!FILTER_GROUPS.some(function (g) { return next[g]; })) { next[key] = true; }
+    return next;
+  }
+
+  function filterCatalog(items, filters, query) {
+    var on = filters || allFiltersOn();
+    var q = String(query || "").toLowerCase().trim();
+    return (items || []).filter(function (it) {
+      if (!on[filterGroupOf(it && it.type)]) { return false; }
+      return !q || String((it && it.name) || "").toLowerCase().indexOf(q) >= 0;
+    });
+  }
+
   var DEMAND_WEIGHT = { neon: 12, green: 10, yellow: 8, orange: 5, red: 2 };
 
   function demandBalance(entries) {
@@ -222,6 +272,13 @@
     MAX_SLOTS: MAX_SLOTS,
     BADGE_CODES: BADGE_CODES,
     badgeCodeFor: badgeCodeFor,
+    CATALOG_ORDER: CATALOG_ORDER,
+    FILTER_GROUPS: FILTER_GROUPS,
+    sortCatalog: sortCatalog,
+    filterGroupOf: filterGroupOf,
+    allFiltersOn: allFiltersOn,
+    toggleFilter: toggleFilter,
+    filterCatalog: filterCatalog,
     parseValue: parseValue,
     itemValue: itemValue,
     flattenTierlist: flattenTierlist,

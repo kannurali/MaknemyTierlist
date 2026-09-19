@@ -46,6 +46,37 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# ------------------------------ Кеш LiteSpeed ------------------------------
+# Хостинг — LiteSpeed с включённым CacheEngine. CacheLookup велит искать ответ
+# в кеше раньше, чем запускать PHP. Что туда класть, решает сам PHP
+# заголовком X-LiteSpeed-Cache-Control (lscache_public() в api/_bootstrap.php):
+# опрос state.php, тирлист и реклама по адресу ревизии, публичные страницы,
+# og-картинки. Админка, сессии и POST этого заголовка не получают и в кеш не
+# попадают. На тарифе 20 процессов PHP и одно ядро, и без кеша каждый запрос —
+# это PHP и MySQL: чтобы положить сайт, хватило бы одного компьютера со
+# скриптом.
+#
+# Блок в <IfModule>: локальный Apache такого модуля не знает и пропускает его.
+<IfModule LiteSpeed>
+  CacheLookup public on
+</IfModule>
+
+# Ключ кеша — адрес целиком. Любой хвост к адресу, которого сайт сам никогда
+# не шлёт, превращал бы каждый запрос флуда в промах мимо кеша, то есть в PHP
+# и MySQL. Такие запросы LiteSpeed отбивает 403 сам, не запуская PHP.
+#
+# state.php клиент зовёт без параметров вовсе, tierlist.php и promo.php — без
+# них или с ?rev=<число>.
+RewriteCond %{QUERY_STRING} .
+RewriteRule ^api/state\.php$ - [F,L]
+
+RewriteCond %{QUERY_STRING} !^(rev=[0-9]{1,18})?$
+RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]
+
+# Хвост пути после .php (PATH_INFO): /api/state.php/<что угодно> исполнил бы
+# тот же state.php под новым ключом кеша. Ни одна ссылка сайта так не выглядит.
+RewriteRule \.php/ - [F,L]
+
 # "/" отдаёт главную (home.php), а не тирлист: по макету это два разных
 # раздела, и в шапке они стоят отдельными пунктами. Явная директива, а не
 # дефолт хостинга: порядок в дефолтном DirectoryIndex шаред-хостинга —
@@ -276,5 +307,26 @@ Options -Indexes
 <IfModule mod_headers.c>
   <FilesMatch "\.(webp|png|jpg|jpeg|ico)$">
     Header set Cache-Control "public, max-age=3600, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# js и css — на год и без переспроса. Все страницы подключают их с ?v=N, и
+# номер растёт в том же коммите, что и сам файл, поэтому один адрес никогда
+# не меняет содержимого, а новое приходит под новым адресом. Без заголовка
+# хостинг отдавал js вовсе без Cache-Control, css — на неделю: повторный
+# заход всё равно переспрашивал сервер, а на медленном маршруте каждый такой
+# запрос — это секунды.
+#
+# Правило безусловное, без проверки ?v= в запросе: LiteSpeed не понимает
+# Header ... expr=, а <If> и env= поддерживает не во всех версиях. Держится
+# оно на инварианте «js/css без ?v= сайт не запрашивает» — его проверяет
+# tests/static_cache_test.php, в том числе для адресов, которые собирают
+# сами скрипты (html2canvas в app.js).
+#
+# Откат версии тоже поднимает номер: git revert возвращает старый ?v=, а под
+# ним у части посетителей уже лежит новое содержимое.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>

@@ -834,6 +834,9 @@
     };
     if (editingPost) { body.id = editingPost.id; }
 
+    const btn = $("#nePublish");
+    btn.disabled = true;
+    btn.textContent = tx("news.publishing");
     try {
       const r = await fetch("/api/news_save.php", {
         method: "POST",
@@ -847,8 +850,12 @@
       }
       closeEditor();
       await NP.reload();
+      if (d.translate_failed > 0) { alert(tx("news.translateFailed")); }
     } catch (e) {
       $("#neError").textContent = tx("news.saveFailed") + " " + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = tx("news.publish");
     }
   }
 

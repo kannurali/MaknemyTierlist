@@ -9,6 +9,8 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // же, что у остальных страниц редизайна: файл несёт номера версий ?v= для
 // css/js, и закешированная копия намертво прибила бы посетителя к старому коду.
 header('Cache-Control: no-cache, must-revalidate');
+// И минута в кеше LiteSpeed: см. page_lscache() в api/_bootstrap.php.
+page_lscache();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -97,11 +99,11 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
-<script src="js/auth.js?v=1" defer></script>
-<script src="js/topbar.js?v=7" defer></script>
+<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=32" />
-<link rel="stylesheet" href="css/calculator.css?v=23" />
+<link rel="stylesheet" href="css/design-page.css?v=33" />
+<link rel="stylesheet" href="css/calculator.css?v=26" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -222,7 +224,7 @@ header('Cache-Control: no-cache, must-revalidate');
         <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
 
           <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">Я</span>
+          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">ДАЮ</span>
 
           <ul class="tc-slots" data-side="left"></ul>
 
@@ -256,7 +258,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
         <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
           <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ВЫ</span>
+          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ХОЧУ</span>
 
           <ul class="tc-slots" data-side="right"></ul>
 
@@ -369,6 +371,13 @@ header('Cache-Control: no-cache, must-revalidate');
         </div>
         <div class="tc-cat-sub">
           <span class="tc-pill" id="tcCatalogTitle" data-i18n="calc.catalogPill">Каталог</span>
+          <div class="tc-cat-filters" id="tcCatalogFilters" role="group" data-i18n-label="news.filterGroupLabel" aria-label="Фильтр по категориям">
+            <button type="button" class="chip" data-f="fruits" data-i18n="filters.fruits" data-i18n-title="filters.fruitsTitle" title="Обычные фрукты" aria-pressed="true">Фрукты</button>
+            <button type="button" class="chip" data-f="configurators" data-i18n="filters.configurators" data-i18n-title="filters.configuratorsTitle" title="Скины, мутации, конфигурации и хроматики" aria-pressed="true">Конфигураторы</button>
+            <button type="button" class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="Перманентные фрукты" aria-pressed="true">Пермы</button>
+            <button type="button" class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="Геймпассы и воучеры" aria-pressed="true">Пассы</button>
+            <button type="button" class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="Показать всё" aria-pressed="true">Все</button>
+          </div>
           <button type="button" class="tc-cat-close" id="tcCatalogClose" data-i18n-label="calc.catalogClose" aria-label="Закрыть каталог">✕</button>
         </div>
         <p class="tc-cat-status" id="tcCatalogStatus" role="status" aria-live="polite"></p>
@@ -415,13 +424,13 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=44"></script>
-  <script src="js/promo.js?v=10"></script>
+  <script src="js/i18n.js?v=49" fetchpriority="high"></script>
+  <script src="js/promo.js?v=10" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=5"></script>
+  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
 
-  <script src="js/promo-popup.js?v=3"></script>
-  <script src="js/calc.js?v=8"></script>
-  <script src="js/calculator-page.js?v=18"></script>
+  <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
+  <script src="js/calc.js?v=9" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=19" fetchpriority="high"></script>
 </body>
 </html>

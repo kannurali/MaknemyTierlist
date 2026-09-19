@@ -56,7 +56,7 @@ if (!defined('TESTING')) {
     // лайкнуть-и-передумать по каждому из 50 постов за один заход (50×2=100),
     // и при этом на порядок ниже того, что нужно скрипту, который реально
     // пытается накрутить счётчик.
-    $key = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $key = client_key();
     if (!rate_limit_allow('news_like', $key, 100, 3600, time())) {
         json_out(['ok' => false, 'error' => 'rate_limited'], 429);
         exit;

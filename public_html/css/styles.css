@@ -289,6 +289,12 @@
   image-rendering: auto;
   pointer-events: none;
 }
+.glow, .glow-gold { --glow-core: #ffe27f; --glow-halo: rgba(255,190,40,.95); }
+.glow-green { --glow-core: #5dff6a; --glow-halo: rgb(0,255,64); }
+.glow-red { --glow-core: #ff4a4a; --glow-halo: rgb(255,0,0); }
+.cell.glow .cell-icon img {
+  filter: drop-shadow(0 0 .15cqw var(--glow-core)) drop-shadow(0 0 .45cqw var(--glow-halo));
+}
 
 .cell-strip {
   position: relative;
@@ -322,7 +328,7 @@
   width: 1.27cqw;
   z-index: 3;
 }
-.cell .trend.tr-swap { width: 1.27cqw; }
+.cell .trend.tr-swap { width: 1.74cqw; top: 3.46cqw; }
 
 .cell-edit {
   position: absolute; top: -.4cqw; right: -.4cqw;
@@ -815,12 +821,11 @@ body.ptn-locked { overflow: hidden; }
   border-radius: 50%;
   background: var(--dc);
 }
-.d-green { --dc: #1aff00; }
-.d-yellow { --dc: #fff200; }
-.d-orange { --dc: #ffa100; }
-.d-red { --dc: #ff0000; }
-
 .d-neon { --dc: url("../assets/dot-neon.png") center / cover no-repeat; }
+.d-green { --dc: url("../assets/dot-green.png") center / cover no-repeat; }
+.d-yellow { --dc: url("../assets/dot-yellow.png") center / cover no-repeat; }
+.d-orange { --dc: url("../assets/dot-orange.png") center / cover no-repeat; }
+.d-red { --dc: url("../assets/dot-red.png") center / cover no-repeat; }
 
 .lc-trends .trend { justify-self: end; }
 .lc-trends .tr-wip { width: 2.23cqw; height: 3.25cqw; }
@@ -925,6 +930,7 @@ body.ptn-locked { overflow: hidden; }
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .icon-preview img { max-width: 90%; max-height: 80%; }
+.icon-preview.glow img { filter: drop-shadow(0 0 1.5px var(--glow-core)) drop-shadow(0 0 4.5px var(--glow-halo)); }
 .icon-actions { display: flex; flex-direction: column; gap: 8px; }
 
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -944,6 +950,7 @@ body.ptn-locked { overflow: hidden; }
 .seg .trend.tr-swap { width: 22px; }
 
 .seg .trend.tr-new { width: 34px; }
+.seg .seg-glow { color: var(--glow-core); text-shadow: 0 0 6px var(--glow-halo); }
 
 .seg button[class*="t-"] {
   background: rgba(8,16,32,.6); color: #cfe2ff; min-width: auto; height: 38px;
@@ -1143,6 +1150,9 @@ body.ptn-locked { overflow: hidden; }
   }
 
   .cell-icon img { filter: none; }
+  .cell.glow .cell-icon img {
+    filter: drop-shadow(0 0 .42cqw var(--glow-core)) drop-shadow(0 0 1.27cqw var(--glow-halo));
+  }
 
   .like-fab, .donate-fab {
     transition: transform .22s ease, opacity .22s ease,
@@ -1185,6 +1195,7 @@ body.ptn-locked { overflow: hidden; }
   .cell .tbadge { height: 3.3cqw; }
   .cell .dot { width: 2.5cqw; height: 2.5cqw; }
   .cell .trend { width: 2.5cqw; }
+  .cell .trend.tr-swap { width: 3.43cqw; top: 6.58cqw; }
 
   .tier-band { height: 8.4cqw; border-radius: 2.5cqw; }
   .band-logo { height: 5.6cqw; }

@@ -213,8 +213,8 @@ test('в легенде стоят те же файлы значков, что �
 // Точек спроса пять, и «оверпрайс» — верх шкалы, а не сноска в конце: за
 // такой предмет переплачивают, значит отдать его легче всего. Порядок сверху
 // вниз тот же, что у оценок в DEMAND_WEIGHT (js/calc.js): 12, 10, 8, 5, 2.
-// Кружок оверпрайса залит градиентом из картинки, поэтому у него есть файл,
-// класс в CSS и подпись в словаре.
+// Каждый кружок — картинка с тёмной обводкой, а оверпрайс ещё и с переливом,
+// поэтому у каждого есть файл, класс в CSS, а у оверпрайса и подпись в словаре.
 test('точка «оверпрайс» есть в легенде, в модалке и на диске', function () use ($PUB) {
     $s = tag_read($PUB . '/index.php');
 
@@ -235,9 +235,25 @@ test('точка «оверпрайс» есть в легенде, в мода�
     foreach (['green', 'yellow', 'orange', 'red', 'neon'] as $d) {
         assert_true(is_file($PUB . '/assets/dot-' . $d . '.png'), "нет assets/dot-$d.png");
     }
-    $css = tag_read($PUB . '/css/styles.css');
-    assert_true(strpos($css, '.d-neon { --dc: url("../assets/dot-neon.png")') !== false,
-        'точка в легенде должна брать ту же картинку, что и карточка');
+    // Не мельче оверпрайса: 30-пиксельные точки при увеличении щипком на
+    // телефоне растягивались и мылились рядом с чётким неоном 72x72.
+    // Цветные рисует tools/make-demand-dots.py.
+    foreach (['green', 'yellow', 'orange', 'red', 'neon'] as $d) {
+        [$w, $h] = getimagesize($PUB . '/assets/dot-' . $d . '.png');
+        assert_true($w === $h && $w >= 72, "assets/dot-$d.png должна быть квадратом от 72 px, сейчас {$w}x{$h}");
+    }
+    // Легенда и индикатор «Спрос стороны» в калькуляторе рисуют те же файлы,
+    // что и карточка: заливка цветом в CSS разошлась бы с картинкой.
+    $css  = tag_read($PUB . '/css/styles.css');
+    $calc = tag_read($PUB . '/css/calculator.css');
+    foreach (['neon', 'green', 'yellow', 'orange', 'red'] as $d) {
+        $img = 'url("../assets/dot-' . $d . '.png")';
+        assert_true(strpos($css, '.d-' . $d . ' { --dc: ' . $img) !== false,
+            "точка $d в легенде должна брать ту же картинку, что и карточка");
+        assert_true(preg_match('/\\.tc-demand-dot\\[data-demand="' . $d . '"\\]\\s*\\{ background: '
+            . preg_quote($img, '/') . '/', $calc) === 1,
+            "точка $d в калькуляторе должна брать ту же картинку, что и карточка");
+    }
     $i18n = tag_read($PUB . '/js/i18n.js');
     assert_eq(2, preg_match_all('/"legend\.neon":/', $i18n), 'подпись нужна на обоих языках');
 });
@@ -274,6 +290,99 @@ test('в тренде стрелки — один выбор, «?» и NEW — �
     assert_true(strpos($js, 'if (btn.dataset.flag) { btn.classList.toggle("active"); return; }') !== false,
         'щелчок по флагу не должен трогать остальные кнопки');
     assert_eq(0, preg_match_all('/#mNew|#mWip/', $js), 'ссылок на тумблеры в коде не осталось');
+});
+
+// Выделение — самостоятельный флаг предмета, как NEW и «?», но своим полем:
+// к тренду оно не относится, и в легенде его нет. Поле хранит цвет. Цвет,
+// который забыли в разметке, словаре или GLOW_COLORS, теряется молча: админ
+// жмёт кнопку, а предмет не светится или светится не тем.
+test('выделение: цвета в модалке, словаре и app.js совпадают', function () use ($PUB) {
+    $s    = tag_read($PUB . '/index.php');
+    $from = strpos($s, '<div class="seg" id="mGlow">');
+    assert_true($from !== false, 'нужен сегмент выделения');
+    assert_true($from > strpos($s, '<div class="seg" id="mTrend">'), 'выделение стоит после тренда');
+    $seg  = substr($s, (int)$from, strpos($s, '</div>', (int)$from) - (int)$from);
+    preg_match_all('/data-v="([^"]*)"/', $seg, $v);
+    assert_eq(['', 'gold', 'green', 'red'], $v[1], 'выключено и три цвета');
+    assert_true(strpos($s, '<label data-i18n="modal.glow">') !== false, 'поле подписано');
+
+    $i18n = tag_read($PUB . '/js/i18n.js');
+    foreach (['gold', 'green', 'red'] as $c) {
+        $key = 'modal.glow' . ucfirst($c);
+        assert_true(strpos($seg, 'data-v="' . $c . '" class="seg-glow glow-' . $c . '" data-i18n="' . $key . '" data-i18n-title="modal.glowTitle"') !== false,
+            "кнопка $c: свой класс цвета, подпись и подсказка");
+        assert_eq(2, preg_match_all('/"' . preg_quote($key, '/') . '":/', $i18n), "$key нужен на обоих языках");
+    }
+    foreach (['modal.glow', 'modal.glowTitle'] as $key) {
+        assert_eq(2, preg_match_all('/"' . preg_quote($key, '/') . '":/', $i18n), "$key нужен на обоих языках");
+    }
+    assert_eq(0, preg_match_all('/"modal\.glowOn":/', $i18n), 'кнопки «Свечение» без цвета больше нет');
+
+    $js = tag_read($PUB . '/js/app.js');
+    assert_true(strpos($js, 'const GLOW_COLORS = ["gold", "green", "red"];') !== false,
+        'список цветов в app.js совпадает с кнопками');
+    assert_true(strpos($js, 'if (item.glow === true) return "gold";') !== false,
+        'true из первой версии — это золото');
+    assert_true(strpos($js, 'return GLOW_COLORS.includes(item.glow) ? item.glow : "";') !== false,
+        'неизвестный цвет — без свечения');
+    assert_true(strpos($js, 'cell.className = glow ? "cell glow glow-" + glow : "cell";') !== false,
+        'карточка получает классы цвета');
+    assert_true(strpos($js, 'flag: false, wip: false, glow: "",') !== false, 'предметы шаблона без свечения');
+    assert_true(strpos($js, 'flag: true, wip: false, glow: "",') !== false, 'новый предмет без свечения');
+    assert_true(strpos($js, 'it.glow = getSeg("#mGlow");') !== false, 'сохранение пишет цвет строкой');
+    assert_eq(0, preg_match_all('/=== "on"/', $js), 'старого значения "on" не осталось');
+    assert_true(strpos($js, '["#mDemand", "#mTrend", "#mGlow"]') !== false,
+        'щелчок по сегменту выделения переключает кнопки');
+    assert_true(strpos($js, 'box.classList.remove("glow", ...GLOW_COLORS.map(c => "glow-" + c));') !== false,
+        'превью снимает прежний цвет');
+    assert_true(strpos($js, 'if (glow) box.classList.add("glow", "glow-" + glow);') !== false,
+        'превью берёт выбранный цвет');
+    assert_true(strpos($js, '$("#mGlow").addEventListener("click", syncGlowPreview);') !== false,
+        'щелчок сразу обновляет превью');
+
+    $a    = strpos($js, 'function openModal(');
+    $b    = strpos($js, 'function closeModal(', (int)$a);
+    assert_true($a !== false && $b !== false, 'нужны openModal и closeModal');
+    $open = substr($js, (int)$a, (int)$b - (int)$a);
+    assert_true(strpos($open, 'setSeg("#mGlow", glowOf(it));') !== false,
+        'openModal ставит цвет через glowOf');
+    assert_true(strpos($open, 'syncGlowPreview();') !== false,
+        'openModal сбрасывает превью под открытый предмет');
+});
+
+// Свечение — контур по форме иконки. Размеры общие, цвет приходит из
+// переменных: золото стоит и на голом .glow (класс без цвета из первой
+// версии), зелёный и красный переопределяют его ниже. Правило свечения стоит
+// ПОСЛЕ голубого правила наведения: специфичность у них одна, и иначе при
+// наведении голубое перебивало бы цветное. На телефоне свои размеры:
+// пропорциональное десктопному свечение там почти не видно.
+test('свечение предмета: цвета через переменные, наведение не гасит, на телефоне сильнее', function () use ($PUB) {
+    $css = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
+
+    $gold  = strpos($css, '.glow, .glow-gold { --glow-core: #ffe27f; --glow-halo: rgba(255,190,40,.95); }');
+    $green = strpos($css, '.glow-green { --glow-core: #5dff6a; --glow-halo: rgb(0,255,64); }');
+    $red   = strpos($css, '.glow-red { --glow-core: #ff4a4a; --glow-halo: rgb(255,0,0); }');
+    assert_true($gold !== false && $green !== false && $red !== false, 'три цвета заданы переменными');
+    assert_true($gold < $green && $gold < $red, 'золото объявлено раньше и не перебивает остальные');
+    assert_eq(1, substr_count($css, '#ffe27f'), 'золото записано в одном месте');
+
+    $rule = '/\.cell\.glow \.cell-icon img \{\n\s*filter: drop-shadow\(0 0 ([\d.]+)cqw var\(--glow-core\)\) drop-shadow\(0 0 ([\d.]+)cqw var\(--glow-halo\)\);\n\s*\}/';
+    assert_eq(2, preg_match_all($rule, $css, $m, PREG_OFFSET_CAPTURE), 'одно правило для компьютера, одно для телефона');
+    if (count($m[0]) !== 2) { return; }
+
+    $hover = strpos($css, '.cell:hover .cell-icon img {');
+    $phone = strpos($css, '@media (max-width: 640px)');
+    $none  = strpos($css, '  .cell-icon img { filter: none; }');
+    assert_true($m[0][0][1] > $hover, 'правило свечения стоит после голубого наведения');
+    assert_true($m[0][0][1] < $phone, 'правило для компьютера — вне телефонных блоков');
+    assert_true($m[0][1][1] > $none, 'правило для телефона — после телефонного filter: none');
+    assert_eq(['.15', '.42'], [$m[1][0][0], $m[1][1][0]], 'ядро: компьютер, телефон');
+    assert_eq(['.45', '1.27'], [$m[2][0][0], $m[2][1][0]], 'ореол: компьютер, телефон');
+
+    assert_true(strpos($css, '.icon-preview.glow img { filter: drop-shadow(0 0 1.5px var(--glow-core)) drop-shadow(0 0 4.5px var(--glow-halo)); }') !== false,
+        'превью в окне светится выбранным цветом');
+    assert_true(strpos($css, '.seg .seg-glow { color: var(--glow-core); text-shadow: 0 0 6px var(--glow-halo); }') !== false,
+        'кнопка цвета подписана своим цветом');
 });
 
 // --------------------------------------------------------------------------
@@ -325,20 +434,31 @@ test('фон ленты прибит к экрану, а не едет со ст
     // иначе лента стоит на другом кадре фона, чем тирлист и главная.
     assert_true((bool)preg_match('/\.news-bg::before \{[^}]*background-position: calc\(-272 \* var\(--pu\)\) calc\(-533 \* var\(--pu\)\);/s', $css),
         'фон ленты должен стоять по макетной геометрии');
-    // cover остаётся запасным вариантом для узких высоких экранов, где
-    // макетной картинки не хватает по высоте.
-    assert_true((bool)preg_match('/@media \(max-aspect-ratio: 1443\/2703\) \{[^}]*\{[^}]*background-size: cover;/s', $css),
-        'на узком высоком экране нужен запасной cover');
+    // cover остаётся запасным вариантом для узкого высокого окна на
+    // компьютере, где макетной картинки не хватает по высоте. На телефоне его
+    // нет: там слой обязан совпадать с копией фона в шапке (см. ниже), а низ
+    // картинки и так почти чёрный и сливается с заливкой.
+    assert_true((bool)preg_match('/@media \(min-width: 761px\) and \(max-aspect-ratio: 1443\/2703\) \{[^}]*\{[^}]*background-size: cover;/s', $css),
+        'на узком высоком окне компьютера нужен запасной cover');
+    assert_eq(0, preg_match('/@media \(max-aspect-ratio: 1443\/2703\)/', $css),
+        'на телефоне cover разошёлся бы с шапкой');
 
     // Фон body обязан быть прозрачным: у html свой непрозрачный фон, поэтому
     // фон body не продвигается на канву и рисуется обычным слоем элемента —
     // а слой с z-index: -1 уходит ПОД него, и страница остаётся чёрной.
     assert_true((bool)preg_match('/\.news-bg \{ background: none; \}/', $css),
         'заливка на body закрыла бы собой фиксированный слой');
-    // Своя картинка в шапке повторяет макетную геометрию страницы и на
-    // нижней границе шапки давала бы стык двух кадров одной картинки.
-    assert_true(strpos($css, '.news-bg .mk-top::before { display: none; }') !== false,
-        'у шапки на ленте не должно быть своего фона');
+    // Своя картинка в шапке на компьютере не нужна: при прокрутке шапка
+    // сворачивается в плавающую панель, а наверху страницы прозрачная шапка
+    // показывает тот же слой (в окне с cover копия дала бы стык). На
+    // телефоне шапка не сворачивается никогда, и её копия фона — единственное,
+    // что закрывает прокручиваемую под ней ленту: без неё текст и картинки
+    // постов проплывали сквозь логотип и кнопки. Шва там нет: шапка стоит у
+    // верхнего края экрана, как и слой, в той же геометрии и с тем же файлом.
+    assert_true((bool)preg_match('/@media \(min-width: 761px\) \{\s*\.news-bg \.mk-top::before \{ display: none; \}\s*\}/', $css),
+        'копия фона в шапке спрятана только на компьютере');
+    assert_eq(1, substr_count($css, '.news-bg .mk-top::before'),
+        'других правил, прячущих копию фона в шапке, быть не должно');
 
     // .nw-body в news.css — это ТЕЛО ПОСТА внутри карточки. Фон страницы,
     // повешенный на такое имя, красил каждый пост непрозрачным чёрным вместо
@@ -442,11 +562,35 @@ test('значки тренда в ячейке — те же картинки, 
     }
 
     // Ниже по файлу лежит общее .trend.tr-swap для легенды и модалки той же
-    // специфичности. Без своей строки у ячейки оно перебивало бы её, и круглый
-    // значок выходил вдвое шире стрелок, наезжая на цену.
-    $css = tag_read($PUB . '/css/styles.css');
-    assert_true(strpos($css, '.cell .trend.tr-swap { width: 1.27cqw; }') !== false,
-        'ячейке нужна своя ширина swap');
+    // специфичности, что .cell .trend, поэтому у ячейки своя строка. Ширина —
+    // как в легенде: круглый значок 37×43 в 37/27 раза шире стрелок 27×32,
+    // иначе при той же ширине он читается мельче них. Верх сдвинут так, чтобы
+    // низ совпал с низом стрелок и значок не наезжал на цену. На телефоне
+    // строка своя: десктопная специфичнее телефонного .cell .trend и держала
+    // значок вдвое меньше стрелок.
+    $css = str_replace("\r\n", "\n", tag_read($PUB . '/css/styles.css'));
+    $n   = '([\d.]+)';
+    assert_true((bool)preg_match('/\n\.cell \.trend \{\n\s*position: absolute; top: ' . $n . 'cqw; left: \.1cqw;\n\s*width: ' . $n . 'cqw;/', $css, $arrowD),
+        'стрелка на компьютере');
+    assert_true((bool)preg_match('/\n\.cell \.trend\.tr-swap \{ width: ' . $n . 'cqw; top: ' . $n . 'cqw; \}/', $css, $swapD),
+        'своя строка перерассмотра на компьютере');
+    assert_true((bool)preg_match('/\n  \.cell \.trend \{ top: ' . $n . 'cqw; \}/', $css, $topM),
+        'верх стрелки на телефоне');
+    assert_true((bool)preg_match('/\n  \.cell \.trend \{ width: ' . $n . 'cqw; \}/', $css, $widthM, PREG_OFFSET_CAPTURE),
+        'ширина стрелки на телефоне');
+    assert_true((bool)preg_match('/\n  \.cell \.trend\.tr-swap \{ width: ' . $n . 'cqw; top: ' . $n . 'cqw; \}/', $css, $swapM, PREG_OFFSET_CAPTURE),
+        'своя строка перерассмотра на телефоне');
+    if (!$arrowD || !$swapD || !$topM || !$widthM || !$swapM) { return; }
+    assert_true($swapM[0][1] > $widthM[0][1], 'строка перерассмотра на телефоне стоит после ширины стрелки');
+
+    $fits = function (string $where, float $arrowW, float $arrowTop, float $swapW, float $swapTop) {
+        assert_true(abs($swapW / $arrowW - 37 / 27) < 0.01, "$where: перерассмотр в 37/27 раза шире стрелки");
+        $arrowBottom = $arrowTop + $arrowW * 32 / 27;
+        $swapBottom  = $swapTop + $swapW * 43 / 37;
+        assert_true(abs($arrowBottom - $swapBottom) < 0.02, "$where: низ перерассмотра на уровне стрелки");
+    };
+    $fits('компьютер', (float)$arrowD[2], (float)$arrowD[1], (float)$swapD[1], (float)$swapD[2]);
+    $fits('телефон', (float)$widthM[1][0], (float)$topM[1], (float)$swapM[1][0], (float)$swapM[2][0]);
 });
 
 // Пока едут данные, зритель видел defaultState() целиком — фальшивый тирлист

@@ -81,6 +81,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     } catch (Throwable $e) {
         error_log('index.php: og preview fallback: ' . $e->getMessage());
     }
+    // Минута в кеше LiteSpeed — см. page_lscache() в api/_bootstrap.php.
+    // window.NX_REV из закешированной копии может отстать от ревизии на эту
+    // минуту — тогда app.js получит данные через редирект tierlist.php на
+    // текущую ревизию, а следующий опрос state.php всё выровняет.
+    page_lscache();
 }
 ?>
 <!DOCTYPE html>
@@ -133,14 +138,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="stylesheet" href="css/base.css?v=11" />
-<link rel="stylesheet" href="css/styles.css?v=56" />
+<link rel="stylesheet" href="css/styles.css?v=60" />
 
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
-<script src="js/auth.js?v=1" defer></script>
-<script src="js/topbar.js?v=7" defer></script>
+<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=32" />
+<link rel="stylesheet" href="css/design-page.css?v=33" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -445,6 +450,15 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
             <button data-flag="flag" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="NEW" /></button>
           </div>
         </div>
+        <div class="field">
+          <label data-i18n="modal.glow">Выделение</label>
+          <div class="seg" id="mGlow">
+            <button data-v="" class="active">—</button>
+            <button data-v="gold" class="seg-glow glow-gold" data-i18n="modal.glowGold" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Золотое</button>
+            <button data-v="green" class="seg-glow glow-green" data-i18n="modal.glowGreen" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Зелёное</button>
+            <button data-v="red" class="seg-glow glow-red" data-i18n="modal.glowRed" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Красное</button>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button class="btn danger" id="mDelete" data-i18n="modal.delete">Удалить</button>
@@ -538,13 +552,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=44"></script>
-  <script src="js/content.js?v=3"></script>
-  <script src="js/tiers.js?v=2"></script>
+  <script src="js/i18n.js?v=49" fetchpriority="high"></script>
+  <script src="js/content.js?v=3" fetchpriority="high"></script>
+  <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=10"></script>
+  <script src="js/promo.js?v=10" fetchpriority="high"></script>
 
-  <script src="js/protect.js?v=2"></script>
-  <script src="js/app.js?v=73"></script>
+  <script src="js/protect.js?v=2" fetchpriority="high"></script>
+  <script src="js/app.js?v=76" fetchpriority="high"></script>
 </body>
 </html>
