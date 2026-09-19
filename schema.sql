@@ -93,5 +93,35 @@ CREATE TABLE IF NOT EXISTS users (
   display_name  VARCHAR(64)  NOT NULL DEFAULT '',
   avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
   created_at    BIGINT UNSIGNED NOT NULL,
-  last_login_at BIGINT UNSIGNED NOT NULL
+  last_login_at BIGINT UNSIGNED NOT NULL,
+  -- Присутствие. Отдельно от last_login_at намеренно: вход пишется РАЗ, а
+  -- сессия живёт долго, и по времени входа активный посетитель через час
+  -- выглядит ушедшим. Эту колонку обновляет api/session.php — запрос, который
+  -- шапка делает на каждой странице у каждого вошедшего, — не чаще раза в
+  -- минуту (ROBLOX_SEEN_THROTTLE).
+  --
+  -- DEFAULT 0 — «ещё не отмечали». Профиль в этом случае откатывается на
+  -- last_login_at, чтобы только что вошедший не выглядел офлайном.
+  --
+  -- Для уже созданной боевой базы колонку заводит миграция
+  -- docs/migrations/2026-09-10-last-seen.sql; при чистой установке она не нужна.
+  last_seen_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  -- Текст «о себе» со страницы профиля. Пишет его сам человек
+  -- (POST /api/profile-about.php), длина ограничена и здесь, и в
+  -- PROFILE_ABOUT_MAX. Для уже созданной боевой базы есть отдельная миграция
+  -- docs/migrations/2026-09-09-profile.sql; при чистой установке она не нужна.
+  --
+  -- NULL — «человек ничего не написал». Пустая строка значила бы то же самое
+  -- вторым способом, поэтому profile_about_save() кладёт именно NULL.
+  about         VARCHAR(280) NULL DEFAULT NULL,
+  -- Репутация из чатов: два счётчика, которые показывает профиль. Хранятся
+  -- денормализованно рядом с пользователем, а не считаются на лету — профиль
+  -- открывают чаще, чем пишут отзывы. Пересчитываются целиком при каждом
+  -- отзыве (chat_recount_reputation), а не инкрементом: правка оценки меняет
+  -- вклад с плюса на минус.
+  --
+  -- Для уже созданной боевой базы те же колонки заводит миграция
+  -- docs/migrations/2026-09-09-chat.sql; при чистой установке она не нужна.
+  likes         INT UNSIGNED NOT NULL DEFAULT 0,
+  dislikes      INT UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
