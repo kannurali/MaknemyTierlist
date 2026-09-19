@@ -402,7 +402,7 @@
       "home.tickerNews":        "свежие новости",
 
       "home.btnFruits":         "фрукты",
-      "home.btnAbout":          "о нас",
+      "home.btnAbout":          "обо мне",
 
       "home.cardFruits":        "Фрукты",
       "home.cardFruitsNote":    "а какой фрукт предложат тебе?",
@@ -414,6 +414,19 @@
       "home.cardGiveawaysNote": "любимые призы только на нашем канале!",
       "home.cardNews":          "Новости",
       "home.cardNewsNote":      "узнай самые свежие новинки в твоей любимой игре!",
+
+      "home.aboutTitle":        "Обо мне и проекте Maknemy",
+      "home.aboutP1":           "Меня зовут Максим, но в интернете я известен как Maknemy. Я Roblox-креатор, блогер и дизайнер, специализирующийся на игре Blox Fruits.",
+      "home.aboutP2":           "Я создаю новости, обзоры обновлений, тирлисты, гайды, теории и материалы об игровой экономике и трейдах. Моя цель — не просто рассказывать о происходящем в игре, а помогать игрокам разбираться в предметах, принимать более выгодные решения и всегда оставаться в курсе важных событий.",
+      "home.aboutP3":           "Maknemy.com — мой главный проект и независимый фанатский сайт для игроков Blox Fruits. Он создан как удобное место, где собраны самые необходимые инструменты и информация для игры:",
+      "home.aboutList1":        "актуальный тирлист предметов",
+      "home.aboutList2":        "калькулятор трейдов",
+      "home.aboutList3":        "цены и оценки фруктов, перманентов, геймпассов, скинов и мутаций",
+      "home.aboutList4":        "новости и обновления Blox Fruits",
+      "home.aboutList5":        "полезные материалы для игроков",
+      "home.aboutList6":        "информация об игровой экономике и изменениях цен",
+      "home.aboutP4":           "Сайт помогает игрокам оценивать стоимость предметов, проверять выгодность трейдов и следить за изменениями экономики после обновлений. Проект развивается вместе с игрой и создаётся прежде всего для русскоязычного сообщества и игроков из СНГ.",
+      "home.aboutP5":           "Моя цель — сделать maknemy.com самым полезным и удобным фанатским проектом по Blox Fruits: местом, куда игроки заходят перед трейдом, после обновления и просто для поиска актуальной информации об игре.",
 
       "home.faqTitle":          "Немного о важном",
       "home.faqSub":            "ваша гарантия успешных трейдов - ваша любознательность!",
@@ -842,7 +855,7 @@
       "home.tickerNews":        "fresh news",
 
       "home.btnFruits":         "fruits",
-      "home.btnAbout":          "about us",
+      "home.btnAbout":          "about me",
 
       "home.cardFruits":        "Fruits",
       "home.cardFruitsNote":    "so which fruit will you be offered?",
@@ -854,6 +867,19 @@
       "home.cardGiveawaysNote": "the prizes you want, only on our channel!",
       "home.cardNews":          "News",
       "home.cardNewsNote":      "find out the freshest news in your favourite game!",
+
+      "home.aboutTitle":        "About me and the Maknemy project",
+      "home.aboutP1":           "My name is Maksim, known online as Maknemy. I'm a Roblox creator, blogger and designer focused on Blox Fruits.",
+      "home.aboutP2":           "I make news, update reviews, tier lists, guides, theories and material about the in-game economy and trading. My goal isn't just to report what's happening in the game, but to help players understand items, make better decisions and stay on top of everything that matters.",
+      "home.aboutP3":           "Maknemy.com is my main project — an independent fan site for Blox Fruits players. It's built as one convenient place that brings together the tools and information players need most:",
+      "home.aboutList1":        "an up-to-date item tier list",
+      "home.aboutList2":        "a trade calculator",
+      "home.aboutList3":        "values for fruits, permanent fruits, gamepasses, skins and mutations",
+      "home.aboutList4":        "Blox Fruits news and updates",
+      "home.aboutList5":        "useful material for players",
+      "home.aboutList6":        "information about the game's economy and price changes",
+      "home.aboutP4":           "The site helps players judge item values, check whether a trade is worth making, and track how the economy shifts after updates. The project grows alongside the game and is built first and foremost for the Russian-speaking community and players from the CIS.",
+      "home.aboutP5":           "My goal is to make maknemy.com the most useful and convenient Blox Fruits fan project out there — a place players open before a trade, right after an update, or whenever they just need current information about the game.",
 
       "home.faqTitle":          "A few things worth knowing",
       "home.faqSub":            "your guarantee of good trades is your own curiosity!",

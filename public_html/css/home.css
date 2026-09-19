@@ -440,6 +440,67 @@
   cursor: pointer;
 }
 
+.hm-about {
+  position: relative;
+  padding: calc(86 * var(--u)) calc(42 * var(--u)) 0;
+  scroll-margin-top: calc(var(--mk-top-h) + 24px);
+}
+
+.hm-about-inner {
+  box-sizing: border-box;
+  max-width: calc(920 * var(--u));
+  margin: 0 auto;
+  padding: calc(52 * var(--u)) calc(64 * var(--u)) calc(56 * var(--u));
+  border-radius: calc(42 * var(--u));
+  background: var(--hm-panel);
+}
+
+.hm-about-title {
+  margin: 0 0 calc(28 * var(--u));
+  font-size: calc(36 * var(--u));
+  line-height: 1.1;
+}
+
+.hm-about-body p {
+  margin: 0;
+  font-size: calc(19 * var(--u));
+  line-height: 1.6;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.hm-about-body p + p {
+  margin-top: calc(18 * var(--u));
+}
+
+.hm-about-list {
+  margin: calc(18 * var(--u)) 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(10 * var(--u));
+}
+
+.hm-about-list li {
+  display: flex;
+  align-items: baseline;
+  gap: calc(12 * var(--u));
+  font-size: calc(19 * var(--u));
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.hm-about-list li::before {
+  content: "";
+  flex: none;
+  width: calc(8 * var(--u));
+  height: calc(8 * var(--u));
+  margin-top: calc(7 * var(--u));
+  border-radius: 50%;
+  background: var(--hm-accent-a);
+}
+
 .hm-faq {
   position: relative;
   padding: calc(86 * var(--u)) calc(42 * var(--u)) calc(60 * var(--u));
@@ -848,6 +909,25 @@
     right: -130px;
     top: -30px;
   }
+
+  .hm-about {
+    padding: 28px 12px 0;
+  }
+
+  .hm-about-inner {
+    max-width: none;
+    padding: 24px 16px 20px;
+    border-radius: 20px;
+  }
+
+  .hm-about-title { margin-bottom: 16px; font-size: 22px; line-height: 1.15; }
+
+  .hm-about-body p { font-size: 15px; }
+  .hm-about-body p + p { margin-top: 12px; }
+
+  .hm-about-list { margin: 12px 0; gap: 8px; }
+  .hm-about-list li { gap: 10px; font-size: 15px; line-height: 1.4; }
+  .hm-about-list li::before { width: 6px; height: 6px; margin-top: 6px; }
 
   .hm-faq {
     padding: 28px 12px 32px;

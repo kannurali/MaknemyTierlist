@@ -95,7 +95,7 @@ page_lscache();
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/home.css?v=16" />
+<link rel="stylesheet" href="css/home.css?v=17" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -202,7 +202,7 @@ page_lscache();
     <div class="hm-lead-actions">
 
       <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnFruits">фрукты</span></span></a>
-      <a class="hm-btn hm-btn-ghost" href="https://t.me/theMaknemy" target="_blank" rel="noopener"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">о нас</span><span class="hm-btn-word hm-btn-word-hover" data-i18n="home.btnAbout">о нас</span></span></a>
+      <a class="hm-btn hm-btn-ghost" href="#about"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">обо мне</span><span class="hm-btn-word hm-btn-word-hover" data-i18n="home.btnAbout">обо мне</span></span></a>
     </div>
 
     <div class="hm-cards hm-anim">
@@ -269,6 +269,27 @@ page_lscache();
     <div class="hm-fig hm-fig-circle hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-square-sm hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-tri hm-deco hm-anim" aria-hidden="true"></div>
+  </section>
+
+  <section class="hm-about" id="about">
+    <div class="hm-about-inner">
+      <h2 class="hm-ak hm-about-title" data-i18n="home.aboutTitle">Обо мне и проекте Maknemy</h2>
+      <div class="hm-about-body">
+        <p data-i18n="home.aboutP1">Меня зовут Максим, но в интернете я известен как Maknemy. Я Roblox-креатор, блогер и дизайнер, специализирующийся на игре Blox Fruits.</p>
+        <p data-i18n="home.aboutP2">Я создаю новости, обзоры обновлений, тирлисты, гайды, теории и материалы об игровой экономике и трейдах. Моя цель — не просто рассказывать о происходящем в игре, а помогать игрокам разбираться в предметах, принимать более выгодные решения и всегда оставаться в курсе важных событий.</p>
+        <p data-i18n="home.aboutP3">Maknemy.com — мой главный проект и независимый фанатский сайт для игроков Blox Fruits. Он создан как удобное место, где собраны самые необходимые инструменты и информация для игры:</p>
+        <ul class="hm-about-list">
+          <li data-i18n="home.aboutList1">актуальный тирлист предметов</li>
+          <li data-i18n="home.aboutList2">калькулятор трейдов</li>
+          <li data-i18n="home.aboutList3">цены и оценки фруктов, перманентов, геймпассов, скинов и мутаций</li>
+          <li data-i18n="home.aboutList4">новости и обновления Blox Fruits</li>
+          <li data-i18n="home.aboutList5">полезные материалы для игроков</li>
+          <li data-i18n="home.aboutList6">информация об игровой экономике и изменениях цен</li>
+        </ul>
+        <p data-i18n="home.aboutP4">Сайт помогает игрокам оценивать стоимость предметов, проверять выгодность трейдов и следить за изменениями экономики после обновлений. Проект развивается вместе с игрой и создаётся прежде всего для русскоязычного сообщества и игроков из СНГ.</p>
+        <p data-i18n="home.aboutP5">Моя цель — сделать maknemy.com самым полезным и удобным фанатским проектом по Blox Fruits: местом, куда игроки заходят перед трейдом, после обновления и просто для поиска актуальной информации об игре.</p>
+      </div>
+    </div>
   </section>
 
   <section class="hm-faq">
@@ -369,7 +390,7 @@ page_lscache();
     </p>
 </footer>
 
-<script src="js/i18n.js?v=48" fetchpriority="high"></script>
+<script src="js/i18n.js?v=49" fetchpriority="high"></script>
 <script src="js/home.js?v=5" fetchpriority="high"></script>
 </body>
 </html>
