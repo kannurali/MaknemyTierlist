@@ -57,13 +57,42 @@ T_HEAD = ["РАЗДАЧА", "ФРУКТОВ"]
 T_HEAD_ONE = "РАЗДАЧА ФРУКТОВ"
 T_TG = "@THEMAKNEMY"
 
-# Три фрукта в порядке показа. Хвост — вес размера: мех крупнее остальных,
-# золотой фрукт мельче, иначе ряд читается как лестница.
-FRUITS = [
-    ("giveaway-fruit-kitsune.webp", 1.00),
-    ("giveaway-fruit-mech.webp", 1.06),
-    ("giveaway-fruit-gold.webp", 0.86),
-]
+KITSUNE = "giveaway-fruit-kitsune.webp"
+MECH = "giveaway-fruit-mech.webp"
+GOLD = "giveaway-fruit-gold.webp"
+
+# Раскладка предметов: (арт, мерить по "h" или "w", доля холста, центр в долях
+# холста, наклон в градусах, герой ли). Ряд из трёх одинаковых артов в линейку
+# читается как таблица товаров, поэтому композиция строится иначе: мех — герой,
+# он крупнее, стоит выше и перекрывает соседей, боковые развёрнуты в разные
+# стороны, посажены ниже и приглушены на план назад. Порядок в списке — порядок
+# отрисовки, герой всегда последний.
+LAYOUTS = {
+    "strip": [
+        (KITSUNE, "h", 0.620, (0.500, 0.590), -13, False),
+        (GOLD, "h", 0.600, (0.862, 0.580), 12, False),
+        (MECH, "h", 0.820, (0.680, 0.500), -4, True),
+    ],
+    # У дока пропорции другие (3.2:1 против 4:1), поэтому при тех же долях
+    # предметы лезли бы друг на друга: своя строка, размеры мельче.
+    "dock": [
+        (KITSUNE, "h", 0.550, (0.478, 0.600), -13, False),
+        (GOLD, "h", 0.530, (0.845, 0.575), 12, False),
+        (MECH, "h", 0.750, (0.672, 0.500), -4, True),
+    ],
+    "popup": [
+        (KITSUNE, "h", 0.265, (0.172, 0.650), -14, False),
+        (GOLD, "h", 0.262, (0.828, 0.628), 13, False),
+        (MECH, "h", 0.385, (0.500, 0.520), -4, True),
+    ],
+    # Борт узкий и длинный: предметы идут зигзагом, иначе столбик по центру
+    # выглядит списком.
+    "rail": [
+        (KITSUNE, "w", 0.720, (0.440, 0.305), -12, False),
+        (GOLD, "w", 0.660, (0.400, 0.735), 12, False),
+        (MECH, "w", 0.800, (0.550, 0.525), -4, True),
+    ],
+}
 
 
 # ===========================================================================
@@ -246,20 +275,33 @@ def rim(im, colour, width=6, alpha=190):
     return layer
 
 
+def darken(im, k):
+    """Приглушить арт, не трогая альфу: Brightness множит и её тоже."""
+    r, g, b, a = im.split()
+    rgb = ImageEnhance.Brightness(Image.merge("RGB", (r, g, b))).enhance(k)
+    return Image.merge("RGBA", rgb.split() + (a,))
+
+
 def pedestal(img, im, x, y, colour=(60, 150, 235)):
-    """Свет и короткое отражение под предметом: он стоит, а не висит."""
+    """Свет и короткое отражение под предметом: он стоит, а не висит.
+
+    Меряем по силуэту, а не по холсту: после поворота вокруг арта остаётся
+    прозрачная кайма, и без этого свет с отражением уезжали бы вниз.
+    """
     w, h = img.size
-    cx, cy = x + im.width / 2, y + im.height * 0.96
-    img.alpha_composite(radial_layer((w, h), cx, cy, im.width * 0.46, im.height * 0.16,
-                                     colour, 170, blur_div=14))
-    ref = im.transpose(Image.FLIP_TOP_BOTTOM)
-    ref = ref.crop((0, 0, ref.width, round(ref.height * 0.38)))
+    bb = im.split()[3].getbbox() or (0, 0, im.width, im.height)
+    l, t, r, b = bb
+    iw, ih = r - l, b - t
+    img.alpha_composite(radial_layer((w, h), x + (l + r) / 2, y + b - ih * 0.04,
+                                     iw * 0.46, ih * 0.16, colour, 170, blur_div=14))
+    ref = im.crop(bb).transpose(Image.FLIP_TOP_BOTTOM)
+    ref = ref.crop((0, 0, iw, round(ih * 0.38)))
     m = Image.new("L", ref.size)
     d = ImageDraw.Draw(m)
     for yy in range(ref.height):
         d.line([(0, yy), (ref.width, yy)], fill=round(64 * (1 - yy / ref.height) ** 2))
     ref.putalpha(ImageChops.multiply(ref.split()[3], m))
-    img.alpha_composite(ref.filter(ImageFilter.GaussianBlur(4)), (x, round(y + im.height)))
+    img.alpha_composite(ref.filter(ImageFilter.GaussianBlur(4)), (x + l, y + b))
 
 
 def place_fruit(img, im, x, y, glow_col=(70, 170, 245)):
@@ -273,48 +315,20 @@ def place_fruit(img, im, x, y, glow_col=(70, 170, 245)):
     img.alpha_composite(im, (x, y))
 
 
-def fruit_row(img, box, base_h, lift=0.07):
-    """Три фрукта в ряд. Ряд собирается целиком и при нужде ужимается под
-    ширину: иначе золотой фрукт вылезал бы за борт раньше остальных."""
-    x0, y0, x1, y1 = box
-    gap = round((x1 - x0) * 0.035)
-    ims = [scaled(art(n), h=round(base_h * k)) for n, k in FRUITS]
-    total = sum(i.width for i in ims) + gap * (len(ims) - 1)
-    room = x1 - x0
-    if total > room:
-        k = room / total
-        ims = [scaled(i, h=max(1, round(i.height * k))) for i in ims]
-        gap = round(gap * k)
-        total = sum(i.width for i in ims) + gap * (len(ims) - 1)
-    x = round(x0 + (room - total) / 2)
-    cy = (y0 + y1) / 2
-    for i, im in enumerate(ims):
-        # Средний фрукт приподнят: ряд из трёх одинаково посаженных артов
-        # читается как таблица, а не как витрина.
-        y = round(cy - im.height / 2 - (im.height * lift if i == 1 else 0))
+def scatter(img, slot):
+    """Разложить предметы по таблице LAYOUTS: наклон, план, перекрытия."""
+    w, h = img.size
+    for name, by, size, (fx, fy), rot, front in LAYOUTS[slot]:
+        im = art(name)
+        im = scaled(im, h=round(size * h)) if by == "h" else scaled(im, w=round(size * w))
+        if not front:
+            im = darken(im, 0.92)
+        if rot:
+            im = im.rotate(rot, resample=Image.BICUBIC, expand=True)
+        x = round(fx * w - im.width / 2)
+        y = round(fy * h - im.height / 2)
         pedestal(img, im, x, y)
-        place_fruit(img, im, x, y)
-        x += im.width + gap
-
-
-def fruit_column(img, box, base_w):
-    """Те же три фрукта столбиком — для борта 320x1200."""
-    x0, y0, x1, y1 = box
-    ims = [scaled(art(n), w=round(base_w * k)) for n, k in FRUITS]
-    gap = max(8, round(((y1 - y0) - sum(i.height for i in ims)) / len(ims)))
-    total = sum(i.height for i in ims) + gap * (len(ims) - 1)
-    if total > (y1 - y0):
-        k = (y1 - y0) / total
-        ims = [scaled(i, w=max(1, round(i.width * k))) for i in ims]
-        gap = round(gap * k)
-        total = sum(i.height for i in ims) + gap * (len(ims) - 1)
-    y = round(y0 + ((y1 - y0) - total) / 2)
-    cx = (x0 + x1) / 2
-    for im in ims:
-        x = round(cx - im.width / 2)
-        pedestal(img, im, x, y)
-        place_fruit(img, im, x, y)
-        y += im.height + gap
+        place_fruit(img, im, x, y, glow_col=(70, 170, 245) if front else (52, 138, 214))
 
 
 # ===========================================================================
@@ -406,7 +420,7 @@ def build(slot, w, h):
     if slot == "popup":
         tracked(d, (w / 2, 76), T_EYEBROW, font(40), CYAN + (255,), 8)
         poster_text(img, (w / 2, 170), T_HEAD_ONE, fit(d, T_HEAD_ONE, w - 120, 116))
-        fruit_row(img, (24, 282, w - 24, 618), 352)
+        scatter(img, slot)
         tg_button(img, w / 2, 706, 540, 92)
         frame(img, CYAN, 18, 30, 3)
         return img
@@ -416,7 +430,7 @@ def build(slot, w, h):
         f = fit(d, "ФРУКТОВ", w - 40, 84)
         for i, line in enumerate(T_HEAD):
             poster_text(img, (w / 2, 126 + i * 80), line, f)
-        fruit_column(img, (14, 250, w - 14, h - 160), int(w * 0.82))
+        scatter(img, slot)
         tg_button(img, w / 2, h - 82, w - 36, 70)
         frame(img, CYAN, 11, 16, 3)
         return img
@@ -432,8 +446,7 @@ def build(slot, w, h):
     for i, line in enumerate(T_HEAD):
         poster_text(img, (cx, int(h * (0.42 + 0.235 * i))), line, f)
     tg_button(img, cx, int(h * 0.865), colw * 0.96, int(h * 0.17))
-    fruit_row(img, (int(w * 0.40), int(h * 0.06), int(w * 0.955), int(h * 0.94)),
-              int(h * (0.76 if big else 0.72)))
+    scatter(img, slot)
     frame(img, CYAN, 16 if big else 10, 18 if big else 12, 3 if big else 2)
     return img
 
