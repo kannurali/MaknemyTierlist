@@ -1,31 +1,40 @@
 """Креативы кампании «Раздача фруктов в телеграме».
 
-    python tools/make-giveaway-creatives.py                        # превью в out/
-    python tools/make-giveaway-creatives.py --as giveaway --out public_html/assets/promo
+    python tools/make-giveaway-creatives.py --png --out tools/out/giveaway   # превью
+    python tools/make-giveaway-creatives.py --out public_html/assets/promo   # боевые
 
 Кампания — собственная (t.me/theMaknemy/5302), поэтому макеты лежат в
 репозитории рядом с house-tg-popup.webp, а не приезжают загрузкой из админки.
 
-Размеры берутся из CREATIVE_SPECS в api/lib/images.php: файл, который не влез
-в потолок слота, сервер либо ужмёт (still), либо отвергнет (анимация).
+Размеры и потолки веса берутся из CREATIVE_SPECS в api/lib/images.php: файл,
+который не влез в потолок слота, сервер либо ужмёт (still), либо отвергнет.
 
 Исходники — tools/art/giveaway-fruit-mech.webp, giveaway-fruit-kitsune.webp и
 giveaway-fruit-gold.webp: арты фруктов, обрезанные по альфе.
 
+Арт-направление — «афиша»: фоном идёт ночная сцена самого сайта
+(assets/design/page-bg.webp), предметы стоят в луче света с контровым
+свечением и коротким отражением, заголовок набран как на игровом постере —
+свечение, тень, тёмный контур, градиентная заливка. Баннер должен выглядеть
+продолжением страницы, а не наклейкой поверх неё, поэтому фон берётся из
+дизайна сайта, а не рисуется градиентом заново.
+
 Слов «розыгрыш», «приз» и «участвовать» в макетах нет намеренно: раздача идёт
 в телеграм-канале, и единственное, что макет обязан сказать за секунду, — что
-раздают фрукты и где. Отсюда три строки и ни одной лишней.
+раздают фрукты и где.
 
 Нужен Pillow.
 """
 import argparse
 import math
 import pathlib
+import random
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ART = ROOT / "tools" / "art"
+DESIGN = ROOT / "public_html" / "assets" / "design"
 FONT_PATH = ROOT / "public_html" / "assets" / "fonts" / "Bootshaus" / "Bootshaus-Regular.ttf"
 
 # Размеры слотов = CREATIVE_SPECS.
@@ -38,27 +47,28 @@ SLOTS = {
 
 # Палитра сайта: base.css :root + градиент кнопок шапки.
 CYAN = (79, 214, 255)
-MK = (214, 90, 255)
+CYAN_PALE = (198, 240, 255)
 INK = (255, 255, 255)
-GRAD_A = (97, 181, 233)
-GRAD_B = (45, 74, 237)
+GRAD_A = (132, 205, 255)
+GRAD_B = (40, 96, 222)
 
-# Тексты. Русский — как у объявления, которое стоит в тир-листе, и как в
-# канале, где идёт раздача.
 T_EYEBROW = "В ТЕЛЕГРАМЕ"
 T_HEAD = ["РАЗДАЧА", "ФРУКТОВ"]
 T_HEAD_ONE = "РАЗДАЧА ФРУКТОВ"
 T_TG = "@THEMAKNEMY"
 
-# Три фрукта в порядке показа. Хвост — доля высоты/ширины места: меху даём
-# больше всех, золотой фрукт мельче остальных, иначе ряд выглядит как
-# лестница.
+# Три фрукта в порядке показа. Хвост — вес размера: мех крупнее остальных,
+# золотой фрукт мельче, иначе ряд читается как лестница.
 FRUITS = [
     ("giveaway-fruit-kitsune.webp", 1.00),
     ("giveaway-fruit-mech.webp", 1.06),
     ("giveaway-fruit-gold.webp", 0.86),
 ]
 
+
+# ===========================================================================
+#  Базовое
+# ===========================================================================
 
 def font(px):
     return ImageFont.truetype(str(FONT_PATH), px)
@@ -92,154 +102,185 @@ def dgrad(w, h, a, b):
     return img.convert("RGBA")
 
 
-def halftone(w, h, pitch, colour=(122, 176, 233), alpha=24):
-    layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    r = pitch * 0.26
-    for y in range(0, h + pitch, pitch):
-        for x in range(0, w + pitch, pitch):
-            d.ellipse([x - r, y - r, x + r, y + r], fill=colour + (alpha,))
-    return layer
-
-
-def radial(img, cx, cy, rx, ry, colour, strength=140, blur_div=8):
-    """Мягкое пятно света поверх фона."""
-    mask = Image.new("L", img.size, 0)
-    ImageDraw.Draw(mask).ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=strength)
-    mask = mask.filter(ImageFilter.GaussianBlur(max(img.size) // blur_div))
-    tint = Image.new("RGBA", img.size, colour + (255,))
-    img.paste(tint, (0, 0), mask)
-    return img
-
-
-def rays(w, h, cx, cy, colour, count=14, alpha=26):
-    """Лучи из точки — «товар в свете софитов»."""
-    layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    span = max(w, h) * 2.2
-    for i in range(count):
-        a0 = (360 / count) * i
-        a1 = a0 + (360 / count) * 0.42
-        p = [(cx, cy)]
-        for a in (a0, a1):
-            rad = math.radians(a)
-            p.append((cx + span * math.cos(rad), cy + span * math.sin(rad)))
-        d.polygon(p, fill=colour + (alpha,))
-    return layer.filter(ImageFilter.GaussianBlur(max(w, h) // 90 + 1))
-
-
-def text_glow(img, xy, text, f, fill, glow_col, blur, anchor="mm", stroke=0, stroke_fill=None):
-    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(layer).text(xy, text, font=f, fill=glow_col + (255,), anchor=anchor,
-                               stroke_width=stroke + max(2, blur // 2), stroke_fill=glow_col + (255,))
-    img.alpha_composite(layer.filter(ImageFilter.GaussianBlur(blur)))
-    ImageDraw.Draw(img).text(xy, text, font=f, fill=fill + (255,), anchor=anchor,
-                             stroke_width=stroke, stroke_fill=stroke_fill)
-
-
 def art(name):
     return Image.open(ART / name).convert("RGBA")
 
 
 def scaled(im, h=None, w=None):
-    if h:
-        k = h / im.height
-    else:
-        k = w / im.width
+    k = (h / im.height) if h else (w / im.width)
     return im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
 
 
-def glow_under(img, im, x, y, colour, strength=150):
-    """Пятно света под фруктом: без него арт висит на фоне сам по себе."""
-    mask = Image.new("L", img.size, 0)
-    cx, cy = x + im.width / 2, y + im.height / 2
-    rx, ry = im.width * 0.46, im.height * 0.46
+def cover(path, w, h, focus=(0.5, 0.36)):
+    """Фон сайта, обрезанный по точке интереса и растянутый под холст."""
+    im = Image.open(path).convert("RGB")
+    k = max(w / im.width, h / im.height)
+    im = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
+    x = min(max(0, round(im.width * focus[0] - w / 2)), im.width - w)
+    y = min(max(0, round(im.height * focus[1] - h / 2)), im.height - h)
+    return im.crop((x, y, x + w, y + h)).convert("RGBA")
+
+
+def radial_layer(size, cx, cy, rx, ry, colour, strength=150, blur_div=6):
+    mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=strength)
-    mask = mask.filter(ImageFilter.GaussianBlur(max(im.size) // 3 + 4))
-    tint = Image.new("RGBA", img.size, colour + (255,))
-    img.paste(tint, (0, 0), mask)
+    mask = mask.filter(ImageFilter.GaussianBlur(max(size) // blur_div))
+    layer = Image.new("RGBA", size, colour + (0,))
+    layer.putalpha(mask)
+    return layer
 
 
-def drop(img, im, x, y, shadow=True):
-    if shadow:
-        sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        a = im.split()[3].point(lambda v: v * 0.55)
-        black = Image.new("RGBA", im.size, (0, 0, 0, 255))
-        black.putalpha(a)
-        sh.alpha_composite(black, (max(0, x + im.width // 40), max(0, y + im.height // 30)))
-        img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(im.size) // 28 + 2)))
-    img.alpha_composite(im, (x, y))
-
-
-def chip(img, box, text, f, bg_grad=None, bg=None, fg=(10, 18, 38), radius=None):
-    x0, y0, x1, y1 = box
-    r = radius if radius is not None else (y1 - y0) // 2
-    mask = Image.new("L", img.size, 0)
-    ImageDraw.Draw(mask).rounded_rectangle(box, radius=r, fill=255)
-    fillimg = bg_grad if bg_grad is not None else Image.new("RGBA", img.size, bg + (255,))
-    img.paste(fillimg, (0, 0), mask)
-    ImageDraw.Draw(img).text(((x0 + x1) / 2, (y0 + y1) / 2 - (y1 - y0) * 0.06), text,
-                             font=f, fill=fg + (255,), anchor="mm")
-
-
-def tg_glyph(size):
-    """Самолётик в круге. Свой рисунок, не фирменный знак Telegram."""
-    ss = 4
-    s = size * ss
-    layer = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    disc = Image.new("L", (s, s), 0)
-    ImageDraw.Draw(disc).ellipse([0, 0, s - 1, s - 1], fill=255)
-    layer.paste(dgrad(s, s, GRAD_A, GRAD_B), (0, 0), disc)
+def rays(size, cx, cy, colour, count=13, alpha=14):
+    """Лучи из точки — «товар в свете софитов»."""
+    w, h = size
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
-    u = s / 100.0
-    d.polygon([(20 * u, 50 * u), (82 * u, 25 * u), (70 * u, 78 * u), (52 * u, 62 * u), (40 * u, 72 * u)],
-              fill=INK + (255,))
-    d.line([(40 * u, 72 * u), (42 * u, 56 * u), (82 * u, 25 * u)], fill=(10, 20, 48, 255),
-           width=round(2.4 * u), joint="curve")
-    return layer.resize((size, size), Image.LANCZOS)
+    span = max(w, h) * 2.4
+    for i in range(count):
+        a0 = (360 / count) * i
+        a1 = a0 + (360 / count) * 0.40
+        p = [(cx, cy)]
+        for a in (a0, a1):
+            r = math.radians(a)
+            p.append((cx + span * math.cos(r), cy + span * math.sin(r)))
+        d.polygon(p, fill=colour + (alpha,))
+    return layer.filter(ImageFilter.GaussianBlur(max(w, h) // 80 + 1))
 
 
-def tg_chip(img, cx, cy, width, height, text=T_TG):
-    """Плашка канала: кружок с самолётиком и адрес. Центр задаётся по (cx, cy)."""
-    x0, x1 = round(cx - width / 2), round(cx + width / 2)
-    y0, y1 = round(cy - height / 2), round(cy + height / 2)
-    g = round(height * 0.72)
-    d = ImageDraw.Draw(img)
-    f = fit(d, text, width - g - round(height * 0.9), round(height * 0.62))
-    tw = d.textlength(text, font=f)
-    chip(img, [x0, y0, x1, y1], "", font(8), bg_grad=dgrad(img.width, img.height, GRAD_A, GRAD_B))
-    block = g + round(height * 0.24) + tw
-    gx = round(cx - block / 2)
-    img.alpha_composite(tg_glyph(g), (gx, round(cy - g / 2)))
-    ImageDraw.Draw(img).text((gx + g + round(height * 0.24), cy - height * 0.06), text,
-                             font=f, fill=INK + (255,), anchor="lm")
+def sparkles(size, colour, count=40, seed=3, rmin=1.5, rmax=4.5):
+    """Искры в воздухе. Сид фиксирован: пересборка не должна менять картинку."""
+    rnd = random.Random(seed)
+    w, h = size
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    for _ in range(count):
+        x, y = rnd.uniform(0, w), rnd.uniform(0, h)
+        r = rnd.uniform(rmin, rmax)
+        a = rnd.randint(70, 210)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=colour + (a,))
+        if r > rmax * 0.7:
+            d.line([(x - r * 3, y), (x + r * 3, y)], fill=colour + (a // 2,), width=1)
+            d.line([(x, y - r * 3), (x, y + r * 3)], fill=colour + (a // 2,), width=1)
+    return layer.filter(ImageFilter.GaussianBlur(0.6))
 
 
-def frame(img, colour, pad, radius, width):
-    ImageDraw.Draw(img).rounded_rectangle([pad, pad, img.width - pad - 1, img.height - pad - 1],
-                                          radius=radius, outline=colour + (210,), width=width)
-
-
-def bg(w, h, cx, cy):
-    img = vgrad(w, h, (20, 40, 78), (7, 12, 30))
-    img.alpha_composite(rays(w, h, cx, cy, CYAN, count=16, alpha=18))
-    img = radial(img, cx, cy, w * 0.42, h * 0.58, (46, 96, 176), 116)
-    img.alpha_composite(halftone(w, h, max(14, min(w, h) // 18)))
+def vignette(img, strength=165, spread=0.62):
+    w, h = img.size
+    mask = Image.new("L", (w, h), 255)
+    ImageDraw.Draw(mask).ellipse([-w * (1 - spread), -h * (1 - spread),
+                                  w * (2 - spread), h * (2 - spread)], fill=0)
+    mask = mask.filter(ImageFilter.GaussianBlur(max(w, h) // 8))
+    dark = Image.new("RGBA", (w, h), (2, 5, 14, 255))
+    dark.putalpha(mask.point(lambda v: v * strength // 255))
+    img.alpha_composite(dark)
     return img
 
 
-def row(img, box, heights_of):
-    """Три фрукта в ряд по центру прямоугольника box = (x0, y0, x1, y1).
+def scrim(img, top_h=0.0, bottom_h=0.0, alpha=205, colour=(4, 9, 24)):
+    """Затемнение под текстом: фон-картинка не имеет права спорить с буквами."""
+    w, h = img.size
+    for part, height in (("top", top_h), ("bottom", bottom_h)):
+        if not height:
+            continue
+        n = round(h * height)
+        layer = Image.new("RGBA", (w, n), colour + (0,))
+        m = Image.new("L", (w, n))
+        d = ImageDraw.Draw(m)
+        for y in range(n):
+            k = (1 - y / n) if part == "top" else (y / n)
+            d.line([(0, y), (w, y)], fill=round(alpha * k ** 1.5))
+        layer.putalpha(m)
+        img.alpha_composite(layer, (0, 0 if part == "top" else h - n))
+    return img
 
-    heights_of — базовая высота, которую домножает вес фрукта. Ряд сначала
-    собирается целиком, потом при нужде ужимается под ширину: иначе золотой
-    фрукт вылезал бы за борт раньше остальных.
-    """
+
+# ===========================================================================
+#  Типографика
+# ===========================================================================
+
+def poster_text(img, xy, text, f, anchor="mm", fill_top=INK, fill_bottom=CYAN_PALE,
+                stroke_col=(6, 14, 36), glow=CYAN, glow_alpha=150):
+    """Заголовок афиши: свечение, тень, тёмный контур, градиентная заливка."""
+    w, h = img.size
+    px = f.size
+    stroke = max(3, round(px * 0.085))
+
+    g = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(g).text(xy, text, font=f, fill=glow + (glow_alpha,), anchor=anchor,
+                           stroke_width=stroke + max(3, px // 8), stroke_fill=glow + (glow_alpha,))
+    img.alpha_composite(g.filter(ImageFilter.GaussianBlur(max(6, px // 6))))
+
+    sh = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).text((xy[0], xy[1] + max(2, px * 0.07)), text, font=f, fill=(0, 0, 0, 190),
+                            anchor=anchor, stroke_width=stroke, stroke_fill=(0, 0, 0, 190))
+    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(3, px // 12))))
+
+    ImageDraw.Draw(img).text(xy, text, font=f, fill=stroke_col + (255,), anchor=anchor,
+                             stroke_width=stroke, stroke_fill=stroke_col + (255,))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).text(xy, text, font=f, fill=255, anchor=anchor)
+    img.paste(vgrad(w, h, fill_top, fill_bottom), (0, 0), mask)
+
+
+def tracked(draw, xy, text, f, fill, spacing):
+    """Разрядка: у Bootshaus её нет, поэтому надстрочник рисуется посимвольно."""
+    widths = [draw.textlength(c, font=f) for c in text]
+    total = sum(widths) + spacing * (len(text) - 1)
+    x = xy[0] - total / 2
+    for c, cw in zip(text, widths):
+        draw.text((x, xy[1]), c, font=f, fill=fill, anchor="lm")
+        x += cw + spacing
+
+
+# ===========================================================================
+#  Предметы
+# ===========================================================================
+
+def rim(im, colour, width=6, alpha=190):
+    """Контровой свет по силуэту — предмет отделяется от тёмного фона."""
+    a = im.split()[3]
+    grown = a.filter(ImageFilter.MaxFilter(width * 2 + 1))
+    edge = ImageChops.subtract(grown, a).filter(ImageFilter.GaussianBlur(width * 0.9))
+    layer = Image.new("RGBA", im.size, colour + (0,))
+    layer.putalpha(edge.point(lambda v: v * alpha // 255))
+    return layer
+
+
+def pedestal(img, im, x, y, colour=(60, 150, 235)):
+    """Свет и короткое отражение под предметом: он стоит, а не висит."""
+    w, h = img.size
+    cx, cy = x + im.width / 2, y + im.height * 0.96
+    img.alpha_composite(radial_layer((w, h), cx, cy, im.width * 0.46, im.height * 0.16,
+                                     colour, 170, blur_div=14))
+    ref = im.transpose(Image.FLIP_TOP_BOTTOM)
+    ref = ref.crop((0, 0, ref.width, round(ref.height * 0.38)))
+    m = Image.new("L", ref.size)
+    d = ImageDraw.Draw(m)
+    for yy in range(ref.height):
+        d.line([(0, yy), (ref.width, yy)], fill=round(64 * (1 - yy / ref.height) ** 2))
+    ref.putalpha(ImageChops.multiply(ref.split()[3], m))
+    img.alpha_composite(ref.filter(ImageFilter.GaussianBlur(4)), (x, round(y + im.height)))
+
+
+def place_fruit(img, im, x, y, glow_col=(70, 170, 245)):
+    img.alpha_composite(rim(im, glow_col, width=max(3, im.width // 90)), (x, y))
+    sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    a = im.split()[3].point(lambda v: v * 0.6)
+    black = Image.new("RGBA", im.size, (0, 0, 0, 255))
+    black.putalpha(a)
+    sh.alpha_composite(black, (x + im.width // 40, y + im.height // 26))
+    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(im.size) // 24 + 2)))
+    img.alpha_composite(im, (x, y))
+
+
+def fruit_row(img, box, base_h, lift=0.07):
+    """Три фрукта в ряд. Ряд собирается целиком и при нужде ужимается под
+    ширину: иначе золотой фрукт вылезал бы за борт раньше остальных."""
     x0, y0, x1, y1 = box
     gap = round((x1 - x0) * 0.035)
-    ims = [scaled(art(n), h=round(heights_of * k)) for n, k in FRUITS]
+    ims = [scaled(art(n), h=round(base_h * k)) for n, k in FRUITS]
     total = sum(i.width for i in ims) + gap * (len(ims) - 1)
-    room = (x1 - x0)
+    room = x1 - x0
     if total > room:
         k = room / total
         ims = [scaled(i, h=max(1, round(i.height * k))) for i in ims]
@@ -250,18 +291,16 @@ def row(img, box, heights_of):
     for i, im in enumerate(ims):
         # Средний фрукт приподнят: ряд из трёх одинаково посаженных артов
         # читается как таблица, а не как витрина.
-        lift = im.height * 0.07 if i == 1 else 0
-        y = round(cy - im.height / 2 - lift)
-        glow_under(img, im, x, y, (40, 110, 190), 130)
-        drop(img, im, x, y)
+        y = round(cy - im.height / 2 - (im.height * lift if i == 1 else 0))
+        pedestal(img, im, x, y)
+        place_fruit(img, im, x, y)
         x += im.width + gap
-    return ims
 
 
-def column(img, box, widths_of):
-    """Те же три фрукта, но столбиком — для борта 320x1200."""
+def fruit_column(img, box, base_w):
+    """Те же три фрукта столбиком — для борта 320x1200."""
     x0, y0, x1, y1 = box
-    ims = [scaled(art(n), w=round(widths_of * k)) for n, k in FRUITS]
+    ims = [scaled(art(n), w=round(base_w * k)) for n, k in FRUITS]
     gap = max(8, round(((y1 - y0) - sum(i.height for i in ims)) / len(ims)))
     total = sum(i.height for i in ims) + gap * (len(ims) - 1)
     if total > (y1 - y0):
@@ -273,61 +312,129 @@ def column(img, box, widths_of):
     cx = (x0 + x1) / 2
     for im in ims:
         x = round(cx - im.width / 2)
-        glow_under(img, im, x, y, (40, 110, 190), 130)
-        drop(img, im, x, y)
+        pedestal(img, im, x, y)
+        place_fruit(img, im, x, y)
         y += im.height + gap
-    return ims
+
+
+# ===========================================================================
+#  Детали
+# ===========================================================================
+
+def tg_glyph(size):
+    """Самолётик в круге. Свой рисунок, не фирменный знак Telegram."""
+    ss = 4
+    s = size * ss
+    layer = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    disc = Image.new("L", (s, s), 0)
+    ImageDraw.Draw(disc).ellipse([0, 0, s - 1, s - 1], fill=255)
+    layer.paste(dgrad(s, s, (97, 181, 233), (45, 74, 237)), (0, 0), disc)
+    d = ImageDraw.Draw(layer)
+    u = s / 100.0
+    d.polygon([(20 * u, 50 * u), (82 * u, 25 * u), (70 * u, 78 * u), (52 * u, 62 * u), (40 * u, 72 * u)],
+              fill=INK + (255,))
+    d.line([(40 * u, 72 * u), (42 * u, 56 * u), (82 * u, 25 * u)], fill=(10, 20, 48, 255),
+           width=round(2.4 * u), joint="curve")
+    return layer.resize((size, size), Image.LANCZOS)
+
+
+def tg_button(img, cx, cy, w, h, text=T_TG):
+    """Кнопка канала: тень, градиент, кант и блик — как кнопка в игре."""
+    x0, x1 = round(cx - w / 2), round(cx + w / 2)
+    y0, y1 = round(cy - h / 2), round(cy + h / 2)
+
+    sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle([x0, y0 + h * 0.16, x1, y1 + h * 0.16],
+                                         radius=h // 2, fill=(0, 0, 0, 170))
+    img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(max(4, h // 7))))
+
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([x0, y0, x1, y1], radius=h // 2, fill=255)
+    img.paste(vgrad(img.width, img.height, GRAD_A, GRAD_B), (0, 0), mask)
+    ImageDraw.Draw(img).rounded_rectangle([x0, y0, x1, y1], radius=h // 2,
+                                          outline=INK + (220,), width=max(2, h // 22))
+
+    gloss = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(gloss).rounded_rectangle([x0 + h * 0.12, y0 + h * 0.13, x1 - h * 0.12, y0 + h * 0.44],
+                                            radius=h // 3, fill=(255, 255, 255, 60))
+    img.alpha_composite(gloss.filter(ImageFilter.GaussianBlur(max(1, h // 18))))
+
+    d = ImageDraw.Draw(img)
+    g = round(h * 0.68)
+    f = fit(d, text, w - g - h, round(h * 0.52))
+    tw = d.textlength(text, font=f)
+    gx = round(cx - (g + h * 0.22 + tw) / 2)
+    img.alpha_composite(tg_glyph(g), (gx, round(cy - g / 2)))
+    tx, ty = gx + g + h * 0.22, cy - h * 0.04
+    d.text((tx, ty), text, font=f, anchor="lm", fill=(9, 20, 52, 255),
+           stroke_width=max(1, h // 40), stroke_fill=(9, 20, 52, 255))
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).text((tx, ty), text, font=f, fill=255, anchor="lm")
+    img.paste(Image.new("RGBA", img.size, INK + (255,)), (0, 0), mask)
+
+
+def frame(img, colour, pad, radius, width):
+    g = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(g).rounded_rectangle([pad, pad, img.width - pad - 1, img.height - pad - 1],
+                                        radius=radius, outline=colour + (150,), width=width * 3)
+    img.alpha_composite(g.filter(ImageFilter.GaussianBlur(width * 3)))
+    ImageDraw.Draw(img).rounded_rectangle([pad, pad, img.width - pad - 1, img.height - pad - 1],
+                                          radius=radius, outline=colour + (225,), width=width)
 
 
 # ===========================================================================
 #  Макеты
 # ===========================================================================
 
+def stage(w, h):
+    """Сцена: ночной фон сайта, луч света и искры под предметы."""
+    img = cover(DESIGN / "page-bg.webp", w, h)
+    img = ImageEnhance.Brightness(img).enhance(1.35)
+    img = ImageEnhance.Color(img).enhance(1.15)
+    img.alpha_composite(Image.new("RGBA", (w, h), (12, 34, 82, 44)))
+    img.alpha_composite(rays((w, h), w * 0.5, h * 0.04, (170, 225, 255)))
+    img.alpha_composite(radial_layer((w, h), w * 0.5, h * 0.54, w * 0.44, h * 0.34, (40, 120, 210), 105))
+    img = scrim(img, top_h=0.30, bottom_h=0.26)
+    img.alpha_composite(sparkles((w, h), (190, 235, 255), count=max(18, w * h // 26000)))
+    return vignette(img)
+
+
 def build(slot, w, h):
-    if slot in ("strip", "dock"):
-        big = slot == "strip"
-        img = bg(w, h, w * 0.70, h * 0.50)
-        frame(img, CYAN, 18 if big else 11, 18 if big else 12, 3 if big else 2)
+    img = stage(w, h)
+    d = ImageDraw.Draw(img)
 
-        left = int(w * 0.050)
-        colw = int(w * 0.33)
-        d = ImageDraw.Draw(img)
-        d.text((left, int(h * 0.19)), T_EYEBROW, font=fit(d, T_EYEBROW, colw, int(h * 0.125)),
-               fill=CYAN + (255,), anchor="lm")
-        f_head = fit(d, max(T_HEAD, key=len), colw, int(h * 0.27))
-        for i, line in enumerate(T_HEAD):
-            text_glow(img, (left, int(h * (0.42 + 0.23 * i))), line, f_head, INK, CYAN,
-                      max(4, h // 28), anchor="lm")
-
-        tg_chip(img, left + colw * 0.47, int(h * 0.87), colw * 0.94, int(h * 0.15))
-
-        row(img, (int(w * 0.395), int(h * 0.06), int(w * 0.955), int(h * 0.94)),
-            int(h * (0.76 if big else 0.72)))
+    if slot == "popup":
+        tracked(d, (w / 2, 76), T_EYEBROW, font(40), CYAN + (255,), 8)
+        poster_text(img, (w / 2, 170), T_HEAD_ONE, fit(d, T_HEAD_ONE, w - 120, 116))
+        fruit_row(img, (24, 282, w - 24, 618), 352)
+        tg_button(img, w / 2, 706, 540, 92)
+        frame(img, CYAN, 18, 30, 3)
         return img
 
     if slot == "rail":
-        img = bg(w, h, w * 0.5, h * 0.52)
-        frame(img, CYAN, 12, 14, 3)
-        d = ImageDraw.Draw(img)
-        d.text((w / 2, 56), T_EYEBROW, font=fit(d, T_EYEBROW, w - 46, 44), fill=CYAN + (255,), anchor="mm")
-        f_head = fit(d, max(T_HEAD, key=len), w - 36, 88)
+        tracked(d, (w / 2, 54), T_EYEBROW, font(30), CYAN + (255,), 5)
+        f = fit(d, "ФРУКТОВ", w - 40, 84)
         for i, line in enumerate(T_HEAD):
-            text_glow(img, (w / 2, 132 + i * 78), line, f_head, INK, CYAN, 12, anchor="mm")
-
-        column(img, (14, 250, w - 14, h - 150), int(w * 0.80))
-        tg_chip(img, w / 2, h - 80, w - 40, 64)
+            poster_text(img, (w / 2, 126 + i * 80), line, f)
+        fruit_column(img, (14, 250, w - 14, h - 160), int(w * 0.82))
+        tg_button(img, w / 2, h - 82, w - 36, 70)
+        frame(img, CYAN, 11, 16, 3)
         return img
 
-    # popup 800x800
-    img = bg(w, h, w * 0.5, h * 0.48)
-    frame(img, CYAN, 20, 32, 3)
-    d = ImageDraw.Draw(img)
-    d.text((w / 2, 88), T_EYEBROW, font=font(46), fill=CYAN + (255,), anchor="mm")
-    text_glow(img, (w / 2, 190), T_HEAD_ONE, fit(d, T_HEAD_ONE, w - 120, 112), INK, CYAN, 16, anchor="mm")
-
-    row(img, (26, 262, w - 26, 636), 348)
-
-    tg_chip(img, w / 2, 706, 520, 86)
+    # strip и dock: текст колонкой слева, предметы рядом справа.
+    big = slot == "strip"
+    left = int(w * 0.055)
+    colw = int(w * 0.34)
+    cx = left + colw * 0.40
+    tracked(d, (cx, int(h * 0.19)), T_EYEBROW, fit(d, T_EYEBROW, colw * 0.8, int(h * 0.115)),
+            CYAN + (255,), max(2, int(h * 0.012)))
+    f = fit(d, "ФРУКТОВ", colw, int(h * 0.30))
+    for i, line in enumerate(T_HEAD):
+        poster_text(img, (cx, int(h * (0.42 + 0.235 * i))), line, f)
+    tg_button(img, cx, int(h * 0.865), colw * 0.96, int(h * 0.17))
+    fruit_row(img, (int(w * 0.40), int(h * 0.06), int(w * 0.955), int(h * 0.94)),
+              int(h * (0.76 if big else 0.72)))
+    frame(img, CYAN, 16 if big else 10, 18 if big else 12, 3 if big else 2)
     return img
 
 
