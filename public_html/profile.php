@@ -351,7 +351,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=49" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=50" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=2" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 </body>

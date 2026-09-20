@@ -508,6 +508,19 @@
       "home.aboutP4":           "Сайт помогает игрокам оценивать стоимость предметов, проверять выгодность трейдов и следить за изменениями экономики после обновлений. Проект развивается вместе с игрой и создаётся прежде всего для русскоязычного сообщества и игроков из СНГ.",
       "home.aboutP5":           "Моя цель — сделать maknemy.com самым полезным и удобным фанатским проектом по Blox Fruits: местом, куда игроки заходят перед трейдом, после обновления и просто для поиска актуальной информации об игре.",
 
+      "home.socialTitle":       "Соцсети",
+      "home.socialYoutube":     "YouTube",
+      "home.socialTiktok":      "TikTok",
+      "home.socialTwitch":      "Twitch",
+      "home.socialX":           "X (Twitter)",
+      "home.socialTelegram1":   "@maknemy",
+      "home.socialTelegram2":   "@mksvtn",
+
+      "home.telegramTitle":     "Telegram-проекты",
+      "home.telegramMain":      "Основной канал",
+      "home.telegramTierlist":  "Maknemy Tierlist",
+      "home.telegramChat":      "Чат подписчиков",
+
       "home.faqTitle":          "Немного о важном",
       "home.faqSub":            "ваша гарантия успешных трейдов - ваша любознательность!",
 
@@ -1040,6 +1053,19 @@
       "home.aboutList6":        "information about the game's economy and price changes",
       "home.aboutP4":           "The site helps players judge item values, check whether a trade is worth making, and track how the economy shifts after updates. The project grows alongside the game and is built first and foremost for the Russian-speaking community and players from the CIS.",
       "home.aboutP5":           "My goal is to make maknemy.com the most useful and convenient Blox Fruits fan project out there — a place players open before a trade, right after an update, or whenever they just need current information about the game.",
+
+      "home.socialTitle":       "Social media",
+      "home.socialYoutube":     "YouTube",
+      "home.socialTiktok":      "TikTok",
+      "home.socialTwitch":      "Twitch",
+      "home.socialX":           "X (Twitter)",
+      "home.socialTelegram1":   "@maknemy",
+      "home.socialTelegram2":   "@mksvtn",
+
+      "home.telegramTitle":     "Telegram projects",
+      "home.telegramMain":      "Main channel",
+      "home.telegramTierlist":  "Maknemy Tierlist",
+      "home.telegramChat":      "Subscriber chat",
 
       "home.faqTitle":          "A few things worth knowing",
       "home.faqSub":            "your guarantee of good trades is your own curiosity!",

@@ -300,7 +300,7 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=49" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=50" fetchpriority="high"></script>
   <script src="js/chat-page.js?v=8" defer></script>
 
 
