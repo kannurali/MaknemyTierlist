@@ -391,8 +391,8 @@
   };
 
   var HOUSE_GIVEAWAY = {
-    id: "house-giveaway-magnet-chromatic",
-    name: "house-giveaway-chromatic",
+    id: "house-giveaway-fruits",
+    name: "house-giveaway-fruits",
     advertiser: "",
     enabled: true,
     weight: 1,
