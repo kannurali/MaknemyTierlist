@@ -391,14 +391,14 @@
   };
 
   var HOUSE_GIVEAWAY = {
-    id: "house-giveaway-fruits",
-    name: "house-giveaway-fruits",
+    id: "house-giveaway-arcsteel-magnet",
+    name: "house-giveaway-arcsteel-magnet",
     advertiser: "",
     enabled: true,
     weight: 1,
     start: "",
     end: "",
-    href: "https://t.me/theMaknemy/5302",
+    href: "https://t.me/theMaknemy/5432",
     text: "",
     cta: "",
     textKey: "promo.giveawayText",

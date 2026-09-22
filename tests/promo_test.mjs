@@ -557,7 +557,7 @@ test('popupPick keeps the house ad running all week, not three days', () => {
 test('HOUSE_GIVEAWAY ships a creative for every slot', () => {
     assert.deepEqual(HOUSE_GIVEAWAY.slots, ['strip', 'rail', 'dock', 'popup']);
     assert.equal(HOUSE_GIVEAWAY.enabled, true);
-    assert.equal(safeHref(HOUSE_GIVEAWAY.href), 'https://t.me/theMaknemy/5302');
+    assert.equal(safeHref(HOUSE_GIVEAWAY.href), 'https://t.me/theMaknemy/5432');
     for (const slot of SLOTS) {
         const cre = PROMO.creativeFor(HOUSE_GIVEAWAY, slot);
         assert.ok(cre, `у слота ${slot} должен быть макет`);
