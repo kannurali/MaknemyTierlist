@@ -551,11 +551,11 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=49" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=50" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=11" fetchpriority="high"></script>
+  <script src="js/promo.js?v=12" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
   <script src="js/app.js?v=76" fetchpriority="high"></script>

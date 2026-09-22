@@ -24,11 +24,11 @@
 import { chromium } from 'playwright';
 
 const BASE = process.argv[2] || 'http://127.0.0.1:8850';
-const GIVEAWAY_POST = 'https://t.me/theMaknemy/5302';
+const GIVEAWAY_POST = 'https://t.me/theMaknemy/5432';
 const PLAYEROK_LINK = 'https://plrk.co/p/Maknemy0509';
 const has = (v, part) => typeof v === 'string' && v.includes(part);
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || undefined });
 let failed = 0;
 
 function check(name, ok, detail) {
