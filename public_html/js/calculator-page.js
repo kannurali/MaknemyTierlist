@@ -137,9 +137,6 @@
     const resultEl = $("#tcResult");
     const bothEmpty = sides.left.length === 0 && sides.right.length === 0;
 
-    resultEl.dataset.verdict = bothEmpty ? "none" : trade.verdict;
-    $("#tcVerdictBadge").dataset.verdict = bothEmpty ? "none" : trade.verdict;
-
     const invert = v => v === "win" ? "lose" : v === "lose" ? "win" : v;
     const gaugeL = bothEmpty ? "none" : trade.verdict;
     const gaugeR = bothEmpty ? "none" : invert(trade.verdict);
@@ -147,16 +144,28 @@
     if (gl) { gl.dataset.state = gaugeL; }
     if (gr) { gr.dataset.state = gaugeR; }
 
+    const totalEl = $("#tcTotalNum");
+    if (bothEmpty) {
+      totalEl.textContent = "0";
+    } else {
+      const diffAbs = Math.round(trade.diffAbs);
+      const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
+      totalEl.textContent = sign + fmtNum(Math.abs(diffAbs));
+    }
+
+    if (!resultEl) return;
+
+    resultEl.dataset.verdict = bothEmpty ? "none" : trade.verdict;
+    $("#tcVerdictBadge").dataset.verdict = bothEmpty ? "none" : trade.verdict;
+
     const headingEl = $("#tcVerdictHeading");
     const stateEl = $("#tcVerdictState");
     const numberEl = $("#tcVerdictNumber");
-    const totalEl = $("#tcTotalNum");
 
     if (bothEmpty) {
       headingEl.textContent = tx("calc.verdictPrompt");
       stateEl.textContent = "";
       numberEl.textContent = "0%";
-      totalEl.textContent = "0";
     } else {
       const verdictKey = trade.verdict === "win" ? "calc.verdictWin"
         : trade.verdict === "lose" ? "calc.verdictLose"
@@ -167,13 +176,10 @@
       headingEl.textContent = tx(titleKey);
       stateEl.textContent = tx(verdictKey);
 
-      const diffAbs = Math.round(trade.diffAbs);
       const diffPct = Math.round(trade.diffPct * 10) / 10;
 
-      const sign = diffAbs > 0 ? "+" : (diffAbs < 0 ? "−" : "");
       const pctSign = diffPct > 0 ? "+" : (diffPct < 0 ? "−" : "");
       numberEl.textContent = pctSign + Math.abs(diffPct) + "%";
-      totalEl.textContent = sign + fmtNum(Math.abs(diffAbs));
     }
 
     const noteEl = $("#tcDemandNote");
@@ -187,7 +193,8 @@
   }
 
   function renderThreshold() {
-    $("#tcThreshold").textContent = tx("calc.thresholdNote", { pct: CALC.THRESHOLD_PCT });
+    const el = $("#tcThreshold");
+    if (el) { el.textContent = tx("calc.thresholdNote", { pct: CALC.THRESHOLD_PCT }); }
   }
 
   function syncUrl() {
@@ -202,7 +209,15 @@
     renderMeters("left", trade);
     renderMeters("right", trade);
     renderResult(trade);
+    document.dispatchEvent(new CustomEvent("tc:change"));
   }
+
+  window.NX_CALC = {
+    sides: () => ({
+      left: sides.left.map(e => e.item.id),
+      right: sides.right.map(e => e.item.id)
+    })
+  };
 
   function onSidesChanged() {
     renderAll();
@@ -459,6 +474,7 @@
   }
 
   function wireActions() {
+    if (!$("#tcClearAllBtn") || !$("#tcShareBtn")) return;
     $("#tcClearAllBtn").addEventListener("click", () => {
       if (!window.confirm(tx("calc.confirmClearAll"))) return;
       sides.left = CALC.clearSide();

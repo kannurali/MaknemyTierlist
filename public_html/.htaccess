@@ -158,6 +158,32 @@ RewriteRule ^chat\.php$ /chat [L,R=301]
 
 RewriteRule ^chat$ /chat.php [L]
 
+# --------------------------------- Трейдинг ---------------------------------
+# Тот же приём, что у /calculator выше: слэш снимается внешним 301, прямой
+# адрес .php — тоже 301, условие на REDIRECT_STATUS не даёт внутреннему
+# рероуту зациклиться. /trading/new на уровень глубже, но пути внутри
+# trade-new.php всё равно разрешаются от корня: у страниц редизайна стоит
+# <base href="/">. Черновик объявления едет в строке запроса (?l=…&r=…), и
+# рероут без своей строки запроса передаёт её как есть.
+RewriteRule ^trading/$ /trading [L,R=301]
+RewriteRule ^trading/new/$ /trading/new [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^trading\.php$ /trading [L,R=301]
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^trade-new\.php$ /trading/new [L,R=301]
+
+RewriteRule ^trading$ /trading.php [L]
+RewriteRule ^trading/new$ /trade-new.php [L]
+
+# ----------------------------- Центр обращений -----------------------------
+RewriteRule ^support/$ /support [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^support\.php$ /support [L,R=301]
+
+RewriteRule ^support$ /support.php [L]
+
 # /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
 # именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy
 # URL / Terms of Service URL), а там адрес меняется только через повторное
@@ -248,6 +274,7 @@ RewriteRule ^admin/$        /admin              [R=301,L]
 RewriteRule ^admin$         /admin.php          [L]
 RewriteRule ^admin/news/?$  /admin-news.php     [L]
 RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
+RewriteRule ^admin/support/?$ /admin-support.php [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 
 # Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому

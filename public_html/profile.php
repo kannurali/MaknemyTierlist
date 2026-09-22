@@ -127,7 +127,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/profile.css?v=6" />
+<link rel="stylesheet" href="css/profile.css?v=7" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -159,10 +159,10 @@ $pfTitle = $pfNick !== ''
           </a>
         </li>
         <li>
-          <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+          <a class="mk-pill" href="/trading">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
-          </button>
+          </a>
         </li>
         <li>
           <a class="mk-pill" href="/calculator">
@@ -220,8 +220,8 @@ $pfTitle = $pfNick !== ''
           <span></span><span></span><span></span>
         </button>
         <ul class="pf-menu-list" id="pfMenuList">
-          <li><button class="pf-menu-item" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке" data-i18n="profile.menuChats">Чаты</button></li>
-          <li><button class="pf-menu-item" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке" data-i18n="profile.menuHelp">Помощь</button></li>
+          <li><a class="pf-menu-item" href="/chat" data-i18n="profile.menuChats">Чаты</a></li>
+          <li><a class="pf-menu-item" href="/support" data-i18n="profile.menuHelp">Помощь</a></li>
           <li><button class="pf-menu-item" type="button" id="pfLogout" data-i18n="profile.menuLogout">Выйти из аккаунта</button></li>
           <li><button class="pf-menu-item" type="button" id="pfSwitch" data-i18n="profile.menuSwitch">Сменить аккаунт</button></li>
           <li class="pf-menu-danger"><button class="pf-menu-item" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке" data-i18n="profile.menuDelete">Удалить аккаунт</button></li>
@@ -351,7 +351,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=50" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=51" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=2" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 </body>

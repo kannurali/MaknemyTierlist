@@ -113,15 +113,15 @@ test('на самом чате кнопка помечена aria-current, на 
     }
 });
 
-// Чат из «В активной разработке» вышел, и в шапке осталось двое: «Трейдинг»
-// (раздела нет) и кнопка профиля — её js/topbar.js по ответу /api/session.php
-// превращает во вход через Roblox или в меню пользователя, а до ответа она
-// остаётся прежней заглушкой.
+// Чат из «В активной разработке» вышел, а за ним и «Трейдинг» (/trading).
+// В шапке остался один data-soon — кнопка профиля: её js/topbar.js по ответу
+// /api/session.php превращает во вход через Roblox или в меню пользователя,
+// а до ответа она остаётся прежней заглушкой.
 test('чат больше не значится неготовым разделом', function () use ($PUB, $PAGES) {
     foreach ($PAGES as $f) {
         $s = cp_read($PUB . '/' . $f);
         $head = cp_markup(substr($s, 0, strpos($s, '</header>') ?: strlen($s)));
-        assert_eq(2, substr_count($head, 'data-soon'), "$f: трейдинг и профиль");
+        assert_eq(1, substr_count($head, 'data-soon'), "$f: только профиль");
         assert_eq(0, preg_match('/<button class="mk-chat"[^>]*data-soon/', $head),
             "$f: чат среди них быть не должен");
     }

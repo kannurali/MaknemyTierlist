@@ -207,6 +207,7 @@
   line-height: calc(15 * var(--u));
   text-transform: uppercase;
   color: rgba(255, 255, 255, .82);
+  text-decoration: none;
   cursor: pointer;
   transition: color .16s ease;
 }

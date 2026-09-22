@@ -2,19 +2,21 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
-// Чаты — /chat (Figma «трейдинг чат», node 244:5707).
+// Трейдинг — /trading (Figma «трейдинг», нода 243:4078).
 //
-// Разметка ниже — каркас: список диалогов, пузыри сообщений и форму отзыва
-// наполняет js/chat-page.js по ответу /api/chat.php. Кто пишет — берётся из
-// сессии Roblox, той же, что у api/session.php.
+// Страница — каркас: ленту объявлений наполняет js/trading-page.js по ответу
+// /api/trades.php, картинки и цены предметов — из того же тирлиста, что у
+// калькулятора (/api/tierlist.php). Разметка от сессии не зависит, поэтому
+// её можно держать в кеше LiteSpeed, как калькулятор: кто вошёл, решает
+// скрипт.
 //
-// Не вошедшему страница предлагает войти, а не делает вид, что переписки нет.
-// Пока таблиц чата нет (миграция docs/migrations/2026-09-09-chat.sql не
-// запущена) — тоже честное пустое состояние, а не 500.
-//
-// noindex, nofollow: переписка приватная, индексировать её нельзя, и ходить
-// по ссылкам из неё поисковику незачем. В sitemap.xml её нет.
+// Макет → разметка: слева рекламный борт (как у калькулятора), в центре три
+// кнопки («уточнить цены» → /calculator, «создать» → /trading/new,
+// «поддержка» → /support), поиск и лента; справа выезжающая карточка своего
+// профиля (Frame 96). Клик по чужому объявлению ведёт в чат с автором —
+// в прототипе карточка ведёт на «трейдинг чат» (244:5707).
 header('Cache-Control: no-cache, must-revalidate');
+page_lscache();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -25,41 +27,33 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <base href="/" />
 
-<title>Чаты | Maknemy Tier List</title>
-<meta name="description" content="Личные сообщения игроков Maknemy: переписка по сделкам и отзывы." />
-<link rel="canonical" href="https://maknemy.com/chat" />
-<meta name="robots" content="noindex, nofollow" />
+<title>Трейдинг Blox Fruits — объявления об обмене | Maknemy</title>
+<meta name="description" content="Доска трейдов Blox Fruits от Maknemy: объявления игроков об обмене фруктов, пермов и геймпассов по ценам тирлиста. Найдите предмет и напишите автору в чат." />
+<link rel="canonical" href="https://maknemy.com/trading" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
 
-
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Maknemy Tier List" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:url" content="https://maknemy.com/trading" />
+<meta property="og:title" content="Трейдинг Blox Fruits" />
+<meta property="og:description" content="Объявления игроков об обмене по ценам тирлиста Maknemy." />
+<meta name="twitter:card" content="summary" />
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "WebApplication",
-      "name": "Калькулятор трейдов Blox Fruits",
-      "alternateName": ["Макнеми калькулятор", "Maknemy calculator", "Калькулятор трейдов Maknemy"],
-      "url": "https://maknemy.com/calculator",
+      "@type": "CollectionPage",
+      "name": "Трейдинг Blox Fruits",
+      "url": "https://maknemy.com/trading",
       "inLanguage": "ru",
-      "applicationCategory": "UtilityApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Requires JavaScript",
-      "description": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
+      "description": "Объявления игроков Blox Fruits об обмене предметов по ценам тирлиста Maknemy.",
       "isPartOf": {
         "@type": "WebSite",
         "name": "Maknemy Tier List",
         "url": "https://maknemy.com/"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "RUB"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Maknemy",
-        "url": "https://t.me/mksvtnc"
       }
     },
     {
@@ -74,8 +68,8 @@ header('Cache-Control: no-cache, must-revalidate');
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "Калькулятор трейдов",
-          "item": "https://maknemy.com/calculator"
+          "name": "Трейдинг",
+          "item": "https://maknemy.com/trading"
         }
       ]
     }
@@ -95,9 +89,11 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/chat.css?v=5" />
+<link rel="stylesheet" href="css/trading.css?v=1" />
 
+<link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
+<link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -131,7 +127,7 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
         <li>
 
-          <a class="mk-pill" href="/trading">
+          <a class="mk-pill" href="/trading" aria-current="page">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </a>
@@ -151,7 +147,7 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
       </ul>
 
-      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат" aria-current="page">
+      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </a>
 
@@ -167,100 +163,84 @@ header('Cache-Control: no-cache, must-revalidate');
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
+  <svg class="tr-sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="trGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
+      </linearGradient>
+    </defs>
+    <symbol id="trIconUp" viewBox="0 0 26 24">
+      <path d="M13 23.2C7.4 19.4 1.2 14.6 1.2 8.3 1.2 4.6 4 1.6 7.6 1.6c2.2 0 4 1 5.4 2.9 1.4-1.9 3.2-2.9 5.4-2.9 3.6 0 6.4 3 6.4 6.7 0 6.3-6.2 11.1-11.8 14.9Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="trIconDown" viewBox="0 0 26 24">
+      <path d="M12.2 4.2C10.9 2.6 9.3 1.6 7.4 1.6 3.9 1.6 1.2 4.6 1.2 8.3c0 6 5.7 10.7 11.1 14.4l-1.5-4.9 2.4-3.7-2.9-3.8 2.5-3.5-.6-2.6Z" fill="currentColor"/>
+      <path d="M14.4 4.3c1.3-1.7 2.9-2.7 4.8-2.7 3.5 0 6.2 3 6.2 6.7 0 6-5.7 10.7-11.1 14.4l-.9-4.4 2.5-4.2-3-3.8 2.4-3.4-.9-2.6Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="trIconSwap" viewBox="0 0 36 44">
+      <path d="M6.6 2.2 33 10.6a1.5 1.5 0 0 1 0 2.8L6.6 21.8A1.5 1.5 0 0 1 4.6 20.4V3.6a1.5 1.5 0 0 1 2-1.4Z" fill="url(#trGrad)"/>
+      <path d="M29.4 22.2 3 30.6a1.5 1.5 0 0 0 0 2.8l26.4 8.4a1.5 1.5 0 0 0 2-1.4V23.6a1.5 1.5 0 0 0-2-1.4Z" fill="url(#trGrad)"/>
+    </symbol>
+  </svg>
 
-  <main class="ct-page">
-    <p class="ct-gate" id="ctGate" hidden></p>
+  <main class="tr-page">
+    <div class="tr-frame">
 
-    <div class="ct-shell" id="ctShell" hidden>
-      <aside class="ct-rail" id="ctRail" aria-labelledby="ctRailTitle">
-        <h2 class="ct-sr-only" id="ctRailTitle" data-i18n="chat.threads">Диалоги</h2>
-        <ul class="ct-list" id="ctList" role="tablist" aria-orientation="vertical"></ul>
-        <p class="ct-rail-empty" id="ctRailEmpty" hidden></p>
-      </aside>
+      <div class="tr-rail-slot" aria-hidden="true">
+        <aside class="tr-rail" id="trRail" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+      </div>
 
-      <section class="ct-room" id="ctRoom" role="tabpanel" aria-labelledby="ctRoomTitle">
-        <div class="ct-room-head">
-          <button class="ct-rail-toggle" type="button" id="ctRailToggle"
-                  aria-expanded="false" aria-controls="ctList"
-                  data-i18n-label="chat.showList" aria-label="Показать список диалогов">
-            <span></span><span></span><span></span>
+      <section class="tr-main" aria-labelledby="trTitle">
+        <h1 class="tr-sr-only" id="trTitle" data-i18n="trade.title">Трейдинг</h1>
+
+        <nav class="tr-tools" data-i18n-label="trade.toolsLabel" aria-label="Действия">
+          <a class="tr-tool" href="/calculator">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 5C0 2.239 2.239 0 5 0H15C17.761 0 20 2.239 20 5V15C20 17.761 17.761 20 15 20H5C2.239 20 0 17.761 0 15V5ZM13.707 7.707C14.098 7.317 14.098 6.683 13.707 6.293C13.317 5.902 12.683 5.902 12.293 6.293L6.293 12.293C5.902 12.683 5.902 13.317 6.293 13.707C6.683 14.098 7.317 14.098 7.707 13.707L13.707 7.707ZM14 12.5C14 13.328 13.328 14 12.5 14C11.672 14 11 13.328 11 12.5C11 11.672 11.672 11 12.5 11C13.328 11 14 11.672 14 12.5ZM7.5 9C8.328 9 9 8.328 9 7.5C9 6.672 8.328 6 7.5 6C6.672 6 6 6.672 6 7.5C6 8.328 6.672 9 7.5 9Z" fill="currentColor"/></svg>
+            <span data-i18n="trade.toolPrices">Уточнить цены</span>
+          </a>
+          <a class="tr-tool" href="/trading/new">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 2C3.343 2 2 3.343 2 5V15C2 16.657 3.343 18 5 18H15C16.657 18 18 16.657 18 15V9C18 8.448 18.448 8 19 8C19.552 8 20 8.448 20 9V15C20 17.761 17.761 20 15 20H5C2.239 20 0 17.761 0 15V5C0 2.239 2.239 0 5 0H11C11.552 0 12 0.448 12 1C12 1.552 11.552 2 11 2H5Z" fill="currentColor"/><path d="M15.216 0.821C16.311 -0.274 18.085 -0.274 19.179 0.821C20.274 1.915 20.274 3.689 19.179 4.784L18.396 5.568C18.006 5.958 17.372 5.958 16.982 5.568L14.432 3.018C14.042 2.628 14.042 1.995 14.432 1.604L15.216 0.821ZM13.018 4.432C12.628 4.042 11.995 4.042 11.604 4.432L7.143 8.894C7.015 9.022 6.924 9.183 6.88 9.358L6.03 12.757C5.945 13.098 6.045 13.459 6.293 13.707C6.541 13.955 6.902 14.055 7.243 13.97L10.642 13.12C10.818 13.076 10.978 12.985 11.106 12.857L15.568 8.396C15.958 8.006 15.958 7.372 15.568 6.982L13.018 4.432Z" fill="currentColor"/></svg>
+            <span data-i18n="trade.toolCreate">Создать</span>
+          </a>
+          <a class="tr-tool" href="/support">
+            <svg viewBox="0 0 26 26" fill="none" aria-hidden="true"><path transform="translate(13 13) rotate(45) translate(-9.25 -9)" d="M7.417 1.082C8.216 -0.361 10.284 -0.361 11.083 1.082L18.141 13.829C19.317 15.954 17.426 18.472 15.066 17.924L11.794 17.163C10.889 16.953 10.248 16.144 10.248 15.211L10.248 9.851C10.248 9.298 9.801 8.849 9.25 8.849C8.699 8.849 8.252 9.298 8.252 9.851L8.252 15.211C8.252 16.143 7.611 16.952 6.706 17.163L3.434 17.924C1.074 18.472 -0.817 15.954 0.359 13.829L7.417 1.082Z" fill="currentColor"/></svg>
+            <span data-i18n="trade.toolSupport">Поддержка</span>
+          </a>
+        </nav>
+
+        <form class="tr-search" id="trSearch" role="search">
+          <label class="tr-sr-only" for="trQuery" data-i18n="trade.searchLabel">Поиск по предметам и никам</label>
+          <input class="tr-search-input" id="trQuery" type="search" autocomplete="off" spellcheck="false"
+                 maxlength="40" data-i18n-placeholder="trade.searchPlaceholder" placeholder="Предмет или ник…" />
+          <button class="tr-search-btn" type="submit" data-i18n-label="trade.searchGo" aria-label="Искать">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="2.2"/><path d="M18 18L13.5 13.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
           </button>
-          <h1 class="ct-room-title" id="ctRoomTitle" data-i18n="chat.title">Чаты</h1>
-        </div>
-
-        <ol class="ct-log" id="ctLog" role="log" aria-live="polite" aria-relevant="additions"></ol>
-        <p class="ct-room-empty" id="ctRoomEmpty" hidden></p>
-
-        <form class="ct-compose" id="ctCompose" hidden>
-          <button class="ct-emoji-btn" type="button" id="ctEmojiBtn"
-                  aria-expanded="false" aria-controls="ctEmoji"
-                  data-i18n-label="chat.emoji" aria-label="Смайлики"
-                  data-i18n-title="chat.emoji" title="Смайлики">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M8.3 14.2c.9 1.3 2.2 2 3.7 2s2.8-.7 3.7-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.1" cy="9.8" r="1.25" fill="currentColor"/><circle cx="14.9" cy="9.8" r="1.25" fill="currentColor"/></svg>
-          </button>
-
-          <div class="ct-emoji" id="ctEmoji" role="group"
-               data-i18n-label="chat.emoji" aria-label="Смайлики" hidden></div>
-
-          <label class="ct-sr-only" for="ctInput" data-i18n="chat.inputLabel">Сообщение</label>
-          <input class="ct-input" id="ctInput" type="text" autocomplete="off"
-                 maxlength="2000" data-i18n-placeholder="chat.placeholder"
-                 placeholder="Напишите сообщение…" />
-          <button class="ct-send" type="submit" data-i18n="chat.send">Отправить</button>
         </form>
+
+        <div class="tr-board" id="trBoard">
+          <p class="tr-state" id="trState" role="status" aria-live="polite"></p>
+
+          <h2 class="tr-sub" id="trMineTitle" data-i18n="trade.mineTitle" hidden>Ваши объявления</h2>
+          <ol class="tr-feed" id="trMine" aria-labelledby="trMineTitle" hidden></ol>
+
+          <h2 class="tr-sub" id="trAllTitle" data-i18n="trade.allTitle" hidden>Все объявления</h2>
+          <ol class="tr-feed" id="trFeed" data-i18n-label="trade.feedLabel" aria-label="Объявления"></ol>
+
+          <button class="tr-more" id="trMore" type="button" data-i18n="trade.more" hidden>Показать ещё</button>
+        </div>
       </section>
 
-      <form class="ct-review" id="ctReview" hidden>
-        <span class="ct-review-label" data-i18n="chat.review">Отзыв</span>
-
-        <label class="ct-sr-only" for="ctReviewText" data-i18n="chat.reviewLabel">Текст отзыва</label>
-        <input class="ct-review-input" id="ctReviewText" type="text" autocomplete="off"
-               maxlength="500" data-i18n-placeholder="chat.reviewPlaceholder"
-               placeholder="Как прошла сделка?" />
-
-        <fieldset class="ct-stars" id="ctStars">
-          <legend class="ct-sr-only" data-i18n="chat.stars">Оценка</legend>
-          <label class="ct-star"><input type="radio" name="stars" value="1" /><span aria-hidden="true">★</span><span class="ct-sr-only">1</span></label>
-          <label class="ct-star"><input type="radio" name="stars" value="2" /><span aria-hidden="true">★</span><span class="ct-sr-only">2</span></label>
-          <label class="ct-star"><input type="radio" name="stars" value="3" /><span aria-hidden="true">★</span><span class="ct-sr-only">3</span></label>
-          <label class="ct-star"><input type="radio" name="stars" value="4" /><span aria-hidden="true">★</span><span class="ct-sr-only">4</span></label>
-          <label class="ct-star"><input type="radio" name="stars" value="5" /><span aria-hidden="true">★</span><span class="ct-sr-only">5</span></label>
-        </fieldset>
-
-        <button class="ct-review-send" type="submit" data-i18n="chat.reviewSend">Отправить</button>
-        <p class="ct-review-status" id="ctReviewStatus" role="status" aria-live="polite"></p>
-      </form>
+      <aside class="tr-me" id="trMe" data-i18n-label="trade.meLabel" aria-label="Ваш профиль" hidden>
+        <div class="tr-me-card">
+          <dl class="tr-me-info">
+            <div class="tr-me-row"><dt data-i18n="trade.meNick">Ник</dt><dd id="trMeNick"></dd></div>
+            <div class="tr-me-row"><dt data-i18n="trade.meId">ID</dt><dd id="trMeHandle"></dd></div>
+          </dl>
+          <a class="tr-me-btn" id="trMeBtn" href="/profile" data-i18n="trade.meProfile">Профиль</a>
+          <span class="tr-me-ava" id="trMeAva" aria-hidden="true"></span>
+        </div>
+      </aside>
     </div>
-
-    <p class="ct-empty" id="ctEmpty" hidden></p>
   </main>
-
-    <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
-      <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
-        <div class="tc-cat-head">
-          <div class="tc-cat-search">
-            <label class="tc-sr-only" for="tcCatalogSearch" data-i18n="calc.searchLabel">Поиск предмета</label>
-            <input type="text" id="tcCatalogSearch" class="tc-search-input"
-                   data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
-                   autocomplete="off" spellcheck="false" />
-          </div>
-
-          <span class="tc-cat-search-btn" aria-hidden="true">
-            <svg class="tc-cat-search-icon" viewBox="0 0 20 20" fill="none">
-              <circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
-              <path d="M18 18L13.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
-          </span>
-        </div>
-        <div class="tc-cat-sub">
-          <span class="tc-pill" id="tcCatalogTitle" data-i18n="calc.catalogPill">Каталог</span>
-          <button type="button" class="tc-cat-close" id="tcCatalogClose" data-i18n-label="calc.catalogClose" aria-label="Закрыть каталог">✕</button>
-        </div>
-        <p class="tc-cat-status" id="tcCatalogStatus" role="status" aria-live="polite"></p>
-        <ul class="tc-cat-grid" id="tcCatalogGrid"></ul>
-        <p class="tc-cat-footer" data-i18n="calc.catalogFooter">Используйте калькулятор с умом!</p>
-      </div>
-    </div>
 
   <footer class="mk-foot">
     <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
@@ -278,7 +258,6 @@ header('Cache-Control: no-cache, must-revalidate');
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
-
   <div class="ptn-dock" id="promoDock" hidden
        data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
 
@@ -301,8 +280,12 @@ header('Cache-Control: no-cache, must-revalidate');
   </div>
 
   <script src="js/i18n.js?v=51" fetchpriority="high"></script>
-  <script src="js/chat-page.js?v=9" defer></script>
+  <script src="js/promo.js?v=12" fetchpriority="high"></script>
 
+  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
 
+  <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
+  <script src="js/calc.js?v=9" fetchpriority="high"></script>
+  <script src="js/trading-page.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

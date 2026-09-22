@@ -1,0 +1,39 @@
+.sp-admin {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font: 14px/1.45 "Segoe UI", Roboto, system-ui, sans-serif;
+}
+
+.sp-main {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+.sp-title { font-size: 20px; margin: 0 0 16px; }
+.sp-title span { font-size: 14px; font-weight: 400; margin-left: 8px; }
+
+.sp-empty { margin: 24px 0; }
+
+.sp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.sp-ticket {
+  background: var(--adm-panel);
+  border: 1px solid var(--adm-edge);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.sp-ticket.is-done { opacity: .55; }
+
+.sp-ticket-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sp-ticket-who { color: var(--adm-cyan); font-weight: 600; text-decoration: none; }
+.sp-ticket-who span { color: var(--adm-muted); font-weight: 400; margin-left: 4px; }
+.sp-ticket-head time { color: var(--adm-muted); font-size: 12px; white-space: nowrap; }
+
+.sp-ticket-body { margin: 10px 0 12px; white-space: normal; word-break: break-word; }
+
+.sp-ticket-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sp-ticket-actions form { margin: 0; }
+.sp-ticket-actions a.adm-btn { text-decoration: none; }

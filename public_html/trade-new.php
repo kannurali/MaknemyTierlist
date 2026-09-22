@@ -2,14 +2,22 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
-// Страница статичная (данные тирлиста запрашивает клиент через
-// GET /api/tierlist.php, см. js/calculator-page.js) — ни превью, собираемого
-// из базы, ни og:*-данных строить не из чего, поэтому здесь нет ничего похожего
-// на tierlist_og_data()/news_og_data() из index.php/news.php. Cache-Control тот
-// же, что у остальных страниц редизайна: файл несёт номера версий ?v= для
-// css/js, и закешированная копия намертво прибила бы посетителя к старому коду.
+// Новое объявление — /trading/new (Figma «трейдинг выбор», нода 244:5235).
+//
+// В макете это панель калькулятора один в один (слоты, каталог, пойнты,
+// спрос), только стороны подписаны «вы предлагаете / вы хотите», а место
+// вердикта занимает предупреждение о безопасности. Поэтому страница
+// подключает те же calc.js, calculator-page.js и calculator.css, а не
+// держит вторую копию логики: слоты и каталог ведут себя одинаково, и
+// правка в калькуляторе сразу доезжает сюда. Своё у страницы — только кнопка
+// «опубликовать» (js/trade-new.js), которой в макете нет: без неё собранное
+// объявление было бы некуда отправить.
+//
+// Собранное лежит в адресе (?l=…&r=…, как «поделиться» у калькулятора), так
+// что черновик переживает перезагрузку и вход через Roblox с возвратом сюда.
+//
+// noindex: страница — форма, а не содержимое.
 header('Cache-Control: no-cache, must-revalidate');
-// И минута в кеше LiteSpeed: см. page_lscache() в api/_bootstrap.php.
 page_lscache();
 ?>
 <!DOCTYPE html>
@@ -21,75 +29,10 @@ page_lscache();
 
 <base href="/" />
 
-<title>Калькулятор трейдов Blox Fruits — Maknemy | Макнеми калькулятор</title>
-<meta name="description" content="Калькулятор трейдов Blox Fruits от Maknemy (Макнеми): соберите обе стороны сделки по ценам нашего тирлиста и узнайте, выгодна ли она." />
-<link rel="canonical" href="https://maknemy.com/calculator" />
-<meta name="robots" content="index, follow, max-image-preview:large" />
-
-<meta property="og:type" content="website" />
-<meta property="og:site_name" content="Maknemy Tier List" />
-<meta property="og:locale" content="ru_RU" />
-<meta property="og:url" content="https://maknemy.com/calculator" />
-<meta property="og:title" content="Калькулятор трейдов Blox Fruits" />
-<meta property="og:description" content="Соберите обе стороны сделки по ценам тирлиста Maknemy и узнайте, выгодна ли она." />
-
-<meta property="og:image" content="https://maknemy.com/assets/og-calculator.jpg?v=1" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:alt" content="Калькулятор трейдов Blox Fruits" />
-<meta name="twitter:card" content="summary_large_image" />
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "name": "Калькулятор трейдов Blox Fruits",
-      "alternateName": ["Макнеми калькулятор", "Maknemy calculator", "Калькулятор трейдов Maknemy"],
-      "url": "https://maknemy.com/calculator",
-      "inLanguage": "ru",
-      "applicationCategory": "UtilityApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Requires JavaScript",
-      "description": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
-      "isPartOf": {
-        "@type": "WebSite",
-        "name": "Maknemy Tier List",
-        "url": "https://maknemy.com/"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "RUB"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Maknemy",
-        "url": "https://t.me/mksvtnc"
-      }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Maknemy",
-          "item": "https://maknemy.com/"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Калькулятор трейдов",
-          "item": "https://maknemy.com/calculator"
-        }
-      ]
-    }
-  ]
-}
-</script>
+<title>Новое объявление — трейдинг | Maknemy</title>
+<meta name="description" content="Соберите объявление об обмене в Blox Fruits: что вы предлагаете и что хотите взамен — по ценам тирлиста Maknemy." />
+<link rel="canonical" href="https://maknemy.com/trading/new" />
+<meta name="robots" content="noindex, follow" />
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
@@ -104,6 +47,7 @@ page_lscache();
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
 <link rel="stylesheet" href="css/calculator.css?v=26" />
+<link rel="stylesheet" href="css/trading.css?v=1" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -141,14 +85,14 @@ page_lscache();
         </li>
         <li>
 
-          <a class="mk-pill" href="/trading">
+          <a class="mk-pill" href="/trading" aria-current="page">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
           </a>
         </li>
         <li>
 
-          <a class="mk-pill" href="/calculator" aria-current="page">
+          <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
           </a>
@@ -177,8 +121,7 @@ page_lscache();
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
-
-  <main class="tc-page">
+  <main class="tc-page tn-page">
     <div class="tc-frame">
 
       <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
@@ -223,8 +166,8 @@ page_lscache();
 
         <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
 
-          <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">ДАЮ</span>
+          <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="trade.giveLabel">Вы предлагаете</h2>
+          <span class="tc-pill tc-pill-l" data-i18n="trade.givePill" aria-hidden="true">Вы предлагаете</span>
 
           <ul class="tc-slots" data-side="left"></ul>
 
@@ -257,8 +200,8 @@ page_lscache();
         </section>
 
         <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
-          <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ХОЧУ</span>
+          <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="trade.wantLabel">Вы хотите</h2>
+          <span class="tc-pill tc-pill-r" data-i18n="trade.wantPill" aria-hidden="true">Вы хотите</span>
 
           <ul class="tc-slots" data-side="right"></ul>
 
@@ -296,58 +239,43 @@ page_lscache();
           <strong class="tc-total-num" id="tcTotalNum">0</strong>
         </div>
       </div>
+      <div class="tn-publish">
+        <button class="tr-tool tn-publish-btn" id="tnPublish" type="button" disabled>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 2C3.343 2 2 3.343 2 5V15C2 16.657 3.343 18 5 18H15C16.657 18 18 16.657 18 15V9C18 8.448 18.448 8 19 8C19.552 8 20 8.448 20 9V15C20 17.761 17.761 20 15 20H5C2.239 20 0 17.761 0 15V5C0 2.239 2.239 0 5 0H11C11.552 0 12 0.448 12 1C12 1.552 11.552 2 11 2H5Z" fill="currentColor"/><path d="M15.216 0.821C16.311 -0.274 18.085 -0.274 19.179 0.821C20.274 1.915 20.274 3.689 19.179 4.784L18.396 5.568C18.006 5.958 17.372 5.958 16.982 5.568L14.432 3.018C14.042 2.628 14.042 1.995 14.432 1.604L15.216 0.821ZM13.018 4.432C12.628 4.042 11.995 4.042 11.604 4.432L7.143 8.894C7.015 9.022 6.924 9.183 6.88 9.358L6.03 12.757C5.945 13.098 6.045 13.459 6.293 13.707C6.541 13.955 6.902 14.055 7.243 13.97L10.642 13.12C10.818 13.076 10.978 12.985 11.106 12.857L15.568 8.396C15.958 8.006 15.958 7.372 15.568 6.982L13.018 4.432Z" fill="currentColor"/></svg>
+          <span id="tnPublishText" data-i18n="trade.publish">Опубликовать</span>
+        </button>
+        <p class="tn-status" id="tnStatus" role="status" aria-live="polite"></p>
+      </div>
 
-      <section class="tc-result" id="tcResult" role="status" aria-live="polite">
-        <span class="tc-result-badge" id="tcVerdictBadge" data-verdict="none" aria-hidden="true">
-
-          <svg viewBox="0 0 134 134" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="67" cy="67" r="39.5" stroke="#fff" stroke-width="5"/>
-            <g class="tc-face tc-face-none">
-              <circle cx="50.5" cy="62.5" r="8.5" fill="#d9d9d9"/>
-              <circle cx="84.5" cy="62.5" r="8.5" fill="#d9d9d9"/>
-              <path d="M55.5 81.5C55.5 81.5 59.5 88 67 88C74.5 88 78.5 81.5 78.5 81.5"
-                    stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-            </g>
-            <g class="tc-face tc-face-lose" stroke="#fff" stroke-width="5" stroke-linecap="round">
-              <path d="M75 63L88.5 66.69"/>
-              <path d="M45 66.66L58.52 63.03"/>
-              <path d="M57.03 87C57.03 87 55.98 79 66 79C76.02 79 74.97 87 74.97 87"/>
-            </g>
-            <g class="tc-face tc-face-win" stroke="#fff" stroke-width="5" stroke-linecap="round">
-              <path d="M45 66.62C45 66.62 46.5 62.53 50.5 61.46C54.5 60.39 58.52 62.99 58.52 62.99"/>
-              <path d="M87.97 66.48C87.97 66.48 86.53 62.55 82.68 61.52C78.84 60.49 74.97 62.99 74.97 62.99"/>
-              <path d="M74.97 78.96C74.97 78.96 76.02 86.96 66 86.96C55.98 86.96 57.03 78.96 57.03 78.96"/>
-            </g>
-            <g class="tc-face tc-face-fair" fill="#fff">
-              <rect x="47" y="59" width="7" height="7" rx="3.5"/>
-              <rect x="80" y="59" width="7" height="7" rx="3.5"/>
-              <rect x="47" y="71" width="40" height="7" rx="3.5"/>
-            </g>
-          </svg>
-        </span>
-        <div class="tc-result-card">
-          <h2 class="tc-verdict-heading" id="tcVerdictHeading" data-i18n="calc.verdictPrompt">Проверим?</h2>
-          <span class="tc-result-line" aria-hidden="true"></span>
-          <span class="tc-verdict-state" id="tcVerdictState"></span>
-          <strong class="tc-verdict-number" id="tcVerdictNumber">0%</strong>
-        </div>
+      <section class="tn-warn" aria-labelledby="tnWarnTitle">
+        <svg class="tn-warn-icon" viewBox="0 0 92 81" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="tnWarnGrad" x1="46" y1="0" x2="46" y2="81" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#FD0000"/><stop offset="1" stop-color="#970000"/>
+            </linearGradient>
+          </defs>
+          <path d="M38.6 6.4c3.3-5.6 11.4-5.6 14.7 0l35.3 61c3.3 5.7-.8 12.8-7.4 12.8H10.8c-6.6 0-10.7-7.1-7.4-12.8l35.2-61Z" fill="url(#tnWarnGrad)"/>
+          <rect x="40" y="19" width="12" height="32" rx="6" fill="#D9D9D9"/>
+          <circle cx="46" cy="63" r="6.5" fill="#D9D9D9"/>
+        </svg>
+        <h2 class="tn-warn-title" id="tnWarnTitle" data-i18n="trade.warnTitle">Мы боремся за вашу безопасность во время торговли</h2>
+        <p class="tn-warn-text">
+          <span data-i18n="trade.warnP1a">Пожалуйста,</span>
+          <em data-i18n="trade.warnP1b">остерегайтесь подозрительных предложений</em>
+          <span data-i18n="trade.warnP1c">и по возможности</span>
+          <em data-i18n="trade.warnP1d">не вступайте в диалоги с посредниками,</em>
+          <span data-i18n="trade.warnP1e">а ведите диалог напрямую с тем, кто предлагает вам свой оффер</span>
+        </p>
+        <p class="tn-warn-text">
+          <span data-i18n="trade.warnP2a">Если увидели недобросовестного трейдера, обязательно сообщите нам</span>
+          <a class="tn-warn-link" href="/support" data-i18n="trade.warnP2b">в поддержку!</a>
+        </p>
+        <p class="tn-warn-sign" data-i18n="trade.warnSign">С любовью Maknemy</p>
       </section>
     </div>
 
     <div class="tc-extras">
-
       <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
-
-      <p class="tc-demand-note" id="tcDemandNote" role="status" aria-live="polite" hidden></p>
-
-      <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
-      <p class="tc-disclaimer" data-i18n="calc.disclaimer">Значения — это оценка ценности по нашему тирлисту, а не игровое ограничение на обмен Blox Fruits. Решение — за вами.</p>
-
-      <div class="tc-actions">
-        <button type="button" class="tc-btn tc-btn-accent" id="tcShareBtn" data-i18n="calc.shareBtn">Скопировать ссылку</button>
-        <button type="button" class="tc-btn tc-btn-ghost" id="tcClearAllBtn" data-i18n="calc.clearAll">Очистить всё</button>
-      </div>
-      <p class="tc-sr-only" id="tcShareStatus" role="status" aria-live="polite"></p>
     </div>
 
   </main>
@@ -385,7 +313,6 @@ page_lscache();
         <p class="tc-cat-footer" data-i18n="calc.catalogFooter">Используйте калькулятор с умом!</p>
       </div>
     </div>
-
   <footer class="mk-foot">
     <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
     <ul class="mk-foot-roles">
@@ -402,7 +329,6 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
-
   <div class="ptn-dock" id="promoDock" hidden
        data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
 
@@ -432,5 +358,6 @@ page_lscache();
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/calculator-page.js?v=20" fetchpriority="high"></script>
+  <script src="js/trade-new.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

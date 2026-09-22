@@ -77,19 +77,21 @@ function admin_render_public_page(string $file): ?string {
     return metrika_strip($html);
 }
 
-// Top bar shared by every panel. $active is 'tier', 'news' or 'promo'.
+// Top bar shared by every panel. $active is 'tier', 'news', 'promo' or 'support'.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
 function admin_nav(string $active): string {
     $tier  = $active === 'tier'  ? ' is-active' : '';
     $news  = $active === 'news'  ? ' is-active' : '';
     $promo = $active === 'promo' ? ' is-active' : '';
+    $help  = $active === 'support' ? ' is-active' : '';
     return <<<HTML
 <nav class="adm-nav">
   <span class="adm-nav-brand">MAKNEMY<b>ADMIN</b></span>
   <a class="adm-nav-tab{$tier}" href="/admin">Тирлист</a>
   <a class="adm-nav-tab{$news}" href="/admin/news">Новости</a>
   <a class="adm-nav-tab{$promo}" href="/admin/promo">Реклама</a>
+  <a class="adm-nav-tab{$help}" href="/admin/support">Обращения</a>
   <span class="adm-nav-gap"></span>
   <a class="adm-nav-out" href="/" target="_blank" rel="noopener">Сайт ↗</a>
   <form class="adm-nav-exit" method="post" action="/admin/logout">

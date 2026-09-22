@@ -722,19 +722,25 @@ test('удаление аккаунта отделено от остальных
 
 // Выход и смена аккаунта — НАСТОЯЩИЕ: вход через Roblox на сайте есть, и
 // пункт, отвечающий «в активной разработке» рядом с работающим выходом в
-// шапке, был бы прямым враньём. Остальные три раздела не существуют и
-// обязаны отвечать той же плашкой, что «Трейдинг» в шапке: клики по
-// [data-soon] ловит js/topbar.js делегированием на документе.
+// шапке, был бы прямым враньём. «Чаты» и «Помощь» ведут на свои страницы
+// (/chat и /support — в прототипе макета «ЧАТЫ» ведёт на «трейдинг чат»,
+// «Помощь» на центр обращений). Удаления аккаунта нет, и оно отвечает
+// плашкой «в активной разработке»: клики по [data-soon] ловит js/topbar.js
+// делегированием на документе.
 test('в меню профиля работает то, что работает, и помечено то, что нет', function () use ($PUB) {
     $s  = pf_read($PUB . '/profile.php');
     $js = pf_read($PUB . '/js/profile-page.js');
     preg_match('/<ul class="pf-menu-list".*?<\/ul>/s', $s, $m);
     assert_true(!empty($m), 'список меню найден');
 
-    $n = preg_match_all('/<button class="pf-menu-item"/', $m[0]);
+    $n = preg_match_all('/<(?:button|a) class="pf-menu-item"/', $m[0]);
     assert_eq(5, $n, 'пять пунктов из макета');
-    assert_eq(3, substr_count($m[0], 'data-soon'), 'три ненастоящих: чаты, помощь, удаление');
-    assert_eq(3, substr_count($m[0], 'data-i18n-title="topbar.soon"'), 'у каждого из них ключ объяснения');
+    assert_true(strpos($m[0], '<a class="pf-menu-item" href="/chat" data-i18n="profile.menuChats">') !== false,
+        '«Чаты» ведут на /chat');
+    assert_true(strpos($m[0], '<a class="pf-menu-item" href="/support" data-i18n="profile.menuHelp">') !== false,
+        '«Помощь» ведёт в центр обращений');
+    assert_eq(1, substr_count($m[0], 'data-soon'), 'ненастоящий остался один: удаление');
+    assert_eq(1, substr_count($m[0], 'data-i18n-title="topbar.soon"'), 'и у него ключ объяснения');
     assert_eq(0, substr_count($m[0], 'href="#"'), 'пустых якорей быть не должно');
 
     // Настоящие пункты обязаны быть БЕЗ data-soon: иначе делегат из

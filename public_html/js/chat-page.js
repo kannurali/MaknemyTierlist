@@ -580,11 +580,18 @@
 
   var wanted = /[?&]to=(\d{1,20})(?:&|$)/.exec(location.search);
 
+  var offerDraft = (function () {
+    var m = /[?&]draft=([^&]*)/.exec(location.search);
+    if (!m) { return ''; }
+    try { return decodeURIComponent(m[1].replace(/\+/g, ' ')).slice(0, 500); } catch (e) { return ''; }
+  })();
+
   if (wanted) {
     if (history.replaceState) {
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
     }
     openWith(wanted[1]).then(function (id) {
+      if (id && offerDraft && !drafts[id]) { drafts[id] = offerDraft; }
       load(id).then(pollLater, pollLater);
     }, function () {
       load(0).then(pollLater, pollLater);

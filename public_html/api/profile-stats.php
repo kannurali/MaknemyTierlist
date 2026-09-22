@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/profile.php';
+require_once __DIR__ . '/lib/trade.php';
 
 // Статистика сделок для страницы профиля —
 // /api/profile-stats.php?month=YYYY-MM&id=<roblox_id>
@@ -260,6 +261,14 @@ function handle_profile_stats(PDO $pdo, array $session, array $get, ?string $mon
         // не-'ok' статусов в последний, а total при этом считался бы верно.
         if ((string)$row['status'] === 'ok') { $life['ok'] += $n; } else { $life['declined'] += $n; }
     }
+
+    // «Созданные» — это объявления с ленты трейдинга, а журнал выше знает
+    // только закрытые: открытое объявление тоже создано. Больший из двух
+    // счётчиков, а не замена: журнал может быть старше ленты (сеялка
+    // tools/seed-profile-stats.php пишет в него без объявлений), и
+    // «созданных» не может оказаться меньше, чем завершённых и отменённых.
+    $created = trade_created_count($pdo, $who);
+    if ($created !== null && $created > $life['total']) { $life['total'] = $created; }
 
     // Месяцы, в которых сделки вообще были, — из них собирается селектор.
     // Предлагать пустые месяцы значит звать человека туда, где ничего нет.
