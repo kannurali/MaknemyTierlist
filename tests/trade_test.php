@@ -40,8 +40,12 @@ function trade_db(bool $withTables = true): PDO {
             want TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'open',
             created_at INTEGER NOT NULL,
+            replied_at INTEGER NULL,
             closed_at INTEGER NULL
         )");
+        $pdo->exec('CREATE TABLE chat_threads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, a_id INTEGER NOT NULL,
+            b_id INTEGER NOT NULL, last_at INTEGER NOT NULL DEFAULT 0)');
         $pdo->exec("CREATE TABLE profile_trades (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -115,14 +119,112 @@ test('публикация: «хочу» можно оставить пусты�
     assert_eq('open', $row['status'], 'открыто');
 });
 
-test('открытых объявлений не больше пяти, истёкшие не считаются', function () {
+test('не больше 10 публикаций за 5 часов, окно скользящее', function () {
     $pdo = trade_db();
-    offer($pdo, '101', ['idDark'], [], NOW - TRADE_TTL - 10);   // истекло
-    for ($i = 0; $i < TRADE_OPEN_MAX; $i++) { offer($pdo, '101', ['idDark']); }
+    offer($pdo, '101', ['idDark'], [], NOW - 3600 - TRADE_RATE_WINDOW - 1);   // вне окна и сейчас, и при публикации остальных
+    for ($i = 0; $i < TRADE_RATE_MAX; $i++) { offer($pdo, '101', ['idDark'], [], NOW - 3600 + $i * 60); }
     [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
-    assert_eq(409, $code, 'шестое не принимается');
+    assert_eq(429, $code, 'одиннадцатое за окно не принимается');
     assert_eq('too_many', $body['error'], 'и это названо');
+    assert_eq(0, $body['quota']['left'], 'осталось ноль');
+    assert_eq(NOW - 3600 + TRADE_RATE_WINDOW, $body['quota']['retryAt'], 'следующее — когда из окна выйдет самое старое');
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW - 3600 + TRADE_RATE_WINDOW)[0], 'в тот момент — можно');
     assert_eq(200, trade_create($pdo, '202', ['idDark'], [], NOW)[0], 'у другого человека свой счёт');
+});
+
+test('снятые объявления тоже съедают предел', function () {
+    $pdo = trade_db();
+    for ($i = 0; $i < TRADE_RATE_MAX; $i++) {
+        $id = offer($pdo, '101', ['idDark'], [], NOW - 60);
+        trade_close($pdo, '101', false, $id, 'cancel', NOW - 30);
+    }
+    assert_eq(429, trade_create($pdo, '101', ['idDark'], [], NOW)[0], '«выложил — снял» предел не обходит');
+    $q = trade_quota($pdo, '101', NOW);
+    assert_eq([10, 10, 0], [$q['max'], $q['used'], $q['left']], 'квота считает всё созданное');
+    assert_eq(TRADE_RATE_MAX, trade_quota($pdo, '', NOW)['left'], 'у анонима квота пустая, а не ошибка');
+});
+
+// --------------------------------------------------------------------------
+//  Отклик и истечение
+// --------------------------------------------------------------------------
+
+function trade_thread(PDO $pdo, string $x, string $y): int {
+    [$a, $b] = strcmp(str_pad($x, 20, '0', STR_PAD_LEFT), str_pad($y, 20, '0', STR_PAD_LEFT)) <= 0 ? [$x, $y] : [$y, $x];
+    $pdo->prepare('INSERT INTO chat_threads (a_id, b_id, last_at) VALUES (?, ?, 0)')->execute([$a, $b]);
+    return (int)$pdo->lastInsertId();
+}
+
+test('без отклика объявление уходит из ленты через 4 дня, с откликом живёт 14', function () {
+    $pdo = trade_db();
+    $quiet   = offer($pdo, '202', ['idDark'], [], NOW - TRADE_QUIET_TTL - 5);
+    $fresh   = offer($pdo, '202', ['idBoat'], [], NOW - TRADE_QUIET_TTL + 60);
+    $replied = offer($pdo, '303', ['idDragon'], [], NOW - TRADE_QUIET_TTL - 5);
+    $pdo->exec("UPDATE trade_offers SET replied_at = " . (NOW - TRADE_QUIET_TTL + 100) . " WHERE id = $replied");
+    $old     = offer($pdo, '303', ['idKitsune'], [], NOW - TRADE_TTL - 5);
+    $pdo->exec("UPDATE trade_offers SET replied_at = " . (NOW - TRADE_TTL + 100) . " WHERE id = $old");
+
+    $ids = array_column(trade_feed($pdo, '', '', 0, NOW)['offers'], 'id');
+    assert_eq(false, in_array($quiet, $ids, true), '4 дня без отклика — ушло');
+    assert_eq(true, in_array($fresh, $ids, true), 'моложе 4 дней — на месте');
+    assert_eq(true, in_array($replied, $ids, true), 'с откликом живёт дольше');
+    assert_eq(false, in_array($old, $ids, true), 'но не больше двух недель');
+    assert_eq('open', $pdo->query("SELECT status FROM trade_offers WHERE id = $quiet")->fetchColumn(),
+        'истечение статус не меняет');
+});
+
+test('отклик засчитывает только сообщение собеседника из чата по его объявлению', function () {
+    $pdo = trade_db();
+    $offer = offer($pdo, '101', ['idDragon']);
+    $t     = trade_thread($pdo, '101', '202');
+    $other = trade_thread($pdo, '202', '303');
+
+    assert_eq(false, trade_note_reply($pdo, '101', $t, $offer, NOW), 'автор сам себе не откликается');
+    assert_eq(false, trade_note_reply($pdo, '202', $other, $offer, NOW), 'ветка не с автором — не считается');
+    assert_eq(false, trade_note_reply($pdo, '303', $t, $offer, NOW), 'чужая ветка — не считается');
+    assert_eq(true,  trade_note_reply($pdo, '202', $t, $offer, NOW + 10), 'собеседник написал — отклик');
+    assert_eq(false, trade_note_reply($pdo, '202', $t, $offer, NOW + 20), 'второй раз не переписывает');
+    assert_eq(NOW + 10, (int)$pdo->query("SELECT replied_at FROM trade_offers WHERE id = $offer")->fetchColumn(), 'время первого');
+
+    $gone = offer($pdo, '101', ['idDark'], [], NOW - TRADE_QUIET_TTL - 5);
+    assert_eq(false, trade_note_reply($pdo, '202', $t, $gone, NOW), 'истёкшее отклик не оживляет');
+    assert_eq(false, trade_note_reply(trade_db(false), '202', 1, 1, NOW), 'без таблиц — тихо false');
+});
+
+test('свои объявления для профиля: все, со статусами и сроком', function () {
+    $pdo = trade_db();
+    $live  = offer($pdo, '101', ['idDragon'], [], NOW - 60);
+    $quiet = offer($pdo, '101', ['idDark'], [], NOW - TRADE_QUIET_TTL - 5);
+    $done  = offer($pdo, '101', ['idBoat'], [], NOW - 3600);
+    trade_close($pdo, '101', false, $done, 'done', NOW);
+    offer($pdo, '202', ['idDark']);
+
+    $mine = trade_mine_all($pdo, '101', NOW);
+    $by = [];
+    foreach ($mine as $o) { $by[$o['id']] = $o; }
+    assert_eq([$done, $quiet, $live], array_keys($by), 'только свои, свежие сверху');
+    assert_eq('open', $by[$live]['state'], 'живое');
+    assert_eq('expired', $by[$quiet]['state'], 'истекло без отклика');
+    assert_eq('done', $by[$done]['state'], 'сделка состоялась');
+    assert_eq(NOW - 60 + TRADE_QUIET_TTL, $by[$live]['expires'], 'срок — от публикации');
+    assert_eq(false, $by[$live]['replied'], 'отклика нет');
+    assert_eq([], trade_mine_all($pdo, '', NOW), 'аноним — пусто');
+
+    [$code, $body] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'mine'], NOW);
+    assert_eq(200, $code, 'view=mine');
+    assert_eq(3, count($body['offers']), 'все три');
+    assert_eq(TRADE_RATE_MAX - 2, $body['quota']['left'], 'и квота: в окне 5 часов два из трёх');
+    [, $q] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'quota'], NOW);
+    assert_eq(false, isset($q['offers']), 'view=quota без списка');
+    [, $anon] = handle_trades($pdo, [], ['view' => 'mine'], NOW);
+    assert_eq([false, [], null], [$anon['authed'], $anon['offers'], $anon['quota']], 'аноним — пусто');
+});
+
+test('чужим в ленте не видно, ответили ли автору', function () {
+    $pdo = trade_db();
+    offer($pdo, '202', ['idDark']);
+    $o = trade_feed($pdo, '101', '', 0, NOW)['offers'][0];
+    assert_eq(false, array_key_exists('replied', $o), 'нет replied');
+    assert_eq(false, array_key_exists('expires', $o), 'нет expires');
 });
 
 // --------------------------------------------------------------------------

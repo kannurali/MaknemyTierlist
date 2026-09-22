@@ -7,6 +7,7 @@
   const INVITE_KEY = "nexus-signin-v1";
   const API_CREATE = "/api/trade_create.php";
   const API_SESSION = "/api/session.php";
+  const API_QUOTA = "/api/trades.php?view=quota";
 
   let lang = I18N.pickLang(
     (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
@@ -23,8 +24,21 @@
     canLogin: false,
     busy: false,
     error: "",
-    errorVars: null
+    errorVars: null,
+    quota: null
   };
+
+  function duration(sec) {
+    const s = Math.max(60, sec);
+    if (s >= 86400) { return tx("trade.durDay", { n: Math.floor(s / 86400) }); }
+    if (s >= 3600) { return tx("trade.durHour", { n: Math.floor(s / 3600) }); }
+    return tx("trade.durMin", { n: Math.ceil(s / 60) });
+  }
+
+  function quotaOut() {
+    const q = st.quota;
+    return !!(q && q.left === 0 && q.retryAt > Math.floor(Date.now() / 1000));
+  }
 
   function sides() {
     return window.NX_CALC ? window.NX_CALC.sides() : { left: [], right: [] };
@@ -51,11 +65,17 @@
     } else if (st.busy) {
       key = "trade.publishing";
       disabled = true;
+    } else if (quotaOut()) {
+      disabled = true;
+      bad = true;
+      hint = tx("trade.quotaOut", { max: st.quota.max, t: duration(st.quota.retryAt - Math.floor(Date.now() / 1000)) });
     } else if (!s.left.length) {
       disabled = true;
       hint = tx("trade.hintEmpty");
     } else if (!s.right.length) {
       hint = tx("trade.hintAny");
+    } else if (st.quota) {
+      hint = tx("trade.quotaLeft", { n: st.quota.left, max: st.quota.max });
     }
 
     if (st.error) {
@@ -72,7 +92,6 @@
   }
 
   function errorKey(status, err) {
-    if (err === "too_many") return "trade.errTooMany";
     if (err === "bad_items") return "trade.errBadItems";
     if (err === "empty_give") return "trade.hintEmpty";
     if (err === "not_ready") return "trade.errNotReady";
@@ -106,9 +125,11 @@
       }
       if (r.status === 401) {
         st.session = Object.assign({}, st.session, { user: null });
+      } else if (d && d.error === "too_many" && d.quota) {
+        st.quota = d.quota;
       } else {
         st.error = errorKey(r.status, d && d.error);
-        st.errorVars = d && d.error === "too_many" ? { n: d.max } : null;
+        st.errorVars = null;
       }
     } catch (_) {
       st.error = "trade.errFailed";
@@ -130,6 +151,18 @@
     try { invited = localStorage.getItem(INVITE_KEY) === "1" || /[?&]signin(=|&|$)/.test(location.search); } catch (_) {}
     st.session = s || {};
     st.canLogin = !!(s && s.roblox && (s.roblox_public || invited));
+    render();
+    if (s && s.user) { loadQuota(); }
+  }
+
+  async function loadQuota() {
+    try {
+      const r = await fetch(API_QUOTA, { cache: "no-store", credentials: "same-origin" });
+      const d = r.ok ? await r.json() : null;
+      st.quota = d && d.quota ? d.quota : null;
+    } catch (_) {
+      st.quota = null;
+    }
     render();
   }
 

@@ -141,9 +141,11 @@ CREATE TABLE IF NOT EXISTS users (
 -- removed (снял администратор). VARCHAR, а не ENUM: тесты гоняются на
 -- SQLite, и схемы обязаны вести себя одинаково.
 --
--- Объявление живёт TRADE_TTL (две недели, api/lib/trade.php) — дальше оно
--- просто перестаёт попадать в ленту. Статус при этом не меняется: истечение
--- — не отмена, и в «отменённые» профиля оно не идёт.
+-- replied_at — когда по объявлению впервые написали из чата (сообщение,
+-- отправленное из чата, открытого с карточки). Без отклика объявление уходит
+-- из ленты через четыре дня (TRADE_QUIET_TTL в api/lib/trade.php), с
+-- откликом — через две недели (TRADE_TTL). Статус при этом не меняется:
+-- истечение — не отмена, и в «отменённые» профиля оно не идёт.
 CREATE TABLE IF NOT EXISTS trade_offers (
   id         INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   user_id    BIGINT UNSIGNED NOT NULL,
@@ -151,8 +153,10 @@ CREATE TABLE IF NOT EXISTS trade_offers (
   want       VARCHAR(255)    NOT NULL,
   status     VARCHAR(10)     NOT NULL DEFAULT 'open',
   created_at BIGINT UNSIGNED NOT NULL,
+  replied_at BIGINT UNSIGNED NULL,
   closed_at  BIGINT UNSIGNED NULL,
   KEY idx_feed (status, id),
+  KEY idx_quota (user_id, created_at),
   KEY idx_user (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

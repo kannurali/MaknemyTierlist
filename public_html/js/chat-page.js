@@ -28,6 +28,7 @@
   var state = { me: '', threads: [], thread: 0, ready: false, authed: false, messages: [] };
 
   var drafts = {};
+  var offerRef = {};
   var reviewDrafts = {};
 
   var PROFILE_PATH = '/profile';
@@ -442,11 +443,15 @@
     drafts[state.thread] = '';
     input.disabled = true;
 
-    var r = await post('/api/chat_send.php', { thread: state.thread, body: text });
+    var sentThread = state.thread;
+    var payload = { thread: sentThread, body: text };
+    if (offerRef[sentThread]) { payload.offer = offerRef[sentThread]; }
+    var r = await post('/api/chat_send.php', payload);
     input.disabled = false;
     input.focus();
 
     if (r.ok && r.data && r.data.ok) {
+      delete offerRef[sentThread];
       log.appendChild(bubble(r.data.message));
       roomEmpty.hidden = true;
       log.scrollTop = log.scrollHeight;
@@ -586,12 +591,18 @@
     try { return decodeURIComponent(m[1].replace(/\+/g, ' ')).slice(0, 500); } catch (e) { return ''; }
   })();
 
+  var offerFromUrl = (function () {
+    var m = /[?&]offer=(\d{1,10})(?:&|$)/.exec(location.search);
+    return m ? Number(m[1]) : 0;
+  })();
+
   if (wanted) {
     if (history.replaceState) {
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
     }
     openWith(wanted[1]).then(function (id) {
       if (id && offerDraft && !drafts[id]) { drafts[id] = offerDraft; }
+      if (id && offerFromUrl) { offerRef[id] = offerFromUrl; }
       load(id).then(pollLater, pollLater);
     }, function () {
       load(0).then(pollLater, pollLater);

@@ -128,6 +128,9 @@ $pfTitle = $pfNick !== ''
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=33" />
 <link rel="stylesheet" href="css/profile.css?v=7" />
+<?php if ($pfSelf): ?>
+<link rel="stylesheet" href="css/trading.css?v=1" />
+<?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -194,6 +197,27 @@ $pfTitle = $pfNick !== ''
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
+
+<?php if ($pfSelf): ?>
+  <svg class="tr-sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="trGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
+      </linearGradient>
+    </defs>
+    <symbol id="trIconUp" viewBox="0 0 26 24">
+      <path d="M13 23.2C7.4 19.4 1.2 14.6 1.2 8.3 1.2 4.6 4 1.6 7.6 1.6c2.2 0 4 1 5.4 2.9 1.4-1.9 3.2-2.9 5.4-2.9 3.6 0 6.4 3 6.4 6.7 0 6.3-6.2 11.1-11.8 14.9Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="trIconDown" viewBox="0 0 26 24">
+      <path d="M12.2 4.2C10.9 2.6 9.3 1.6 7.4 1.6 3.9 1.6 1.2 4.6 1.2 8.3c0 6 5.7 10.7 11.1 14.4l-1.5-4.9 2.4-3.7-2.9-3.8 2.5-3.5-.6-2.6Z" fill="currentColor"/>
+      <path d="M14.4 4.3c1.3-1.7 2.9-2.7 4.8-2.7 3.5 0 6.2 3 6.2 6.7 0 6-5.7 10.7-11.1 14.4l-.9-4.4 2.5-4.2-3-3.8 2.4-3.4-.9-2.6Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="trIconSwap" viewBox="0 0 36 44">
+      <path d="M6.6 2.2 33 10.6a1.5 1.5 0 0 1 0 2.8L6.6 21.8A1.5 1.5 0 0 1 4.6 20.4V3.6a1.5 1.5 0 0 1 2-1.4Z" fill="url(#trGrad)"/>
+      <path d="M29.4 22.2 3 30.6a1.5 1.5 0 0 0 0 2.8l26.4 8.4a1.5 1.5 0 0 0 2-1.4V23.6a1.5 1.5 0 0 0-2-1.4Z" fill="url(#trGrad)"/>
+    </symbol>
+  </svg>
+<?php endif; ?>
 
   <main class="pf-page">
     <p class="pf-gate" id="pfGate" data-i18n="profile.login"<?php if ($pfState !== 'gate'): ?> hidden<?php endif; ?>>Войдите через Roblox — кнопка входа в шапке справа</p>
@@ -336,6 +360,18 @@ $pfTitle = $pfNick !== ''
 
       <p class="pf-stats-note" data-i18n="<?= $pfSelf ? 'profile.statsNote' : 'profile.statsNotePeer' ?>"><?= $pfSelf ? 'Чем больше сделок — тем выше опыт!' : 'Сделки за всё время' ?></p>
     </section>
+
+<?php if ($pfSelf): ?>
+    <section class="pf-trades" aria-labelledby="pfTradesTitle">
+      <div class="pf-trades-head">
+        <h2 class="pf-trades-title" id="pfTradesTitle" data-i18n="profile.tradesTitle">Мои объявления</h2>
+        <a class="tr-tool pf-trades-new" href="/trading/new" data-i18n="trade.toolCreate">Создать</a>
+      </div>
+      <p class="pf-trades-quota" id="pfTradesQuota" hidden></p>
+      <p class="tr-state" id="pfTradesState" role="status" aria-live="polite"></p>
+      <ol class="tr-feed" id="pfTrades" aria-labelledby="pfTradesTitle"></ol>
+    </section>
+<?php endif; ?>
 <?php endif; ?>
   </main>
 
@@ -354,5 +390,10 @@ $pfTitle = $pfNick !== ''
   <script src="js/i18n.js?v=51" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=2" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
+<?php if ($pfSelf): ?>
+  <script src="js/calc.js?v=9" defer></script>
+  <script src="js/trade-cards.js?v=1" defer></script>
+  <script src="js/profile-trades.js?v=1" defer></script>
+<?php endif; ?>
 </body>
 </html>

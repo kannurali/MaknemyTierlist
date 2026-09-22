@@ -14,13 +14,25 @@ require_once __DIR__ . '/profile.php';
 // она не умеет собрать, сервер принимать не должен.
 const TRADE_SIDE_MAX = 4;
 
-// Открытых объявлений у одного человека одновременно. Лента общая: без
-// потолка один человек забил бы её своими копиями.
-const TRADE_OPEN_MAX = 5;
+// Сколько объявлений можно опубликовать за скользящее окно. Считаются ВСЕ
+// созданные в окне, включая снятые: иначе «выложил — снял — выложил» обходил
+// бы предел. Лента общая, и без него один человек забил бы её своими копиями.
+const TRADE_RATE_MAX    = 10;
+const TRADE_RATE_WINDOW = 5 * 3600;
 
-// Сколько живёт объявление. Старое предложение почти наверняка уже неактуально,
-// а сам автор о нём забыл. Истечение статуса не меняет (см. миграцию).
+// Сколько объявление ждёт первого отклика. Если за это время из чата по нему
+// никто не написал (trade_note_reply), оно уходит из ленты: предложение,
+// которое никому не интересно, только занимает место. Статус при этом не
+// меняется — истечение не отмена, и в «отменённые» профиля оно не идёт.
+const TRADE_QUIET_TTL = 4 * 86400;
+
+// Сколько живёт объявление, на которое откликнулись. Переписка идёт, но и
+// она через две недели почти наверняка закончилась, а автор забыл снять.
 const TRADE_TTL = 14 * 86400;
+
+// Сколько своих объявлений отдаёт профиль. Больше на одной странице не
+// прочитать, а при пределе 10 за 5 часов это больше недели активности.
+const TRADE_MINE_MAX = 100;
 
 // Страница ленты. Больше за раз не нужно: карточка высокая, и двадцать штук —
 // это несколько экранов прокрутки.
@@ -131,12 +143,60 @@ function trade_decode_side($raw): array {
     return $out;
 }
 
-/** Сколько у человека живых открытых объявлений. */
-function trade_open_count(PDO $pdo, string $me, int $now): int {
-    $st = $pdo->prepare("SELECT COUNT(*) FROM trade_offers
-                          WHERE user_id = :me AND status = 'open' AND created_at > :cut");
-    $st->execute([':me' => $me, ':cut' => $now - TRADE_TTL]);
-    return (int)$st->fetchColumn();
+/**
+ * Сколько публикаций человеку ещё можно в текущем окне и когда освободится
+ * следующая. Окно скользящее: место освобождает самое старое объявление из
+ * последних TRADE_RATE_WINDOW секунд, а не «начало часа».
+ */
+function trade_quota(PDO $pdo, string $me, int $now): array {
+    $used = [];
+    if ($me !== '') {
+        $st = $pdo->prepare('SELECT created_at FROM trade_offers
+                              WHERE user_id = :me AND created_at > :cut ORDER BY created_at ASC');
+        $st->execute([':me' => $me, ':cut' => $now - TRADE_RATE_WINDOW]);
+        $used = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    }
+    $n = count($used);
+    return [
+        'max'     => TRADE_RATE_MAX,
+        'window'  => TRADE_RATE_WINDOW,
+        'used'    => $n,
+        'left'    => max(0, TRADE_RATE_MAX - $n),
+        // Когда можно следующее: у переполненного окна — когда из него выйдет
+        // самое старое из тех, что держат предел. 0 — можно прямо сейчас.
+        'retryAt' => $n >= TRADE_RATE_MAX ? $used[$n - TRADE_RATE_MAX] + TRADE_RATE_WINDOW : 0,
+    ];
+}
+
+/**
+ * Живо ли объявление, то есть видно ли оно в ленте. Открытое — пока ему
+ * TRADE_QUIET_TTL, а если по нему уже написали — пока ему TRADE_TTL.
+ */
+function trade_is_live(array $row, int $now): bool {
+    if ((string)$row['status'] !== 'open') { return false; }
+    $age = $now - (int)$row['created_at'];
+    $replied = isset($row['replied_at']) && (int)$row['replied_at'] > 0;
+    return $age < ($replied ? TRADE_TTL : TRADE_QUIET_TTL);
+}
+
+/** То же условие для SQL: [фрагмент WHERE, параметры]. */
+function trade_live_sql(string $alias, int $now): array {
+    return [
+        "($alias.status = 'open' AND ($alias.created_at > ?"
+        . " OR ($alias.replied_at IS NOT NULL AND $alias.created_at > ?)))",
+        [$now - TRADE_QUIET_TTL, $now - TRADE_TTL],
+    ];
+}
+
+/**
+ * Состояние объявления для профиля: open (в ленте), expired (открыто, но
+ * истекло — по нему не написали вовремя или прошли две недели), done,
+ * cancelled, removed.
+ */
+function trade_state(array $row, int $now): string {
+    $status = (string)$row['status'];
+    if ($status === 'open') { return trade_is_live($row, $now) ? 'open' : 'expired'; }
+    return in_array($status, ['done', 'cancelled', 'removed'], true) ? $status : 'expired';
 }
 
 /**
@@ -157,8 +217,9 @@ function trade_create(PDO $pdo, string $me, $giveRaw, $wantRaw, int $now): array
     if ($give === null || $want === null) { return [400, ['ok' => false, 'error' => 'bad_items']]; }
     if (!$give)                           { return [400, ['ok' => false, 'error' => 'empty_give']]; }
 
-    if (trade_open_count($pdo, $me, $now) >= TRADE_OPEN_MAX) {
-        return [409, ['ok' => false, 'error' => 'too_many', 'max' => TRADE_OPEN_MAX]];
+    $quota = trade_quota($pdo, $me, $now);
+    if ($quota['left'] === 0) {
+        return [429, ['ok' => false, 'error' => 'too_many', 'quota' => $quota]];
     }
 
     $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at)
@@ -280,14 +341,25 @@ function trade_rows_out(PDO $pdo, array $rows, string $me, int $now): array {
     foreach ($rows as $r) {
         $author = $authors[(string)$r['user_id']] ?? null;
         if (!$author) { continue; }   // автора удалили из users
-        $out[] = [
+        $mine    = $me !== '' && (string)$r['user_id'] === $me;
+        $replied = isset($r['replied_at']) && (int)$r['replied_at'] > 0;
+        $row = [
             'id'      => (int)$r['id'],
             'author'  => $author,
             'give'    => trade_decode_side($r['give']),
             'want'    => trade_decode_side($r['want']),
             'at'      => (int)$r['created_at'],
-            'mine'    => $me !== '' && (string)$r['user_id'] === $me,
+            'mine'    => $mine,
+            'state'   => trade_state($r, $now),
         ];
+        // Ответили ли и когда объявление уйдёт — только автору: остальным это
+        // знать незачем, а «на него уже пишут» подталкивало бы не писать.
+        if ($mine) {
+            $row['replied'] = $replied;
+            $row['expires'] = (int)$r['created_at'] + ($replied ? TRADE_TTL : TRADE_QUIET_TTL);
+            $row['closedAt'] = isset($r['closed_at']) ? (int)$r['closed_at'] : 0;
+        }
+        $out[] = $row;
     }
     return $out;
 }
@@ -321,8 +393,8 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now): arr
     if (!trade_ready($pdo)) { return $empty; }
     $empty['ready'] = true;
 
-    $where  = ["o.status = 'open'", 'o.created_at > ?'];
-    $params = [$now - TRADE_TTL];
+    [$live, $params] = trade_live_sql('o', $now);
+    $where = [$live];
     if ($before > 0) { $where[] = 'o.id < ?'; $params[] = $before; }
 
     if ($q !== '') {
@@ -351,7 +423,7 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now): arr
 
     // На одну строку больше страницы: так без второго запроса видно, есть ли
     // что показывать дальше.
-    $sql = 'SELECT o.id, o.user_id, o.give, o.want, o.created_at FROM trade_offers o
+    $sql = 'SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at FROM trade_offers o
              WHERE ' . implode(' AND ', $where) . '
           ORDER BY o.id DESC LIMIT ' . (TRADE_PAGE_SIZE + 1);
     $st = $pdo->prepare($sql);
@@ -362,10 +434,12 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now): arr
 
     $mine = [];
     if ($me !== '' && $before === 0 && $q === '') {
-        $ms = $pdo->prepare("SELECT id, user_id, give, want, created_at FROM trade_offers
-                              WHERE user_id = ? AND status = 'open' AND created_at > ?
-                           ORDER BY id DESC LIMIT " . TRADE_OPEN_MAX);
-        $ms->execute([$me, $now - TRADE_TTL]);
+        [$liveMine, $pm] = trade_live_sql('o', $now);
+        $ms = $pdo->prepare("SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at, o.closed_at
+                               FROM trade_offers o
+                              WHERE o.user_id = ? AND $liveMine
+                           ORDER BY o.id DESC LIMIT " . TRADE_RATE_MAX);
+        $ms->execute(array_merge([$me], $pm));
         $mine = trade_rows_out($pdo, $ms->fetchAll(PDO::FETCH_ASSOC), $me, $now);
     }
 
@@ -375,8 +449,51 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now): arr
         'offers' => trade_rows_out($pdo, $rows, $me, $now),
         'mine'   => $mine,
         'more'   => $more,
-        'ttl'    => TRADE_TTL,
     ];
+}
+
+/**
+ * Все свои объявления для профиля — и живые, и истёкшие, и закрытые, свежие
+ * сверху. Модерация (removed) тоже видна: человек должен понимать, куда
+ * делось его объявление.
+ */
+function trade_mine_all(PDO $pdo, string $me, int $now): array {
+    if ($me === '' || !trade_ready($pdo)) { return []; }
+    $st = $pdo->prepare('SELECT id, user_id, give, want, status, created_at, replied_at, closed_at
+                           FROM trade_offers WHERE user_id = :me
+                       ORDER BY id DESC LIMIT ' . TRADE_MINE_MAX);
+    $st->execute([':me' => $me]);
+    return trade_rows_out($pdo, $st->fetchAll(PDO::FETCH_ASSOC), $me, $now);
+}
+
+/**
+ * По объявлению написали из чата: отметить отклик, чтобы оно не ушло из
+ * ленты через TRADE_QUIET_TTL.
+ *
+ * Отклик засчитывается, только если написал НЕ автор, объявление принадлежит
+ * собеседнику по этой ветке, открыто, ещё живо и отклика у него не было.
+ * Истёкшее этим не оживить: иначе старая вкладка с лентой возвращала бы в неё
+ * то, что уже ушло. Ничего не бросает: отметка — побочный эффект отправки
+ * сообщения, и уронить её она не должна.
+ */
+function trade_note_reply(PDO $pdo, string $me, int $threadId, int $offerId, int $now): bool {
+    if ($me === '' || $threadId <= 0 || $offerId <= 0) { return false; }
+    try {
+        if (!trade_ready($pdo)) { return false; }
+        $st = $pdo->prepare('SELECT a_id, b_id FROM chat_threads WHERE id = :t AND (a_id = :me OR b_id = :me)');
+        $st->execute([':t' => $threadId, ':me' => $me]);
+        $t = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$t) { return false; }
+        $peer = ((string)$t['a_id'] === $me) ? (string)$t['b_id'] : (string)$t['a_id'];
+        if ($peer === $me) { return false; }
+        $up = $pdo->prepare("UPDATE trade_offers SET replied_at = :now
+                              WHERE id = :o AND user_id = :peer AND status = 'open'
+                                AND replied_at IS NULL AND created_at > :cut");
+        $up->execute([':now' => $now, ':o' => $offerId, ':peer' => $peer, ':cut' => $now - TRADE_QUIET_TTL]);
+        return $up->rowCount() === 1;
+    } catch (PDOException $e) {
+        return false;
+    }
 }
 
 /**

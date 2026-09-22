@@ -147,14 +147,19 @@ test('лента: кнопки из макета ведут куда в прот
 });
 
 test('скрипт ленты: API, чат с черновиком, закрытие, реклама', function () use ($PUB) {
-    $js = tp_read($PUB . '/js/trading-page.js');
+    $js    = tp_read($PUB . '/js/trading-page.js');
+    $cards = tp_read($PUB . '/js/trade-cards.js');
     assert_true(strpos($js, '"/api/trades.php"') !== false, 'лента');
-    assert_true(strpos($js, '"/api/trade_close.php"') !== false, 'закрытие');
-    assert_true(strpos($js, '"/chat?to=" + encodeURIComponent(offer.author.id) + "&draft="') !== false,
-        'чужое объявление открывает чат с автором и черновиком');
-    assert_true(strpos($js, '"/profile?id=" + encodeURIComponent(offer.author.id)') !== false, 'ник ведёт на профиль');
-    assert_true(strpos($js, 'CALC.buildCatalogIndex(CALC.flattenTierlist(d.tierlist))') !== false,
+    assert_true(strpos($js, 'TRADE_CARDS.make(') !== false, 'карточки — из общего модуля');
+    assert_true(strpos($cards, '"/api/trade_close.php"') !== false, 'закрытие');
+    assert_true(strpos($cards, '"/chat?to=" + encodeURIComponent(offer.author.id)') !== false
+        && strpos($cards, '+ "&offer=" + encodeURIComponent(offer.id)') !== false
+        && strpos($cards, '+ "&draft=" + encodeURIComponent(draftFor(offer))') !== false,
+        'чужое объявление открывает чат с автором, номером объявления и черновиком');
+    assert_true(strpos($cards, '"/profile?id=" + encodeURIComponent(offer.author.id)') !== false, 'ник ведёт на профиль');
+    assert_true(strpos($cards, 'CALC.buildCatalogIndex(CALC.flattenTierlist(d.tierlist))') !== false,
         'картинки и цены — из тирлиста, как у калькулятора');
+    $js .= $cards;
     assert_true(strpos($js, 'const PROMO_PAGE = "calc"') !== false, 'реклама — как у калькулятора');
     assert_true(strpos($js, 'promo.houseFor(') !== false, 'борт берёт объявление из общего модуля');
     assert_true(strpos($js, 'NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE)') !== false, 'полоса тем же документом');
@@ -168,6 +173,41 @@ test('чат подставляет черновик из объявления',
     assert_true(strpos($js, 'if (id && offerDraft && !drafts[id]) { drafts[id] = offerDraft; }') !== false,
         'и кладётся в черновик ветки, не затирая начатый');
     assert_true(strpos($js, '.slice(0, 500)') !== false, 'длина черновика ограничена');
+    assert_true(strpos($js, '/[?&]offer=(\\d{1,10})(?:&|$)/') !== false, 'номер объявления — из адреса');
+    assert_true(strpos($js, 'if (offerRef[sentThread]) { payload.offer = offerRef[sentThread]; }') !== false,
+        'и уходит с первым сообщением');
+    assert_true(strpos($js, 'delete offerRef[sentThread];') !== false, 'один раз');
+
+    $api = tp_read($PUB . '/api/chat_send.php');
+    assert_true(strpos($api, 'trade_note_reply(db(), $me, $thread, $offer, time());') !== false,
+        'отправка засчитывает отклик');
+    assert_true(strpos($api, 'if ($status === 200 && $offer > 0) {') !== false, 'только после успешной отправки');
+});
+
+test('в своём профиле — все свои объявления и остаток лимита', function () use ($PUB) {
+    $s = tp_read($PUB . '/profile.php');
+    $a = strpos($s, '<section class="pf-trades"');
+    assert_true($a !== false, 'блок «Мои объявления»');
+    assert_true(strpos(substr($s, 0, $a), '<?php if ($pfSelf): ?>', strrpos(substr($s, 0, $a), '</section>')) !== false,
+        'только на своём профиле');
+    foreach (['id="pfTrades"', 'id="pfTradesState"', 'id="pfTradesQuota"', 'href="/trading/new"'] as $needle) {
+        assert_true(strpos($s, $needle) !== false, "в разметке: $needle");
+    }
+    foreach (['trIconUp', 'trIconDown', 'trIconSwap'] as $id) {
+        assert_true(strpos($s, '<symbol id="' . $id . '"') !== false, "значок $id для карточек");
+    }
+    $order = ['js/i18n.js', 'js/calc.js', 'js/trade-cards.js', 'js/profile-trades.js'];
+    $at = array_map(function ($f) use ($s) { return strpos($s, 'src="' . $f . '?v='); }, $order);
+    assert_true(!in_array(false, $at, true), 'скрипты подключены');
+    $sorted = $at; sort($sorted);
+    assert_eq($sorted, $at, 'в правильном порядке');
+    assert_true(strpos($s, 'css/trading.css?v=') !== false, 'стили карточек');
+
+    $js = tp_read($PUB . '/js/profile-trades.js');
+    assert_true(strpos($js, '"/api/trades.php?view=mine"') !== false, 'свои объявления');
+    assert_true(strpos($js, 'TRADE_CARDS.close(') !== false, 'закрытие — тем же модулем');
+    $tn = tp_read($PUB . '/js/trade-new.js');
+    assert_true(strpos($tn, '"/api/trades.php?view=quota"') !== false, 'форма знает остаток лимита');
 });
 
 // --------------------------------------------------------------------------
@@ -252,7 +292,7 @@ test('все ключи словаря с новых страниц есть в 
         preg_match_all('/data-i18n(?:-label|-placeholder|-title)?="([a-zA-Z.]+)"/', tp_read($PUB . '/' . $f), $m);
         $keys = array_merge($keys, $m[1]);
     }
-    foreach (['trading-page.js', 'trade-new.js', 'support-page.js'] as $f) {
+    foreach (['trading-page.js', 'trade-new.js', 'support-page.js', 'trade-cards.js', 'profile-trades.js'] as $f) {
         preg_match_all('/"((?:trade|support)\.[a-zA-Z]+)"/', tp_read($PUB . '/js/' . $f), $m);
         $keys = array_merge($keys, $m[1]);
     }
@@ -263,7 +303,7 @@ test('все ключи словаря с новых страниц есть в 
 });
 
 test('новые скрипты и стили отдаются без комментариев и без innerHTML', function () use ($PUB) {
-    foreach (['js/trading-page.js', 'js/trade-new.js', 'js/support-page.js'] as $f) {
+    foreach (['js/trading-page.js', 'js/trade-new.js', 'js/support-page.js', 'js/trade-cards.js', 'js/profile-trades.js'] as $f) {
         $s = tp_read($PUB . '/' . $f);
         assert_eq(0, preg_match('~(^|[^:"\'])//\s~m', $s), "$f: без // комментариев");
         assert_eq(0, preg_match('~/\*~', $s), "$f: без /* */");
