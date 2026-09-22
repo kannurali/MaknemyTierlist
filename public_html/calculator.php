@@ -425,7 +425,7 @@ page_lscache();
   </div>
 
   <script src="js/i18n.js?v=50" fetchpriority="high"></script>
-  <script src="js/promo.js?v=11" fetchpriority="high"></script>
+  <script src="js/promo.js?v=12" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
 

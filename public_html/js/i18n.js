@@ -309,8 +309,8 @@
       "promo.houseTgText":      "Свежие цены, розыгрыши и новости Blox Fruits — в нашем телеграм-канале",
       "promo.houseTgCta":       "Открыть канал",
 
-      "promo.giveawayText":     "Раздача фруктов в нашем телеграм-канале",
-      "promo.giveawayCta":      "Открыть канал",
+      "promo.giveawayText":     "Розыгрыш Arcsteel Magnet в нашем телеграм-канале",
+      "promo.giveawayCta":      "Участвовать",
       "promo.playerokText":     "Фрукты, мутации, скины и донат — по лучшим ценам на Playerok",
       "promo.playerokCta":      "Перейти на Playerok",
 
@@ -857,8 +857,8 @@
       "promo.cta":              "Open",
       "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
       "promo.houseTgCta":       "Open the channel",
-      "promo.giveawayText":     "Free fruit drops in our Telegram channel",
-      "promo.giveawayCta":      "Open the channel",
+      "promo.giveawayText":     "Arcsteel Magnet giveaway in our Telegram channel",
+      "promo.giveawayCta":      "Enter the giveaway",
       "promo.playerokText":     "Fruits, mutations, skins and top-ups at the best prices on Playerok",
       "promo.playerokCta":      "Go to Playerok",
 
