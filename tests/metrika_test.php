@@ -97,20 +97,25 @@ test('номер счётчика один и тот же в PHP и в js/app.js
     }
 });
 
-test('блок счётчика собирается целиком, с маркерами и noscript', function () {
+test('блок счётчика собирается целиком, с маркерами и noscript', function () use ($PUB) {
     $html = metrika_counter_html();
     $id = (string)METRIKA_ID;
     assert_eq(0, strpos($html, '<!-- Yandex.Metrika counter -->'),
         'блок начинается маркером — по нему его вырезает админка');
     assert_true(substr(rtrim($html), -strlen('<!-- /Yandex.Metrika counter -->'))
         === '<!-- /Yandex.Metrika counter -->', 'и закрывающим маркером заканчивается');
-    assert_true(strpos($html, 'https://mc.yandex.ru/metrika/tag.js?id=' . $id) !== false,
+    // Сам код счётчика — во внешнем js/metrika.js: CSP сайта не пускает
+    // встроенные скрипты (см. tests/csp_test.php).
+    assert_true((bool)preg_match('~<script src="/js/metrika\.js\?v=\d+" async></script>~', $html),
+        'блок подключает js/metrika.js');
+    $js = mt_read($PUB . '/js/metrika.js');
+    assert_true(strpos($js, 'https://mc.yandex.ru/metrika/tag.js?id=' . $id) !== false,
         'загрузка tag.js с номером счётчика');
-    assert_true(strpos($html, 'ym(' . $id . ", 'init'") !== false, 'инициализация счётчика');
+    assert_true(strpos($js, 'ym(' . $id . ", 'init'") !== false, 'инициализация счётчика');
     // Вебвизор и карта кликов включены осознанно — на них держится вся
     // аналитика поведения, а их отключение выглядит безобидной правкой.
     foreach (['webvisor:true', 'clickmap:true', 'trackLinks:true', 'accurateTrackBounce:true'] as $opt) {
-        assert_true(strpos($html, $opt) !== false, "опция $opt должна остаться включённой");
+        assert_true(strpos($js, $opt) !== false, "опция $opt должна остаться включённой");
     }
     // <noscript> — единственный способ посчитать посетителя с отключённым JS.
     assert_true(strpos($html, 'https://mc.yandex.ru/watch/' . $id) !== false,
@@ -126,7 +131,8 @@ test('разметка счётчика лежит в одном файле, а 
         if (!$f->isFile() || strtolower($f->getExtension()) !== 'php') { continue; }
         $path = str_replace('\\', '/', $f->getPathname());
         if (substr($path, -strlen('api/lib/metrika.php')) === 'api/lib/metrika.php') { continue; }
-        if (strpos(mt_read($path), 'mc.yandex.ru/metrika/tag.js') !== false) { $copies[] = $path; }
+        $src = mt_read($path);
+        if (strpos($src, 'mc.yandex.ru/metrika/tag.js') !== false || strpos($src, 'js/metrika.js') !== false) { $copies[] = $path; }
     }
     assert_eq([], $copies, 'счётчик подключают вызовом metrika_counter_html(), а не копией разметки');
 });
@@ -143,7 +149,7 @@ test('счётчик приезжает на все публичные стра�
 
         assert_eq(1, substr_count($html, '<!-- Yandex.Metrika counter -->'),
             "$page: счётчик должен быть ровно один");
-        assert_true(strpos($html, 'tag.js?id=' . METRIKA_ID) !== false,
+        assert_true((bool)preg_match('~<script src="/js/metrika\.js\?v=\d+" async></script>~', $html),
             "$page: нет загрузки счётчика");
         assert_true(strpos($html, 'mc.yandex.ru/watch/' . METRIKA_ID) !== false,
             "$page: нет noscript-пикселя");

@@ -189,7 +189,7 @@ HTML;
 $html = str_replace(
     '  <script src="/js/i18n.js',
     $editor . "
-  <script>window.NX_ADMIN_PAGE = true;</script>
+  <script src=\"/js/admin-flag.js?v=1\"></script>
   <script src=\"/js/i18n.js",
     $html
 );

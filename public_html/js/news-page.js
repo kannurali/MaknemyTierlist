@@ -13,7 +13,8 @@
   const LANG_KEY = "nexus-lang-v1";
 
   const LINKED_POST_ID = (() => {
-    const n = Number(window.NX_LINKED_POST_ID);
+    const meta = document.querySelector('meta[name="nx-post"]');
+    const n = Number(meta ? meta.getAttribute("content") : NaN);
     return Number.isInteger(n) && n > 0 ? n : null;
   })();
 

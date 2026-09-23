@@ -58,7 +58,7 @@ $html = preg_replace('~<body[^>]*>~', "$0
 // поэтому редактировать с публичной страницы больше нельзя.
 $html = str_replace(
     '<script src="js/app.js',
-    "<script>window.NX_ADMIN_PAGE = true;</script>\n  <script src=\"js/app.js",
+    '<script src="/js/admin-flag.js?v=1"></script>' . "\n  " . '<script src="js/app.js',
     $html
 );
 

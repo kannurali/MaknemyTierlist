@@ -67,7 +67,7 @@ function news_parse_post_id($raw): ?int {
 }
 
 // Пост по id — для og:* конкретной страницы и для подсказки клиенту, какую
-// карточку подсветить (см. NX_LINKED_POST_ID ниже и focusLinkedPost() в
+// карточку подсветить (см. <meta name="nx-post"> ниже и focusLinkedPost() в
 // js/news-page.js). null — пост с таким id не существует: вызывающая сторона
 // отвечает 404 (см. дальше по файлу), а не 500 и не тихо показывает ленту как
 // ни в чём не бывало.
@@ -177,6 +177,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<?php if ($linkedPostId !== null): ?>
+<meta name="nx-post" content="<?= (int)$linkedPostId ?>" />
+<?php endif; ?>
 
 <base href="/" />
 
@@ -356,9 +359,6 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </div>
   </div>
 
-<?php if ($linkedPostId !== null): ?>
-  <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
-<?php endif; ?>
   <script src="js/i18n.js?v=53" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
@@ -370,7 +370,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=24" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=25" fetchpriority="high"></script>
 </body>
 </html>
 <?php endif; ?>

@@ -82,7 +82,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         error_log('index.php: og preview fallback: ' . $e->getMessage());
     }
     // Минута в кеше LiteSpeed — см. page_lscache() в api/_bootstrap.php.
-    // window.NX_REV из закешированной копии может отстать от ревизии на эту
+    // Ревизия из <meta name="nx-rev"> закешированной копии может отстать на эту
     // минуту — тогда app.js получит данные через редирект tierlist.php на
     // текущую ревизию, а следующий опрос state.php всё выровняет.
     page_lscache();
@@ -93,6 +93,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<?php if ($nxRev !== null): ?>
+<meta name="nx-rev" content="<?= (int)$nxRev ?>" />
+<?php endif; ?>
 
 <meta name="color-scheme" content="dark" />
 
@@ -548,10 +551,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-<?php if ($nxRev !== null): ?>
-
-  <script>window.NX_REV = <?= (int)$nxRev ?>;</script>
-<?php endif; ?>
   <script src="js/i18n.js?v=53" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
@@ -559,6 +558,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/promo.js?v=12" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=76" fetchpriority="high"></script>
+  <script src="js/app.js?v=77" fetchpriority="high"></script>
 </body>
 </html>

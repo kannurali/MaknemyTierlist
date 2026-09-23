@@ -2628,7 +2628,11 @@
     return false;
   }
 
-  let bootRev = (typeof window.NX_REV === "number" && isFinite(window.NX_REV)) ? window.NX_REV : null;
+  let bootRev = (() => {
+    const meta = document.querySelector('meta[name="nx-rev"]');
+    const raw = meta ? meta.getAttribute("content") : "";
+    return /^\d{1,15}$/.test(raw || "") ? Number(raw) : null;
+  })();
 
   async function fetchSnapshot() {
     if (bootRev !== null && !haveFullData) {
