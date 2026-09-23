@@ -449,4 +449,44 @@ test('обращения для администратора: новые све�
     assert_eq([], support_list(trade_db(false)), 'без таблицы — пусто');
 });
 
+// Чужой профиль показывает, что у человека сейчас есть на обмен: только живое,
+// без сроков и отметок об отклике — это знает лишь автор.
+test('объявления игрока для его профиля: только живые и только вошедшему', function () {
+    $pdo = trade_db();
+    $live  = offer($pdo, '202', ['idDragon'], ['idKitsune'], NOW - 60);
+    $quiet = offer($pdo, '202', ['idDark'], [], NOW - TRADE_QUIET_TTL - 5);
+    $done  = offer($pdo, '202', ['idBoat'], [], NOW - 3600);
+    trade_close($pdo, '202', false, $done, 'done', NOW);
+    offer($pdo, '101', ['idDark']);
+
+    $list = trade_user_live($pdo, '202', '101', NOW);
+    assert_eq([$live], array_column($list, 'id'), 'только живое и только его');
+    assert_eq('open', $list[0]['state'], 'в ленте');
+    assert_eq(false, $list[0]['mine'], 'смотрит другой');
+    assert_eq(false, isset($list[0]['expires']), 'срок чужим не показывается');
+    assert_eq(false, isset($list[0]['replied']), 'отклик тоже');
+    assert_eq('202', $list[0]['author']['id'], 'автор приложен');
+
+    [$code, $body] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW);
+    assert_eq(200, $code, 'view=user');
+    assert_eq([$live], array_column($body['offers'], 'id'), 'тот же список');
+    assert_eq(false, isset($body['quota']), 'чужая квота не отдаётся');
+
+    [, $anon] = handle_trades($pdo, [], ['view' => 'user', 'id' => '202'], NOW);
+    assert_eq([false, []], [$anon['authed'], $anon['offers']], 'аноним — пусто');
+
+    foreach (['', 'abc', '202 OR 1=1', '1e3'] as $bad) {
+        [, $b] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => $bad], NOW);
+        assert_eq([], $b['offers'], "мусор в id: '$bad'");
+    }
+    [, $arr] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => ['202']], NOW);
+    assert_eq([], $arr['offers'], 'массив вместо id');
+    [, $zero] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '000202'], NOW);
+    assert_eq([$live], array_column($zero['offers'], 'id'), 'ведущие нули не мешают');
+
+    assert_eq([], trade_user_live(trade_db(false), '202', '101', NOW), 'без таблиц — пусто');
+    [, $nt] = handle_trades(trade_db(false), ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW);
+    assert_eq([false, []], [$nt['ready'], $nt['offers']], 'без таблиц — ready:false');
+});
+
 run_tests();

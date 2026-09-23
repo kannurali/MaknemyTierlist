@@ -95,7 +95,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/chat.css?v=9" />
+<link rel="stylesheet" href="css/chat.css?v=10" />
 
 
 
@@ -186,6 +186,12 @@ header('Cache-Control: no-cache, must-revalidate');
             <span></span><span></span><span></span>
           </button>
           <h1 class="ct-room-title" id="ctRoomTitle" data-i18n="chat.title">Чаты</h1>
+
+          <button class="ct-del" type="button" id="ctDelete" hidden
+                  data-i18n-label="chat.delete" aria-label="Удалить чат у себя"
+                  data-i18n-title="chat.delete" title="Удалить чат у себя">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.8c0-.7.6-1.3 1.3-1.3h2.4c.7 0 1.3.6 1.3 1.3v1.7M6.2 6.5l.9 12.1c.1 1.1 1 1.9 2 1.9h5.8c1.1 0 1.9-.8 2-1.9l.9-12.1M10.2 10.5v6M13.8 10.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
 
           <div class="ct-notify" id="ctNotify" hidden>
             <button class="ct-bell" type="button" id="ctBell"
@@ -332,9 +338,9 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=54" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=55" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=13" defer></script>
+  <script src="js/chat-page.js?v=14" defer></script>
 
 
 </body>

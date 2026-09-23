@@ -818,4 +818,43 @@ test('на узких экранах у панели стикеров свои �
     }
 });
 
+// --------------------------------------------------------------------------
+//  Удаление диалога у себя
+// --------------------------------------------------------------------------
+
+// Кнопка появляется только у открытого диалога: до ответа сервера удалять
+// нечего. Удаление одностороннее, и подтверждение обязано это сказать —
+// иначе человек решит, что стёр переписку и у собеседника.
+test('кнопка «удалить чат» стоит в шапке комнаты и спрашивает подтверждение', function () use ($PUB) {
+    $page = cp_markup(cp_read($PUB . '/chat.php'));
+    assert_eq(1, preg_match('/<button class="ct-del" type="button" id="ctDelete" hidden/', $page), 'кнопка скрыта до выбора диалога');
+    $head = strpos($page, 'class="ct-room-head"');
+    $btn  = strpos($page, 'id="ctDelete"');
+    $log  = strpos($page, 'id="ctLog"');
+    assert_true($head !== false && $head < $btn && $btn < $log, 'в шапке комнаты');
+
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(strpos($js, "post('/api/chat_delete.php', { thread: id, upto: lastShownId() })") !== false,
+        'удаляется то, что человек видел на странице');
+    assert_true(strpos($js, "window.confirm(ask)") !== false, 'без подтверждения не удаляет');
+    assert_true(strpos($js, "delBtn.hidden = !peer;") !== false, 'кнопка — только у открытого диалога');
+    assert_true(strpos($js, "state.thread = 0;") !== false, 'после удаления фоновая перечитка не открывает удалённое');
+
+    $i18n = cp_read($PUB . '/js/i18n.js');
+    foreach (['chat.delete', 'chat.deleteConfirm', 'chat.deleteFailed'] as $k) {
+        cp_assert_key($i18n, $k);
+        assert_true(strpos($js, "'" . $k . "'") !== false || $k === 'chat.delete', "скрипт ставит $k");
+    }
+    $enAt = strpos($i18n, "\n    en: {");
+    assert_true(strpos(substr($i18n, 0, $enAt), 'только у вас') !== false, 'ru: сказано, что удаляется только у себя');
+    assert_true(strpos(substr($i18n, $enAt), 'only for you') !== false, 'en: то же');
+});
+
+test('удаление — только POST и с пределом частоты', function () use ($PUB) {
+    $api = cp_read($PUB . '/api/chat_delete.php');
+    assert_true(strpos($api, 'require_post();') !== false, 'GET-ссылкой не удалить');
+    assert_true(strpos($api, "rate_limit_allow('chat_delete'") !== false, 'предел частоты');
+    assert_true(strpos($api, 'chat_clear(db(), $me, $thread, $upto, time())') !== false, 'логика — в lib/chat.php');
+});
+
 run_tests();

@@ -52,6 +52,14 @@ function ch_db(): PDO {
         created_at INTEGER NOT NULL,
         UNIQUE (thread_id, author_id)
     )');
+    // docs/migrations/2026-09-24-chat-clears.sql
+    $pdo->exec('CREATE TABLE chat_clears (
+        thread_id  INTEGER NOT NULL,
+        user_id    INTEGER NOT NULL,
+        cleared_id INTEGER NOT NULL DEFAULT 0,
+        cleared_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (thread_id, user_id)
+    )');
     return $pdo;
 }
 
@@ -596,6 +604,140 @@ test('без таблиц чата открытие честно отвечае�
     [$st, $p] = chat_open($pdo, '11', '22', CH_NOW);
     assert_eq(503, $st, 'не пятисотка и не молчание');
     assert_eq('unavailable', $p['error'], 'причина названа');
+});
+
+// --------------------------------------------------------------------------
+//  Удаление диалога у себя
+// --------------------------------------------------------------------------
+
+function ch_msg(PDO $p, int $t, string $from, string $body, int $at = CH_NOW): int {
+    $p->prepare('INSERT INTO chat_messages (thread_id, sender_id, body, created_at) VALUES (?,?,?,?)')
+      ->execute([$t, $from, $body, $at]);
+    $id = (int)$p->lastInsertId();
+    $p->prepare('UPDATE chat_threads SET last_at = ? WHERE id = ?')->execute([$at, $t]);
+    return $id;
+}
+
+// Одностороннее: у меня переписки нет, у собеседника она вся на месте.
+test('удалённый у себя диалог пропадает только у меня', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A'); $b = ch_user($pdo, '33', 'B');
+    $t  = ch_thread($pdo, $me, $a);
+    $u  = ch_thread($pdo, $me, $b);
+    ch_msg($pdo, $t, $me, 'привет', CH_NOW);
+    $last = ch_msg($pdo, $t, $a, 'здравствуй', CH_NOW + 1);
+    ch_msg($pdo, $u, $b, 'йо', CH_NOW - 5);
+
+    [$code, $p] = chat_clear($pdo, $me, $t, $last, CH_NOW + 2);
+    assert_eq(200, $code, 'удалено');
+    assert_eq(true, $p['ok'], 'ok');
+
+    assert_eq([$u], array_column(chat_threads($pdo, $me, CH_NOW), 'id'), 'у меня осталась только другая ветка');
+    assert_eq([], chat_messages($pdo, $me, $t), 'переписки у меня нет');
+    assert_eq([$t], array_column(chat_threads($pdo, $a, CH_NOW), 'id'), 'у собеседника ветка на месте');
+    assert_eq(2, count(chat_messages($pdo, $a, $t)), 'и вся переписка');
+    assert_eq(3, (int)$pdo->query('SELECT COUNT(*) FROM chat_messages')->fetchColumn(), 'в базе ничего не стёрто');
+
+    [, $h] = handle_chat($pdo, ch_session($me), null, CH_NOW);
+    assert_eq($u, $h['thread'], 'по умолчанию открывается оставшаяся ветка');
+});
+
+// Собеседник написал снова — ветка возвращается, но только с новым.
+test('новое сообщение возвращает ветку без удалённой истории', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    $old = ch_msg($pdo, $t, $a, 'старое', CH_NOW);
+    chat_clear($pdo, $me, $t, $old, CH_NOW + 1);
+    ch_msg($pdo, $t, $a, 'новое', CH_NOW + 2);
+
+    $list = chat_threads($pdo, $me, CH_NOW);
+    assert_eq([$t], array_column($list, 'id'), 'ветка вернулась');
+    assert_eq('новое', $list[0]['last']['body'], 'в превью новое');
+    assert_eq(['новое'], array_column(chat_messages($pdo, $me, $t), 'body'), 'старое не вернулось');
+});
+
+// Удаляется то, что человек видел. Письмо, пришедшее, пока он жал «удалить»,
+// не пропадает непрочитанным.
+test('удаление не съедает сообщение, которого человек ещё не видел', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    $seen = ch_msg($pdo, $t, $a, 'видел', CH_NOW);
+    ch_msg($pdo, $t, $a, 'не видел', CH_NOW + 1);
+
+    chat_clear($pdo, $me, $t, $seen, CH_NOW + 2);
+    assert_eq(['не видел'], array_column(chat_messages($pdo, $me, $t), 'body'), 'непрочитанное на месте');
+    assert_eq([$t], array_column(chat_threads($pdo, $me, CH_NOW), 'id'), 'и ветка в списке');
+
+    chat_clear($pdo, $me, $t, 999999, CH_NOW + 3);
+    assert_eq([], chat_messages($pdo, $me, $t), 'upto больше последнего — удалено всё, что есть');
+    ch_msg($pdo, $t, $a, 'после', CH_NOW + 4);
+    assert_eq(['после'], array_column(chat_messages($pdo, $me, $t), 'body'),
+        'граница встала на последнее сообщение, а не на присланное число');
+});
+
+test('граница удаления назад не двигается', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    $first = ch_msg($pdo, $t, $a, 'раз', CH_NOW);
+    ch_msg($pdo, $t, $a, 'два', CH_NOW + 1);
+    chat_clear($pdo, $me, $t, null, CH_NOW + 2);
+    chat_clear($pdo, $me, $t, $first, CH_NOW + 3);
+    assert_eq([], chat_messages($pdo, $me, $t), 'старая вкладка не вернула удалённое');
+});
+
+// Открыл диалог сам («Написать» в профиле) — ветка в списке и открыта, хотя
+// переписки у меня в ней нет. Иначе страница показала бы пустоту без поля ввода.
+test('удалённая ветка открывается, если её запросили явно', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    ch_msg($pdo, $t, $a, 'секрет', CH_NOW);
+    chat_clear($pdo, $me, $t, null, CH_NOW + 1);
+
+    [, $p] = chat_open($pdo, $me, $a, CH_NOW + 2);
+    assert_eq($t, $p['thread'], 'та же ветка');
+    [, $h] = handle_chat($pdo, ch_session($me), (string)$t, CH_NOW + 2);
+    assert_eq($t, $h['thread'], 'открыта');
+    assert_eq([$t], array_column($h['threads'], 'id'), 'и есть в списке');
+    assert_eq(null, $h['threads'][0]['last'], 'без превью удалённого');
+    assert_eq([], $h['messages'], 'без переписки');
+
+    [, $h2] = handle_chat($pdo, ch_session($me), null, CH_NOW + 3);
+    assert_eq([], $h2['threads'], 'без явного запроса её в списке нет');
+    assert_eq(0, $h2['thread'], 'и она не открывается сама');
+});
+
+test('удалить можно только свой диалог и только вошедшему', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A'); $b = ch_user($pdo, '33', 'B');
+    $alien = ch_thread($pdo, $a, $b);
+    ch_msg($pdo, $alien, $a, 'чужое', CH_NOW);
+
+    [$code] = chat_clear($pdo, $me, $alien, null, CH_NOW);
+    assert_eq(403, $code, 'чужую ветку не удалить');
+    [$code] = chat_clear($pdo, '', $alien, null, CH_NOW);
+    assert_eq(401, $code, 'аноним');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM chat_clears')->fetchColumn(), 'отметок не появилось');
+    assert_eq(1, count(chat_messages($pdo, $a, $alien)), 'у участников всё на месте');
+});
+
+// Миграция выполняется руками. До неё чат обязан работать как раньше, а
+// кнопка — честно отвечать, что удалить нельзя.
+test('без таблицы удалений чат работает, а удаление отвечает 503', function () {
+    $pdo = ch_db();
+    $pdo->exec('DROP TABLE chat_clears');
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    ch_msg($pdo, $t, $a, 'привет', CH_NOW);
+
+    [$code, $p] = chat_clear($pdo, $me, $t, null, CH_NOW);
+    assert_eq(503, $code, '503');
+    assert_eq('not_ready', $p['error'], 'причина названа');
+    assert_eq([$t], array_column(chat_threads($pdo, $me, CH_NOW), 'id'), 'список как раньше');
+    assert_eq(1, count(chat_messages($pdo, $me, $t)), 'переписка как раньше');
 });
 
 run_tests();
