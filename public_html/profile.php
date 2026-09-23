@@ -73,6 +73,12 @@ elseif ($pfMe !== '' && $pfId !== '') { $pfState = 'missing'; }
 
 $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 
+// Вход в панель со своего профиля: кнопку видят только те, кого config.php
+// записал в admin_ids (вся панель) или moderator_ids (обращения) — см.
+// site_role() в api/_bootstrap.php. На чужом профиле её нет никогда: права
+// смотрящего к чужой карточке отношения не имеют.
+$pfPanel = $pfSelf ? current_role() : '';
+
 // Свой статус известен без базы: страницу только что запросили, значит человек
 // здесь. Отметку присутствия ставит запрос состояния из шапки, а он случится
 // на долю секунды позже — без этой строки собственный профиль после перерыва
@@ -127,7 +133,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/profile.css?v=7" />
+<link rel="stylesheet" href="css/profile.css?v=8" />
 <?php if ($pfSelf): ?>
 <link rel="stylesheet" href="css/trading.css?v=4" />
 <?php endif; ?>
@@ -287,6 +293,13 @@ $pfTitle = $pfNick !== ''
         </p>
       </div>
 
+<?php if ($pfPanel !== ''): ?>
+      <a class="pf-panel" href="<?= $pfPanel === 'admin' ? '/admin' : '/admin/support' ?>">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5 4.5 5.4v5.9c0 4.7 3.2 8.9 7.5 10.2 4.3-1.3 7.5-5.5 7.5-10.2V5.4L12 2.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.6 12 2.4 2.4 4.4-4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="<?= $pfPanel === 'admin' ? 'user.admin' : 'user.support' ?>"><?= $pfPanel === 'admin' ? 'Админка' : 'Обращения' ?></span>
+      </a>
+<?php endif; ?>
+
       <figure class="pf-chart" id="pfChart" aria-labelledby="pfChartTitle"
               data-profile="<?= htmlspecialchars($pfWho, ENT_QUOTES, 'UTF-8') ?>"<?= $pfSelf ? '' : ' data-peer="1"' ?>>
         <figcaption class="pf-chart-head">
@@ -388,7 +401,7 @@ $pfTitle = $pfNick !== ''
   </footer>
 
   <script src="js/i18n.js?v=53" fetchpriority="high"></script>
-  <script src="js/profile-page.js?v=2" defer></script>
+  <script src="js/profile-page.js?v=3" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfSelf): ?>
   <script src="js/calc.js?v=9" defer></script>
