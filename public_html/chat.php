@@ -95,7 +95,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=9" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/chat.css?v=6" />
+<link rel="stylesheet" href="css/chat.css?v=7" />
 
 
 
@@ -186,6 +186,21 @@ header('Cache-Control: no-cache, must-revalidate');
             <span></span><span></span><span></span>
           </button>
           <h1 class="ct-room-title" id="ctRoomTitle" data-i18n="chat.title">Чаты</h1>
+
+          <div class="ct-notify" id="ctNotify" hidden>
+            <button class="ct-bell" type="button" id="ctBell"
+                    aria-expanded="false" aria-controls="ctNotifyPanel"
+                    data-i18n-label="chat.notify" aria-label="Уведомления в Telegram"
+                    data-i18n-title="chat.notify" title="Уведомления в Telegram">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 3.2.8 5.1 1.6 6.2.4.5 0 1.3-.6 1.3H5c-.6 0-1-.8-.6-1.3C5.2 15.1 6 13.2 6 10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.8 20.2a2.4 2.4 0 0 0 4.4 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+
+            <div class="ct-notify-panel" id="ctNotifyPanel" hidden>
+              <p class="ct-notify-text" id="ctNotifyText" role="status" aria-live="polite"></p>
+              <a class="ct-notify-go" id="ctNotifyGo" href="https://t.me/" target="_blank" rel="noopener" hidden data-i18n="chat.notifyConnect">Подключить Telegram</a>
+              <button class="ct-notify-off" id="ctNotifyOff" type="button" hidden data-i18n="chat.notifyOff">Отключить</button>
+            </div>
+          </div>
         </div>
 
         <ol class="ct-log" id="ctLog" role="log" aria-live="polite" aria-relevant="additions"></ol>
@@ -300,8 +315,8 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=51" fetchpriority="high"></script>
-  <script src="js/chat-page.js?v=10" defer></script>
+  <script src="js/i18n.js?v=52" fetchpriority="high"></script>
+  <script src="js/chat-page.js?v=11" defer></script>
 
 
 </body>

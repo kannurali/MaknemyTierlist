@@ -242,6 +242,136 @@
     });
   }
 
+  var notifyBox   = $('ctNotify');
+  var bell        = $('ctBell');
+  var notifyPanel = $('ctNotifyPanel');
+  var notifyText  = $('ctNotifyText');
+  var notifyGo    = $('ctNotifyGo');
+  var notifyOff   = $('ctNotifyOff');
+  var roomHead    = bell ? bell.closest('.ct-room-head') : null;
+
+  var TG_URL = 'https://t.me/';
+
+  var tg = { on: false, linked: false, name: '', mod: false };
+  var tgUrl = '';
+  var tgWaiting = false;
+  var tgFailed = false;
+  var tgBusy = false;
+
+  function renderBell() {
+    if (!notifyBox) { return; }
+    var show = !!(state.authed && tg.on);
+    notifyBox.hidden = !show;
+    if (roomHead) { roomHead.classList.toggle('has-bell', show); }
+    if (!show) { notifyOpen(false); return; }
+
+    bell.dataset.on = tg.linked ? 'true' : 'false';
+
+    var msg;
+    if (tgFailed) {
+      msg = tx('chat.notifyFailed', 'Не получилось. Попробуйте ещё раз.');
+    } else if (tg.linked) {
+      msg = tx('chat.notifyLinked', 'Уведомления приходят в Telegram') + (tg.name ? ': ' + tg.name : '') + '.';
+      if (tg.mod) { msg += ' ' + tx('chat.notifyMod', 'Сюда же приходят новые обращения в поддержку.'); }
+    } else if (tgWaiting) {
+      msg = tx('chat.notifyWait', 'Нажмите «Start» в Telegram — и уведомления включатся.');
+    } else {
+      msg = tx('chat.notifyIntro', 'Бот в Telegram сообщит, кто вам написал. Сам текст останется на сайте.');
+    }
+    notifyText.textContent = msg;
+    notifyGo.hidden  = tg.linked;
+    notifyOff.hidden = !tg.linked;
+  }
+
+  function setTg(next) {
+    var was = tg.linked;
+    tg = {
+      on: !!(next && next.on),
+      linked: !!(next && next.linked),
+      name: next && typeof next.name === 'string' ? next.name : '',
+      mod: !!(next && next.mod),
+    };
+    if (tg.linked) {
+      tgWaiting = false;
+      tgUrl = '';
+      if (!was) { tgFailed = false; }
+    }
+    renderBell();
+  }
+
+  async function prepareLink() {
+    if (tgBusy || tg.linked) { return; }
+    tgBusy = true;
+    tgUrl = '';
+    notifyGo.classList.add('is-busy');
+    notifyGo.setAttribute('aria-disabled', 'true');
+    var r = await post('/api/tg_link.php', { action: 'link', lang: lang() });
+    tgBusy = false;
+    notifyGo.classList.remove('is-busy');
+    notifyGo.removeAttribute('aria-disabled');
+    var url = r.ok && r.data && r.data.ok && typeof r.data.url === 'string' ? r.data.url : '';
+    if (url.indexOf(TG_URL) === 0) {
+      tgUrl = url;
+      notifyGo.href = url;
+      tgFailed = false;
+    } else {
+      tgFailed = true;
+    }
+    renderBell();
+  }
+
+  function notifyOpen(next) {
+    if (!notifyPanel || !bell) { return; }
+    var wasOpen = !notifyPanel.hidden;
+    notifyPanel.hidden = !next;
+    bell.setAttribute('aria-expanded', next ? 'true' : 'false');
+    if (next && !wasOpen && !tg.linked) {
+      tgWaiting = false;
+      tgFailed = false;
+      renderBell();
+      prepareLink();
+    }
+  }
+
+  if (bell && notifyPanel) {
+    bell.addEventListener('click', function () {
+      notifyOpen(notifyPanel.hidden);
+    });
+
+    notifyGo.addEventListener('click', function (e) {
+      if (!tgUrl) { e.preventDefault(); return; }
+      tgWaiting = true;
+      renderBell();
+    });
+
+    notifyOff.addEventListener('click', async function () {
+      notifyOff.disabled = true;
+      var r = await post('/api/tg_link.php', { action: 'unlink' });
+      notifyOff.disabled = false;
+      if (r.ok && r.data && r.data.ok) {
+        setTg({ on: tg.on, linked: false, name: '', mod: tg.mod });
+        tgFailed = false;
+        prepareLink();
+      } else {
+        tgFailed = true;
+        renderBell();
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || notifyPanel.hidden) { return; }
+      var inside = notifyPanel.contains(document.activeElement) || document.activeElement === bell;
+      notifyOpen(false);
+      if (inside) { bell.focus(); }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (notifyPanel.hidden) { return; }
+      if (notifyPanel.contains(e.target) || bell.contains(e.target)) { return; }
+      notifyOpen(false);
+    });
+  }
+
   function sameHead(messages) {
     var shown = log.querySelectorAll('.ct-msg');
     if (!shown.length || shown.length > messages.length) { return -1; }
@@ -333,7 +463,7 @@
       var d = await res.json();
       if (mine !== seq) { return; }
 
-      var sig = JSON.stringify([d.thread, d.threads, d.messages, d.ready, d.authed]);
+      var sig = JSON.stringify([d.thread, d.threads, d.messages, d.ready, d.authed, d.tg]);
       if (quiet && sig === lastSig) { return; }
       lastSig = sig;
 
@@ -343,6 +473,8 @@
       state.threads  = d.threads || [];
       state.thread   = d.thread || 0;
       state.messages = d.messages || [];
+
+      setTg(d.tg);
 
       if (!state.authed) {
         shell.hidden = true;
@@ -545,6 +677,7 @@
       renderList();
       var open = state.threads.filter(function (t) { return t.id === state.thread; })[0];
       renderRoom(state.messages, open ? open.peer : null, true);
+      renderBell();
 
       if (!state.authed) { gate.textContent = tx('chat.login', 'Войдите через Roblox, чтобы переписываться'); }
       if (!state.ready)  { pageEmpty.textContent = tx('chat.notReady', 'Чаты появятся вместе с аккаунтами'); }

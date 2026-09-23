@@ -37,3 +37,18 @@
 .sp-ticket-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .sp-ticket-actions form { margin: 0; }
 .sp-ticket-actions a.adm-btn { text-decoration: none; }
+
+.sp-bot {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--adm-edge);
+  border-radius: 12px;
+  background: var(--adm-panel);
+}
+.sp-bot-title { font-size: 15px; margin: 0 0 6px; }
+.sp-bot p { margin: 0 0 10px; }
+.sp-bot form { margin: 0; }
+.sp-bot code { font-size: 13px; }
+.sp-bot .sp-bot-note { margin: 10px 0 0; }
+.sp-bot-note.is-ok { color: #7ee2a0; }
+.sp-bot-note.is-fail { color: #ff9a8f; }

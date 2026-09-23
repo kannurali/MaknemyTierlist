@@ -231,6 +231,32 @@ test('строки, которые ставит скрипт, тоже пере�
     }
 });
 
+// Колокольчик уведомлений в Telegram (api/lib/telegram.php). Его тексты пишет
+// скрипт по состоянию из /api/chat.php, в разметке их нет.
+test('колокольчик: подписи, которые ставит скрипт, переведены', function () use ($PUB) {
+    $i18n = cp_read($PUB . '/js/i18n.js');
+    $js   = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    foreach (['chat.notifyIntro', 'chat.notifyWait', 'chat.notifyLinked',
+              'chat.notifyMod', 'chat.notifyFailed'] as $k) {
+        cp_assert_key($i18n, $k);
+        assert_true(strpos($js, "'" . $k . "'") !== false, "скрипт ставит $k");
+    }
+});
+
+// Кнопка раскрывает панель и объявляет это; ссылка на бота уходит в новую
+// вкладку, чтобы чат остался открытым и сам увидел подключение.
+test('колокольчик размечен как раскрывающаяся панель', function () use ($PUB) {
+    $page = cp_markup(cp_read($PUB . '/chat.php'));
+    assert_eq(1, preg_match('/<button[^>]*id="ctBell"[^>]*aria-controls="ctNotifyPanel"/s', $page), 'кнопка управляет панелью');
+    assert_eq(1, preg_match('/id="ctBell"[^>]*aria-expanded="false"/s', $page), 'и сообщает, раскрыта ли');
+    assert_eq(1, preg_match('/<div[^>]*id="ctNotify"[^>]*hidden/s', $page), 'до ответа сервера колокольчика нет');
+    assert_eq(1, preg_match('/<a[^>]*id="ctNotifyGo"[^>]*target="_blank"[^>]*rel="noopener"/s', $page), 'бот открывается в новой вкладке');
+
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(strpos($js, "setAttribute('aria-expanded'") !== false, 'состояние переключается');
+    assert_true(strpos($js, 'd.tg') !== false, 'состояние берётся из ответа чата');
+});
+
 // Пустых состояний три, и они отвечают на разные вопросы: «переписки нет»,
 // «чатов на сайте ещё нет» и «ответ не доехал». Общий текст на все три
 // вводил бы в заблуждение.

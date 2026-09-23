@@ -28,6 +28,18 @@ return [
     // сайт по ссылке https://maknemy.com/?signin (она же — Entry Link).
     'roblox_login_public'  => false,
 
+    // --- Уведомления в Telegram (api/lib/telegram.php) -----------------
+    // Бот заводится у @BotFather: /newbot → токен вида 123456:ABC-DEF…
+    // Пустой токен или имя = уведомления выключены, колокольчика в чате нет.
+    // После того как токен вписан: /admin/support → «Подключить вебхук».
+    'tg_bot_token'  => '',
+    // Имя бота без @ — из него собирается ссылка t.me/<имя>?start=…
+    'tg_bot_name'   => '',
+    // Модераторы — Roblox id аккаунтов сайта (как в адресе /profile?id=…).
+    // Им бот пишет о новых обращениях в поддержку, если они подключили
+    // Telegram колокольчиком в чате.
+    'moderator_ids' => [],
+
     // --- GitHub push webhook (api/deploy.php) ---------------------------
     // Leave 'deploy_secret' empty to keep the endpoint disabled: it then
     // answers 503 and never runs anything.

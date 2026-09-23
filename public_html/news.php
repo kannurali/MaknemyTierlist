@@ -359,7 +359,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if ($linkedPostId !== null): ?>
   <script>window.NX_LINKED_POST_ID = <?= (int)$linkedPostId ?>;</script>
 <?php endif; ?>
-  <script src="js/i18n.js?v=51" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=52" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 

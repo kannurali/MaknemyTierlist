@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/chat.php';
+require_once __DIR__ . '/lib/telegram.php';
 
 // Данные страницы чата — /api/chat.php[?thread=N]
 //
@@ -9,7 +10,9 @@ require_once __DIR__ . '/lib/chat.php';
 // двумя запросами: экран открывается сразу с выбранным диалогом, и вторая
 // поездка только добавила бы мигание.
 
-function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now): array {
+// $tg — настройки бота (tg_config). По ним в ответ уходит состояние
+// колокольчика; без них колокольчик выключен.
+function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, array $tg = []): array {
     $me = chat_me($session);
 
     // Не вошёл — отдаём пустоту и признак. Страница по нему предлагает войти
@@ -18,6 +21,7 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now): ar
         return [200, [
             'ok' => true, 'ready' => chat_ready($pdo), 'authed' => false,
             'me' => '', 'threads' => [], 'thread' => 0, 'messages' => [], 'review' => null,
+            'tg' => tg_status($pdo, $tg, ''),
         ]];
     }
 
@@ -44,6 +48,16 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now): ar
     // у меня нет.
     if ($thread !== 0 && !chat_is_member($pdo, $me, $thread)) { $thread = 0; }
 
+    $messages = $thread ? chat_messages($pdo, $me, $thread) : [];
+
+    // Ветку, которую отдаём, человек сейчас видит: отметка «прочитано» и «в
+    // диалоге». По ней бот в Telegram молчит, пока человек здесь. Фоновая
+    // перечитка идёт только из открытой вкладки, так что отметка не врёт.
+    if ($thread) {
+        $last = $messages ? $messages[count($messages) - 1]['id'] : 0;
+        chat_mark_read($pdo, $thread, $me, $last, $now);
+    }
+
     return [200, [
         'ok'       => true,
         'ready'    => chat_ready($pdo),
@@ -51,8 +65,9 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now): ar
         'me'       => $me,
         'threads'  => $threads,
         'thread'   => $thread,
-        'messages' => $thread ? chat_messages($pdo, $me, $thread) : [],
+        'messages' => $messages,
         'review'   => $thread ? chat_my_review($pdo, $me, $thread) : null,
+        'tg'       => tg_status($pdo, $tg, $me),
     ]];
 }
 
@@ -62,6 +77,6 @@ if (!defined('TESTING')) {
     header('Cache-Control: no-store');
     start_site_session();
     $raw = isset($_GET['thread']) && is_string($_GET['thread']) ? $_GET['thread'] : null;
-    [$status, $payload] = handle_chat(db(), $_SESSION, $raw, time());
+    [$status, $payload] = handle_chat(db(), $_SESSION, $raw, time(), tg_config(app_config()));
     json_out($payload, $status);
 }
