@@ -8,6 +8,8 @@ if (!defined('CONFIG_PATH')) {
     define('CONFIG_PATH', __DIR__ . '/../../config.php');
 }
 
+require_once __DIR__ . '/lib/remember.php';
+
 function app_config(): array {
     static $cfg = null;
     if ($cfg === null) { $cfg = require CONFIG_PATH; }
@@ -60,6 +62,10 @@ function json_out(array $data, int $status = 200): void {
 // roblox.com — это переход верхнего уровня по GET, и именно Lax пропускает
 // на нём куку. Со Strict сессия на возврате оказалась бы пустой, и вход не
 // доходил бы до конца.
+//
+// Сама сессия живёт до закрытия браузера и ~24 минуты простоя на сервере.
+// Пустую сессию восстанавливает долгая кука входа (api/lib/remember.php):
+// user_id из неё кладётся под новым идентификатором, как после входа.
 function start_site_session(): void {
     if (session_status() === PHP_SESSION_ACTIVE) { return; }
     session_set_cookie_params([
@@ -70,6 +76,13 @@ function start_site_session(): void {
         'samesite' => 'Lax',
     ]);
     session_start();
+    if (empty($_SESSION['user_id'])) {
+        $uid = remember_user();
+        if ($uid !== null) {
+            session_regenerate_id(true);
+            $_SESSION['user_id'] = $uid;
+        }
+    }
 }
 
 // Прежнее имя той же сессии. Оставлено как есть: его зовут все админские
@@ -89,10 +102,13 @@ function site_session_cookie_present(array $cookies): bool {
 // тысячами в счёт лимита тарифа (400 000 inode на всё). А ответ с Set-Cookie
 // LiteSpeed вдобавок не кладёт в свой кеш.
 //
+// Кука входа без куки сессии — это вернувшийся после перезапуска браузера
+// посетитель: сессия для него заводится, но только если ключ настоящий.
+//
 // true — сессия открыта; false — куки нет, $_SESSION пустой.
 function resume_site_session(): bool {
     if (session_status() === PHP_SESSION_ACTIVE) { return true; }
-    if (!site_session_cookie_present($_COOKIE)) {
+    if (!site_session_cookie_present($_COOKIE) && remember_user() === null) {
         $_SESSION = [];
         return false;
     }

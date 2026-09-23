@@ -6,6 +6,7 @@
 //   вход через Roblox      → api/roblox_callback.php, api/lib/roblox_oauth.php
 //   что храним о вошедшем  → таблица users в schema.sql
 //   сессионная кука        → start_site_session() в api/_bootstrap.php
+//   кука входа             → api/lib/remember.php, таблица login_tokens
 //   лимиты по IP           → rate_limit_allow() там же
 //   Яндекс Метрика         → api/lib/metrika.php (вебвизор включён)
 //   localStorage           → js/app.js, js/promo.js, js/topbar.js
@@ -59,6 +60,11 @@ legal_page_open(
         <li><b>Сессионная cookie</b> (<code>PHPSESSID</code>). Техническая,
         нужна только чтобы сайт помнил, что вы вошли. Помечена HttpOnly и
         Secure, стирается при выходе.</li>
+        <li><b>Cookie входа</b> (<code>nx_remember</code>). Случайный ключ, по
+        которому сайт узнаёт вас после перезапуска браузера, чтобы не входить
+        через Roblox каждый раз. Живёт 180 дней с последнего посещения, помечена
+        HttpOnly и Secure. На сервере хранится только хеш ключа, привязанный к
+        вашему Roblox ID. Выход стирает и cookie, и ключ на сервере.</li>
         <li><b>Данные в браузере</b> (localStorage). Выбранный язык интерфейса,
         отметка о поставленном лайке, кеш рекламных материалов и отметка о
         показанном рекламном окне. Всё это остаётся в вашем браузере и на наш
@@ -106,6 +112,7 @@ legal_page_open(
       <h2>4. Сколько мы храним</h2>
       <ul>
         <li>Запись о вошедшем — пока вы не попросите её удалить.</li>
+        <li>Ключ входа — до выхода или 180 дней с последнего посещения.</li>
         <li>Хеш IP для ограничения частоты — до одного часа.</li>
         <li>Журналы веб-сервера — по правилам хостинг-провайдера.</li>
         <li>Статистика Метрики — по правилам «Яндекса».</li>
@@ -172,6 +179,11 @@ legal_page_open(
         <li><b>Session cookie</b> (<code>PHPSESSID</code>). Strictly technical:
         it only lets the site remember that you are logged in. It is HttpOnly and
         Secure, and it is cleared when you log out.</li>
+        <li><b>Login cookie</b> (<code>nx_remember</code>). A random key that lets
+        the site recognise you after a browser restart, so you don't have to sign
+        in with Roblox every time. It lasts 180 days from your last visit and is
+        HttpOnly and Secure. The server keeps only a hash of the key, tied to your
+        Roblox ID. Logging out deletes both the cookie and the key on the server.</li>
         <li><b>Browser storage</b> (localStorage). Your interface language, a
         marker that you left a like, a cache of advertising material and a marker
         that the ad popup was shown. All of it stays in your browser and is never
@@ -210,6 +222,7 @@ legal_page_open(
       <h2>4. How long we keep it</h2>
       <ul>
         <li>Your login record — until you ask us to delete it.</li>
+        <li>The login key — until you log out, or 180 days after your last visit.</li>
         <li>The IP hash used for rate limiting — up to one hour.</li>
         <li>Web server logs — per our hosting provider's rules.</li>
         <li>Metrica statistics — per Yandex's rules.</li>
