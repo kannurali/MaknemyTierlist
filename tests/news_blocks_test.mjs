@@ -215,3 +215,50 @@ test('english text falls back to russian per block', () => {
     const blocks = [{ t: 'p', ru: [{ s: 'Русский' }], en: [] }, { t: 'p', ru: [{ s: 'Тоже' }], en: [{ s: 'English' }] }];
     assert.equal(B.renderBlocks(d, blocks, 'en').textContent, 'РусскийEnglish');
 });
+
+// ------------------------- Строки и пустые строки -------------------------
+
+test('a line break inside a paragraph renders as BR between the two lines', () => {
+    const d = fakeDoc();
+    const nodes = flat(B.renderBlocks(d, [p('• Лента\n• Калькулятор')], 'ru'));
+    const inline = nodes.filter(n => n.tagName === '#text' || n.tagName === 'BR');
+    assert.deepEqual(inline.map(n => n.tagName === 'BR' ? '<br>' : n.textContent), ['• Лента', '<br>', '• Калькулятор']);
+    assert.equal(nodes.filter(n => n.tagName === 'P').length, 1);
+});
+
+test('a line break inside bold text stays inside the bold', () => {
+    const d = fakeDoc();
+    const blocks = [{ t: 'p', ru: [{ s: 'раз\nдва', b: true }], en: [] }];
+    const strong = flat(B.renderBlocks(d, blocks, 'ru')).find(n => n.tagName === 'STRONG');
+    assert.ok(tags(strong).includes('BR'));
+    assert.equal(strong.textContent, 'раздва');
+});
+
+test('pasted text splits into paragraphs on blank lines, single newlines stay inside', () => {
+    const text = 'Всем привет!\r\n\r\nКак вы могли заметить,\r\nна сайте вход.\r\n\r\nС любовью';
+    assert.deepEqual(B.pasteParagraphs(text), ['Всем привет!', 'Как вы могли заметить,\nна сайте вход.', 'С любовью']);
+});
+
+test('every extra blank line becomes a spacer paragraph', () => {
+    assert.deepEqual(B.pasteParagraphs('A\n\n\nB\n\n\n\nC'), ['A', B.SPACER, 'B', B.SPACER, B.SPACER, 'C']);
+});
+
+test('blank lines at the edges and lines of spaces or NBSP do not make spacers of their own', () => {
+    assert.deepEqual(B.pasteParagraphs('\n\n  \nA  \n \u00a0 \nB\n\n'), ['A', 'B']);
+    assert.deepEqual(B.pasteParagraphs('\n \n'), []);
+});
+
+test('a spacer paragraph is a valid block and stays out of the plain text', () => {
+    const blocks = B.pasteParagraphs('A\n\n\nB').map(s => p(s));
+    assert.equal(B.validateDoc(doc(blocks)).ok, true);
+    assert.equal(B.toPlainText(blocks, 'ru'), 'A\n\nB');
+});
+
+test('pasted lines become list items without their own bullets or numbers', () => {
+    const text = '• Лента объявлений\n- Поиск\n\n1. Чат\n2) Профиль\n* Звезда\nбез маркера';
+    assert.deepEqual(B.pasteListItems(text), ['Лента объявлений', 'Поиск', 'Чат', 'Профиль', 'Звезда', 'без маркера']);
+});
+
+test('a dash inside a line is not a list marker', () => {
+    assert.deepEqual(B.pasteListItems('Magnet — лучший фрукт'), ['Magnet — лучший фрукт']);
+});

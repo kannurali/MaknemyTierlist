@@ -43,6 +43,7 @@ $html = preg_replace('~(src|href)="(?!https?:|//|/|#|data:)~i', '$1="/', $html);
 $html = str_replace(
     '</head>',
     '<link rel="stylesheet" href="/css/admin-shell.css?v=3" />' . "
+" . '<link rel="stylesheet" href="/css/news-editor.css?v=1" />' . "
 </head>",
     $html
 );
@@ -148,7 +149,13 @@ $editor = <<<'HTML'
         </div>
 
         <div class="field">
-          <label data-i18n="news.previewHeading">Предпросмотр карточки</label>
+          <div class="ne-body-head ne-preview-head">
+            <label data-i18n="news.previewHeading">Предпросмотр карточки</label>
+            <div class="ne-lang-seg" id="nePreviewMode" role="group" aria-label="Экран предпросмотра">
+              <button type="button" data-v="desktop" class="active">ПК</button>
+              <button type="button" data-v="phone">Телефон</button>
+            </div>
+          </div>
           <div class="ne-preview-card" id="nePreviewCard"></div>
         </div>
 
@@ -196,7 +203,7 @@ $html = str_replace(
 // `"></script>` промахивался бы молча.
 $html = preg_replace(
     '~(<script src="/js/news-page\.js[^"]*"[^>]*></script>)~',
-    '$1' . "\n  " . '<script src="/js/news-editor.js?v=3"></script>',
+    '$1' . "\n  " . '<script src="/js/news-editor.js?v=4"></script>',
     $html,
     1
 );

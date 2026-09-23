@@ -31,7 +31,7 @@
   function spansToEditable(spans) {
     const frag = document.createDocumentFragment();
     for (const sp of spans) {
-      let node = document.createTextNode(sp.s);
+      let node = NB.textWithBreaks(document, sp.s);
       const wrap = (tag, cls, attrs) => {
         const w = document.createElement(tag);
         if (cls) { w.className = cls; }
@@ -64,19 +64,24 @@
 
   function blockToSpans(root) {
     const out = [];
+    const push = (text, state) => {
+      const sp = { s: text };
+      for (const k in state) { if (state[k]) { sp[k] = state[k]; } }
+      const prev = out[out.length - 1];
+      if (prev && sameFormat(prev, sp)) { prev.s += sp.s; } else { out.push(sp); }
+    };
+    const atLineStart = () => !out.length || out[out.length - 1].s.endsWith("\n");
     const walk = (node, state) => {
       if (node.nodeType === 3) {
         const text = node.nodeValue.split(ZWSP).join("");
         if (text === "") { return; }
-        const sp = { s: text };
-        for (const k in state) { if (state[k]) { sp[k] = state[k]; } }
-
-        const prev = out[out.length - 1];
-        if (prev && sameFormat(prev, sp)) { prev.s += sp.s; } else { out.push(sp); }
+        push(text, state);
         return;
       }
       if (node.nodeType !== 1) { return; }
-      if (node.tagName === "BR") { return; }
+      if (node.tagName === "BR") { push("\n", state); return; }
+      const isLine = node.tagName === "DIV" || node.tagName === "P";
+      if (isLine && !atLineStart()) { push("\n", {}); }
       const next = Object.assign({}, state);
       const flag = TAG_FLAG[node.tagName];
       if (flag) { next[flag] = true; }
@@ -87,9 +92,124 @@
         if (NB.isSafeHref(href)) { next.href = href; }
       }
       for (const kid of Array.from(node.childNodes)) { walk(kid, next); }
+      if (isLine && !atLineStart()) { push("\n", {}); }
     };
     for (const kid of Array.from(root.childNodes)) { walk(kid, {}); }
+    return trimBreaks(out, false);
+  }
+
+  function trimBreaks(spans, leading) {
+    const out = spans.map(sp => Object.assign({}, sp));
+    if (leading) {
+      while (out.length) {
+        out[0].s = out[0].s.replace(/^\n+/, "");
+        if (out[0].s !== "") { break; }
+        out.shift();
+      }
+    }
+    while (out.length) {
+      const last = out[out.length - 1];
+      last.s = last.s.replace(/\n+$/, "");
+      if (last.s !== "") { break; }
+      out.pop();
+    }
     return out;
+  }
+
+  function joinSpans(...lists) {
+    const out = [];
+    for (const list of lists) {
+      for (const sp of list) {
+        if (!sp || sp.s === "") { continue; }
+        const prev = out[out.length - 1];
+        if (prev && sameFormat(prev, sp)) { prev.s += sp.s; } else { out.push(Object.assign({}, sp)); }
+      }
+    }
+    return out;
+  }
+
+  const plainSpans = s => (s === "" ? [] : [{ s: s }]);
+
+  const spansLength = spans => spans.reduce((n, sp) => n + sp.s.length, 0);
+
+  function cutAtCaret(ed) {
+    const sel = document.getSelection();
+    if (!sel || !sel.rangeCount) { return null; }
+    const range = sel.getRangeAt(0);
+    if (!ed.contains(range.startContainer) || !ed.contains(range.endContainer)) { return null; }
+    range.deleteContents();
+    const rest = document.createRange();
+    rest.setStart(range.startContainer, range.startOffset);
+    rest.setEnd(ed, ed.childNodes.length);
+    const box = document.createElement("div");
+    box.append(rest.extractContents());
+    return { head: blockToSpans(ed), tail: trimBreaks(blockToSpans(box), true) };
+  }
+
+  function pastedLines(text) {
+    const lines = text.split("\n").map(l => l.replace(/\s+$/, ""));
+    while (lines.length && lines[0].trim() === "") { lines.shift(); }
+    while (lines.length && lines[lines.length - 1].trim() === "") { lines.pop(); }
+    return lines.join("\n");
+  }
+
+  function pasteMultiline(ed, text) {
+    const bi = Number(ed.dataset.index);
+    const block = editorBlocks[bi];
+    const holder = ed._holder;
+    const cut = cutAtCaret(ed);
+    if (!block || !holder || !cut) { return; }
+
+    let focus = { index: bi, nth: 0, offset: 0 };
+
+    if (holder === block && block.t === "p") {
+      const paras = NB.pasteParagraphs(text);
+      const room = Math.max(0, NB.LIMITS.blocks - editorBlocks.length);
+      if (paras.length > room + 1) {
+        paras.splice(room, paras.length - room, paras.slice(room).filter(p => p !== NB.SPACER).join("\n\n"));
+      }
+      if (paras.length <= 1) {
+        const mid = plainSpans(paras[0] || "");
+        holder[editorLang] = joinSpans(cut.head, mid, cut.tail);
+        focus.offset = spansLength(cut.head) + spansLength(mid);
+      } else {
+        holder[editorLang] = joinSpans(cut.head, plainSpans(paras[0]));
+        const added = paras.slice(1).map((para, i, rest) => {
+          const nb = newBlock("p");
+          nb[editorLang] = i === rest.length - 1 ? joinSpans(plainSpans(para), cut.tail) : plainSpans(para);
+          return nb;
+        });
+        editorBlocks.splice(bi + 1, 0, ...added);
+        focus = { index: bi + added.length, nth: 0, offset: paras[paras.length - 1].length };
+      }
+    } else if (block.t === "list" && holder !== block) {
+      const ii = block.items.indexOf(holder);
+      const items = NB.pasteListItems(text);
+      const room = Math.max(0, NB.LIMITS.listItems - block.items.length);
+      if (items.length > room + 1) { items.splice(room, items.length - room, items.slice(room).join(" ")); }
+      if (items.length <= 1) {
+        const mid = plainSpans(items[0] || "");
+        holder[editorLang] = joinSpans(cut.head, mid, cut.tail);
+        focus = { index: bi, nth: ii, offset: spansLength(cut.head) + spansLength(mid) };
+      } else {
+        holder[editorLang] = joinSpans(cut.head, plainSpans(items[0]));
+        const added = items.slice(1).map((line, i, rest) => {
+          const it = { ru: [], en: [] };
+          it[editorLang] = i === rest.length - 1 ? joinSpans(plainSpans(line), cut.tail) : plainSpans(line);
+          return it;
+        });
+        block.items.splice(ii + 1, 0, ...added);
+        focus = { index: bi, nth: ii + added.length, offset: items[items.length - 1].length };
+      }
+    } else {
+      const mid = plainSpans(pastedLines(text));
+      holder[editorLang] = joinSpans(cut.head, mid, cut.tail);
+      const nth = Array.from(document.querySelectorAll('.ne-block[data-index="' + bi + '"] .ne-editable')).indexOf(ed);
+      focus = { index: bi, nth: Math.max(0, nth), offset: spansLength(cut.head) + spansLength(mid) };
+    }
+
+    renderBlockList();
+    focusAt(focus.index, focus.offset, focus.nth);
   }
 
   function currentDoc() {
@@ -218,8 +338,12 @@
 
     ed.addEventListener("paste", ev => {
       ev.preventDefault();
-      const text = (ev.clipboardData || window.clipboardData).getData("text/plain");
-      document.execCommand("insertText", false, text);
+      const text = ((ev.clipboardData || window.clipboardData).getData("text/plain") || "").replace(/\r\n?/g, "\n");
+      if (text.indexOf("\n") === -1) {
+        document.execCommand("insertText", false, text);
+        return;
+      }
+      pasteMultiline(ed, text);
     });
     ed.addEventListener("input", () => {
       holder[editorLang] = blockToSpans(ed);
@@ -759,12 +883,100 @@
     };
   }
 
+  const PREVIEW_SIZES = {
+    desktop: { viewport: 1443, card: 810 },
+    phone:   { viewport: 366,  card: 366 }
+  };
+  const PREVIEW_MODE_KEY = "nexus-news-preview-v1";
+
+  let previewMode = "desktop";
+  try {
+    if (localStorage.getItem(PREVIEW_MODE_KEY) === "phone") { previewMode = "phone"; }
+  } catch (e) {}
+
+  let previewFrame = null;
+  let previewClip = null;
+  let previewReady = false;
+  let previewCard = null;
+
+  function previewDocHtml() {
+    const esc = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map(l => l.href)
+      .filter(href => href && !/admin-shell|news-editor/.test(href))
+      .map(href => '<link rel="stylesheet" href="' + esc(href) + '">')
+      .join("");
+    return '<!doctype html><html lang="' + esc(document.documentElement.lang || "ru") + '"><head><meta charset="utf-8">'
+      + links
+      + '<style>html,body{margin:0}body{overflow:hidden}.nw-lead{min-height:0;padding:0}.nw-feed{margin:0}</style>'
+      + '</head><body class="news-bg"><main class="nw-page"><div class="nw-lead"><div class="nw-feed"></div></div></main></body></html>';
+  }
+
+  function ensurePreviewFrame(box) {
+    if (previewFrame) { return; }
+    previewClip = document.createElement("div");
+    previewClip.className = "ne-preview-clip";
+    previewFrame = document.createElement("iframe");
+    previewFrame.className = "ne-preview-frame";
+    previewFrame.title = tx("news.previewHeading");
+    previewFrame.addEventListener("load", () => {
+      const doc = previewFrame.contentDocument;
+      if (!doc || !doc.querySelector(".nw-feed")) { return; }
+      previewReady = true;
+      doc.addEventListener("click", ev => {
+        const el = ev.target.closest && ev.target.closest(".nw-spoiler, .nw-quote-collapsible");
+        if (el) { el.classList.add("is-open"); }
+      });
+      new previewFrame.contentWindow.ResizeObserver(layoutPreview).observe(doc.querySelector(".nw-feed"));
+      showPreviewCard();
+    });
+    previewFrame.srcdoc = previewDocHtml();
+    previewClip.append(previewFrame);
+    box.append(previewClip);
+    new ResizeObserver(layoutPreview).observe(box);
+  }
+
+  function showPreviewCard() {
+    if (!previewReady || !previewCard) { return; }
+    const doc = previewFrame.contentDocument;
+    const card = doc.importNode(previewCard, true);
+    for (const img of card.querySelectorAll("img")) { img.loading = "eager"; }
+    doc.querySelector(".nw-feed").replaceChildren(card);
+    layoutPreview();
+  }
+
+  function layoutPreview() {
+    if (!previewReady) { return; }
+    const box = $("#nePreviewCard");
+    const size = PREVIEW_SIZES[previewMode];
+    const cs = getComputedStyle(box);
+    const room = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const scale = room > 0 ? Math.min(1, room / size.card) : 1;
+    previewFrame.style.width = size.viewport + "px";
+    const feed = previewFrame.contentDocument.querySelector(".nw-feed");
+    const height = Math.ceil(feed.getBoundingClientRect().bottom);
+    previewFrame.style.height = height + "px";
+    previewFrame.style.transform = scale < 1 ? "scale(" + scale + ")" : "";
+    previewClip.style.width = Math.floor(size.card * scale) + "px";
+    previewClip.style.height = Math.ceil(height * scale) + "px";
+  }
+
+  function setPreviewMode(mode) {
+    previewMode = mode === "phone" ? "phone" : "desktop";
+    try { localStorage.setItem(PREVIEW_MODE_KEY, previewMode); } catch (e) {}
+    for (const b of document.querySelectorAll("#nePreviewMode [data-v]")) {
+      b.classList.toggle("active", b.dataset.v === previewMode);
+    }
+    layoutPreview();
+  }
+
   function updatePreview() {
     const box = $("#nePreviewCard");
 
     if (!box) { return; }
-    box.innerHTML = "";
-    box.append(NP.cardFor(buildPreviewPost(), false));
+    ensurePreviewFrame(box);
+    previewCard = NP.cardFor(buildPreviewPost(), false);
+    showPreviewCard();
   }
 
   function closeEditor() {
@@ -1018,6 +1230,15 @@
       renderBlockList();
     });
 
+    const previewSeg = $("#nePreviewMode");
+    if (previewSeg) {
+      previewSeg.addEventListener("click", ev => {
+        const btn = ev.target.closest("[data-v]");
+        if (btn) { setPreviewMode(btn.dataset.v); }
+      });
+      setPreviewMode(previewMode);
+    }
+
     const blocksBox = $("#neBlocks");
     blocksBox.addEventListener("keydown", onBlocksKeydown);
     blocksBox.addEventListener("keyup", onBlocksKeyup);
@@ -1042,12 +1263,39 @@
   }
 
   function focusBlock(index) {
-    const ed = document.querySelector('.ne-block[data-index="' + index + '"] .ne-editable');
+    focusAt(index, Infinity, 0);
+  }
+
+  function focusAt(index, offset, nth) {
+    const ed = document.querySelectorAll('.ne-block[data-index="' + index + '"] .ne-editable')[nth || 0];
     if (!ed) { return; }
     ed.focus();
     const range = document.createRange();
-    range.selectNodeContents(ed);
-    range.collapse(false);
+    let left = offset;
+    let placed = false;
+    const walk = node => {
+      if (node.nodeType === 3) {
+        if (left <= node.nodeValue.length) { range.setStart(node, left); placed = true; return; }
+        left -= node.nodeValue.length;
+        return;
+      }
+      if (node.nodeName === "BR") {
+        if (left === 0) { range.setStartBefore(node); placed = true; return; }
+        left -= 1;
+        return;
+      }
+      for (const kid of Array.from(node.childNodes)) {
+        walk(kid);
+        if (placed) { return; }
+      }
+    };
+    walk(ed);
+    if (placed) {
+      range.collapse(true);
+    } else {
+      range.selectNodeContents(ed);
+      range.collapse(false);
+    }
     const sel = document.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
@@ -1066,6 +1314,19 @@
 
     if (ev.key === "Enter" && !ev.shiftKey) {
       ev.preventDefault();
+      const block = editorBlocks[bi];
+      const splittable = block && ed._holder === block && (block.t === "p" || block.t === "quote");
+      const cut = splittable ? cutAtCaret(ed) : null;
+      if (cut) {
+        block[editorLang] = cut.head;
+        const next = newBlock(cut.tail.length ? block.t : "p");
+        if (next.t === "quote") { next.collapsible = block.collapsible; }
+        next[editorLang] = cut.tail;
+        editorBlocks.splice(bi + 1, 0, next);
+        renderBlockList();
+        focusAt(bi + 1, 0, 0);
+        return;
+      }
       editorBlocks.splice(bi + 1, 0, newBlock("p"));
       renderBlockList();
       focusBlock(bi + 1);

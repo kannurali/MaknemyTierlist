@@ -1,0 +1,17 @@
+#newsEditor .modal { width: min(900px, 96vw); }
+
+.ne-preview-head { flex-wrap: wrap; }
+.ne-preview-head .ne-lang-seg { flex: none; }
+
+.ne-preview-clip {
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.ne-preview-frame {
+  display: block;
+  border: 0;
+  background: #05070d;
+  transform-origin: 0 0;
+}
