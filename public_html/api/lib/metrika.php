@@ -14,9 +14,10 @@
 // include-ом шаблона: место вставки остаётся за страницей, а сам код счётчика
 // живёт в единственном экземпляре.
 
-// Номер счётчика. Этот же номер зашит в js/app.js — там он уходит в
-// ym(..., 'reachGoal', ...) для кликов по рекламе, и общей константы у PHP с
-// браузерным кодом нет. Расхождение ловит tests/metrika_test.php.
+// Номер счётчика. Этот же номер зашит в js/metrika.js (загрузка и init) и в
+// js/app.js — там он уходит в ym(..., 'reachGoal', ...) для кликов по
+// рекламе, и общей константы у PHP с браузерным кодом нет. Расхождение ловит
+// tests/metrika_test.php.
 const METRIKA_ID = 111127188;
 
 // Комментарии-маркеры вокруг блока — часть контракта, а не оформление: по ним
@@ -27,20 +28,18 @@ const METRIKA_ID = 111127188;
 // Перевод строки в конце дописывается отдельно, потому что PHP съедает ровно
 // один перевод сразу после закрывающего тега. Без него закрывающий маркер и
 // </head> вызывающей страницы склеились бы в одну строку.
+//
+// Код счётчика — во внешнем js/metrika.js, а не прямо в разметке: сайт
+// отдаёт Content-Security-Policy без 'unsafe-inline' в script-src (.htaccess),
+// и встроенный скрипт браузер бы не исполнил. Этот способ Метрика описывает
+// сама («Установка счетчика на сайт с CSP»). async — чтобы не держать
+// разбор <head>: код и сам грузит tag.js асинхронно, а цели в app.js зовут
+// ym только после проверки typeof ym === "function".
 function metrika_counter_html(): string {
     $id = METRIKA_ID;
     $block = <<<HTML
 <!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id={$id}', 'ym');
-
-    ym({$id}, 'init', {ssr:true, webvisor:true, trackHash:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-</script>
+<script src="/js/metrika.js?v=1" async></script>
 <noscript><div><img src="https://mc.yandex.ru/watch/{$id}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
 HTML;

@@ -147,7 +147,9 @@ test('/admin (admin.php) реально отдаёт разметку тирли
     assert_true(strlen($html) > 15000, 'это вся сцена (постер/тиры/легенда/модалки), а не заглушка');
     assert_true(strpos($html, 'id="stage"') !== false, 'сцена тирлиста присутствует');
     assert_true(strpos($html, 'id="modal"') !== false, 'модалка редактирования предмета присутствует');
-    assert_true(strpos($html, 'window.NX_ADMIN_PAGE = true') !== false, 'флаг роли выставлен ДО app.js');
+    $flag = strpos($html, '<script src="/js/admin-flag.js?v=');
+    $app  = strpos($html, '<script src="js/app.js');
+    assert_true($flag !== false && $app !== false && $flag < $app, 'флаг роли (js/admin-flag.js) выставлен ДО app.js');
     assert_true(strpos($html, 'adm-nav') !== false, 'шапка админки вставлена');
 
     $publicLen = render_length_in_subprocess(__DIR__ . '/../public_html/index.php');
@@ -175,7 +177,9 @@ test('/admin/news (admin-news.php) реально отдаёт разметку 
     assert_true((bool)preg_match(
         '~<script\b[^>]*\bsrc="/js/news-page\.js[^"]*"[^>]*></script>\s*<script src="/js/news-editor\.js\?v=\d+"></script>~',
         $html), 'news-editor.js подключён сразу после news-page.js');
-    assert_true(strpos($html, 'window.NX_ADMIN_PAGE = true') !== false, 'флаг роли выставлен');
+    $flag = strpos($html, '<script src="/js/admin-flag.js?v=');
+    $page = strpos($html, '<script src="/js/news-page.js');
+    assert_true($flag !== false && $page !== false && $flag < $page, 'флаг роли (js/admin-flag.js) выставлен ДО news-page.js');
     assert_true(strpos($html, 'adm-nav') !== false, 'шапка админки вставлена');
 
     $publicLen = render_length_in_subprocess(__DIR__ . '/../public_html/news.php');

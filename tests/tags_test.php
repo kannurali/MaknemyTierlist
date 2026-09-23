@@ -608,10 +608,11 @@ test('пока едут данные, зритель не видит демо-ш
 
     // Ревизия в разметке: первый запрос идёт сразу за данными, минуя
     // /api/state.php, а его ответ помечен immutable и берётся из кэша.
-    assert_true(strpos($js, 'window.NX_REV') !== false,
+    // Ревизия едет в <meta>, а не во встроенном скрипте: его не пустит CSP.
+    assert_true(strpos($js, "document.querySelector('meta[name=\"nx-rev\"]')") !== false,
         'app.js должен читать ревизию из разметки');
     $idx = tag_read($PUB . '/index.php');
-    assert_true(strpos($idx, 'window.NX_REV = <?= (int)$nxRev ?>;') !== false,
+    assert_true(strpos($idx, '<meta name="nx-rev" content="<?= (int)$nxRev ?>" />') !== false,
         'страница должна отдавать ревизию тирлиста');
 });
 
