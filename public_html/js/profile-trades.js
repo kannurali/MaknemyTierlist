@@ -34,8 +34,11 @@
     const q = state.quota;
     if (!q) { quotaEl.hidden = true; return; }
     quotaEl.hidden = false;
-    if (q.left > 0) {
-      quotaEl.textContent = tx("trade.quotaLeft", { n: q.left, max: q.max });
+    if (q.activeLeft === 0) {
+      quotaEl.textContent = tx("trade.activeOut", { max: q.activeMax });
+      quotaEl.classList.add("is-bad");
+    } else if (q.left > 0) {
+      quotaEl.textContent = tx("trade.quotaLeft", { active: q.active, activeMax: q.activeMax, n: q.left });
       quotaEl.classList.remove("is-bad");
     } else {
       const wait = q.retryAt - Math.floor(Date.now() / 1000);

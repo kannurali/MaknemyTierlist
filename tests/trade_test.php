@@ -119,10 +119,35 @@ test('публикация: «хочу» можно оставить пусты�
     assert_eq('open', $row['status'], 'открыто');
 });
 
+test('не больше 5 активных одновременно; снял, отметил сделку или истекло — место свободно', function () {
+    $pdo = trade_db();
+    $ids = [];
+    for ($i = 0; $i < TRADE_ACTIVE_MAX; $i++) { $ids[] = offer($pdo, '101', ['idDark'], [], NOW - 100 + $i); }
+    [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
+    assert_eq(409, $code, 'шестое активное не принимается');
+    assert_eq('too_many_active', $body['error'], 'и это названо');
+    assert_eq([5, 5, 0], [$body['quota']['active'], $body['quota']['activeMax'], $body['quota']['activeLeft']], 'квота активных');
+    assert_eq(200, trade_create($pdo, '202', ['idDark'], [], NOW)[0], 'у другого человека свой счёт');
+
+    trade_close($pdo, '101', false, $ids[0], 'cancel', NOW);
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + 1)[0], 'снял одно — можно выложить новое');
+    assert_eq(409, trade_create($pdo, '101', ['idDark'], [], NOW + 2)[0], 'и снова пять');
+    trade_close($pdo, '101', false, $ids[1], 'done', NOW + 3);
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + 4)[0], 'отметил сделку — тоже');
+
+    $old = trade_db();
+    for ($i = 0; $i < TRADE_ACTIVE_MAX; $i++) { offer($old, '101', ['idDark'], [], NOW - TRADE_QUIET_TTL - 100 + $i); }
+    assert_eq(200, trade_create($old, '101', ['idDark'], [], NOW)[0], 'истёкшие без отклика места не занимают');
+});
+
 test('не больше 10 публикаций за 5 часов, окно скользящее', function () {
     $pdo = trade_db();
     offer($pdo, '101', ['idDark'], [], NOW - 3600 - TRADE_RATE_WINDOW - 1);   // вне окна и сейчас, и при публикации остальных
-    for ($i = 0; $i < TRADE_RATE_MAX; $i++) { offer($pdo, '101', ['idDark'], [], NOW - 3600 + $i * 60); }
+    // Каждое снимаем сразу: иначе раньше сработал бы предел активных.
+    for ($i = 0; $i < TRADE_RATE_MAX; $i++) {
+        $id = offer($pdo, '101', ['idDark'], [], NOW - 3600 + $i * 60);
+        trade_close($pdo, '101', false, $id, 'cancel', NOW - 3600 + $i * 60 + 1);
+    }
     [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
     assert_eq(429, $code, 'одиннадцатое за окно не принимается');
     assert_eq('too_many', $body['error'], 'и это названо');

@@ -40,6 +40,10 @@
     return !!(q && q.left === 0 && q.retryAt > Math.floor(Date.now() / 1000));
   }
 
+  function activeOut() {
+    return !!(st.quota && st.quota.activeLeft === 0);
+  }
+
   function sides() {
     return window.NX_CALC ? window.NX_CALC.sides() : { left: [], right: [] };
   }
@@ -65,6 +69,10 @@
     } else if (st.busy) {
       key = "trade.publishing";
       disabled = true;
+    } else if (activeOut()) {
+      disabled = true;
+      bad = true;
+      hint = tx("trade.activeOut", { max: st.quota.activeMax });
     } else if (quotaOut()) {
       disabled = true;
       bad = true;
@@ -75,7 +83,7 @@
     } else if (!s.right.length) {
       hint = tx("trade.hintAny");
     } else if (st.quota) {
-      hint = tx("trade.quotaLeft", { n: st.quota.left, max: st.quota.max });
+      hint = tx("trade.quotaLeft", { active: st.quota.active, activeMax: st.quota.activeMax, n: st.quota.left });
     }
 
     if (st.error) {
@@ -125,7 +133,7 @@
       }
       if (r.status === 401) {
         st.session = Object.assign({}, st.session, { user: null });
-      } else if (d && d.error === "too_many" && d.quota) {
+      } else if (d && (d.error === "too_many" || d.error === "too_many_active") && d.quota) {
         st.quota = d.quota;
       } else {
         st.error = errorKey(r.status, d && d.error);
