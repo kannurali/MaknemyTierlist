@@ -86,7 +86,7 @@ page_lscache();
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=9" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
 <link rel="stylesheet" href="css/trading.css?v=2" />
