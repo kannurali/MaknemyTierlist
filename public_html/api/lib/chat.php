@@ -11,10 +11,27 @@
 // users уже есть, ключ там roblox_id, и второй список людей означал бы два
 // ответа на вопрос «кто это».
 
+// Каталог предметов для стикеров — тот же, по которому трейдинг проверяет
+// объявления (trade_catalog): список предметов на сайте один.
+require_once __DIR__ . '/trade.php';
+
 // Границы. Сообщение длиннее — отвергается; без потолка одна вставка может
 // занять сколько угодно места в TEXT.
 const CHAT_BODY_MAX   = 2000;
 const CHAT_REVIEW_MAX = 500;
+
+// Стикер — предмет тирлиста, отправленный картинкой. В базе это обычное
+// сообщение с телом «[sticker:<id предмета>]»: своей колонки нет, и миграция
+// на бою не нужна. Цену и спрос стикер не показывает, поэтому хранится только
+// id — картинку и название страница берёт из текущего тирлиста.
+//
+// id — ровно тот же формат, что у предметов в объявлениях (TRADE_ITEM_ID_RE).
+const CHAT_STICKER_RE = '/^\[sticker:([A-Za-z0-9_-]{1,40})\]\z/';
+
+/** id предмета, если сообщение — стикер, иначе ''. */
+function chat_sticker_id(string $body): string {
+    return preg_match(CHAT_STICKER_RE, $body, $m) === 1 ? $m[1] : '';
+}
 
 // Сколько сообщений отдаём за раз. Диалог может быть длинным, а страница
 // рисует их все — без предела один старый чат съел бы и память, и трафик.
@@ -342,6 +359,14 @@ function chat_send(PDO $pdo, string $me, int $threadId, string $body, int $now):
     $body = trim($body);
     if ($body === '')                     { return [400, ['ok' => false, 'error' => 'empty']]; }
     if (mb_strlen($body) > CHAT_BODY_MAX) { return [400, ['ok' => false, 'error' => 'too_long']]; }
+
+    // Стикер — только предмет, который сейчас есть в тирлисте. Выдуманный id
+    // у собеседника нарисовался бы пустой рамкой, а перебором в переписку
+    // клались бы «стикеры» чего угодно.
+    $sticker = chat_sticker_id($body);
+    if ($sticker !== '' && !isset(trade_catalog($pdo)[$sticker])) {
+        return [400, ['ok' => false, 'error' => 'bad_sticker']];
+    }
 
     $pdo->prepare('INSERT INTO chat_messages (thread_id, sender_id, body, created_at)
                    VALUES (:t, :s, :b, :at)')
