@@ -95,7 +95,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/chat.css?v=8" />
+<link rel="stylesheet" href="css/chat.css?v=9" />
 
 
 
@@ -334,7 +334,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
   <script src="js/i18n.js?v=54" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=12" defer></script>
+  <script src="js/chat-page.js?v=13" defer></script>
 
 
 </body>

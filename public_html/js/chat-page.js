@@ -307,7 +307,9 @@
   }
 
   function refreshStickers() {
+    var atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
     log.querySelectorAll('.ct-sticker').forEach(fillSticker);
+    if (atBottom) { log.scrollTop = log.scrollHeight; }
     var inRail = state.threads.some(function (t) { return t.last && stickerId(t.last.body); });
     if (inRail) { renderList(); }
     if (stickerPanel && !stickerPanel.hidden) { renderStickerGrid(); }
@@ -649,7 +651,7 @@
 
     var from = keepScroll && peer ? sameHead(messages) : -1;
     if (from >= 0) {
-      for (var k = from; k < messages.length; k++) { log.appendChild(bubble(messages[k])); }
+      for (var k = from; k < messages.length; k++) { place(messages[k]); }
       if (messages.length > from) {
         roomEmpty.hidden = true;
         log.scrollTop = atBottom ? log.scrollHeight : keepAt;
@@ -676,36 +678,51 @@
       roomEmpty.textContent = tx('chat.noMessages', 'Сообщений пока нет — напишите первым');
     }
 
-    messages.forEach(function (m) { log.appendChild(bubble(m)); });
+    messages.forEach(function (m) { place(m); });
     log.scrollTop = (keepScroll && !atBottom) ? keepAt : log.scrollHeight;
   }
 
   function bubble(m) {
-    var li = document.createElement('li');
-    li.className = 'ct-msg' + (m.mine ? ' is-mine' : '');
-    li.dataset.id = String(m.id);
-
     var sticker = stickerId(m.body);
+    var msg = document.createElement(sticker ? 'div' : 'li');
+    msg.className = 'ct-msg' + (m.mine ? ' is-mine' : '');
+    msg.dataset.id = String(m.id);
+
     if (sticker) {
-      li.classList.add('is-sticker');
+      msg.classList.add('is-sticker');
       var card = document.createElement('div');
       card.className = 'ct-sticker';
       card.dataset.item = sticker;
       fillSticker(card);
-      li.appendChild(card);
+      msg.appendChild(card);
     } else {
       var body = document.createElement('p');
       body.className = 'ct-body';
       body.textContent = m.body;
-      li.appendChild(body);
+      msg.appendChild(body);
     }
 
     var t = document.createElement('time');
     t.className = 'ct-time';
     t.dateTime = new Date(m.at * 1000).toISOString();
     t.textContent = when(m.at);
-    li.appendChild(t);
-    return li;
+    msg.appendChild(t);
+    return msg;
+  }
+
+  function place(m) {
+    var msg = bubble(m);
+    if (!msg.classList.contains('is-sticker')) {
+      log.appendChild(msg);
+      return;
+    }
+    var row = log.lastElementChild;
+    if (!row || !row.classList.contains('ct-sticker-row') || row.classList.contains('is-mine') !== !!m.mine) {
+      row = document.createElement('li');
+      row.className = 'ct-sticker-row' + (m.mine ? ' is-mine' : '');
+      log.appendChild(row);
+    }
+    row.appendChild(msg);
   }
 
   function setStars(n) {
@@ -846,7 +863,7 @@
 
     if (r.ok && r.data && r.data.ok) {
       delete offerRef[sentThread];
-      log.appendChild(bubble(r.data.message));
+      place(r.data.message);
       roomEmpty.hidden = true;
       log.scrollTop = log.scrollHeight;
       return true;
