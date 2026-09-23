@@ -129,7 +129,7 @@ $pfTitle = $pfNick !== ''
 <link rel="stylesheet" href="css/design-page.css?v=33" />
 <link rel="stylesheet" href="css/profile.css?v=7" />
 <?php if ($pfSelf): ?>
-<link rel="stylesheet" href="css/trading.css?v=2" />
+<link rel="stylesheet" href="css/trading.css?v=3" />
 <?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>

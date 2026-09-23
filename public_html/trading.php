@@ -89,7 +89,7 @@ page_lscache();
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/trading.css?v=2" />
+<link rel="stylesheet" href="css/trading.css?v=3" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -97,7 +97,7 @@ page_lscache();
 
 <?php echo metrika_counter_html(); ?>
 </head>
-<body>
+<body class="tr-body">
 
   <header class="mk-top">
     <a class="mk-top-brand" href="/">
@@ -280,6 +280,6 @@ page_lscache();
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/trade-cards.js?v=1" fetchpriority="high"></script>
-  <script src="js/trading-page.js?v=2" fetchpriority="high"></script>
+  <script src="js/trading-page.js?v=3" fetchpriority="high"></script>
 </body>
 </html>

@@ -294,7 +294,7 @@
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver(entries => {
         if (entries.some(en => en.isIntersecting) && state.more && !state.loading) { loadFeed(false); }
-      }, { rootMargin: "240px" });
+      }, { root: $("#trBoard"), rootMargin: "240px" });
       io.observe($("#trMore"));
     }
 
