@@ -396,8 +396,16 @@
   border: 0;
 }
 
+.ct-shell.is-empty .ct-room-empty { display: none; }
+
 @media (max-width: 900px) {
-  .ct-page { padding: 16px 10px 40px; }
+  .ct-page { --u: 1px; padding: 16px 10px 40px; }
+
+  .ct-gate { margin: 40px auto; padding: 22px 18px; font-size: 18px; }
+  .ct-empty { font-size: 16px; }
+
+  .ct-shell.is-empty .ct-log { display: none; }
+  .ct-shell.is-empty .ct-room-empty { display: block; font-size: 16px; }
 
   .ct-shell {
     position: relative;
@@ -425,6 +433,19 @@
   }
 
   .ct-shell.rail-open .ct-rail { transform: none; }
+
+  .ct-shell::after {
+    content: "";
+    position: absolute;
+    inset: 58px 0 0;
+    z-index: 2;
+    background: rgba(0, 0, 0, .6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+
+  .ct-shell.rail-open::after { opacity: 1; pointer-events: auto; }
 
   .ct-rail-toggle {
     display: block;
@@ -470,7 +491,7 @@
   }
 
   .ct-emoji-item { width: auto; height: 40px; border-radius: 8px; font-size: 24px; }
-  .ct-input, .ct-review-input { font-size: 14px; padding: 10px 12px; }
+  .ct-input, .ct-review-input { font-size: 16px; padding: 10px 12px; }
   .ct-send, .ct-review-send { font-size: 14px; padding: 10px 16px; }
 
   .ct-review { grid-column: 1; gap: 10px; padding: 12px; }

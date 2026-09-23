@@ -56,6 +56,7 @@
     list.textContent = '';
     var has = state.threads.length > 0;
     railEmpty.hidden = has;
+    shell.classList.toggle('is-empty', !has);
     if (!has) {
       railEmpty.textContent = state.ready
         ? tx('chat.noThreads', 'Диалогов пока нет')
@@ -276,7 +277,7 @@
       roomEmpty.hidden = false;
       roomEmpty.textContent = state.threads.length
         ? tx('chat.pick', 'Выберите диалог слева')
-        : '';
+        : railEmpty.textContent;
       return;
     }
 

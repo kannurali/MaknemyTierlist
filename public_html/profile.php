@@ -126,10 +126,10 @@ $pfTitle = $pfNick !== ''
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=9" defer fetchpriority="high"></script>
-<link rel="stylesheet" href="css/design-page.css?v=33" />
+<link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=7" />
 <?php if ($pfSelf): ?>
-<link rel="stylesheet" href="css/trading.css?v=3" />
+<link rel="stylesheet" href="css/trading.css?v=4" />
 <?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
