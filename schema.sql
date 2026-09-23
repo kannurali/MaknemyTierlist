@@ -93,5 +93,101 @@ CREATE TABLE IF NOT EXISTS users (
   display_name  VARCHAR(64)  NOT NULL DEFAULT '',
   avatar_url    VARCHAR(255) NOT NULL DEFAULT '',
   created_at    BIGINT UNSIGNED NOT NULL,
-  last_login_at BIGINT UNSIGNED NOT NULL
+  last_login_at BIGINT UNSIGNED NOT NULL,
+  -- Присутствие. Отдельно от last_login_at намеренно: вход пишется РАЗ, а
+  -- сессия живёт долго, и по времени входа активный посетитель через час
+  -- выглядит ушедшим. Эту колонку обновляет api/session.php — запрос, который
+  -- шапка делает на каждой странице у каждого вошедшего, — не чаще раза в
+  -- минуту (ROBLOX_SEEN_THROTTLE).
+  --
+  -- DEFAULT 0 — «ещё не отмечали». Профиль в этом случае откатывается на
+  -- last_login_at, чтобы только что вошедший не выглядел офлайном.
+  --
+  -- Для уже созданной боевой базы колонку заводит миграция
+  -- docs/migrations/2026-09-10-last-seen.sql; при чистой установке она не нужна.
+  last_seen_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  -- Текст «о себе» со страницы профиля. Пишет его сам человек
+  -- (POST /api/profile-about.php), длина ограничена и здесь, и в
+  -- PROFILE_ABOUT_MAX. Для уже созданной боевой базы есть отдельная миграция
+  -- docs/migrations/2026-09-09-profile.sql; при чистой установке она не нужна.
+  --
+  -- NULL — «человек ничего не написал». Пустая строка значила бы то же самое
+  -- вторым способом, поэтому profile_about_save() кладёт именно NULL.
+  about         VARCHAR(280) NULL DEFAULT NULL,
+  -- Репутация из чатов: два счётчика, которые показывает профиль. Хранятся
+  -- денормализованно рядом с пользователем, а не считаются на лету — профиль
+  -- открывают чаще, чем пишут отзывы. Пересчитываются целиком при каждом
+  -- отзыве (chat_recount_reputation), а не инкрементом: правка оценки меняет
+  -- вклад с плюса на минус.
+  --
+  -- Для уже созданной боевой базы те же колонки заводит миграция
+  -- docs/migrations/2026-09-09-chat.sql; при чистой установке она не нужна.
+  likes         INT UNSIGNED NOT NULL DEFAULT 0,
+  dislikes      INT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Трейдинг и центр обращений. Для уже созданной боевой базы те же таблицы
+-- заводит миграция docs/migrations/2026-09-23-trading.sql.
+-- --------------------------------------------------------------------------
+--  Объявления
+-- --------------------------------------------------------------------------
+-- Одна строка — одно объявление с ленты /trading: что человек отдаёт и что
+-- хочет взамен. Стороны хранятся JSON-массивом id предметов тирлиста
+-- (["idmqeau8kci10et", ...], до четырёх на сторону, повторы допустимы — как
+-- в калькуляторе). Названия и цены НЕ копируются: лента показывает текущие
+-- цены тирлиста, а не те, что были в момент публикации.
+--
+-- status: open → done (сделка состоялась) | cancelled (автор снял) |
+-- removed (снял администратор). VARCHAR, а не ENUM: тесты гоняются на
+-- SQLite, и схемы обязаны вести себя одинаково.
+--
+-- replied_at — когда по объявлению впервые написали из чата (сообщение,
+-- отправленное из чата, открытого с карточки). Без отклика объявление уходит
+-- из ленты через четыре дня (TRADE_QUIET_TTL в api/lib/trade.php), с
+-- откликом — через две недели (TRADE_TTL). Статус при этом не меняется:
+-- истечение — не отмена, и в «отменённые» профиля оно не идёт.
+CREATE TABLE IF NOT EXISTS trade_offers (
+  id         INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id    BIGINT UNSIGNED NOT NULL,
+  give       VARCHAR(255)    NOT NULL,
+  want       VARCHAR(255)    NOT NULL,
+  status     VARCHAR(10)     NOT NULL DEFAULT 'open',
+  created_at BIGINT UNSIGNED NOT NULL,
+  replied_at BIGINT UNSIGNED NULL,
+  closed_at  BIGINT UNSIGNED NULL,
+  KEY idx_feed (status, id),
+  KEY idx_quota (user_id, created_at),
+  KEY idx_user (user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Журнал сделок для профиля
+-- --------------------------------------------------------------------------
+-- Его читает api/profile-stats.php (график «успешно/отказ» и полоса
+-- оборота). До трейдинга таблицу заводила только сеялка
+-- tools/seed-profile-stats.php, на бою её не было. Теперь в неё пишет
+-- закрытие объявления: «сделка состоялась» → status 'ok' и value = сумма
+-- отданного по ценам тирлиста на момент закрытия, «отменить» → 'declined'.
+CREATE TABLE IF NOT EXISTS profile_trades (
+  id      INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  day     DATE            NOT NULL,
+  status  VARCHAR(8)      NOT NULL,
+  value   INT UNSIGNED    NOT NULL DEFAULT 0,
+  KEY idx_user_day (user_id, day)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Центр обращений
+-- --------------------------------------------------------------------------
+-- Обращения со страницы /support. Писать может только вошедший через Roblox:
+-- ответ приходит в личный чат сайта, и без аккаунта отвечать было бы некуда.
+-- Администратор читает их на /admin/support.
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id         INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id    BIGINT UNSIGNED NOT NULL,
+  body       TEXT            NOT NULL,
+  status     VARCHAR(10)     NOT NULL DEFAULT 'new',
+  created_at BIGINT UNSIGNED NOT NULL,
+  KEY idx_status (status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -88,14 +88,15 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=10" />
+<link rel="stylesheet" href="css/base.css?v=11" />
 
-<link rel="stylesheet" href="css/topbar.css?v=11" />
+<link rel="stylesheet" href="css/topbar.css?v=12" />
 
+<script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/home.css?v=16" />
+<link rel="stylesheet" href="css/home.css?v=19" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -129,10 +130,10 @@ page_lscache();
         </li>
         <li>
 
-          <button class="mk-pill" type="button" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+          <a class="mk-pill" href="/trading">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
-          </button>
+          </a>
         </li>
         <li>
 
@@ -149,9 +150,9 @@ page_lscache();
         </li>
       </ul>
 
-      <button class="mk-chat" type="button" aria-label="Чат" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
-      </button>
+      </a>
 
       <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
@@ -202,7 +203,7 @@ page_lscache();
     <div class="hm-lead-actions">
 
       <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnFruits">фрукты</span></span></a>
-      <a class="hm-btn hm-btn-ghost" href="https://t.me/theMaknemy" target="_blank" rel="noopener"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">о нас</span><span class="hm-btn-word hm-btn-word-hover" data-i18n="home.btnAbout">о нас</span></span></a>
+      <a class="hm-btn hm-btn-ghost" href="#about"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">обо мне</span><span class="hm-btn-word hm-btn-word-hover" data-i18n="home.btnAbout">обо мне</span></span></a>
     </div>
 
     <div class="hm-cards hm-anim">
@@ -269,6 +270,112 @@ page_lscache();
     <div class="hm-fig hm-fig-circle hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-square-sm hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-tri hm-deco hm-anim" aria-hidden="true"></div>
+  </section>
+
+  <section class="hm-about" id="about">
+    <div class="hm-about-inner">
+      <h2 class="hm-ak hm-about-title" data-i18n="home.aboutTitle">Обо мне и проекте Maknemy</h2>
+      <div class="hm-about-body">
+        <p data-i18n="home.aboutP1">Меня зовут Максим, но в интернете я известен как Maknemy. Я Roblox-креатор, блогер и дизайнер, специализирующийся на игре Blox Fruits.</p>
+        <p data-i18n="home.aboutP2">Я создаю новости, обзоры обновлений, тирлисты, гайды, теории и материалы об игровой экономике и трейдах. Моя цель — не просто рассказывать о происходящем в игре, а помогать игрокам разбираться в предметах, принимать более выгодные решения и всегда оставаться в курсе важных событий.</p>
+        <p data-i18n="home.aboutP3">Maknemy.com — мой главный проект и независимый фанатский сайт для игроков Blox Fruits. Он создан как удобное место, где собраны самые необходимые инструменты и информация для игры:</p>
+        <ul class="hm-about-list">
+          <li data-i18n="home.aboutList1">актуальный тирлист предметов</li>
+          <li data-i18n="home.aboutList2">калькулятор трейдов</li>
+          <li data-i18n="home.aboutList3">цены и оценки фруктов, перманентов, геймпассов, скинов и мутаций</li>
+          <li data-i18n="home.aboutList4">новости и обновления Blox Fruits</li>
+          <li data-i18n="home.aboutList5">полезные материалы для игроков</li>
+          <li data-i18n="home.aboutList6">информация об игровой экономике и изменениях цен</li>
+        </ul>
+        <p data-i18n="home.aboutP4">Сайт помогает игрокам оценивать стоимость предметов, проверять выгодность трейдов и следить за изменениями экономики после обновлений. Проект развивается вместе с игрой и создаётся прежде всего для русскоязычного сообщества и игроков из СНГ.</p>
+        <p data-i18n="home.aboutP5">Моя цель — сделать maknemy.com самым полезным и удобным фанатским проектом по Blox Fruits: местом, куда игроки заходят перед трейдом, после обновления и просто для поиска актуальной информации об игре.</p>
+      </div>
+
+      <div class="hm-about-social">
+        <h3 class="hm-about-social-title" data-i18n="home.socialTitle">Соцсети</h3>
+        <ul class="hm-social-list">
+          <li>
+            <a class="hm-social-link" href="https://youtube.com/@maknemy" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M10 9v6l5.2-3L10 9Z" fill="currentColor"/>
+              </svg>
+              <span data-i18n="home.socialYoutube">YouTube</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://www.tiktok.com/@maknemy" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M14 3c.4 2.6 2.1 4.4 4.5 4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="home.socialTiktok">TikTok</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://www.twitch.tv/maknemy" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 3h18v11l-4 4h-4l-3 3v-3H3V3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M10 8v5M15 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="home.socialTwitch">Twitch</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://x.com/mksvtn" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4l16 16M20 4 4 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="home.socialX">X (Twitter)</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://t.me/maknemy" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="home.socialTelegram1">@maknemy</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://t.me/mksvtn" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="home.socialTelegram2">@mksvtn</span>
+            </a>
+          </li>
+        </ul>
+
+        <h3 class="hm-about-social-title" data-i18n="home.telegramTitle">Telegram-проекты</h3>
+        <ul class="hm-social-list">
+          <li>
+            <a class="hm-social-link" href="https://t.me/theMaknemy" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="home.telegramMain">Основной канал</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://t.me/bftierlist" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="home.telegramTierlist">Maknemy Tierlist</span>
+            </a>
+          </li>
+          <li>
+            <a class="hm-social-link" href="https://t.me/mksvtnchat" target="_blank" rel="noopener">
+              <svg class="hm-social-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="home.telegramChat">Чат подписчиков</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
   </section>
 
   <section class="hm-faq">
@@ -369,7 +476,7 @@ page_lscache();
     </p>
 </footer>
 
-<script src="js/i18n.js?v=50" fetchpriority="high"></script>
+<script src="js/i18n.js?v=51" fetchpriority="high"></script>
 <script src="js/home.js?v=5" fetchpriority="high"></script>
 </body>
 </html>

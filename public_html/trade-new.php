@@ -1,0 +1,363 @@
+<?php
+require_once __DIR__ . '/api/_bootstrap.php';
+require_once __DIR__ . '/api/lib/metrika.php';
+
+// Новое объявление — /trading/new (Figma «трейдинг выбор», нода 244:5235).
+//
+// В макете это панель калькулятора один в один (слоты, каталог, пойнты,
+// спрос), только стороны подписаны «вы предлагаете / вы хотите», а место
+// вердикта занимает предупреждение о безопасности. Поэтому страница
+// подключает те же calc.js, calculator-page.js и calculator.css, а не
+// держит вторую копию логики: слоты и каталог ведут себя одинаково, и
+// правка в калькуляторе сразу доезжает сюда. Своё у страницы — только кнопка
+// «опубликовать» (js/trade-new.js), которой в макете нет: без неё собранное
+// объявление было бы некуда отправить.
+//
+// Собранное лежит в адресе (?l=…&r=…, как «поделиться» у калькулятора), так
+// что черновик переживает перезагрузку и вход через Roblox с возвратом сюда.
+//
+// noindex: страница — форма, а не содержимое.
+header('Cache-Control: no-cache, must-revalidate');
+page_lscache();
+?>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+
+<base href="/" />
+
+<title>Новое объявление — трейдинг | Maknemy</title>
+<meta name="description" content="Соберите объявление об обмене в Blox Fruits: что вы предлагаете и что хотите взамен — по ценам тирлиста Maknemy." />
+<link rel="canonical" href="https://maknemy.com/trading/new" />
+<meta name="robots" content="noindex, follow" />
+
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<link rel="stylesheet" href="css/base.css?v=11" />
+
+<link rel="stylesheet" href="css/topbar.css?v=12" />
+
+<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
+
+<link rel="stylesheet" href="css/design-page.css?v=33" />
+<link rel="stylesheet" href="css/calculator.css?v=26" />
+<link rel="stylesheet" href="css/trading.css?v=1" />
+
+<link rel="stylesheet" href="css/promo-dock.css?v=3" />
+
+<link rel="stylesheet" href="css/promo-popup.css?v=3" />
+
+<?php echo metrika_counter_html(); ?>
+</head>
+<body>
+
+  <header class="mk-top">
+    <a class="mk-top-brand" href="/">
+      <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
+      <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
+    </a>
+
+    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
+         data-i18n-label="lang.switch" aria-label="Язык интерфейса">
+      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
+      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
+    </div>
+
+    <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
+      <ul class="mk-nav">
+        <li>
+          <a class="mk-pill" href="/">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 16.0302V8.423C18.05 7.48807 17.644 6.60551 16.9498 6.03152L11.833 1.80094C10.4608 0.666372 8.53926 0.666371 7.16704 1.80094L2.05028 6.03152C1.35606 6.60551 0.950013 7.48807 0.950013 8.423V16.0302C0.950013 17.1457 1.80067 18.05 2.85001 18.05H4.75001C5.79936 18.05 6.65001 17.1994 6.65001 16.15V13.0006C6.65001 11.8851 7.50067 10.9808 8.55002 10.9808H10.45C11.4994 10.9808 12.35 11.8851 12.35 13.0006V16.15C12.35 17.1994 13.2007 18.05 14.25 18.05H16.15C17.1994 18.05 18.05 17.1457 18.05 16.0302Z" stroke="currentColor" stroke-width="1.81101"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.home">Главная</span>
+          </a>
+        </li>
+        <li>
+          <a class="mk-pill" href="/tierlist">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M8.57627 3.7533C8.57627 3.22702 8.14799 2.79425 7.62582 2.85987C6.45486 3.00701 5.32947 3.42467 4.341 4.08515C3.08735 4.9228 2.11026 6.1134 1.53327 7.50637C0.95628 8.89935 0.805314 10.4321 1.09946 11.9109C1.39361 13.3897 2.11965 14.748 3.18579 15.8142C4.25193 16.8803 5.61027 17.6063 7.08904 17.9005C8.56781 18.1946 10.1006 18.0437 11.4936 17.4667C12.8866 16.8897 14.0771 15.9126 14.9148 14.659C15.5753 13.6705 15.9929 12.5451 16.1401 11.3741C16.2057 10.852 15.7729 10.4237 15.2466 10.4237H9.52918C9.0029 10.4237 8.57627 9.99705 8.57627 9.47077V3.7533Z" stroke="currentColor" stroke-width="1.82067"/><path d="M11.435 1.84748C11.435 1.3212 11.8638 0.887589 12.3847 0.962518C12.934 1.04153 13.4726 1.18898 13.9876 1.40232C14.7969 1.73754 15.5323 2.22887 16.1517 2.84828C16.7711 3.46768 17.2624 4.20302 17.5976 5.0123C17.811 5.52735 17.9584 6.06592 18.0374 6.61527C18.1124 7.13618 17.6787 7.56495 17.1525 7.56495L11.5303 7.56495C11.4777 7.56495 11.435 7.52228 11.435 7.46965V1.84748Z" stroke="currentColor" stroke-width="1.82067"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.tierlist">Тирлист</span>
+          </a>
+        </li>
+        <li>
+
+          <a class="mk-pill" href="/trading" aria-current="page">
+            <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
+          </a>
+        </li>
+        <li>
+
+          <a class="mk-pill" href="/calculator">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
+          </a>
+        </li>
+        <li>
+          <a class="mk-pill" href="/news">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 9.50002C18.05 14.2221 14.222 18.05 9.49995 18.05M18.05 9.50002C18.05 4.77798 14.222 0.950013 9.49995 0.950013M18.05 9.50002C18.05 7.92601 14.222 6.65002 9.49995 6.65002C4.77792 6.65002 0.949949 7.92601 0.949949 9.50002M18.05 9.50002C18.05 11.074 14.222 12.35 9.49995 12.35C4.77792 12.35 0.949949 11.074 0.949949 9.50002M9.49995 18.05C4.77792 18.05 0.949949 14.2221 0.949949 9.50002M9.49995 18.05C11.074 18.05 12.35 14.2221 12.35 9.50002C12.35 4.77798 11.074 0.950013 9.49995 0.950013M9.49995 18.05C7.92594 18.05 6.64995 14.2221 6.64995 9.50002C6.64995 4.77798 7.92594 0.950013 9.49995 0.950013M0.949949 9.50002C0.949949 4.77798 4.77792 0.950013 9.49995 0.950013" stroke="currentColor" stroke-width="1.9"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.news">Новости</span>
+          </a>
+        </li>
+      </ul>
+
+      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат">
+        <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
+      </a>
+
+      <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+        <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+
+    <button class="mk-top-toggle" type="button" id="mkTopToggle"
+            aria-expanded="true" aria-controls="mkTopBar"
+            data-i18n-label="topbar.showNav" aria-label="Показать разделы"
+            data-i18n-title="topbar.showNav" title="Показать разделы">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+  <main class="tc-page tn-page">
+    <div class="tc-frame">
+
+      <div class="tc-rail-slot tc-rail-slot-l" aria-hidden="true">
+        <aside class="tc-rail" id="tcRailL" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+      </div>
+      <div class="tc-rail-slot tc-rail-slot-r" aria-hidden="true">
+        <aside class="tc-rail" id="tcRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+      </div>
+
+      <div class="tc-gauge tc-gauge-l" id="tcGaugeL" data-state="none" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="tc-gauge tc-gauge-r" id="tcGaugeR" data-state="none" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="tc-board">
+
+        <div class="tc-hero">
+          <h1 class="tc-title" data-i18n="calc.title">Сравнить цены</h1>
+          <p class="tc-subtitle" data-i18n="calc.subtitle">Сравните цены фруктов в реальном времени!</p>
+        </div>
+
+        <div class="tc-marks" aria-hidden="true">
+          <span class="tc-arrow tc-arrow-l">
+            <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32.155 11.5353H0L14.5132 8.72569L12.1752 0L32.155 11.5353Z" fill="url(#tcArrowGrad)"/>
+              <defs>
+                <linearGradient id="tcArrowGrad" x1="16.0775" y1="0" x2="16.0775" y2="11.5353" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="tc-vs" data-i18n="calc.versus">VS</span>
+          <span class="tc-arrow tc-arrow-r">
+            <svg viewBox="0 0 33 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32.155 11.5353H0L14.5132 8.72569L12.1752 0L32.155 11.5353Z" fill="url(#tcArrowGrad)"/>
+            </svg>
+          </span>
+        </div>
+
+        <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
+
+          <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="trade.giveLabel">Вы предлагаете</h2>
+          <span class="tc-pill tc-pill-l" data-i18n="trade.givePill" aria-hidden="true">Вы предлагаете</span>
+
+          <ul class="tc-slots" data-side="left"></ul>
+
+          <div class="tc-meters">
+            <span class="tc-meter-bar">
+              <span class="tc-meter-mark" data-role="mark" aria-hidden="true">
+                <svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.418 5.067 4.054 2.702 1.689 5.067" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </span>
+            <span class="tc-meter-icon tc-meter-icon-points" aria-hidden="true">
+              <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.61375 3.54677L8.16057 2.64039C7.81725 1.95375 7.11546 1.52002 6.34778 1.52002H5.81285C5.04517 1.52002 4.34346 1.95359 4.00015 2.64022L3.54688 3.54677" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M5.06694 10.6405H4.29131C3.28269 10.6405 2.42757 9.89885 2.28493 8.90037L1.768 5.2819C1.63719 4.36617 2.34776 3.54688 3.27279 3.54688H8.88787C9.8129 3.54688 10.5235 4.36617 10.3927 5.28191L10.2455 6.31225" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M9.62704 9.12016C9.62704 9.95967 8.94648 10.6402 8.10698 10.6402C7.26747 10.6402 6.58691 9.95967 6.58691 9.12016C6.58691 8.28065 7.26747 7.6001 8.10698 7.6001C8.94648 7.6001 9.62704 8.28065 9.62704 9.12016Z" stroke="#fff" stroke-width="1.01337"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-points" data-i18n="calc.pointsLabel">Пойнты</span>
+            <strong class="tc-meter-value tc-meter-value-points" data-role="points">0</strong>
+            <span class="tc-meter-icon tc-meter-icon-demand" aria-hidden="true">
+              <svg viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0.5 6.6 4.34 2.03 7.1 5.32 11.15 0.51" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6.6 0.95 11.1 0.5 11.55 5.05" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-demand" data-i18n="calc.demandLabel">Спрос</span>
+            <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
+          </div>
+        </section>
+
+        <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
+          <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="trade.wantLabel">Вы хотите</h2>
+          <span class="tc-pill tc-pill-r" data-i18n="trade.wantPill" aria-hidden="true">Вы хотите</span>
+
+          <ul class="tc-slots" data-side="right"></ul>
+
+          <div class="tc-meters">
+            <span class="tc-meter-bar">
+              <span class="tc-meter-mark" data-role="mark" aria-hidden="true">
+                <svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.418 5.067 4.054 2.702 1.689 5.067" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </span>
+            <span class="tc-meter-icon tc-meter-icon-points" aria-hidden="true">
+              <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.61375 3.54677L8.16057 2.64039C7.81725 1.95375 7.11546 1.52002 6.34778 1.52002H5.81285C5.04517 1.52002 4.34346 1.95359 4.00015 2.64022L3.54688 3.54677" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M5.06694 10.6405H4.29131C3.28269 10.6405 2.42757 9.89885 2.28493 8.90037L1.768 5.2819C1.63719 4.36617 2.34776 3.54688 3.27279 3.54688H8.88787C9.8129 3.54688 10.5235 4.36617 10.3927 5.28191L10.2455 6.31225" stroke="#fff" stroke-width="1.01337" stroke-linecap="round"/>
+                <path d="M9.62704 9.12016C9.62704 9.95967 8.94648 10.6402 8.10698 10.6402C7.26747 10.6402 6.58691 9.95967 6.58691 9.12016C6.58691 8.28065 7.26747 7.6001 8.10698 7.6001C8.94648 7.6001 9.62704 8.28065 9.62704 9.12016Z" stroke="#fff" stroke-width="1.01337"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-points" data-i18n="calc.pointsLabel">Пойнты</span>
+            <strong class="tc-meter-value tc-meter-value-points" data-role="points">0</strong>
+            <span class="tc-meter-icon tc-meter-icon-demand" aria-hidden="true">
+              <svg viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0.5 6.6 4.34 2.03 7.1 5.32 11.15 0.51" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6.6 0.95 11.1 0.5 11.55 5.05" stroke="#fff" stroke-width="1.013" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="tc-meter-label tc-meter-label-demand" data-i18n="calc.demandLabel">Спрос</span>
+            <span class="tc-demand-dot" data-demand="none" data-role="demand" aria-hidden="true"></span>
+          </div>
+        </section>
+
+        <div class="tc-total">
+          <span class="tc-total-line" aria-hidden="true"></span>
+          <span class="tc-total-eq" aria-hidden="true"></span>
+          <strong class="tc-total-num" id="tcTotalNum">0</strong>
+        </div>
+      </div>
+      <div class="tn-publish">
+        <button class="tr-tool tn-publish-btn" id="tnPublish" type="button" disabled>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 2C3.343 2 2 3.343 2 5V15C2 16.657 3.343 18 5 18H15C16.657 18 18 16.657 18 15V9C18 8.448 18.448 8 19 8C19.552 8 20 8.448 20 9V15C20 17.761 17.761 20 15 20H5C2.239 20 0 17.761 0 15V5C0 2.239 2.239 0 5 0H11C11.552 0 12 0.448 12 1C12 1.552 11.552 2 11 2H5Z" fill="currentColor"/><path d="M15.216 0.821C16.311 -0.274 18.085 -0.274 19.179 0.821C20.274 1.915 20.274 3.689 19.179 4.784L18.396 5.568C18.006 5.958 17.372 5.958 16.982 5.568L14.432 3.018C14.042 2.628 14.042 1.995 14.432 1.604L15.216 0.821ZM13.018 4.432C12.628 4.042 11.995 4.042 11.604 4.432L7.143 8.894C7.015 9.022 6.924 9.183 6.88 9.358L6.03 12.757C5.945 13.098 6.045 13.459 6.293 13.707C6.541 13.955 6.902 14.055 7.243 13.97L10.642 13.12C10.818 13.076 10.978 12.985 11.106 12.857L15.568 8.396C15.958 8.006 15.958 7.372 15.568 6.982L13.018 4.432Z" fill="currentColor"/></svg>
+          <span id="tnPublishText" data-i18n="trade.publish">Опубликовать</span>
+        </button>
+        <p class="tn-status" id="tnStatus" role="status" aria-live="polite"></p>
+      </div>
+
+      <section class="tn-warn" aria-labelledby="tnWarnTitle">
+        <svg class="tn-warn-icon" viewBox="0 0 92 81" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="tnWarnGrad" x1="46" y1="0" x2="46" y2="81" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#FD0000"/><stop offset="1" stop-color="#970000"/>
+            </linearGradient>
+          </defs>
+          <path d="M38.6 6.4c3.3-5.6 11.4-5.6 14.7 0l35.3 61c3.3 5.7-.8 12.8-7.4 12.8H10.8c-6.6 0-10.7-7.1-7.4-12.8l35.2-61Z" fill="url(#tnWarnGrad)"/>
+          <rect x="40" y="19" width="12" height="32" rx="6" fill="#D9D9D9"/>
+          <circle cx="46" cy="63" r="6.5" fill="#D9D9D9"/>
+        </svg>
+        <h2 class="tn-warn-title" id="tnWarnTitle" data-i18n="trade.warnTitle">Мы боремся за вашу безопасность во время торговли</h2>
+        <p class="tn-warn-text">
+          <span data-i18n="trade.warnP1a">Пожалуйста,</span>
+          <em data-i18n="trade.warnP1b">остерегайтесь подозрительных предложений</em>
+          <span data-i18n="trade.warnP1c">и по возможности</span>
+          <em data-i18n="trade.warnP1d">не вступайте в диалоги с посредниками,</em>
+          <span data-i18n="trade.warnP1e">а ведите диалог напрямую с тем, кто предлагает вам свой оффер</span>
+        </p>
+        <p class="tn-warn-text">
+          <span data-i18n="trade.warnP2a">Если увидели недобросовестного трейдера, обязательно сообщите нам</span>
+          <a class="tn-warn-link" href="/support" data-i18n="trade.warnP2b">в поддержку!</a>
+        </p>
+        <p class="tn-warn-sign" data-i18n="trade.warnSign">С любовью Maknemy</p>
+      </section>
+    </div>
+
+    <div class="tc-extras">
+      <p class="tc-state" id="tcState" role="status" aria-live="polite" hidden></p>
+    </div>
+
+  </main>
+
+    <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
+      <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
+        <div class="tc-cat-head">
+          <div class="tc-cat-search">
+            <label class="tc-sr-only" for="tcCatalogSearch" data-i18n="calc.searchLabel">Поиск предмета</label>
+            <input type="text" id="tcCatalogSearch" class="tc-search-input"
+                   data-i18n-placeholder="calc.searchPlaceholder" placeholder="Название предмета…"
+                   autocomplete="off" spellcheck="false" />
+          </div>
+
+          <span class="tc-cat-search-btn" aria-hidden="true">
+            <svg class="tc-cat-search-icon" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
+              <path d="M18 18L13.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </span>
+        </div>
+        <div class="tc-cat-sub">
+          <span class="tc-pill" id="tcCatalogTitle" data-i18n="calc.catalogPill">Каталог</span>
+          <div class="tc-cat-filters" id="tcCatalogFilters" role="group" data-i18n-label="news.filterGroupLabel" aria-label="Фильтр по категориям">
+            <button type="button" class="chip" data-f="fruits" data-i18n="filters.fruits" data-i18n-title="filters.fruitsTitle" title="Обычные фрукты" aria-pressed="true">Фрукты</button>
+            <button type="button" class="chip" data-f="configurators" data-i18n="filters.configurators" data-i18n-title="filters.configuratorsTitle" title="Скины, мутации, конфигурации и хроматики" aria-pressed="true">Конфигураторы</button>
+            <button type="button" class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="Перманентные фрукты" aria-pressed="true">Пермы</button>
+            <button type="button" class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="Геймпассы и воучеры" aria-pressed="true">Пассы</button>
+            <button type="button" class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="Показать всё" aria-pressed="true">Все</button>
+          </div>
+          <button type="button" class="tc-cat-close" id="tcCatalogClose" data-i18n-label="calc.catalogClose" aria-label="Закрыть каталог">✕</button>
+        </div>
+        <p class="tc-cat-status" id="tcCatalogStatus" role="status" aria-live="polite"></p>
+        <ul class="tc-cat-grid" id="tcCatalogGrid"></ul>
+        <p class="tc-cat-footer" data-i18n="calc.catalogFooter">Используйте калькулятор с умом!</p>
+      </div>
+    </div>
+  <footer class="mk-foot">
+    <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
+    <ul class="mk-foot-roles">
+      <li><span data-i18n="site.footAuthor">автор</span><span class="mk-foot-nick">MKSVTN</span></li>
+      <li><span data-i18n="site.footDesigner">дизайнер</span><span class="mk-foot-nick">DANIKTOR</span></li>
+      <li><span data-i18n="site.footAnalyst">аналитик</span><span class="mk-foot-nick">GLH</span></li>
+      <li><span data-i18n="site.footAnalystAide">помощник аналитика</span><span class="mk-foot-nick" data-i18n="site.footHiring">активно ищем</span></li>
+      <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
+    </ul>
+    <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
+
+    <p class="mk-foot-legal">
+      <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
+      <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
+    </p>
+  </footer>
+  <div class="ptn-dock" id="promoDock" hidden
+       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
+
+  <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
+       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       aria-labelledby="promoPopTitle">
+    <div class="ptn-pop-card">
+      <button class="ptn-pop-close" id="promoPopClose" type="button"
+              data-i18n-label="promo.close" data-i18n-title="promo.close"
+              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+
+      <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" /></div>
+
+      <div class="ptn-pop-title" id="promoPopTitle"></div>
+      <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
+
+      <span class="ptn-erid" id="promoPopErid" hidden></span>
+    </div>
+  </div>
+
+  <script src="js/i18n.js?v=51" fetchpriority="high"></script>
+  <script src="js/promo.js?v=12" fetchpriority="high"></script>
+
+  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
+
+  <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
+  <script src="js/calc.js?v=9" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=20" fetchpriority="high"></script>
+  <script src="js/trade-new.js?v=1" fetchpriority="high"></script>
+</body>
+</html>
