@@ -378,6 +378,7 @@
 
   .nw-card .nw-meta { gap: 10px; margin-bottom: 10px; font-size: 14px; }
   .nw-card .nw-body { max-width: none; font-size: 15px; }
+  .nw-card .nw-body p { margin-bottom: .5em; }
 
   .nw-card .nw-footer { gap: 10px; margin-top: 16px; }
 

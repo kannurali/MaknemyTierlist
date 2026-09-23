@@ -206,6 +206,32 @@ test('a Russian-only post is published with English filled in everywhere', funct
     assert_true(strpos($row['body_en'], 'EN:Цитата') !== false, 'body_en is derived from the translated blocks');
 });
 
+test('spacer paragraphs are not sent to Google and do not break the rest of the post', function () {
+    $pdo = test_db();
+    $calls = [];
+    $google = function (string $t) use (&$calls): ?string {
+        $calls[] = $t;
+        if (trim(str_replace("\u{00A0}", '', $t)) === '') { return ''; }
+        $out = [];
+        foreach (explode(TR_SEP, $t) as $p) { $out[] = 'EN:' . $p; }
+        return implode(TR_SEP, $out);
+    };
+    $spacer = tr_para("\u{00A0}");
+    $blocks = [tr_para('Раз'), $spacer, $spacer, tr_para("Два\nтри"), $spacer, $spacer, tr_para('Четыре')];
+    [$status, $p] = handle_news_save($pdo, [
+        'category' => 'project', 'title_ru' => 'Отступы', 'title_en' => 'Spacers', 'body_json' => tr_doc($blocks),
+    ], 1000, $google);
+    assert_eq(200, $status);
+    assert_eq(3, $p['translated'], 'three real paragraphs');
+    assert_eq(0, $p['translate_failed']);
+    foreach ($calls as $c) { assert_true(strpos($c, "\u{00A0}") === false, 'no spacer in a request'); }
+
+    $row = saved_row($pdo, $p['id']);
+    assert_eq([tr_s("EN:Два\nтри")], $row['blocks'][3]['en'], 'the line break survives');
+    assert_eq([], $row['blocks'][1]['en'], 'a spacer keeps no English of its own');
+    assert_eq([tr_s('EN:Четыре')], $row['blocks'][6]['en']);
+});
+
 test('English written by hand is never replaced', function () {
     $pdo = test_db();
     $calls = [];

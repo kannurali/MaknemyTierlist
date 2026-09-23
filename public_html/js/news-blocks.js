@@ -184,11 +184,60 @@
     ["b", "strong"], ["i", "em"], ["u", "u"], ["st", "s"], ["c", "code"]
   ];
 
+  function textWithBreaks(doc, s) {
+    var lines = String(s).split("\n");
+    if (lines.length === 1) { return doc.createTextNode(lines[0]); }
+    var frag = doc.createDocumentFragment();
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) { frag.append(doc.createElement("br")); }
+      if (lines[i] !== "") { frag.append(doc.createTextNode(lines[i])); }
+    }
+    return frag;
+  }
+
+  var BLANK_RE = /^[\s\u200b]*$/;
+
+  var SPACER = "\u00a0";
+
+  function pasteParagraphs(text) {
+    var lines = String(text == null ? "" : text).replace(/\r\n?/g, "\n").split("\n");
+    var out = [];
+    var cur = [];
+    var blanks = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].replace(/\s+$/, "");
+      if (BLANK_RE.test(line)) {
+        if (cur.length) { out.push(cur.join("\n")); cur = []; }
+        blanks++;
+        continue;
+      }
+      if (!cur.length && out.length) {
+        for (var k = 1; k < blanks; k++) { out.push(SPACER); }
+      }
+      blanks = 0;
+      cur.push(line);
+    }
+    if (cur.length) { out.push(cur.join("\n")); }
+    return out;
+  }
+
+  var LIST_MARK_RE = /^\s*(?:[•·▪◦‣∙●○■□➤►▶✓✔\-*–—]|\d{1,3}[.)])\s+/;
+
+  function pasteListItems(text) {
+    var lines = String(text == null ? "" : text).replace(/\r\n?/g, "\n").split("\n");
+    var out = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].replace(LIST_MARK_RE, "").replace(/\s+$/, "");
+      if (!BLANK_RE.test(line)) { out.push(line); }
+    }
+    return out;
+  }
+
   function spansToFragment(doc, spans) {
     var frag = doc.createDocumentFragment();
     for (var i = 0; i < spans.length; i++) {
       var sp = spans[i];
-      var node = doc.createTextNode(sp.s);
+      var node = textWithBreaks(doc, sp.s);
       for (var f = 0; f < FLAG_TAGS.length; f++) {
         if (sp[FLAG_TAGS[f][0]]) {
           var w = doc.createElement(FLAG_TAGS[f][1]);
@@ -322,6 +371,10 @@
     validateDoc: validateDoc,
     toPlainText: toPlainText,
     firstImage: firstImage,
+    SPACER: SPACER,
+    textWithBreaks: textWithBreaks,
+    pasteParagraphs: pasteParagraphs,
+    pasteListItems: pasteListItems,
     spansToFragment: spansToFragment,
     renderBlocks: renderBlocks
   };

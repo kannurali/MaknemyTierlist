@@ -213,7 +213,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
 
-<link rel="stylesheet" href="css/news-design.css?v=19" />
+<link rel="stylesheet" href="css/news-design.css?v=20" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -360,7 +360,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php endif; ?>
   <script src="js/i18n.js?v=50" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
-  <script src="js/news-blocks.js?v=2" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
   <script src="js/promo.js?v=12" fetchpriority="high"></script>
 
