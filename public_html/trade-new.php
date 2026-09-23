@@ -47,7 +47,7 @@ page_lscache();
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
 <link rel="stylesheet" href="css/calculator.css?v=26" />
-<link rel="stylesheet" href="css/trading.css?v=1" />
+<link rel="stylesheet" href="css/trading.css?v=2" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 

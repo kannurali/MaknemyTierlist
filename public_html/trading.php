@@ -10,10 +10,10 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // её можно держать в кеше LiteSpeed, как калькулятор: кто вошёл, решает
 // скрипт.
 //
-// Макет → разметка: слева рекламный борт (как у калькулятора), в центре три
+// Макет → разметка: по бокам рекламные борта (как у калькулятора), в центре три
 // кнопки («уточнить цены» → /calculator, «создать» → /trading/new,
-// «поддержка» → /support), поиск и лента; справа выезжающая карточка своего
-// профиля (Frame 96). Клик по чужому объявлению ведёт в чат с автором —
+// «поддержка» → /support), поиск и лента. Карточку профиля из макета (Frame 96)
+// убрали: вход в профиль — аватар в шапке. Клик по чужому объявлению ведёт в чат с автором —
 // в прототипе карточка ведёт на «трейдинг чат» (244:5707).
 header('Cache-Control: no-cache, must-revalidate');
 page_lscache();
@@ -89,7 +89,7 @@ page_lscache();
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/trading.css?v=1" />
+<link rel="stylesheet" href="css/trading.css?v=2" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 
@@ -229,16 +229,9 @@ page_lscache();
         </div>
       </section>
 
-      <aside class="tr-me" id="trMe" data-i18n-label="trade.meLabel" aria-label="Ваш профиль" hidden>
-        <div class="tr-me-card">
-          <dl class="tr-me-info">
-            <div class="tr-me-row"><dt data-i18n="trade.meNick">Ник</dt><dd id="trMeNick"></dd></div>
-            <div class="tr-me-row"><dt data-i18n="trade.meId">ID</dt><dd id="trMeHandle"></dd></div>
-          </dl>
-          <a class="tr-me-btn" id="trMeBtn" href="/profile" data-i18n="trade.meProfile">Профиль</a>
-          <span class="tr-me-ava" id="trMeAva" aria-hidden="true"></span>
-        </div>
-      </aside>
+      <div class="tr-rail-slot is-right" aria-hidden="true">
+        <aside class="tr-rail" id="trRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+      </div>
     </div>
   </main>
 
@@ -287,6 +280,6 @@ page_lscache();
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/trade-cards.js?v=1" fetchpriority="high"></script>
-  <script src="js/trading-page.js?v=1" fetchpriority="high"></script>
+  <script src="js/trading-page.js?v=2" fetchpriority="high"></script>
 </body>
 </html>

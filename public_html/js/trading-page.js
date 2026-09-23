@@ -148,36 +148,6 @@
     render();
   }
 
-  function renderMe() {
-    const box = $("#trMe");
-    const s = state.session;
-    const user = s && s.user;
-    if (!user && !state.canLogin) { box.hidden = true; return; }
-    box.hidden = false;
-    box.classList.toggle("is-guest", !user);
-
-    $("#trMeNick").textContent = user ? (user.display || user.name || "") : "—";
-    $("#trMeHandle").textContent = user && user.name ? "@" + user.name : "—";
-
-    const btn = $("#trMeBtn");
-    const key = user ? "trade.meProfile" : "trade.meLogin";
-    btn.href = user ? "/profile" : loginUrl();
-    btn.dataset.i18n = key;
-    btn.textContent = tx(key);
-
-    const ava = $("#trMeAva");
-    ava.textContent = "";
-    if (user && user.avatar) {
-      const img = document.createElement("img");
-      img.src = user.avatar;
-      img.alt = "";
-      img.referrerPolicy = "no-referrer";
-      ava.appendChild(img);
-    } else {
-      ava.appendChild(TRADE_CARDS.silhouette());
-    }
-  }
-
   async function loadSession() {
     let s = null;
     try {
@@ -190,7 +160,6 @@
     try { invited = localStorage.getItem(INVITE_KEY) === "1" || /[?&]signin(=|&|$)/.test(location.search); } catch (_) {}
     state.session = s;
     state.canLogin = !!(s && s.roblox && (s.roblox_public || invited));
-    renderMe();
     render();
   }
 
@@ -239,6 +208,7 @@
   function renderPromo() {
     const promo = window.PROMO;
     const rail = document.getElementById("trRail");
+    const railR = document.getElementById("trRailR");
     const dock = document.getElementById("promoDock");
     if (!promo) return;
 
@@ -252,12 +222,13 @@
           window.NX_PROMO_POPUP.mount({ doc, busy: () => false, page: PROMO_PAGE });
         }
 
-        if (!rail) return;
+        if (!rail || !railR) return;
         const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now(), PROMO_PAGE) : [];
         const house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
         const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
         if (!list.length) return;
         fillRail(rail, list[0]);
+        fillRail(railR, list[1] || list[0]);
       });
   }
 
@@ -278,7 +249,6 @@
       b.setAttribute("aria-pressed", String(on));
     });
 
-    renderMe();
     render();
   }
 
@@ -327,15 +297,6 @@
       }, { rootMargin: "240px" });
       io.observe($("#trMore"));
     }
-
-    const me = $("#trMe");
-    me.addEventListener("click", e => {
-      if (e.target.closest("a")) { return; }
-      me.classList.toggle("is-open");
-    });
-    document.addEventListener("click", e => {
-      if (!me.contains(e.target)) { me.classList.remove("is-open"); }
-    });
 
     const langBox = $("#langSwitch");
     if (langBox) {
