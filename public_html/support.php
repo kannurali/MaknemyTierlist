@@ -39,7 +39,7 @@ page_lscache();
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/trading.css?v=1" />
+<link rel="stylesheet" href="css/trading.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
