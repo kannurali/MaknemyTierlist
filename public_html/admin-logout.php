@@ -10,6 +10,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     exit;
 }
 
+// Сначала ключ входа: иначе resume_site_session() восстановил бы по нему
+// сессию, которую тут же и закрываем.
+remember_logout();
 // Без куки выходить не из чего: не заводим сессию, чтобы тут же её убить.
 if (!resume_site_session()) {
     header('Cache-Control: no-store');

@@ -85,6 +85,9 @@ if (!defined('TESTING')) {
     // стал бы идентификатором уже авторизованного пользователя.
     session_regenerate_id(true);
     $_SESSION['user_id'] = $profile['roblox_id'];
+    // Долгая кука: после перезапуска браузера входить заново не придётся
+    // (api/lib/remember.php).
+    remember_login($profile['roblox_id']);
 
     roblox_finish(roblox_with_flag($return, 'ok'));
 }
