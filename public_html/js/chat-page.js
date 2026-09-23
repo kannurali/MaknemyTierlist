@@ -25,6 +25,25 @@
 
   if (!list || !log) { return; }
 
+  var CALC = window.CALC;
+
+  var COPY_OK = 'input, textarea, .ct-nick, .ct-handle, .ct-peer-link';
+
+  function copyAllowed(node) {
+    var el = node && node.nodeType === 1 ? node : (node ? node.parentElement : null);
+    return !!(el && el.closest && el.closest(COPY_OK));
+  }
+
+  ['copy', 'cut', 'contextmenu', 'selectstart'].forEach(function (type) {
+    shell.addEventListener(type, function (e) {
+      if (!copyAllowed(e.target)) { e.preventDefault(); }
+    });
+  });
+
+  shell.addEventListener('dragstart', function (e) {
+    if (!copyAllowed(e.target) || e.target.nodeName === 'IMG') { e.preventDefault(); }
+  });
+
   var state = { me: '', threads: [], thread: 0, ready: false, authed: false, messages: [] };
 
   var drafts = {};
@@ -110,7 +129,7 @@
       if (t.last) {
         var pre = document.createElement('span');
         pre.className = 'ct-preview';
-        pre.textContent = (t.last.mine ? tx('chat.you', 'вы') + ': ' : '') + t.last.body;
+        pre.textContent = (t.last.mine ? tx('chat.you', 'вы') + ': ' : '') + previewText(t.last.body);
         meta.appendChild(pre);
       }
 
@@ -136,6 +155,11 @@
     a.textContent = peer.nick;
     a.setAttribute('aria-label', tx('chat.peerProfile', 'Профиль игрока') + ' ' + peer.nick);
     a.title = tx('chat.peerProfile', 'Профиль игрока');
+    a.draggable = false;
+    a.addEventListener('click', function (e) {
+      var sel = window.getSelection ? window.getSelection() : null;
+      if (sel && !sel.isCollapsed && sel.containsNode(a, true)) { e.preventDefault(); }
+    });
     roomTitle.appendChild(a);
   }
 
@@ -157,7 +181,10 @@
   }
 
   function emojiColumns() {
-    var all = emojiButtons();
+    return columnsOf(emojiButtons());
+  }
+
+  function columnsOf(all) {
     if (all.length < 2) { return 1; }
     var top = all[0].offsetTop;
     var n = 1;
@@ -193,7 +220,7 @@
 
   function emojiOpen(next) {
     if (!emojiBtn || !emojiPanel) { return; }
-    if (next) { buildEmoji(); }
+    if (next) { buildEmoji(); stickersOpen(false); }
     emojiPanel.hidden = !next;
     emojiBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
   }
@@ -239,6 +266,239 @@
       if (emojiPanel.hidden) { return; }
       if (emojiPanel.contains(e.target) || emojiBtn.contains(e.target)) { return; }
       emojiOpen(false);
+    });
+  }
+
+  var STICKER_RE = /^\[sticker:([A-Za-z0-9_-]{1,40})\]$/;
+
+  var items = [];
+  var itemsById = Object.create(null);
+  var itemsState = '';
+
+  function stickerId(body) {
+    var m = STICKER_RE.exec(typeof body === 'string' ? body : '');
+    return m ? m[1] : '';
+  }
+
+  function itemsSettled() { return itemsState === 'ready' || itemsState === 'error'; }
+
+  async function loadItems() {
+    if (itemsState) { return; }
+    itemsState = 'loading';
+    try {
+      var rev = null;
+      try {
+        var sr = await fetch('/api/state.php', { cache: 'no-store' });
+        var st = sr.ok ? await sr.json() : null;
+        if (st && typeof st.rev === 'number') { rev = st.rev; }
+      } catch (e) {  }
+      var url = '/api/tierlist.php' + (rev !== null ? '?rev=' + encodeURIComponent(rev) : '');
+      var res = await fetch(url, { cache: rev !== null ? 'default' : 'no-store' });
+      if (!res.ok) { throw new Error('HTTP ' + res.status); }
+      var d = await res.json();
+      if (!d || !d.tierlist || !CALC) { throw new Error('no tierlist'); }
+      items = CALC.sortCatalog(CALC.flattenTierlist(d.tierlist));
+      itemsById = CALC.buildCatalogIndex(items);
+      itemsState = 'ready';
+    } catch (e) {
+      itemsState = 'error';
+    }
+    refreshStickers();
+  }
+
+  function refreshStickers() {
+    log.querySelectorAll('.ct-sticker').forEach(fillSticker);
+    var inRail = state.threads.some(function (t) { return t.last && stickerId(t.last.body); });
+    if (inRail) { renderList(); }
+    if (stickerPanel && !stickerPanel.hidden) { renderStickerGrid(); }
+  }
+
+  function previewText(body) {
+    var id = stickerId(body);
+    if (!id) { return body; }
+    if (!itemsSettled()) { loadItems(); }
+    var it = itemsById[id];
+    return tx('chat.sticker', 'Стикер') + (it && it.name ? ': ' + it.name : '');
+  }
+
+  function fillSticker(card) {
+    var it = itemsById[card.dataset.item];
+    card.textContent = '';
+    card.classList.toggle('is-pending', !it && !itemsSettled());
+    card.classList.toggle('is-lost', !it && itemsSettled());
+    card.setAttribute('role', 'img');
+    card.setAttribute('aria-label', tx('chat.sticker', 'Стикер') + (it && it.name ? ': ' + it.name : ''));
+    if (!it) {
+      if (itemsSettled()) {
+        var lost = document.createElement('span');
+        lost.className = 'ct-sticker-name';
+        lost.textContent = tx('chat.sticker', 'Стикер');
+        card.appendChild(lost);
+      } else {
+        loadItems();
+      }
+      return;
+    }
+
+    var code = CALC.badgeCodeFor(it.type);
+    card.style.setProperty('--ct-plate', 'var(--ct-plate-' + code + ')');
+
+    var art = document.createElement('span');
+    art.className = 'ct-sticker-art';
+    var icon = document.createElement('img');
+    icon.className = 'ct-sticker-icon';
+    icon.src = it.icon || '';
+    icon.alt = '';
+    icon.decoding = 'async';
+    icon.draggable = false;
+    art.appendChild(icon);
+    card.appendChild(art);
+
+    var name = document.createElement('span');
+    name.className = 'ct-sticker-name';
+    name.textContent = it.name || '';
+    card.appendChild(name);
+
+    var badgeBox = document.createElement('span');
+    badgeBox.className = 'ct-sticker-badge-box';
+    var badge = document.createElement('img');
+    badge.className = 'ct-sticker-badge';
+    badge.src = 'assets/design/legend/badge-' + code + '.svg';
+    badge.alt = '';
+    badge.draggable = false;
+    badgeBox.appendChild(badge);
+    card.appendChild(badgeBox);
+  }
+
+  var stickerBtn   = $('ctStickerBtn');
+  var stickerPanel = $('ctStickers');
+  var stickerFind  = $('ctStickerSearch');
+  var stickerGrid  = $('ctStickerGrid');
+  var stickerNote  = $('ctStickerNote');
+  var stickerBusy  = false;
+
+  function stickerButtons() {
+    return stickerGrid ? stickerGrid.querySelectorAll('.ct-sticker-item') : [];
+  }
+
+  function renderStickerGrid() {
+    if (!stickerGrid) { return; }
+    stickerGrid.textContent = '';
+    if (itemsState !== 'ready') {
+      stickerNote.textContent = itemsState === 'error'
+        ? tx('chat.stickerError', 'Не удалось загрузить предметы')
+        : tx('chat.stickerLoading', 'Загружаем предметы…');
+      return;
+    }
+    var shown = CALC.filterCatalog(items, null, stickerFind.value);
+    stickerNote.textContent = shown.length ? '' : tx('chat.stickerNone', 'Ничего не нашлось');
+    shown.forEach(function (it, i) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ct-sticker-item';
+      b.dataset.item = it.id;
+      b.tabIndex = i === 0 ? 0 : -1;
+      b.title = it.name || '';
+      b.setAttribute('aria-label', tx('chat.stickerSend', 'Отправить стикер') + ': ' + (it.name || ''));
+
+      var img = document.createElement('img');
+      img.src = it.icon || '';
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.draggable = false;
+      b.appendChild(img);
+
+      var cap = document.createElement('span');
+      cap.className = 'ct-sticker-cap';
+      cap.textContent = it.name || '';
+      b.appendChild(cap);
+
+      li.appendChild(b);
+      stickerGrid.appendChild(li);
+    });
+  }
+
+  function stickersOpen(next) {
+    if (!stickerBtn || !stickerPanel) { return; }
+    if (next) {
+      emojiOpen(false);
+      loadItems();
+      renderStickerGrid();
+    }
+    stickerPanel.hidden = !next;
+    stickerBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+  }
+
+  async function sendSticker(id) {
+    if (!state.thread || stickerBusy) { return; }
+    stickerBusy = true;
+    var inside = stickerPanel.contains(document.activeElement);
+    stickersOpen(false);
+    if (inside) { stickerBtn.focus(); }
+    var ok = await send('[sticker:' + id + ']');
+    stickerBusy = false;
+    if (ok) {
+      keepDrafts();
+      load(state.thread, true);
+    }
+  }
+
+  if (stickerBtn && stickerPanel) {
+    stickerBtn.addEventListener('click', function () {
+      var open = stickerPanel.hidden;
+      stickersOpen(open);
+      if (open && window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        stickerFind.focus();
+      }
+    });
+
+    stickerFind.addEventListener('input', renderStickerGrid);
+
+    stickerFind.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== 'ArrowDown') { return; }
+      e.preventDefault();
+      var first = stickerButtons()[0];
+      if (first) { first.focus(); }
+    });
+
+    stickerGrid.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.ct-sticker-item') : null;
+      if (b) { sendSticker(b.dataset.item); }
+    });
+
+    stickerGrid.addEventListener('keydown', function (e) {
+      var all = stickerButtons();
+      var at = [].indexOf.call(all, document.activeElement);
+      if (at < 0) { return; }
+      var cols = columnsOf(all);
+      var next = null;
+      if (e.key === 'ArrowRight')      { next = at + 1; }
+      else if (e.key === 'ArrowLeft')  { next = at - 1; }
+      else if (e.key === 'ArrowDown')  { next = at + cols; }
+      else if (e.key === 'ArrowUp')    { next = at - cols; }
+      else if (e.key === 'Home')       { next = 0; }
+      else if (e.key === 'End')        { next = all.length - 1; }
+      else { return; }
+      e.preventDefault();
+      if (next < 0 && e.key === 'ArrowUp') { stickerFind.focus(); return; }
+      next = Math.max(0, Math.min(all.length - 1, next));
+      for (var k = 0; k < all.length; k++) { all[k].tabIndex = k === next ? 0 : -1; }
+      all[next].focus();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || stickerPanel.hidden) { return; }
+      var inside = stickerPanel.contains(document.activeElement) || document.activeElement === stickerBtn;
+      stickersOpen(false);
+      if (inside) { stickerBtn.focus(); }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (stickerPanel.hidden) { return; }
+      if (stickerPanel.contains(e.target) || stickerBtn.contains(e.target)) { return; }
+      stickersOpen(false);
     });
   }
 
@@ -425,10 +685,20 @@
     li.className = 'ct-msg' + (m.mine ? ' is-mine' : '');
     li.dataset.id = String(m.id);
 
-    var body = document.createElement('p');
-    body.className = 'ct-body';
-    body.textContent = m.body;
-    li.appendChild(body);
+    var sticker = stickerId(m.body);
+    if (sticker) {
+      li.classList.add('is-sticker');
+      var card = document.createElement('div');
+      card.className = 'ct-sticker';
+      card.dataset.item = sticker;
+      fillSticker(card);
+      li.appendChild(card);
+    } else {
+      var body = document.createElement('p');
+      body.className = 'ct-body';
+      body.textContent = m.body;
+      li.appendChild(body);
+    }
 
     var t = document.createElement('time');
     t.className = 'ct-time';
@@ -568,6 +838,26 @@
     }
   }
 
+  async function send(body) {
+    var sentThread = state.thread;
+    var payload = { thread: sentThread, body: body };
+    if (offerRef[sentThread]) { payload.offer = offerRef[sentThread]; }
+    var r = await post('/api/chat_send.php', payload);
+
+    if (r.ok && r.data && r.data.ok) {
+      delete offerRef[sentThread];
+      log.appendChild(bubble(r.data.message));
+      roomEmpty.hidden = true;
+      log.scrollTop = log.scrollHeight;
+      return true;
+    }
+    roomEmpty.hidden = false;
+    roomEmpty.textContent = (r.data && r.data.error === 'rate_limited')
+      ? tx('chat.tooFast', 'Слишком часто. Подождите немного.')
+      : tx('chat.sendFailed', 'Сообщение не отправилось. Попробуйте ещё раз.');
+    return false;
+  }
+
   compose.addEventListener('submit', async function (e) {
     e.preventDefault();
     var text = input.value.trim();
@@ -576,27 +866,16 @@
     drafts[state.thread] = '';
     input.disabled = true;
 
-    var sentThread = state.thread;
-    var payload = { thread: sentThread, body: text };
-    if (offerRef[sentThread]) { payload.offer = offerRef[sentThread]; }
-    var r = await post('/api/chat_send.php', payload);
+    var ok = await send(text);
     input.disabled = false;
     input.focus();
 
-    if (r.ok && r.data && r.data.ok) {
-      delete offerRef[sentThread];
-      log.appendChild(bubble(r.data.message));
-      roomEmpty.hidden = true;
-      log.scrollTop = log.scrollHeight;
+    if (ok) {
       keepDrafts();
       load(state.thread, true);
     } else {
       input.value = text;
       drafts[state.thread] = text;
-      roomEmpty.hidden = false;
-      roomEmpty.textContent = (r.data && r.data.error === 'rate_limited')
-        ? tx('chat.tooFast', 'Слишком часто. Подождите немного.')
-        : tx('chat.sendFailed', 'Сообщение не отправилось. Попробуйте ещё раз.');
     }
   });
 
@@ -677,6 +956,8 @@
       renderList();
       var open = state.threads.filter(function (t) { return t.id === state.thread; })[0];
       renderRoom(state.messages, open ? open.peer : null, true);
+      log.querySelectorAll('.ct-sticker').forEach(fillSticker);
+      if (stickerPanel && !stickerPanel.hidden) { renderStickerGrid(); }
       renderBell();
 
       if (!state.authed) { gate.textContent = tx('chat.login', 'Войдите через Roblox, чтобы переписываться'); }

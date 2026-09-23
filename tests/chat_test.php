@@ -325,6 +325,57 @@ test('слишком длинное сообщение отвергается', 
     assert_eq(200, $ok, 'ровно предел проходит');
 });
 
+// --------------------------------------------------------------------------
+//  Стикеры
+// --------------------------------------------------------------------------
+
+// Стикер — предмет тирлиста. Тирлист в тестовой базе пустой ('{}'), поэтому
+// предметы кладутся руками, как их положила бы админка.
+function ch_tierlist(PDO $p, array $ids): void {
+    $items = array_map(function ($id) { return ['id' => $id, 'name' => $id, 'value' => '100']; }, $ids);
+    $p->prepare('UPDATE tierlist SET data = :d WHERE id = 1')
+      ->execute([':d' => json_encode(['tiers' => [['items' => $items]]])]);
+}
+
+test('стикер узнаётся только по точной форме', function () {
+    assert_eq('idDragon', chat_sticker_id('[sticker:idDragon]'), 'стикер');
+    assert_eq('a_b-9', chat_sticker_id('[sticker:a_b-9]'), 'подчёркивание и дефис из id предметов');
+    foreach (['[sticker:]', 'привет [sticker:idDragon]', '[sticker:idDragon] ',
+              "[sticker:idDragon]\n", '[sticker:id Dragon]', '[sticker:<b>]',
+              '[Sticker:idDragon]', '[sticker:' . str_repeat('a', 41) . ']'] as $text) {
+        assert_eq('', chat_sticker_id($text), "не стикер: $text");
+    }
+});
+
+test('стикер предмета из тирлиста отправляется', function () {
+    $pdo = ch_db();
+    ch_tierlist($pdo, ['idDragon', 'idKitsune']);
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a, CH_NOW);
+    [$code, $p] = chat_send($pdo, $me, $t, '[sticker:idKitsune]', CH_NOW);
+    assert_eq(200, $code, 'принят');
+    assert_eq('[sticker:idKitsune]', $p['message']['body'], 'в ответе тот же стикер');
+    $m = chat_messages($pdo, $a, $t);
+    assert_eq('[sticker:idKitsune]', $m[0]['body'], 'собеседник видит стикер');
+});
+
+// Предмета нет в тирлисте — стикер не отправляется: у собеседника была бы
+// пустая рамка, а перебором в базу клалось бы что угодно в форме стикера.
+test('стикер несуществующего предмета отвергается', function () {
+    $pdo = ch_db();
+    ch_tierlist($pdo, ['idDragon']);
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a, CH_NOW);
+    [$code, $p] = chat_send($pdo, $me, $t, '[sticker:idGhost]', CH_NOW);
+    assert_eq(400, $code, 'отказ');
+    assert_eq('bad_sticker', $p['error'], 'причина названа');
+    assert_eq(0, count(chat_messages($pdo, $me, $t)), 'в базу ничего не легло');
+
+    // Обычный текст, похожий на стикер лишь частично, — просто текст.
+    [$ok] = chat_send($pdo, $me, $t, 'смотри [sticker:idGhost]', CH_NOW);
+    assert_eq(200, $ok, 'текст со скобками отправляется как текст');
+});
+
 // Номер снимается сразу после вставки. Раньше он брался после UPDATE и
 // приходил нулём — то есть сообщение нельзя было отличить от соседнего.
 test('отправка возвращает настоящий номер сообщения', function () {

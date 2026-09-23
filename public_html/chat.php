@@ -95,7 +95,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/chat.css?v=7" />
+<link rel="stylesheet" href="css/chat.css?v=8" />
 
 
 
@@ -217,6 +217,23 @@ header('Cache-Control: no-cache, must-revalidate');
           <div class="ct-emoji" id="ctEmoji" role="group"
                data-i18n-label="chat.emoji" aria-label="Смайлики" hidden></div>
 
+          <button class="ct-sticker-btn" type="button" id="ctStickerBtn"
+                  aria-expanded="false" aria-controls="ctStickers"
+                  data-i18n-label="chat.stickers" aria-label="Стикеры"
+                  data-i18n-title="chat.stickers" title="Стикеры">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12.6V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h5.6L20 12.6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12.6 20v-4.4a3 3 0 0 1 3-3H20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          </button>
+
+          <div class="ct-stickers" id="ctStickers" role="group"
+               data-i18n-label="chat.stickers" aria-label="Стикеры" hidden>
+            <label class="ct-sr-only" for="ctStickerSearch" data-i18n="chat.stickerSearchLabel">Поиск предмета</label>
+            <input class="ct-sticker-search" id="ctStickerSearch" type="search" autocomplete="off"
+                   spellcheck="false" maxlength="40" data-i18n-placeholder="chat.stickerSearch"
+                   placeholder="Найти предмет…" />
+            <p class="ct-sticker-note" id="ctStickerNote" role="status" aria-live="polite"></p>
+            <ul class="ct-sticker-grid" id="ctStickerGrid"></ul>
+          </div>
+
           <label class="ct-sr-only" for="ctInput" data-i18n="chat.inputLabel">Сообщение</label>
           <input class="ct-input" id="ctInput" type="text" autocomplete="off"
                  maxlength="2000" data-i18n-placeholder="chat.placeholder"
@@ -315,8 +332,9 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=53" fetchpriority="high"></script>
-  <script src="js/chat-page.js?v=11" defer></script>
+  <script src="js/i18n.js?v=54" fetchpriority="high"></script>
+  <script src="js/calc.js?v=9" defer></script>
+  <script src="js/chat-page.js?v=12" defer></script>
 
 
 </body>

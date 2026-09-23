@@ -688,4 +688,112 @@ test('фоновая перечитка дописывает сообщения,
         'заголовок обновляется до ветки с дописыванием');
 });
 
+// --------------------------------------------------------------------------
+//  Переписку не скопировать, ник собеседника — можно
+// --------------------------------------------------------------------------
+
+// Владелец попросил: текст в блоке чата не копируется, а ник игрока
+// копируется — его вставляют в поиск друзей Roblox. Поля ввода тоже живые:
+// вставить в сообщение скопированное должно получаться.
+test('в чате выделяются только ник собеседника и поля ввода', function () use ($PUB) {
+    $css = cp_read($PUB . '/css/chat.css');
+    assert_true((bool)preg_match('/\.ct-shell \{\s*-webkit-user-select: none;\s*user-select: none;/u', $css),
+        'весь блок чата не выделяется');
+    assert_true((bool)preg_match(
+        '/\.ct-shell input,\s*\.ct-nick,\s*\.ct-handle,\s*\.ct-peer-link \{\s*-webkit-user-select: text;\s*user-select: text;/u', $css),
+        'кроме ника, @имени, ссылки на собеседника и полей ввода');
+
+    // CSS обходится «Выделить всё» и старыми браузерами — поэтому ещё и
+    // события, и с тем же списком исключений.
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(strpos($js, "var COPY_OK = 'input, textarea, .ct-nick, .ct-handle, .ct-peer-link';") !== false,
+        'список того, что копировать можно, один');
+    assert_true(strpos($js, "['copy', 'cut', 'contextmenu', 'selectstart'].forEach(") !== false,
+        'копирование, вырезание, меню и выделение перехвачены');
+    assert_true(strpos($js, 'if (!copyAllowed(e.target)) { e.preventDefault(); }') !== false,
+        'и отменяются всюду, кроме разрешённого');
+    // Ссылку на профиль мышью не выделить: браузер тащит её как ссылку.
+    assert_true(strpos($js, 'a.draggable = false;') !== false, 'ник в заголовке выделяется протяжкой');
+});
+
+// --------------------------------------------------------------------------
+//  Стикеры
+// --------------------------------------------------------------------------
+
+test('панель стикеров подключена к своей кнопке и лежит в форме отправки', function () use ($PUB) {
+    $s = cp_markup(cp_read($PUB . '/chat.php'));
+    assert_true((bool)preg_match(
+        '/<button class="ct-sticker-btn" type="button" id="ctStickerBtn"\s+aria-expanded="false" aria-controls="ctStickers"/u', $s),
+        'кнопка связана с панелью и говорит, раскрыта ли она');
+    assert_true((bool)preg_match('/<div class="ct-stickers" id="ctStickers" role="group"[^>]*hidden>/u', $s),
+        'панель по умолчанию скрыта');
+    $form  = strpos($s, '<form class="ct-compose"');
+    $panel = strpos($s, 'id="ctStickers"');
+    $end   = strpos($s, '</form>', $form === false ? 0 : $form);
+    assert_true($form !== false && $panel !== false && $form < $panel && $panel < $end,
+        'панель внутри формы отправки');
+
+    // Enter в поиске предмета иначе отправил бы форму — то есть недописанное
+    // сообщение из соседнего поля.
+    $js = cp_read($PUB . '/js/chat-page.js');
+    assert_true(strpos($js, "if (e.key !== 'Enter' && e.key !== 'ArrowDown') { return; }\n      e.preventDefault();") !== false,
+        'Enter в поиске не отправляет сообщение');
+});
+
+// Предметы берутся из того же тирлиста, что у калькулятора и трейдинга, и
+// тем же разбором (js/calc.js). Он обязан загрузиться раньше скрипта чата.
+test('стикеры — предметы тирлиста, разобранные общим кодом', function () use ($PUB) {
+    $s = cp_read($PUB . '/chat.php');
+    $calc = strpos($s, '<script src="js/calc.js?v=');
+    $chat = strpos($s, '<script src="js/chat-page.js?v=');
+    assert_true($calc !== false && $chat !== false && $calc < $chat, 'calc.js подключён до скрипта чата');
+
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(strpos($js, "'/api/tierlist.php'") !== false, 'каталог — тирлист сайта');
+    assert_true(strpos($js, 'CALC.sortCatalog(CALC.flattenTierlist(d.tierlist))') !== false,
+        'в том же порядке, что каталог калькулятора');
+});
+
+// Формат стикера один на сервере и на странице: разъедутся — и отправленный
+// стикер у собеседника окажется строчкой текста.
+test('стикер в скрипте и на сервере распознаётся одинаково', function () use ($PUB) {
+    $js  = cp_read($PUB . '/js/chat-page.js');
+    $lib = cp_read($PUB . '/api/lib/chat.php');
+    assert_true((bool)preg_match('~var STICKER_RE = /\^(.+?)\$/;~u', $js, $a), 'формат в скрипте');
+    assert_true((bool)preg_match("~const CHAT_STICKER_RE = '/\^(.+?)\\\\z/';~u", $lib, $b), 'формат на сервере');
+    assert_eq($b[1], $a[1], 'форматы совпадают');
+    assert_true(strpos($js, "send('[sticker:' + id + ']')") !== false, 'стикер отправляется в этом формате');
+});
+
+// Стикер — предмет без цены и спроса: он про «вот этот предмет», а не про
+// оценку. Цену и точку спроса в ленте легко вернуть копипастой из карточки
+// калькулятора — проверка ловит именно это.
+test('стикер показывает предмет без цены и спроса', function () use ($PUB) {
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_eq(0, substr_count($js, 'it.value'), 'цены нет');
+    assert_eq(0, substr_count($js, 'it.demand'), 'спроса нет');
+    assert_eq(0, substr_count($js, 'assets/dot-'), 'точки спроса нет');
+    assert_true(strpos($js, "name.textContent = it.name || '';") !== false, 'название ставится текстом');
+});
+
+test('стикеры: подписи, которые ставит скрипт, переведены', function () use ($PUB) {
+    $i18n = cp_read($PUB . '/js/i18n.js');
+    $js   = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    foreach (['chat.sticker', 'chat.stickerSend', 'chat.stickerLoading',
+              'chat.stickerNone', 'chat.stickerError'] as $k) {
+        cp_assert_key($i18n, $k);
+        assert_true(strpos($js, "'" . $k . "'") !== false, "скрипт ставит $k");
+    }
+});
+
+test('на узких экранах у панели стикеров свои метрики', function () use ($PUB) {
+    $css = cp_read($PUB . '/css/chat.css');
+    $at  = strpos($css, '@media (max-width: 900px)');
+    assert_true($at !== false, 'медиазапрос найден');
+    $mobile = substr($css, $at);
+    foreach (['.ct-sticker-btn', '.ct-stickers {', '.ct-sticker-grid {', '.ct-sticker-item {', '.ct-sticker {'] as $sel) {
+        assert_true(strpos($mobile, $sel) !== false, "$sel переопределён для узких экранов");
+    }
+});
+
 run_tests();

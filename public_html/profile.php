@@ -400,7 +400,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=53" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=54" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=3" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfSelf): ?>
