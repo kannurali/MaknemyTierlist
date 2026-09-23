@@ -24,21 +24,35 @@
 
 .tr-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
+.tr-body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+.tr-body > .mk-top { flex: 0 0 auto; }
+.tr-body > .mk-foot { display: none; }
+
 .tr-page {
   --u: min(1px, calc(100vw / 1443));
 
   position: relative;
   z-index: 2;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
   font-family: var(--display);
   color: #fff;
 }
 
 .tr-frame {
   position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
   width: calc(1443 * var(--u));
-  min-height: calc(874 * var(--u));
   margin: 0 auto;
-  padding: calc(17 * var(--u)) 0 calc(60 * var(--u));
+  padding: calc(17 * var(--u)) 0 calc(24 * var(--u));
   box-sizing: border-box;
 }
 
@@ -47,7 +61,7 @@
   top: calc(15 * var(--u));
   left: calc(26 * var(--u));
   width: calc(248 * var(--u));
-  height: calc(670 * var(--u));
+  height: min(calc(670 * var(--u)), calc(100% - 39 * var(--u)));
 }
 .tr-rail-slot.is-right {
   left: auto;
@@ -110,6 +124,9 @@
 .tr-rail .ptn-erid { left: calc(10 * var(--u)); bottom: calc(10 * var(--u)); }
 
 .tr-main {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
   width: calc(811 * var(--u));
   margin-left: calc(323 * var(--u));
 }
@@ -202,8 +219,9 @@
 
 .tr-board {
   position: relative;
+  flex: 1 1 0;
+  min-height: 220px;
   margin-top: calc(20 * var(--u));
-  height: calc(738 * var(--u));
   padding: calc(32 * var(--u)) calc(26 * var(--u));
   box-sizing: border-box;
   overflow-y: auto;
@@ -930,8 +948,7 @@ a.tr-nick:focus-visible { text-decoration: underline; text-underline-offset: .15
 
   .tr-frame {
     width: 100%;
-    min-height: 0;
-    padding: 18px 12px 40px;
+    padding: 18px 12px 12px;
   }
   .tr-rail-slot { display: none; }
 
@@ -954,10 +971,8 @@ a.tr-nick:focus-visible { text-decoration: underline; text-underline-offset: .15
   .tr-search-btn { width: 40px; height: 40px; }
 
   .tr-board {
-    height: auto;
     margin-top: 14px;
     padding: 14px 10px;
-    overflow: visible;
     border-radius: 18px;
   }
 
