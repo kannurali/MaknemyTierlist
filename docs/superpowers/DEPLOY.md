@@ -38,8 +38,9 @@ reference — Vercel itself is retired and its build now fails, which is expecte
    and place it one level above the web root (NOT inside `public_html/`). Fill in:
    - `dsn` → `mysql:host=localhost;dbname=<cpanel_db>;charset=utf8mb4`
    - `db_user`, `db_pass` → the cPanel DB user
-   - `admin_hash` → generate with:
-     `php -r "echo password_hash('YOUR_PASSWORD', PASSWORD_BCRYPT), PHP_EOL;"`
+   - `admin_ids` → Roblox ids of the admins (the admin panel has no password;
+     admins sign in with Roblox), `moderator_ids` → Roblox ids of support
+     moderators
    - `images_dir` → absolute path to the uploaded `public_html/images`
    Then point `public_html/api/_bootstrap.php`'s `CONFIG_PATH` at that location
    (default is `__DIR__ . '/../../config.php'` = one level above `public_html`,

@@ -14,7 +14,7 @@ require_once __DIR__ . '/lib/trade.php';
 // Ответ зависит от сессии (флаг mine и отдельный список своих), поэтому
 // никакого кеша — ни браузерного, ни LiteSpeed.
 
-function handle_trades(PDO $pdo, array $session, array $get, int $now): array {
+function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cfg = []): array {
     $me   = trade_me($session);
     $view = isset($get['view']) && is_string($get['view']) ? $get['view'] : '';
 
@@ -38,7 +38,7 @@ function handle_trades(PDO $pdo, array $session, array $get, int $now): array {
         ? (int)$get['before'] : 0;
     $feed = trade_feed($pdo, $me, $q, $before, $now);
     $feed['authed'] = $me !== '';
-    $feed['admin']  = !empty($session['admin']);
+    $feed['admin']  = site_role($session, $cfg) === 'admin';
     return [200, $feed];
 }
 
@@ -46,6 +46,6 @@ if (!defined('TESTING')) {
     header('Cache-Control: no-store');
     lscache_off();
     $session = resume_site_session() ? $_SESSION : [];
-    [$status, $payload] = handle_trades(db(), $session, $_GET, time());
+    [$status, $payload] = handle_trades(db(), $session, $_GET, time(), app_config());
     json_out($payload, $status);
 }

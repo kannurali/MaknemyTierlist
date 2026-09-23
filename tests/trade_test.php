@@ -392,9 +392,12 @@ test('ответ ленты говорит, вошёл ли человек и а
     assert_eq(200, $code, '200');
     assert_eq(true, $body['authed'], 'вошёл');
     assert_eq(false, $body['admin'], 'не админ');
-    [, $anon] = handle_trades($pdo, ['admin' => true], [], NOW);
-    assert_eq(false, $anon['authed'], 'админ по паролю — не вошедший игрок');
-    assert_eq(true, $anon['admin'], 'но админ');
+    [, $adm] = handle_trades($pdo, ['user_id' => '101'], [], NOW, ['admin_ids' => ['101']]);
+    assert_eq(true, $adm['admin'], 'id в admin_ids — админ');
+    [, $mod] = handle_trades($pdo, ['user_id' => '101'], [], NOW, ['moderator_ids' => ['101']]);
+    assert_eq(false, $mod['admin'], 'модератор объявления не снимает');
+    [, $old] = handle_trades($pdo, ['admin' => true], [], NOW, ['admin_ids' => ['101']]);
+    assert_eq(false, $old['admin'], 'метка старого входа по паролю — не админ');
 });
 
 // --------------------------------------------------------------------------

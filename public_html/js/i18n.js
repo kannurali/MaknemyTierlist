@@ -166,6 +166,8 @@
       "user.mine":              "Мой профиль",
       "user.profile":           "Профиль в Roblox",
       "user.logout":            "Выйти",
+      "user.admin":             "Админка",
+      "user.support":           "Обращения",
 
       "user.cancelled":         "Вход отменён",
       "user.expired":           "Вход занял слишком много времени — попробуйте ещё раз",
@@ -837,6 +839,8 @@
       "user.mine":              "My profile",
       "user.profile":           "Roblox profile",
       "user.logout":            "Log out",
+      "user.admin":             "Admin panel",
+      "user.support":           "Support inbox",
       "user.cancelled":         "Login cancelled",
       "user.expired":           "Login took too long — please try again",
       "user.error":             "Could not log in — please try again",

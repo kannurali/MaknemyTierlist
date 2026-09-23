@@ -58,9 +58,17 @@ function mt_render_admin(string $absPath): ?string {
     // Маркер печатается ПОСЛЕ require: ушла страница в exit на ветке ошибки —
     // маркера не будет, и мы это увидим, а не примем 500 за «счётчика нет».
     $marker = '___NX_METRIKA_RENDER_COMPLETED___';
-    $code = "session_start(); \$_SESSION['admin'] = true; require \$argv[1]; echo "
-        . var_export($marker, true) . ";";
+    // Админ — Roblox id 1 во временном конфиге. Путь с прямыми слэшами, в
+    // коде нет двойных кавычек: см. mt_cmd().
+    $cfg = str_replace(DIRECTORY_SEPARATOR, '/', (string)tempnam(sys_get_temp_dir(), 'nxcfg'));
+    file_put_contents($cfg, '<?php return ' . var_export([
+        'dsn' => 'sqlite::memory:', 'db_user' => '', 'db_pass' => '', 'images_dir' => '', 'admin_ids' => ['1'],
+    ], true) . ';');
+    $code = 'define(' . var_export('CONFIG_PATH', true) . ', ' . var_export($cfg, true) . '); '
+        . 'session_start(); $_SESSION[' . var_export('user_id', true) . '] = ' . var_export('1', true) . '; '
+        . 'require $argv[1]; echo ' . var_export($marker, true) . ';';
     $out = shell_exec(mt_cmd($php, $code, $absPath));
+    @unlink($cfg);
     if ($out === null || $out === false) { return null; }
     $pos = strpos($out, $marker);
     return $pos === false ? null : substr($out, 0, $pos);

@@ -1,11 +1,11 @@
 <?php
 // Панель управления рекламой. Прежний адрес /promo-admin.html редиректит сюда.
 //
-// Вход больше не спрашивает сама страница: пароль проверяет сервер до отдачи
-// разметки, поэтому форма входа и её JS из panel'и убраны — гость получает
-// экран входа от admin_page_guard(), а не пустую панель с оверлеем.
+// Вход больше не спрашивает сама страница: роль проверяет сервер до отдачи
+// разметки (admin_page_guard()), поэтому форма входа и её JS из panel'и
+// убраны.
 require_once __DIR__ . '/api/lib/admin_page.php';
-admin_page_guard('Панель рекламы');
+admin_page_guard();
 
 header('Content-Type: text/html; charset=utf-8');
 $nav = admin_nav('promo');
@@ -23,7 +23,7 @@ echo <<<HTML
      и растить его на стили внутренней формы незачем. Пути абсолютные —
      страница живёт на /admin/promo, от относительных они уехали бы в
      /admin/css/. -->
-<link rel="stylesheet" href="/css/admin-shell.css?v=3" />
+<link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=3" />
 </head>
 <body>

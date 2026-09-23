@@ -4,7 +4,9 @@ require_once __DIR__ . '/lib/roblox_oauth.php';
 
 /**
  * Кто сейчас на сайте. Одна ручка на всё состояние входа:
- *   admin  — админская сессия (пароль, api/login.php);
+ *   admin  — вошедший через Roblox есть в admin_ids (вся панель);
+ *   moderator — есть в admin_ids или moderator_ids (обращения). По этим
+ *            двум шапка решает, какую ссылку на панель дать в меню;
  *   user   — вошедший через Roblox или null;
  *   roblox — заведено ли вообще приложение в Roblox. По нему шапка решает,
  *            показывать кнопку входа или оставить прежнюю заглушку: пока
@@ -52,8 +54,10 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
     // лишнее обещание. Присутствие показывает профиль, и берёт он его из базы.
     if ($user !== null) { unset($user['seen']); }
 
+    $role = site_role($session, $cfg);
     return [
-        'admin'         => !empty($session['admin']),
+        'admin'         => $role === 'admin',
+        'moderator'     => $role !== '',
         'user'          => $user,
         'roblox'        => roblox_oauth_enabled($cfg),
         'roblox_public' => roblox_login_public($cfg),

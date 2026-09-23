@@ -2,72 +2,105 @@
 define('TESTING', 1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/../public_html/api/_bootstrap.php';
-require __DIR__ . '/../public_html/api/login.php';
 
-test('correct password verifies', function () {
-    $hash = password_hash('secret', PASSWORD_BCRYPT);
-    assert_true(verify_admin_password('secret', $hash), 'match');
+// Роли сайта: админ и модератор — это аккаунты Roblox из admin_ids и
+// moderator_ids в config.php. Пароля больше нет.
+
+// --- список id из конфига ---------------------------------------------------
+
+test('config_id_list берёт только цифры, без нулей впереди и без повторов', function () {
+    $cfg = ['admin_ids' => ['101', 102, ' 103 ', '101', 'abc', '', '0', '007', ['x'], true, 1.5]];
+    assert_eq(['101', '102', '103', '7'], config_id_list($cfg, 'admin_ids'));
+    assert_eq([], config_id_list(['admin_ids' => 'не список'], 'admin_ids'), 'не массив — пусто');
+    assert_eq([], config_id_list([], 'admin_ids'), 'ключа нет — пусто');
 });
 
-test('wrong password rejected', function () {
-    $hash = password_hash('secret', PASSWORD_BCRYPT);
-    assert_eq(false, verify_admin_password('nope', $hash), 'mismatch');
+// --- роль ---------------------------------------------------------------------
+
+$CFG = ['admin_ids' => ['1', '2'], 'moderator_ids' => ['2', '3']];
+
+test('админ — из admin_ids, модератор — из moderator_ids', function () use ($CFG) {
+    assert_eq('admin', site_role(['user_id' => '1'], $CFG), 'админ');
+    assert_eq('moderator', site_role(['user_id' => '3'], $CFG), 'модератор');
+    assert_eq('', site_role(['user_id' => '4'], $CFG), 'обычный игрок');
+    assert_eq('', site_role([], $CFG), 'аноним');
 });
 
-// --- login throttle -------------------------------------------------------
-// Unique key per test run so parallel/rerun temp files never collide.
-function thr_key(string $suffix): string {
-    return 'test-' . bin2hex(random_bytes(4)) . '-' . $suffix;
-}
-
-test('fresh key is not throttled', function () {
-    assert_eq(0, throttle_retry_after(thr_key('fresh'), 1000), 'no wait');
+test('кто в обоих списках — админ', function () use ($CFG) {
+    assert_eq('admin', site_role(['user_id' => '2'], $CFG));
 });
 
-test('lock engages on the 5th failure', function () {
-    $k = thr_key('lock');
-    for ($i = 1; $i <= 4; $i++) {
-        assert_eq($i, throttle_register_failure($k, 1000), "failure $i counted");
-        assert_eq(0, throttle_retry_after($k, 1000), "still open after $i");
-    }
-    assert_eq(5, throttle_register_failure($k, 1000), '5th failure');
-    assert_eq(300, throttle_retry_after($k, 1000), 'locked 300s');
-    throttle_clear($k);
+test('флаг старого входа по паролю прав не даёт', function () use ($CFG) {
+    assert_eq('', site_role(['admin' => true], $CFG), 'одна старая метка');
+    assert_eq('', site_role(['admin' => true, 'user_id' => '4'], $CFG), 'и вместе с игроком');
 });
 
-test('success clears the counter', function () {
-    $k = thr_key('clear');
-    throttle_register_failure($k, 1000);
-    throttle_clear($k);
-    assert_eq(0, throttle_retry_after($k, 1000), 'cleared');
+test('без списков в конфиге ни у кого прав нет', function () {
+    assert_eq('', site_role(['user_id' => '1'], []));
 });
 
-test('expired lock resets the counter instead of instantly re-locking', function () {
-    $k = thr_key('expire');
-    for ($i = 1; $i <= 5; $i++) { throttle_register_failure($k, 1000); }
-    // 1000 + 300 = lock until 1300; a failure after that starts over at 1.
-    assert_eq(1, throttle_register_failure($k, 2000), 'counter reset');
-    assert_eq(0, throttle_retry_after($k, 2000), 'not re-locked');
-    throttle_clear($k);
+test('user_id не строкой — не вошёл', function () use ($CFG) {
+    assert_eq('', site_role(['user_id' => 1], $CFG), 'число');
+    assert_eq('', site_role(['user_id' => ['1']], $CFG), 'массив');
+    assert_eq('', site_role(['user_id' => true], $CFG), 'true');
 });
 
-// --- login.php: порядок шагов ----------------------------------------------
-// Сам диспетчер юнит-тестом не вызвать, а порядок в нём и есть защита: общий
-// потолок и блокировка по адресу — до bcrypt (иначе поток неверных паролей
-// съедает единственное ядро), сессия — только после верного пароля (иначе
-// файл сессии на каждый запрос), и никакого сна: пауза держала процесс PHP,
-// а их на тарифе двадцать.
-test('login.php checks the limits before bcrypt and starts a session only after it', function () {
+test('is_admin и is_moderator смотрят на открытую сессию', function () {
+    $_SESSION = [];
+    assert_eq(false, is_admin(), 'аноним — не админ, конфиг даже не читается');
+    assert_eq(false, is_moderator(), 'и не модератор');
+});
+
+// --- вход по паролю убран ------------------------------------------------------
+
+// Файл остаётся на сервере: деплой ничего не удаляет, и прежний login.php
+// продолжал бы пускать по паролю. Поэтому он обязан существовать и ничего не
+// проверять.
+test('login.php — заглушка: 410 и никакой проверки пароля', function () {
     $src = file_get_contents(__DIR__ . '/../public_html/api/login.php');
-    $retry  = strpos($src, 'throttle_retry_after(');
-    $global = strpos($src, "rate_limit_allow('login_checks'");
-    $verify = strpos($src, 'verify_admin_password($password');
-    $sess   = strpos($src, 'start_site_session();');
-    assert_true($retry !== false && $global !== false && $verify !== false && $sess !== false, 'all steps present');
-    assert_true($retry < $verify && $global < $verify, 'limits before the password check');
-    assert_true($verify < $sess, 'session only after a correct password');
-    assert_eq(false, strpos($src, 'usleep('), 'no sleeping while holding a PHP process');
-    assert_eq(false, strpos($src, 'start_admin_session'), 'no session before the check');
+    assert_true(strpos($src, "'password_login_removed'], 410)") !== false, 'отвечает 410');
+    assert_eq(false, strpos($src, 'password_verify'), 'пароль не проверяется');
+    assert_eq(false, strpos($src, 'admin_hash'), 'хеш не читается');
+    assert_eq(false, strpos($src, '$_SESSION'), 'сессия не трогается');
+});
+
+test('ни один файл сайта больше не ставит и не читает $_SESSION[admin]', function () {
+    $root = __DIR__ . '/../public_html';
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
+    foreach ($it as $f) {
+        if ($f->getExtension() !== 'php') { continue; }
+        $src = file_get_contents($f->getPathname());
+        assert_eq(false, strpos($src, "\$_SESSION['admin']"), $f->getPathname());
+        assert_eq(false, strpos($src, "\$session['admin']"), $f->getPathname());
+    }
+});
+
+test('панель пускает по роли, остальным её как будто нет', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/api/lib/admin_page.php');
+    assert_eq(false, strpos($src, 'type="password"'), 'поля пароля нет');
+    assert_eq(false, strpos($src, '/api/login.php'), 'на login.php ничего не ходит');
+    assert_eq(false, strpos($src, 'roblox_start'), 'своей кнопки входа у панели нет');
+    assert_true(strpos($src, "    admin_not_found();\n    exit;") !== false
+        || strpos($src, "    admin_not_found();\r\n    exit;") !== false, 'чужим — 404');
+});
+
+test('robots.txt не рассказывает про панель', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/robots.txt');
+    assert_eq(false, stripos($src, 'admin'), 'ни строки про /admin');
+});
+
+test('обращения отмечают модераторы, вебхук ставят только админы', function () {
+    $pub = __DIR__ . '/../public_html';
+    assert_true(strpos(file_get_contents("$pub/api/support_status.php"), 'require_moderator();') !== false, 'support_status');
+    assert_true(strpos(file_get_contents("$pub/api/tg_setup.php"), 'require_admin();') !== false, 'tg_setup');
+    assert_true(strpos(file_get_contents("$pub/admin-support.php"), "admin_page_guard('moderator');") !== false,
+        '/admin/support открыт модераторам');
+    foreach (['admin.php', 'admin-news.php', 'admin-promo.php'] as $f) {
+        assert_true((bool)strpos(file_get_contents("$pub/$f"), 'admin_page_guard();') !== false, "$f — только админам");
+    }
+    foreach (['save.php', 'upload.php', 'news_save.php', 'news_delete.php'] as $f) {
+        assert_true(strpos(file_get_contents("$pub/api/$f"), 'require_admin();') !== false, "api/$f — только админам");
+    }
 });
 
 run_tests();

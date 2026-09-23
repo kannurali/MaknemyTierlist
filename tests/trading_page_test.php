@@ -285,13 +285,13 @@ test('центр обращений: форма, «написать лично»
 
 test('обращения видны в админке отдельной вкладкой', function () use ($PUB) {
     $nav = tp_read($PUB . '/api/lib/admin_page.php');
-    assert_true(strpos($nav, 'href="/admin/support">Обращения</a>') !== false, 'вкладка в общей панели');
+    assert_true(strpos($nav, "'support' => ['/admin/support', 'Обращения']") !== false, 'вкладка в общей панели');
     $page = tp_read($PUB . '/admin-support.php');
-    assert_true(strpos($page, "admin_page_guard('Центр обращений');") !== false, 'страница закрыта паролем');
+    assert_true(strpos($page, "admin_page_guard('moderator');") !== false, 'страница закрыта: модераторы и админы');
     assert_true(strpos($page, "admin_nav('support')") !== false, 'своя вкладка подсвечена');
     assert_true(strpos($page, 'action="/api/support_status.php"') !== false, 'отметка — формой');
     $api = tp_read($PUB . '/api/support_status.php');
-    assert_true(strpos($api, 'require_admin();') !== false, 'отметка только администратору');
+    assert_true(strpos($api, 'require_moderator();') !== false, 'отметка — модератору или админу');
     assert_true(strpos($api, 'require_post();') !== false, 'и только POST');
 });
 

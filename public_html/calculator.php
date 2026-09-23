@@ -100,7 +100,7 @@ page_lscache();
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=9" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/calculator.css?v=26" />
@@ -424,7 +424,7 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=52" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=53" fetchpriority="high"></script>
   <script src="js/promo.js?v=12" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>

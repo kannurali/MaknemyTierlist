@@ -60,17 +60,7 @@ function tg_config(array $cfg): array {
     $name = isset($cfg['tg_bot_name']) && is_string($cfg['tg_bot_name']) ? ltrim(trim($cfg['tg_bot_name']), '@') : '';
     if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{3,31}\z/', $name)) { $name = ''; }
 
-    $mods = [];
-    $raw  = isset($cfg['moderator_ids']) && is_array($cfg['moderator_ids']) ? $cfg['moderator_ids'] : [];
-    foreach ($raw as $id) {
-        $id = is_int($id) ? (string)$id : (is_string($id) ? trim($id) : '');
-        if (preg_match('/^\d{1,20}\z/', $id)) {
-            $id = ltrim($id, '0');
-            if ($id !== '') { $mods[] = $id; }
-        }
-    }
-
-    return ['token' => $token, 'name' => $name, 'moderators' => array_values(array_unique($mods))];
+    return ['token' => $token, 'name' => $name, 'moderators' => config_id_list($cfg, 'moderator_ids')];
 }
 
 function tg_enabled(array $tg): bool {

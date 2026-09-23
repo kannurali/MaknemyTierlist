@@ -1,5 +1,6 @@
 <?php
-// Shared shell for the admin pages (/admin and /admin/promo).
+// Shared shell for the admin pages (/admin, /admin/news, /admin/promo,
+// /admin/support).
 //
 // The login used to live on the public page: a floating "Войти" button in
 // index.html plus the whole editing toolbar sitting in the same markup,
@@ -17,19 +18,65 @@ function admin_page_headers(): void {
     header('X-Robots-Tag: noindex, nofollow');
 }
 
-// Lets an administrator through; hands anyone else the login form and ends the
-// request. Deliberately answers 200 rather than 401: a 401 without a
-// WWW-Authenticate header is malformed, and some shared hosts swap the body
-// for their own ErrorDocument, which would replace the form with a stock page.
-function admin_page_guard(string $title): void {
-    // Без куки админом быть нельзя — форма входа отдаётся без новой сессии,
-    // иначе каждый заход на /admin оставлял бы на сервере файл сессии.
+// Пускает того, чья роль подходит ($need: 'admin' — вся панель, 'moderator' —
+// обращения, туда же пускают и админов). Модератора, открывшего страницу
+// админа, уводит к обращениям — другой панели у него нет.
+//
+// Всем остальным — и анониму, и вошедшему игроку без роли — панели просто нет:
+// ответ тот же, что на любой несуществующий адрес. Ни кнопки входа, ни
+// «нет доступа»: обычному посетителю незачем знать, что здесь что-то есть.
+// Админы и модераторы входят на сайт через Roblox, как все, и попадают в
+// панель из меню аватара (js/topbar.js), которое показывает ссылку только им.
+function admin_page_guard(string $need = 'admin'): void {
+    // Без куки прав быть не может — отказ без новой сессии, иначе каждый
+    // заход на /admin оставлял бы на сервере файл сессии.
     resume_site_session();
-    admin_page_headers();
-    if (is_admin()) { return; }
-    admin_login_page($title);
+    $role = current_role();
+    if ($role === 'admin' || ($role === 'moderator' && $need === 'moderator')) {
+        admin_page_headers();
+        return;
+    }
+    if ($role === 'moderator') {
+        admin_page_headers();
+        header('Location: /admin/support', true, 303);
+        exit;
+    }
+    admin_not_found();
     exit;
 }
+
+// Ровно то, что LiteSpeed на maknemy.com отдаёт на несуществующий адрес:
+// тело байт в байт (два CR в нём — оттуда же), те же Cache-Control и
+// Content-Type, без X-Powered-By, которого у статического ответа нет.
+function admin_not_found(): void {
+    http_response_code(404);
+    header_remove('X-Powered-By');
+    header('Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    // Иначе PHP сам допишет «; charset=UTF-8», а у хостера его нет.
+    ini_set('default_charset', '');
+    header('Content-Type: text/html');
+    // Сначала к LF: на Windows git выписывает этот файл с CRLF.
+    $html = str_replace("\r\n", "\n", ADMIN_NOT_FOUND_HTML);
+    echo str_replace("Not Found\n</", "Not Found\r\n</", $html), "\n";
+}
+
+const ADMIN_NOT_FOUND_HTML = <<<'HTML'
+<!DOCTYPE html>
+<html style="height:100%">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<title> 404 Not Found
+</title><style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></head>
+<body style="color: #444; margin:0;font: normal 14px/20px Arial, Helvetica, sans-serif; height:100%; background-color: #fff;">
+<div style="height:auto; min-height:100%; ">     <div style="text-align: center; width:800px; margin-left: -400px; position:absolute; top: 30%; left:50%;">
+        <h1 style="margin:0; font-size:150px; line-height:150px; font-weight:bold;">404</h1>
+<h2 style="margin-top:20px;font-size: 30px;">Not Found
+</h2>
+<p>The resource requested could not be found on this server!</p>
+</div></div><div style="color:#f0f0f0; font-size:12px;margin:auto;padding:0px 30px 0px 30px;position:relative;clear:both;height:100px;margin-top:-101px;background-color:#474747;border-top: 1px solid rgba(0,0,0,0.15);box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;">
+<br>Proudly powered by LiteSpeed Web Server<p>Please be advised that LiteSpeed Technologies Inc. is not a web hosting company and, as such, has no control over content found on this site.</p></div></body></html>
+HTML;
 
 // Отдаёт РЕАЛЬНУЮ разметку публичной страницы ($file — index.php или
 // news.php), а не её копию: /admin и /admin/news не хранят второй экземпляр
@@ -78,89 +125,31 @@ function admin_render_public_page(string $file): ?string {
 }
 
 // Top bar shared by every panel. $active is 'tier', 'news', 'promo' or 'support'.
+// Модератор видит одну вкладку — обращения: других страниц ему не открыть.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
 function admin_nav(string $active): string {
-    $tier  = $active === 'tier'  ? ' is-active' : '';
-    $news  = $active === 'news'  ? ' is-active' : '';
-    $promo = $active === 'promo' ? ' is-active' : '';
-    $help  = $active === 'support' ? ' is-active' : '';
+    $tabs = is_admin()
+        ? [
+            'tier'    => ['/admin', 'Тирлист'],
+            'news'    => ['/admin/news', 'Новости'],
+            'promo'   => ['/admin/promo', 'Реклама'],
+            'support' => ['/admin/support', 'Обращения'],
+        ]
+        : ['support' => ['/admin/support', 'Обращения']];
+    $links = '';
+    foreach ($tabs as $key => [$href, $label]) {
+        $on = $key === $active ? ' is-active' : '';
+        $links .= "  <a class=\"adm-nav-tab{$on}\" href=\"{$href}\">{$label}</a>\n";
+    }
     return <<<HTML
 <nav class="adm-nav">
   <span class="adm-nav-brand">MAKNEMY<b>ADMIN</b></span>
-  <a class="adm-nav-tab{$tier}" href="/admin">Тирлист</a>
-  <a class="adm-nav-tab{$news}" href="/admin/news">Новости</a>
-  <a class="adm-nav-tab{$promo}" href="/admin/promo">Реклама</a>
-  <a class="adm-nav-tab{$help}" href="/admin/support">Обращения</a>
-  <span class="adm-nav-gap"></span>
+{$links}  <span class="adm-nav-gap"></span>
   <a class="adm-nav-out" href="/" target="_blank" rel="noopener">Сайт ↗</a>
   <form class="adm-nav-exit" method="post" action="/admin/logout">
     <button class="adm-nav-out" type="submit">Выйти</button>
   </form>
 </nav>
-HTML;
-}
-
-// Standalone login page. The password goes to /api/login.php — the same
-// endpoint as before, so the lockout after five misses still applies — and on
-// success we simply reload: the guard above then renders the real page.
-function admin_login_page(string $title): void {
-    $t = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-    header('Content-Type: text/html; charset=utf-8');
-    echo <<<HTML
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
-<meta name="robots" content="noindex,nofollow" />
-<title>Вход — {$t}</title>
-<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-<link rel="stylesheet" href="/css/admin-shell.css?v=3" />
-</head>
-<body class="adm-gate-body">
-<form class="adm-gate" id="gateForm" autocomplete="on">
-  <div class="adm-gate-brand">MAKNEMY<b>ADMIN</b></div>
-  <h1>{$t}</h1>
-  <p class="adm-muted">Введите пароль администратора.</p>
-  <input type="password" id="gatePass" autocomplete="current-password" placeholder="Пароль" autofocus />
-  <button class="adm-btn primary" type="submit" id="gateGo">Войти</button>
-  <div class="adm-err" id="gateErr" hidden></div>
-</form>
-<script>
-(function () {
-  var form = document.getElementById("gateForm");
-  var pass = document.getElementById("gatePass");
-  var go   = document.getElementById("gateGo");
-  var err  = document.getElementById("gateErr");
-  function fail(msg) { err.hidden = false; err.textContent = msg; go.disabled = false; pass.select(); }
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    err.hidden = true;
-    go.disabled = true;
-    fetch("/api/login.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pass.value })
-    })
-      .then(function (r) { return r.json().catch(function () { return {}; })
-        .then(function (j) { return { status: r.status, j: j }; }); })
-      .then(function (res) {
-        if (res.j && res.j.error === "too_many_attempts") {
-          fail("Слишком много попыток. Подождите " + (res.j.retry_after || 300) + " с.");
-          return;
-        }
-        if (res.status !== 200 || !res.j || !res.j.ok) { fail("Неверный пароль."); return; }
-        // Перезагрузка, а не показ панели из JS: разметку редактора отдаёт
-        // сервер, и до входа её в этой вкладке просто нет.
-        location.reload();
-      })
-      .catch(function () { fail("Сервер недоступен. Панель работает только там, где отвечает PHP."); });
-  });
-})();
-</script>
-</body>
-</html>
 HTML;
 }
