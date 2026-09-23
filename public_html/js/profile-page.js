@@ -194,11 +194,48 @@
   }
 
   if (toggle && list) {
-    toggle.addEventListener('click', function () {
-      var next = toggle.getAttribute('aria-expanded') !== 'true';
-      toggle.setAttribute('aria-expanded', String(next));
-      list.hidden = !next;
+    var menu = toggle.closest('.pf-menu');
+    var still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    var running = null;
+    var turn = 0;
+
+    var size = function () {
+      var r = menu.getBoundingClientRect();
+      return { width: r.width + 'px', height: r.height + 'px' };
+    };
+
+    var setMenu = function (open) {
+      var mine = ++turn;
+      var from = size();
+      if (running) { running.cancel(); running = null; }
+
+      toggle.setAttribute('aria-expanded', String(open));
       syncMenuLabel();
+      menu.classList.remove('is-opening', 'is-closing', 'is-animating');
+      menu.classList.toggle('is-closed', !open);
+      list.hidden = !open;
+
+      if (!menu.animate || (still && still.matches)) { return; }
+
+      var to = size();
+      if (!open) { list.hidden = false; }
+      void menu.offsetWidth;
+      menu.classList.add('is-animating', open ? 'is-opening' : 'is-closing');
+
+      running = menu.animate([from, to], {
+        duration: open ? 380 : 280,
+        easing: 'cubic-bezier(.2, .8, .2, 1)'
+      });
+      running.onfinish = function () {
+        if (mine !== turn) { return; }
+        running = null;
+        menu.classList.remove('is-animating', 'is-closing');
+        if (!open) { list.hidden = true; }
+      };
+    };
+
+    toggle.addEventListener('click', function () {
+      setMenu(toggle.getAttribute('aria-expanded') !== 'true');
     });
   }
 })();

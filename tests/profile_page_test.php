@@ -100,7 +100,8 @@ function pf_fixture_db(string $file): void {
     $ins->execute(['900000011', '', '', '', $now - 86400, $now, $now, null, 0, 0]);
 }
 
-function pf_render(string $me, string $id): ?array {
+// $extra — дополнительные ключи config.php (например admin_ids).
+function pf_render(string $me, string $id, array $extra = []): ?array {
     if (!function_exists('shell_exec')) { return null; }
     $php  = PHP_BINARY !== '' ? PHP_BINARY : 'php';
     // Имя уникальное на процесс и на вызов: два прогона набора рядом (или
@@ -112,9 +113,10 @@ function pf_render(string $me, string $id): ?array {
     $cfgf = $tmp . '/nx_profile_' . $tag . '_config.php';
 
     pf_fixture_db($dbf);
-    file_put_contents($cfgf, "<?php return ['dsn' => 'sqlite:" . $dbf . "', 'db_user' => '', "
-        . "'db_pass' => '', 'admin_hash' => '', 'images_dir' => '', 'deploy_secret' => '', "
-        . "'deploy_repo' => '', 'deploy_path' => '', 'deploy_branch' => ''];\n");
+    file_put_contents($cfgf, '<?php return ' . var_export(array_merge([
+        'dsn' => 'sqlite:' . $dbf, 'db_user' => '', 'db_pass' => '', 'images_dir' => '',
+        'deploy_secret' => '', 'deploy_repo' => '', 'deploy_path' => '', 'deploy_branch' => '',
+    ], $extra), true) . ";\n");
 
     // Маркер печатается ПОСЛЕ require, вместе с кодом ответа: ушла страница в
     // exit или в фатал — маркера не будет, и мы это увидим, а не примем
@@ -201,6 +203,69 @@ test('свой профиль: карточка, меню аккаунта и п
     // достраивается скриптом.
     assert_eq(0, substr_count($h, 'data-i18n="profile.nick"'), 'заглушки ника нет');
     assert_eq(0, substr_count($h, 'data-i18n="profile.handle"'), 'заглушки хендла нет');
+});
+
+// Вход в панель со своего профиля. Кнопку решает сервер по той же роли,
+// что пускает в /admin (site_role()), — обычный игрок её не получает даже в
+// разметке, а на чужом профиле её нет ни у кого.
+test('кнопка панели — только на своём профиле и только по роли', function () {
+    $none = pf_render('900000001', '');
+    if ($none === null) { return; }
+    assert_eq(0, substr_count($none['html'], 'class="pf-panel"'), 'обычный игрок кнопки не видит');
+
+    $adm = pf_render('900000001', '', ['admin_ids' => ['900000001']]);
+    assert_true(strpos($adm['html'], '<a class="pf-panel" href="/admin">') !== false, 'админ — в /admin');
+    assert_true(strpos($adm['html'], '<span data-i18n="user.admin">Админка</span>') !== false, 'подпись «Админка»');
+
+    $mod = pf_render('900000001', '', ['moderator_ids' => ['900000001']]);
+    assert_true(strpos($mod['html'], '<a class="pf-panel" href="/admin/support">') !== false, 'модератор — к обращениям');
+    assert_true(strpos($mod['html'], '<span data-i18n="user.support">Обращения</span>') !== false, 'подпись «Обращения»');
+
+    $peer = pf_render('900000001', '900000004', ['admin_ids' => ['900000001', '900000004']]);
+    assert_eq(0, substr_count($peer['html'], 'class="pf-panel"'), 'на чужом профиле кнопки нет, даже у админа');
+
+    // Кнопка — после блока статуса: на телефоне карточка идёт колонкой по
+    // order, и кнопка встаёт строкой под статусом и репутацией.
+    $meta  = strpos($adm['html'], '<div class="pf-meta">');
+    $panel = strpos($adm['html'], 'class="pf-panel"');
+    $chart = strpos($adm['html'], '<figure class="pf-chart"');
+    assert_true($meta !== false && $meta < $panel && $panel < $chart, 'между статусом и графиком');
+});
+
+test('кнопка панели стоит зеркально статусу относительно аватара', function () use ($PUB) {
+    $css = pf_read($PUB . '/css/profile.css');
+    $rule = function (string $sel) use ($css) {
+        $at = strpos($css, "\n" . $sel . ' {');
+        assert_true($at !== false, "правило $sel на месте");
+        return substr($css, $at, strpos($css, '}', $at) - $at);
+    };
+    $status = $rule('.pf-status');
+    $panel  = $rule('.pf-panel');
+    assert_true(strpos($status, 'left: calc(677 * var(--u));') !== false, 'статус: 677 от левого края');
+    assert_true(strpos($panel, 'right: calc(677 * var(--u));') !== false, 'кнопка: 677 от правого');
+    foreach (['top: calc(2 * var(--u));', 'height: calc(34 * var(--u));'] as $same) {
+        assert_true(strpos($status, $same) !== false && strpos($panel, $same) !== false, "одинаково: $same");
+    }
+    assert_true((bool)preg_match('/\.pf-panel\s*\{[^}]*order: 3;/', substr($css, strpos($css, '@media (max-width: 900px)'))),
+        'на телефоне кнопка в колонке карточки');
+});
+
+// Анимация меню: панель тянется из бургера, пункты въезжают по очереди.
+// Список прячется только ПОСЛЕ сворачивания, иначе пункты исчезали бы до
+// того, как панель начала сжиматься. Без анимации — сразу и без WAAPI.
+test('меню открывается и закрывается анимацией, но не у тех, кто просил без неё', function () use ($PUB) {
+    $js  = pf_read($PUB . '/js/profile-page.js');
+    $css = pf_read($PUB . '/css/profile.css');
+    assert_true(strpos($js, "matchMedia('(prefers-reduced-motion: reduce)')") !== false, 'скрипт спрашивает reduced-motion');
+    assert_true(strpos($js, 'menu.animate([from, to]') !== false, 'размер панели анимируется');
+    assert_true(strpos($js, "if (!open) { list.hidden = true; }") !== false, 'список прячется в конце сворачивания');
+    assert_true(strpos($js, 'if (mine !== turn) { return; }') !== false, 'устаревшая анимация не трогает новое состояние');
+    assert_true(strpos($css, '.pf-menu.is-closed {') !== false, 'свёрнутая панель — компактная');
+    assert_true(strpos($css, '@keyframes pf-menu-item-in') !== false, 'пункты въезжают');
+    $reduce = substr($css, strrpos($css, '@media (prefers-reduced-motion: reduce)'));
+    foreach (['.pf-panel', '.pf-menu.is-opening .pf-menu-list li', '.pf-menu.is-closing .pf-menu-list'] as $sel) {
+        assert_true(strpos($reduce, $sel) !== false, "$sel без анимации при reduced-motion");
+    }
 });
 
 test('чужой профиль: те же данные, но без операций с аккаунтом', function () {
