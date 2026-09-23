@@ -133,7 +133,7 @@ test('лента: кнопки из макета ведут куда в прот
     assert_true(strpos($s, '<a class="tr-tool" href="/calculator">') !== false, '«уточнить цены» → калькулятор');
     assert_true(strpos($s, '<a class="tr-tool" href="/trading/new">') !== false, '«создать» → форма');
     assert_true(strpos($s, '<a class="tr-tool" href="/support">') !== false, '«поддержка» → центр обращений');
-    foreach (['trFeed', 'trMine', 'trState', 'trMore', 'trQuery', 'trRail', 'trMe', 'trMeBtn', 'trMeAva'] as $id) {
+    foreach (['trFeed', 'trMine', 'trState', 'trMore', 'trQuery', 'trBoard', 'trRail', 'trRailR'] as $id) {
         assert_true(strpos($s, 'id="' . $id . '"') !== false, "#$id в разметке");
     }
     foreach (['trIconUp', 'trIconDown', 'trIconSwap'] as $id) {
@@ -144,6 +144,22 @@ test('лента: кнопки из макета ведут куда в прот
     assert_true(!in_array(false, $at, true), 'скрипты подключены');
     $sorted = $at; sort($sorted);
     assert_eq($sorted, $at, 'словарь и calc.js раньше скрипта ленты');
+});
+
+test('лента: страница стоит, прокручивается только блок объявлений', function () use ($PUB) {
+    $s   = tp_read($PUB . '/trading.php');
+    $css = tp_read($PUB . '/css/trading.css');
+    $js  = tp_read($PUB . '/js/trading-page.js');
+    assert_true(strpos($s, '<body class="tr-body">') !== false, 'у ленты свой body');
+    assert_true(strpos($css, "height: 100dvh;") !== false, 'body ровно в высоту окна');
+    assert_true(strpos($css, '.tr-body > .mk-foot { display: none; }') !== false, 'подвал под лентой не выглядывает');
+    preg_match('~\n\.tr-board \{(.*?)\n\}~s', $css, $m);
+    $board = $m[1] ?? '';
+    assert_true(strpos($board, 'flex: 1 1 0;') !== false, 'блок занимает остаток окна');
+    assert_true(strpos($board, 'overflow-y: auto;') !== false, 'и прокручивается сам');
+    assert_true(strpos($css, 'overflow: visible;') === false, 'на телефоне прокрутку у блока не отбирают');
+    assert_true(strpos($js, '{ root: $("#trBoard"), rootMargin: "240px" }') !== false,
+        'подгрузка следит за прокруткой блока, а не окна');
 });
 
 test('скрипт ленты: API, чат с черновиком, закрытие, реклама', function () use ($PUB) {
