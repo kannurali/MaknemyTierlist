@@ -79,9 +79,9 @@ function admin_page_subprocess_cmd(string $php, string $code, string $absPath): 
         . ' ' . escapeshellarg($absPath) . ' ' . $devnull;
 }
 
-// Конфиг для дочернего процесса: админ — Roblox id 1, модератор — 2. Вход
-// через Roblox «настроен», чтобы экран входа показывал кнопку. Путь с прямыми
-// слэшами: так он без экранирования доезжает через командную строку Windows.
+// Конфиг для дочернего процесса: админ — Roblox id 1, модератор — 2. Путь с
+// прямыми слэшами: так он без экранирования доезжает через командную строку
+// Windows.
 function admin_test_config_path(): string {
     static $path = null;
     if ($path === null) {
@@ -89,8 +89,6 @@ function admin_test_config_path(): string {
         file_put_contents($path, '<?php return ' . var_export([
             'dsn' => 'sqlite::memory:', 'db_user' => '', 'db_pass' => '', 'images_dir' => '',
             'admin_ids' => ['1'], 'moderator_ids' => ['2'],
-            'roblox_client_id' => 'x', 'roblox_client_secret' => 'y',
-            'roblox_redirect_uri' => 'https://maknemy.com/api/roblox_callback.php',
         ], true) . ';');
         $file = $path;
         register_shutdown_function(function () use ($file) { @unlink($file); });
@@ -101,11 +99,14 @@ function admin_test_config_path(): string {
 // Прогон страницы от лица $uid ('' — аноним, без сессии вовсе). Возвращает
 // напечатанное и признак, дошла ли страница до конца (не ушла ли в exit).
 // В коде дочернего php нет двойных кавычек — см. admin_page_subprocess_cmd().
+// Вывод идёт в hex: shell_exec на Windows читает текстом и съедает CR, а 404
+// сверяется байт в байт.
 function admin_run_as(string $absPath, string $uid, string $uri = ''): ?array {
     if (!function_exists('shell_exec') || !is_file($absPath)) { return null; }
     $php = PHP_BINARY !== '' ? PHP_BINARY : 'php';
     $marker = '___NX_ADMIN_PAGE_RENDER_COMPLETED___';
-    $code = 'define(' . var_export('CONFIG_PATH', true) . ', ' . var_export(admin_test_config_path(), true) . '); ';
+    $code = 'ob_start(function ($b) { return bin2hex($b); }); '
+        . 'define(' . var_export('CONFIG_PATH', true) . ', ' . var_export(admin_test_config_path(), true) . '); ';
     if ($uri !== '') {
         $code .= '$_SERVER[' . var_export('REQUEST_URI', true) . '] = ' . var_export($uri, true) . '; '
             . 'parse_str((string)parse_url(' . var_export($uri, true) . ', PHP_URL_QUERY), $_GET); ';
@@ -113,7 +114,7 @@ function admin_run_as(string $absPath, string $uid, string $uri = ''): ?array {
     if ($uid !== '') { $code .= 'session_start(); $_SESSION[' . var_export('user_id', true) . '] = ' . var_export($uid, true) . '; '; }
     $code .= 'require $argv[1]; echo ' . var_export($marker, true) . ';';
     $out = shell_exec(admin_page_subprocess_cmd($php, $code, $absPath));
-    if ($out === null || $out === false) { $out = ''; }
+    $out = is_string($out) ? (string)@hex2bin(trim($out)) : '';
     $pos = strpos($out, $marker);
     return ['html' => $pos === false ? $out : substr($out, 0, $pos), 'done' => $pos !== false];
 }
@@ -194,24 +195,35 @@ test('/admin/news (admin-news.php) реально отдаёт разметку 
 $ADMIN_PHP   = __DIR__ . '/../public_html/admin.php';
 $SUPPORT_PHP = __DIR__ . '/../public_html/admin-support.php';
 
-test('аноним на /admin получает вход через Roblox, а не поле пароля', function () use ($ADMIN_PHP) {
-    $r = admin_run_as($ADMIN_PHP, '', '/admin?login=error');
-    if ($r === null) { return; }
+// Чужому панель отвечает тем же, что LiteSpeed на maknemy.com отдаёт на
+// несуществующий адрес: 1251 байт, два из них — CR. Ни кнопки входа, ни
+// «нет доступа», ни слова о панели.
+function assert_host_404(array $r, string $who): void {
     $html = $r['html'];
-    assert_eq(false, $r['done'], 'после экрана входа запрос закончен');
-    assert_eq(false, strpos($html, 'id="stage"'), 'редактора в ответе нет');
-    assert_eq(false, strpos($html, 'type="password"'), 'поля пароля нет');
-    assert_true(strpos($html, 'href="/api/roblox_start.php?return=%2Fadmin"') !== false, 'вход ведёт на Roblox и обратно на /admin');
-    assert_true(strpos($html, 'Не удалось войти') !== false, 'неудачную попытку видно');
+    assert_eq(false, $r['done'], "$who: запрос закончен");
+    assert_eq(1251, strlen($html), "$who: тело байт в байт как у хостера");
+    assert_true(strpos($html, "<title> 404 Not Found\r\n</title>") !== false, "$who: заголовок 404");
+    assert_eq(1, substr_count($html, "Not Found\r\n</h2>"), "$who: второй CR на месте");
+    assert_eq(2, substr_count($html, "\r"), "$who: других CR нет");
+    foreach (['id="stage"', 'adm-', 'Roblox', 'MAKNEMY', 'admin'] as $leak) {
+        assert_eq(false, strpos($html, $leak), "$who: в ответе нет $leak");
+    }
+}
+
+test('анониму /admin и /admin/support отвечают 404 хостера', function () use ($ADMIN_PHP, $SUPPORT_PHP) {
+    foreach ([$ADMIN_PHP, $SUPPORT_PHP] as $page) {
+        $r = admin_run_as($page, '', '/admin?login=error');
+        if ($r === null) { return; }
+        assert_host_404($r, basename($page));
+    }
 });
 
-test('вошедший без прав видит свой Roblox id и не видит панели', function () use ($ADMIN_PHP) {
-    $r = admin_run_as($ADMIN_PHP, '555');
-    if ($r === null) { return; }
-    assert_eq(false, $r['done'], 'запрос закончен');
-    assert_true(strpos($r['html'], 'Нет доступа') !== false, 'отказ');
-    assert_true(strpos($r['html'], '>555</b>') !== false, 'свой id — чтобы владелец вписал его в конфиг');
-    assert_eq(false, strpos($r['html'], 'id="stage"'), 'редактора нет');
+test('вошедшему игроку без роли — тот же 404', function () use ($ADMIN_PHP, $SUPPORT_PHP) {
+    foreach ([$ADMIN_PHP, $SUPPORT_PHP] as $page) {
+        $r = admin_run_as($page, '555');
+        if ($r === null) { return; }
+        assert_host_404($r, basename($page));
+    }
 });
 
 test('модератора редактор тирлиста не пускает', function () use ($ADMIN_PHP) {

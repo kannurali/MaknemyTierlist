@@ -75,21 +75,28 @@ test('ни один файл сайта больше не ставит и не �
     }
 });
 
-test('панель пускает по роли, а не по паролю', function () {
+test('панель пускает по роли, остальным её как будто нет', function () {
     $src = file_get_contents(__DIR__ . '/../public_html/api/lib/admin_page.php');
     assert_eq(false, strpos($src, 'type="password"'), 'поля пароля нет');
     assert_eq(false, strpos($src, '/api/login.php'), 'на login.php ничего не ходит');
-    assert_true(strpos($src, '/api/roblox_start.php?return=') !== false, 'вход через Roblox с возвратом');
+    assert_eq(false, strpos($src, 'roblox_start'), 'своей кнопки входа у панели нет');
+    assert_true(strpos($src, "    admin_not_found();\n    exit;") !== false
+        || strpos($src, "    admin_not_found();\r\n    exit;") !== false, 'чужим — 404');
+});
+
+test('robots.txt не рассказывает про панель', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/robots.txt');
+    assert_eq(false, stripos($src, 'admin'), 'ни строки про /admin');
 });
 
 test('обращения отмечают модераторы, вебхук ставят только админы', function () {
     $pub = __DIR__ . '/../public_html';
     assert_true(strpos(file_get_contents("$pub/api/support_status.php"), 'require_moderator();') !== false, 'support_status');
     assert_true(strpos(file_get_contents("$pub/api/tg_setup.php"), 'require_admin();') !== false, 'tg_setup');
-    assert_true(strpos(file_get_contents("$pub/admin-support.php"), "admin_page_guard('Центр обращений', 'moderator');") !== false,
+    assert_true(strpos(file_get_contents("$pub/admin-support.php"), "admin_page_guard('moderator');") !== false,
         '/admin/support открыт модераторам');
     foreach (['admin.php', 'admin-news.php', 'admin-promo.php'] as $f) {
-        assert_true((bool)preg_match("~admin_page_guard\('[^']+'\);~", file_get_contents("$pub/$f")), "$f — только админам");
+        assert_true((bool)strpos(file_get_contents("$pub/$f"), 'admin_page_guard();') !== false, "$f — только админам");
     }
     foreach (['save.php', 'upload.php', 'news_save.php', 'news_delete.php'] as $f) {
         assert_true(strpos(file_get_contents("$pub/api/$f"), 'require_admin();') !== false, "api/$f — только админам");

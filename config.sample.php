@@ -6,10 +6,11 @@ return [
     'dsn'      => 'mysql:host=127.0.0.1;dbname=nexus;charset=utf8mb4',
     'db_user'  => 'root',
     'db_pass'  => '',
-    // Админы — Roblox id аккаунтов сайта (как в адресе /profile?id=…).
-    // Входят в /admin через Roblox и видят всю панель: тирлист, новости,
-    // рекламу, обращения. Пароля у админки нет. Свой id человек видит на
-    // экране «Нет доступа», если войдёт в /admin до того, как его впишут.
+    // Админы — Roblox id аккаунтов сайта: число из адреса
+    // roblox.com/users/<id>/profile (пункт «Профиль в Roblox» в меню аватара).
+    // Входят на сайт через Roblox и видят всю панель: тирлист, новости,
+    // рекламу, обращения. Пароля у админки нет. Всем, кого нет в списках,
+    // /admin отвечает обычным 404.
     'admin_ids' => [],
     // Absolute path to the writable images directory.
     'images_dir' => __DIR__ . '/public_html/images',

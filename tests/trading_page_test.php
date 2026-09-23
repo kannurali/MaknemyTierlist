@@ -287,7 +287,7 @@ test('обращения видны в админке отдельной вкл�
     $nav = tp_read($PUB . '/api/lib/admin_page.php');
     assert_true(strpos($nav, "'support' => ['/admin/support', 'Обращения']") !== false, 'вкладка в общей панели');
     $page = tp_read($PUB . '/admin-support.php');
-    assert_true(strpos($page, "admin_page_guard('Центр обращений', 'moderator');") !== false, 'страница закрыта: модераторы и админы');
+    assert_true(strpos($page, "admin_page_guard('moderator');") !== false, 'страница закрыта: модераторы и админы');
     assert_true(strpos($page, "admin_nav('support')") !== false, 'своя вкладка подсвечена');
     assert_true(strpos($page, 'action="/api/support_status.php"') !== false, 'отметка — формой');
     $api = tp_read($PUB . '/api/support_status.php');

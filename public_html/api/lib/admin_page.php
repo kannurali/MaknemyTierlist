@@ -1,5 +1,6 @@
 <?php
-// Shared shell for the admin pages (/admin and /admin/promo).
+// Shared shell for the admin pages (/admin, /admin/news, /admin/promo,
+// /admin/support).
 //
 // The login used to live on the public page: a floating "Войти" button in
 // index.html plus the whole editing toolbar sitting in the same markup,
@@ -10,7 +11,6 @@
 
 require_once __DIR__ . '/../_bootstrap.php';
 require_once __DIR__ . '/metrika.php';
-require_once __DIR__ . '/roblox_oauth.php';
 
 // Admin pages are per-session and must never sit in a proxy or a bfcache.
 function admin_page_headers(): void {
@@ -19,35 +19,64 @@ function admin_page_headers(): void {
 }
 
 // Пускает того, чья роль подходит ($need: 'admin' — вся панель, 'moderator' —
-// обращения, туда же пускают и админов), остальным отдаёт экран входа и
-// заканчивает запрос. Модератора, открывшего страницу админа, уводит к
-// обращениям — другой панели у него нет.
+// обращения, туда же пускают и админов). Модератора, открывшего страницу
+// админа, уводит к обращениям — другой панели у него нет.
 //
-// Экран входа отвечает 200, а не 401/403: без WWW-Authenticate 401 — кривой
-// ответ, а часть хостингов подменяет тело ошибок своим ErrorDocument, и вместо
-// экрана человек увидел бы стандартную страницу хостера.
-function admin_page_guard(string $title, string $need = 'admin'): void {
-    // Без куки прав быть не может — экран отдаётся без новой сессии, иначе
-    // каждый заход на /admin оставлял бы на сервере файл сессии.
+// Всем остальным — и анониму, и вошедшему игроку без роли — панели просто нет:
+// ответ тот же, что на любой несуществующий адрес. Ни кнопки входа, ни
+// «нет доступа»: обычному посетителю незачем знать, что здесь что-то есть.
+// Админы и модераторы входят на сайт через Roblox, как все, и попадают в
+// панель из меню аватара (js/topbar.js), которое показывает ссылку только им.
+function admin_page_guard(string $need = 'admin'): void {
+    // Без куки прав быть не может — отказ без новой сессии, иначе каждый
+    // заход на /admin оставлял бы на сервере файл сессии.
     resume_site_session();
-    admin_page_headers();
     $role = current_role();
     if ($role === 'admin' || ($role === 'moderator' && $need === 'moderator')) {
-        // Возврат с Roblox приходит с меткой ?login=ok. Страницы панели, кроме
-        // тирлиста, js/topbar.js не грузят, и снять метку из адреса некому.
-        if (isset($_GET['login'])) {
-            header('Location: ' . admin_return_path(), true, 303);
-            exit;
-        }
+        admin_page_headers();
         return;
     }
     if ($role === 'moderator') {
+        admin_page_headers();
         header('Location: /admin/support', true, 303);
         exit;
     }
-    admin_login_page($title, (string)($_SESSION['user_id'] ?? ''));
+    admin_not_found();
     exit;
 }
+
+// Ровно то, что LiteSpeed на maknemy.com отдаёт на несуществующий адрес:
+// тело байт в байт (два CR в нём — оттуда же), те же Cache-Control и
+// Content-Type, без X-Powered-By, которого у статического ответа нет.
+function admin_not_found(): void {
+    http_response_code(404);
+    header_remove('X-Powered-By');
+    header('Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    // Иначе PHP сам допишет «; charset=UTF-8», а у хостера его нет.
+    ini_set('default_charset', '');
+    header('Content-Type: text/html');
+    // Сначала к LF: на Windows git выписывает этот файл с CRLF.
+    $html = str_replace("\r\n", "\n", ADMIN_NOT_FOUND_HTML);
+    echo str_replace("Not Found\n</", "Not Found\r\n</", $html), "\n";
+}
+
+const ADMIN_NOT_FOUND_HTML = <<<'HTML'
+<!DOCTYPE html>
+<html style="height:100%">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<title> 404 Not Found
+</title><style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></head>
+<body style="color: #444; margin:0;font: normal 14px/20px Arial, Helvetica, sans-serif; height:100%; background-color: #fff;">
+<div style="height:auto; min-height:100%; ">     <div style="text-align: center; width:800px; margin-left: -400px; position:absolute; top: 30%; left:50%;">
+        <h1 style="margin:0; font-size:150px; line-height:150px; font-weight:bold;">404</h1>
+<h2 style="margin-top:20px;font-size: 30px;">Not Found
+</h2>
+<p>The resource requested could not be found on this server!</p>
+</div></div><div style="color:#f0f0f0; font-size:12px;margin:auto;padding:0px 30px 0px 30px;position:relative;clear:both;height:100px;margin-top:-101px;background-color:#474747;border-top: 1px solid rgba(0,0,0,0.15);box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;">
+<br>Proudly powered by LiteSpeed Web Server<p>Please be advised that LiteSpeed Technologies Inc. is not a web hosting company and, as such, has no control over content found on this site.</p></div></body></html>
+HTML;
 
 // Отдаёт РЕАЛЬНУЮ разметку публичной страницы ($file — index.php или
 // news.php), а не её копию: /admin и /admin/news не хранят второй экземпляр
@@ -122,77 +151,5 @@ function admin_nav(string $active): string {
     <button class="adm-nav-out" type="submit">Выйти</button>
   </form>
 </nav>
-HTML;
-}
-
-// Куда вернуть человека после входа через Roblox: на ту же страницу панели,
-// без параметров (в них могла остаться метка прошлой неудачной попытки).
-function admin_return_path(): string {
-    $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-    return roblox_safe_return(is_string($path) && $path !== '' ? $path : '/admin');
-}
-
-// Экран вместо панели. Пароля нет: кнопка ведёт на вход через Roblox
-// (api/roblox_start.php), и возврат приходит обратно сюда же, где страж
-// сверяет Roblox id со списками в config.php.
-//
-// $uid — кто уже вошёл на сайт, но прав не имеет. Ему экран показывает его
-// Roblox id: именно это число владелец вписывает в admin_ids или
-// moderator_ids, а узнать его иначе человеку негде.
-function admin_login_page(string $title, string $uid): void {
-    $t = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-
-    if ($uid !== '') {
-        $id   = htmlspecialchars($uid, ENT_QUOTES, 'UTF-8');
-        $body = <<<HTML
-  <h1>Нет доступа</h1>
-  <p class="adm-muted">Этот аккаунт Roblox не админ и не модератор сайта.</p>
-  <p class="adm-muted">Roblox ID: <b class="adm-gate-id">{$id}</b>. Доступ выдаёт владелец сайта — вписывает этот номер в config.php.</p>
-  <form method="post" action="/admin/logout">
-    <button class="adm-btn" type="submit">Выйти из аккаунта</button>
-  </form>
-  <a class="adm-btn" href="/">На сайт</a>
-HTML;
-    } elseif (!roblox_oauth_enabled(app_config())) {
-        $body = <<<HTML
-  <h1>{$t}</h1>
-  <p class="adm-err">Вход через Roblox не настроен: в config.php нет ключей приложения Roblox.</p>
-HTML;
-    } else {
-        $flags = [
-            'cancelled' => 'Вход отменён.',
-            'expired'   => 'Вход занял слишком много времени — попробуйте ещё раз.',
-            'error'     => 'Не удалось войти — попробуйте ещё раз.',
-        ];
-        $flag = isset($_GET['login']) && is_string($_GET['login']) ? $_GET['login'] : '';
-        $err  = isset($flags[$flag]) ? "\n  <p class=\"adm-err\">{$flags[$flag]}</p>" : '';
-        $href = htmlspecialchars('/api/roblox_start.php?return=' . rawurlencode(admin_return_path()), ENT_QUOTES, 'UTF-8');
-        $body = <<<HTML
-  <h1>{$t}</h1>
-  <p class="adm-muted">Панель открывается аккаунтом Roblox администратора или модератора.</p>{$err}
-  <a class="adm-btn primary" href="{$href}">Войти через Roblox</a>
-HTML;
-    }
-
-    header('Content-Type: text/html; charset=utf-8');
-    echo <<<HTML
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
-<meta name="robots" content="noindex,nofollow" />
-<title>Вход — {$t}</title>
-<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-<link rel="stylesheet" href="/css/admin-shell.css?v=4" />
-</head>
-<body class="adm-gate-body">
-<main class="adm-gate">
-  <div class="adm-gate-brand">MAKNEMY<b>ADMIN</b></div>
-{$body}
-</main>
-</body>
-</html>
 HTML;
 }

@@ -16,7 +16,7 @@
 // news.php («css/base.css», «api/news.php») считаются от адреса документа и
 // уехали бы в /admin/. Поэтому все они переписываются на абсолютные ниже.
 require_once __DIR__ . '/api/lib/admin_page.php';
-admin_page_guard('Новости');
+admin_page_guard();
 
 $html = admin_render_public_page(__DIR__ . '/news.php');
 if ($html === null) {

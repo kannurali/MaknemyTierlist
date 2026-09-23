@@ -2,7 +2,7 @@
 require_once __DIR__ . '/api/lib/admin_page.php';
 require_once __DIR__ . '/api/lib/support.php';
 require_once __DIR__ . '/api/lib/telegram.php';
-admin_page_guard('Центр обращений', 'moderator');
+admin_page_guard('moderator');
 
 // Список обращений со страницы /support. Печатается сервером целиком, без
 // скриптов: читать и отмечать — всё, что тут нужно. Отметка — обычная форма

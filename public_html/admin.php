@@ -18,7 +18,7 @@
 // разрешаются от корня и работают без единой правки. На /admin/ они уехали бы
 // в /admin/assets/ и вернули бы 404.
 require_once __DIR__ . '/api/lib/admin_page.php';
-admin_page_guard('Редактор тирлиста');
+admin_page_guard();
 
 $html = admin_render_public_page(__DIR__ . '/index.php');
 if ($html === null) {
