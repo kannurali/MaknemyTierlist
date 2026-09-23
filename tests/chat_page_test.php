@@ -678,8 +678,8 @@ test('фоновая перечитка дописывает сообщения,
     assert_true(strpos($js, 'if (from >= 0) {') !== false, 'и решает, дописывать или пересобирать');
     assert_true(strpos($js, "if (shown[i].dataset.id !== String(messages[i].id)) { return -1; }") !== false,
         'сверка по настоящим номерам сообщений, а не по количеству');
-    assert_true(strpos($js, 'li.dataset.id = String(m.id);') !== false, 'номер есть на каждом пузыре');
-    assert_true(strpos($js, 'for (var k = from; k < messages.length; k++) { log.appendChild(bubble(messages[k])); }') !== false,
+    assert_true(strpos($js, 'msg.dataset.id = String(m.id);') !== false, 'номер есть на каждом пузыре');
+    assert_true(strpos($js, 'for (var k = from; k < messages.length; k++) { place(messages[k]); }') !== false,
         'дописывается только хвост');
 
     // Заголовок комнаты при этом пересобирается всегда: он зависит от языка.
@@ -774,6 +774,28 @@ test('стикер показывает предмет без цены и спр
     assert_eq(0, substr_count($js, 'it.demand'), 'спроса нет');
     assert_eq(0, substr_count($js, 'assets/dot-'), 'точки спроса нет');
     assert_true(strpos($js, "name.textContent = it.name || '';") !== false, 'название ставится текстом');
+});
+
+// Стикеры подряд от одного человека встают в один ряд, а не столбиком: так
+// попросил владелец. Текст между ними или стикер собеседника начинают новый
+// ряд. Каждый стикер при этом остаётся своим .ct-msg с номером — на этом
+// держится сверка ленты при фоновой перечитке (sameHead).
+test('стикеры подряд от одного человека идут в ряд', function () use ($PUB) {
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(strpos($js, 'function place(m)') !== false, 'сообщения ставятся одним местом');
+    assert_eq(0, substr_count($js, 'log.appendChild(bubble('), 'и нигде в обход него');
+    assert_true(strpos($js, "if (!row || !row.classList.contains('ct-sticker-row') || row.classList.contains('is-mine') !== !!m.mine) {") !== false,
+        'новый ряд — после текста или стикера другого человека');
+    assert_true(strpos($js, "var msg = document.createElement(sticker ? 'div' : 'li');") !== false,
+        'стикер внутри ряда — не вложенный li');
+    assert_true(strpos($js, "var shown = log.querySelectorAll('.ct-msg');") !== false,
+        'сверка ленты видит и стикеры внутри рядов');
+
+    $css = cp_read($PUB . '/css/chat.css');
+    assert_true((bool)preg_match('/\.ct-sticker-row \{\s*display: flex;\s*flex-wrap: wrap;/u', $css),
+        'ряд переносится, если стикеров много');
+    assert_true((bool)preg_match('/\.ct-sticker-row\.is-mine \{\s*align-self: flex-end;\s*justify-content: flex-end;/u', $css),
+        'свои стикеры прижаты вправо');
 });
 
 test('стикеры: подписи, которые ставит скрипт, переведены', function () use ($PUB) {
