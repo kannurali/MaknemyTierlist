@@ -42,7 +42,7 @@ $html = preg_replace('~(src|href)="(?!https?:|//|/|#|data:)~i', '$1="/', $html);
 
 $html = str_replace(
     '</head>',
-    '<link rel="stylesheet" href="/css/admin-shell.css?v=3" />' . "
+    '<link rel="stylesheet" href="/css/admin-shell.css?v=4" />' . "
 " . '<link rel="stylesheet" href="/css/news-editor.css?v=1" />' . "
 </head>",
     $html

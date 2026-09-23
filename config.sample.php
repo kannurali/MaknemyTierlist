@@ -6,9 +6,11 @@ return [
     'dsn'      => 'mysql:host=127.0.0.1;dbname=nexus;charset=utf8mb4',
     'db_user'  => 'root',
     'db_pass'  => '',
-    // bcrypt hash of the shared admin password.
-    // Generate: php -r "echo password_hash('YOUR_PASSWORD', PASSWORD_BCRYPT), PHP_EOL;"
-    'admin_hash' => '$2y$10$REPLACE_WITH_A_REAL_BCRYPT_HASH................................',
+    // Админы — Roblox id аккаунтов сайта (как в адресе /profile?id=…).
+    // Входят в /admin через Roblox и видят всю панель: тирлист, новости,
+    // рекламу, обращения. Пароля у админки нет. Свой id человек видит на
+    // экране «Нет доступа», если войдёт в /admin до того, как его впишут.
+    'admin_ids' => [],
     // Absolute path to the writable images directory.
     'images_dir' => __DIR__ . '/public_html/images',
 
@@ -36,8 +38,9 @@ return [
     // Имя бота без @ — из него собирается ссылка t.me/<имя>?start=…
     'tg_bot_name'   => '',
     // Модераторы — Roblox id аккаунтов сайта (как в адресе /profile?id=…).
-    // Им бот пишет о новых обращениях в поддержку, если они подключили
-    // Telegram колокольчиком в чате.
+    // В панели им открыты только обращения (/admin/support). Им же бот пишет
+    // о новых обращениях, если они подключили Telegram колокольчиком в чате —
+    // админ, которому нужны эти уведомления, вписывает себя и сюда.
     'moderator_ids' => [],
 
     // --- GitHub push webhook (api/deploy.php) ---------------------------

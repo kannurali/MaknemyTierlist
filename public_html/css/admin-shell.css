@@ -87,17 +87,9 @@
 .adm-gate p { margin: 0; }
 .adm-muted { color: var(--adm-muted); }
 .adm-err { color: var(--adm-bad); font-size: 12px; }
-
-.adm-gate input {
-  width: 100%;
-  background: #0c1730;
-  border: 1px solid var(--adm-edge);
-  border-radius: 8px;
-  color: var(--adm-text);
-  padding: 8px 10px;
-  font: inherit;
-}
-.adm-gate input:focus { outline: none; border-color: var(--adm-cyan); }
+.adm-gate-id { color: var(--adm-text); user-select: all; }
+.adm-gate form { margin: 0; }
+.adm-gate form .adm-btn { width: 100%; }
 
 .adm-btn {
   border: 1px solid var(--adm-edge);
@@ -115,6 +107,7 @@
   font-weight: 600;
 }
 .adm-btn[disabled] { opacity: .5; cursor: default; }
+.adm-gate a.adm-btn { text-align: center; text-decoration: none; }
 
 .ne-body-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 

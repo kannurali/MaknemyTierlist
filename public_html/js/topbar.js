@@ -15,6 +15,8 @@
     "user.mine": "Мой профиль",
     "user.profile": "Профиль в Roblox",
     "user.logout": "Выйти",
+    "user.admin": "Админка",
+    "user.support": "Обращения",
     "user.cancelled": "Вход отменён",
     "user.expired": "Вход занял слишком много времени — попробуйте ещё раз",
     "user.error": "Не удалось войти — попробуйте ещё раз"
@@ -178,7 +180,12 @@
     return a;
   }
 
-  function buildMenu(user) {
+  var PANEL = {
+    admin: { href: "/admin", key: "user.admin" },
+    support: { href: "/admin/support", key: "user.support" }
+  };
+
+  function buildMenu(user, panel) {
     var menu = document.createElement("div");
     menu.className = "mk-user-menu";
     menu.setAttribute("role", "menu");
@@ -211,6 +218,16 @@
     prof.textContent = tx("user.profile");
     prof.setAttribute("data-i18n", "user.profile");
 
+    var desk = null;
+    if (PANEL[panel]) {
+      desk = document.createElement("a");
+      desk.className = "mk-user-item";
+      desk.setAttribute("role", "menuitem");
+      desk.href = PANEL[panel].href;
+      desk.textContent = tx(PANEL[panel].key);
+      desk.setAttribute("data-i18n", PANEL[panel].key);
+    }
+
     var out = document.createElement("button");
     out.className = "mk-user-item mk-user-out";
     out.type = "button";
@@ -226,12 +243,13 @@
     menu.appendChild(name);
     menu.appendChild(mine);
     menu.appendChild(prof);
+    if (desk) menu.appendChild(desk);
     menu.appendChild(out);
     document.body.appendChild(menu);
     return menu;
   }
 
-  function initUserMenu(btn, user) {
+  function initUserMenu(btn, user, panel) {
     btn.removeAttribute("data-soon");
     var label = tx("user.menu");
     btn.setAttribute("aria-label", label);
@@ -253,7 +271,7 @@
       btn.appendChild(img);
     }
 
-    var menu = buildMenu(user);
+    var menu = buildMenu(user, panel);
     var menuOpen = false;
 
     function place() {
@@ -294,7 +312,7 @@
       .then(function (s) {
         var invited = takeInvite();
         if (!s || !s.roblox) return;
-        if (s.user) initUserMenu(avatarBtn, s.user);
+        if (s.user) initUserMenu(avatarBtn, s.user, s.admin ? "admin" : s.moderator ? "support" : "");
         else if (s.roblox_public || invited) toLoginLink(avatarBtn);
       })
       .catch(function () {});

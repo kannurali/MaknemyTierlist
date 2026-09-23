@@ -2,15 +2,16 @@
 require_once __DIR__ . '/api/lib/admin_page.php';
 require_once __DIR__ . '/api/lib/support.php';
 require_once __DIR__ . '/api/lib/telegram.php';
-admin_page_guard('Центр обращений');
+admin_page_guard('Центр обращений', 'moderator');
 
 // Список обращений со страницы /support. Печатается сервером целиком, без
 // скриптов: читать и отмечать — всё, что тут нужно. Отметка — обычная форма
 // на /api/support_status.php, которая возвращает сюда же.
 //
-// Ответ автору — в личный чат сайта: ссылка «написать» открывает /chat?to=.
-// Для этого администратор должен быть вошедшим и через Roblox тоже — вход по
-// паролю админки личности в чате не даёт.
+// Страница модераторов: они видят её одну. Админы — тоже, плюс блок бота.
+//
+// Ответ автору — в личный чат сайта: ссылка «написать» открывает /chat?to=,
+// и пишет туда тот же аккаунт Roblox, которым модератор вошёл в панель.
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -73,9 +74,12 @@ if (!$ready) {
 // Бот уведомлений. Модераторы — аккаунты сайта из moderator_ids в config.php;
 // о новом обращении бот пишет тем из них, кто подключил Telegram колокольчиком
 // в чате. Здесь видно, сколько подключилось, и есть кнопка установки вебхука.
+// Блок только для админов: вебхук ставит api/tg_setup.php, а он требует админа.
 $tg   = tg_config(app_config());
 $flag = isset($_GET['tg']) && is_string($_GET['tg']) ? $_GET['tg'] : '';
-if (!tg_enabled($tg)) {
+if (!is_admin()) {
+    $bot = '';
+} elseif (!tg_enabled($tg)) {
     $bot = '<p class="adm-muted">Бот не настроен: впишите <code>tg_bot_token</code> и <code>tg_bot_name</code> в config.php.</p>';
 } else {
     $linked = 0;
@@ -102,7 +106,8 @@ if (!tg_enabled($tg)) {
   {$note}
 HTML;
 }
-$botBox = "<section class=\"sp-bot\">\n  <h2 class=\"sp-bot-title\">Уведомления в Telegram</h2>\n  {$bot}\n</section>";
+$botBox = $bot === '' ? ''
+    : "<section class=\"sp-bot\">\n  <h2 class=\"sp-bot-title\">Уведомления в Telegram</h2>\n  {$bot}\n</section>";
 
 $nav = admin_nav('support');
 echo <<<HTML
@@ -115,7 +120,7 @@ echo <<<HTML
 <meta name="robots" content="noindex,nofollow" />
 <title>Обращения — панель управления</title>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-<link rel="stylesheet" href="/css/admin-shell.css?v=3" />
+<link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/support-admin.css?v=2" />
 </head>
 <body class="sp-admin">

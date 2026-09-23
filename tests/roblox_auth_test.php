@@ -294,10 +294,21 @@ test('шапка узнаёт, открыт ли вход всем', function ()
         'без приложения открывать нечего');
 });
 
-test('админская сессия не путается с пользовательской', function () use ($CFG_ON) {
-    $s = handle_session(function () { return test_db(); }, ['admin' => true], $CFG_ON);
-    assert_true($s['admin'], 'админ');
-    assert_eq(null, $s['user'], 'но не игрок Roblox');
+test('роль в шапку — по Roblox id из конфига', function () use ($CFG_ON) {
+    $db  = function () { return test_db(); };
+    $cfg = $CFG_ON + ['admin_ids' => ['42'], 'moderator_ids' => ['43']];
+    $a = handle_session($db, ['user_id' => '42'], $cfg);
+    assert_eq([true, true], [$a['admin'], $a['moderator']], 'админ разбирает и обращения');
+    $m = handle_session($db, ['user_id' => '43'], $cfg);
+    assert_eq([false, true], [$m['admin'], $m['moderator']], 'модератор — только обращения');
+    $u = handle_session($db, ['user_id' => '44'], $cfg);
+    assert_eq([false, false], [$u['admin'], $u['moderator']], 'обычный игрок');
+});
+
+test('метка старого входа по паролю больше не админ', function () use ($CFG_ON) {
+    $s = handle_session(function () { return test_db(); }, ['admin' => true], $CFG_ON + ['admin_ids' => ['42']]);
+    assert_eq(false, $s['admin'], 'не админ');
+    assert_eq(false, $s['moderator'], 'и не модератор');
 });
 
 // --------------------------------------------------------------------------

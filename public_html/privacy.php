@@ -6,7 +6,7 @@
 //   вход через Roblox      → api/roblox_callback.php, api/lib/roblox_oauth.php
 //   что храним о вошедшем  → таблица users в schema.sql
 //   сессионная кука        → start_site_session() в api/_bootstrap.php
-//   лимиты по IP           → rate_limit_allow()/throttle_* там же
+//   лимиты по IP           → rate_limit_allow() там же
 //   Яндекс Метрика         → api/lib/metrika.php (вебвизор включён)
 //   localStorage           → js/app.js, js/promo.js, js/topbar.js
 //
@@ -53,7 +53,7 @@ legal_page_open(
       <h3>Технические данные</h3>
       <ul>
         <li><b>IP-адрес.</b> Обрабатывается, чтобы ограничить частоту запросов —
-        защита от накрутки лайков и перебора пароля админки. На диске лежит не
+        защита от накрутки лайков и потока запросов. На диске лежит не
         сам адрес, а его хеш, во временном файле, не дольше часа. Кроме того,
         IP попадает в служебные журналы веб-сервера у хостинг-провайдера.</li>
         <li><b>Сессионная cookie</b> (<code>PHPSESSID</code>). Техническая,
@@ -90,7 +90,7 @@ legal_page_open(
         <li>показать ваш профиль другим трейдерам: ник, аватар, отзывы и то,
         что вы написали о себе, — чтобы с вами было понятно, иметь ли дело;</li>
         <li>отличать обычного посетителя от администратора;</li>
-        <li>защищаться от накрутки счётчиков и подбора пароля;</li>
+        <li>защищаться от накрутки счётчиков и потока запросов;</li>
         <li>понимать, какими разделами пользуются, а какими нет.</li>
       </ul>
       <p>Мы не показываем рекламу «по интересам», не строим профили и не
@@ -165,7 +165,7 @@ legal_page_open(
       <h3>Technical data</h3>
       <ul>
         <li><b>IP address.</b> Used to rate-limit requests — protection against
-        vote stuffing and password guessing on the admin panel. What is written
+        vote stuffing and request floods. What is written
         to disk is a hash of the address, in a temporary file, for no longer than
         an hour. Your IP also appears in the web server logs kept by our hosting
         provider.</li>
@@ -193,7 +193,7 @@ legal_page_open(
         <li>to show your avatar and nickname in the site header so you can see
         that you are logged in;</li>
         <li>to tell a regular visitor from an administrator;</li>
-        <li>to defend against counter stuffing and password guessing;</li>
+        <li>to defend against counter stuffing and request floods;</li>
         <li>to know which sections are used and which are not.</li>
       </ul>
       <p>We do not run interest-based advertising, we do not build profiles, and

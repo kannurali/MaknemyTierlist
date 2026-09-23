@@ -128,7 +128,7 @@ test('anonymous requests never open a session', function () use ($PUB) {
 });
 
 test('rate limits key on client_key(), never on raw REMOTE_ADDR', function () use ($PUB) {
-    foreach (['like.php', 'login.php', 'news.php', 'news_like.php', 'upload.php', 'promo.php', 'roblox_start.php'] as $f) {
+    foreach (['like.php', 'news.php', 'news_like.php', 'upload.php', 'promo.php', 'roblox_start.php'] as $f) {
         $src = dg_read("$PUB/api/$f");
         assert_eq(false, strpos($src, 'REMOTE_ADDR'), "$f reads REMOTE_ADDR directly");
         assert_true(strpos($src, 'client_key()') !== false, "$f uses client_key()");

@@ -79,19 +79,50 @@ function admin_page_subprocess_cmd(string $php, string $code, string $absPath): 
         . ' ' . escapeshellarg($absPath) . ' ' . $devnull;
 }
 
-function render_admin_page_in_subprocess(string $absPath): ?string {
+// Конфиг для дочернего процесса: админ — Roblox id 1, модератор — 2. Вход
+// через Roblox «настроен», чтобы экран входа показывал кнопку. Путь с прямыми
+// слэшами: так он без экранирования доезжает через командную строку Windows.
+function admin_test_config_path(): string {
+    static $path = null;
+    if ($path === null) {
+        $path = str_replace(DIRECTORY_SEPARATOR, '/', (string)tempnam(sys_get_temp_dir(), 'nxcfg'));
+        file_put_contents($path, '<?php return ' . var_export([
+            'dsn' => 'sqlite::memory:', 'db_user' => '', 'db_pass' => '', 'images_dir' => '',
+            'admin_ids' => ['1'], 'moderator_ids' => ['2'],
+            'roblox_client_id' => 'x', 'roblox_client_secret' => 'y',
+            'roblox_redirect_uri' => 'https://maknemy.com/api/roblox_callback.php',
+        ], true) . ';');
+        $file = $path;
+        register_shutdown_function(function () use ($file) { @unlink($file); });
+    }
+    return $path;
+}
+
+// Прогон страницы от лица $uid ('' — аноним, без сессии вовсе). Возвращает
+// напечатанное и признак, дошла ли страница до конца (не ушла ли в exit).
+// В коде дочернего php нет двойных кавычек — см. admin_page_subprocess_cmd().
+function admin_run_as(string $absPath, string $uid, string $uri = ''): ?array {
     if (!function_exists('shell_exec') || !is_file($absPath)) { return null; }
     $php = PHP_BINARY !== '' ? PHP_BINARY : 'php';
+    $marker = '___NX_ADMIN_PAGE_RENDER_COMPLETED___';
+    $code = 'define(' . var_export('CONFIG_PATH', true) . ', ' . var_export(admin_test_config_path(), true) . '); ';
+    if ($uri !== '') {
+        $code .= '$_SERVER[' . var_export('REQUEST_URI', true) . '] = ' . var_export($uri, true) . '; '
+            . 'parse_str((string)parse_url(' . var_export($uri, true) . ', PHP_URL_QUERY), $_GET); ';
+    }
+    if ($uid !== '') { $code .= 'session_start(); $_SESSION[' . var_export('user_id', true) . '] = ' . var_export($uid, true) . '; '; }
+    $code .= 'require $argv[1]; echo ' . var_export($marker, true) . ';';
+    $out = shell_exec(admin_page_subprocess_cmd($php, $code, $absPath));
+    if ($out === null || $out === false) { $out = ''; }
+    $pos = strpos($out, $marker);
+    return ['html' => $pos === false ? $out : substr($out, 0, $pos), 'done' => $pos !== false];
+}
+
+function render_admin_page_in_subprocess(string $absPath): ?string {
     // Маркер печатается ПОСЛЕ require — если admin.php/admin-news.php ушли в
     // exit на ошибочной ветке, маркер в выводе не появится, и мы это увидим.
-    $marker = '___NX_ADMIN_PAGE_RENDER_COMPLETED___';
-    $code = "session_start(); \$_SESSION['admin'] = true; require \$argv[1]; echo "
-        . var_export($marker, true) . ";";
-    $out = shell_exec(admin_page_subprocess_cmd($php, $code, $absPath));
-    if ($out === null || $out === false) { return null; }
-    $pos = strpos($out, $marker);
-    if ($pos === false) { return null; } // страница не дорендерилась до конца
-    return substr($out, 0, $pos);
+    $r = admin_run_as($absPath, '1');
+    return ($r === null || !$r['done']) ? null : $r['html'];
 }
 
 // Тот же трюк для чистой публичной страницы (без сессии/шапки админа) — она
@@ -154,6 +185,62 @@ test('/admin/news (admin-news.php) реально отдаёт разметку 
         assert_true(strlen($html) >= $publicLen,
             'admin-news.php (' . strlen($html) . ' байт) короче news.php (' . $publicLen . ' байт) — редактор потерялся');
     }
+});
+
+// --------------------------------------------------------------------------
+//  Кого пускает панель
+// --------------------------------------------------------------------------
+
+$ADMIN_PHP   = __DIR__ . '/../public_html/admin.php';
+$SUPPORT_PHP = __DIR__ . '/../public_html/admin-support.php';
+
+test('аноним на /admin получает вход через Roblox, а не поле пароля', function () use ($ADMIN_PHP) {
+    $r = admin_run_as($ADMIN_PHP, '', '/admin?login=error');
+    if ($r === null) { return; }
+    $html = $r['html'];
+    assert_eq(false, $r['done'], 'после экрана входа запрос закончен');
+    assert_eq(false, strpos($html, 'id="stage"'), 'редактора в ответе нет');
+    assert_eq(false, strpos($html, 'type="password"'), 'поля пароля нет');
+    assert_true(strpos($html, 'href="/api/roblox_start.php?return=%2Fadmin"') !== false, 'вход ведёт на Roblox и обратно на /admin');
+    assert_true(strpos($html, 'Не удалось войти') !== false, 'неудачную попытку видно');
+});
+
+test('вошедший без прав видит свой Roblox id и не видит панели', function () use ($ADMIN_PHP) {
+    $r = admin_run_as($ADMIN_PHP, '555');
+    if ($r === null) { return; }
+    assert_eq(false, $r['done'], 'запрос закончен');
+    assert_true(strpos($r['html'], 'Нет доступа') !== false, 'отказ');
+    assert_true(strpos($r['html'], '>555</b>') !== false, 'свой id — чтобы владелец вписал его в конфиг');
+    assert_eq(false, strpos($r['html'], 'id="stage"'), 'редактора нет');
+});
+
+test('модератора редактор тирлиста не пускает', function () use ($ADMIN_PHP) {
+    $r = admin_run_as($ADMIN_PHP, '2');
+    if ($r === null) { return; }
+    assert_eq(false, $r['done'], 'уведён к обращениям');
+    assert_eq('', trim($r['html']), 'ни экрана, ни редактора');
+});
+
+test('модератор видит обращения и одну вкладку', function () use ($SUPPORT_PHP) {
+    $r = admin_run_as($SUPPORT_PHP, '2');
+    if ($r === null) { return; }
+    assert_true($r['done'], 'страница отдана целиком');
+    assert_true(strpos($r['html'], 'Центр обращений') !== false, 'обращения');
+    assert_true(strpos($r['html'], 'href="/admin/support"') !== false, 'вкладка обращений');
+    foreach (['/admin"', '/admin/news"', '/admin/promo"'] as $tab) {
+        assert_eq(false, strpos($r['html'], 'href="' . $tab), "вкладки $tab нет");
+    }
+    assert_eq(false, strpos($r['html'], 'Уведомления в Telegram'), 'блока бота нет');
+});
+
+test('админ видит обращения со всеми вкладками и ботом', function () use ($SUPPORT_PHP) {
+    $r = admin_run_as($SUPPORT_PHP, '1');
+    if ($r === null) { return; }
+    assert_true($r['done'], 'страница отдана целиком');
+    foreach (['/admin"', '/admin/news"', '/admin/promo"', '/admin/support"'] as $tab) {
+        assert_true(strpos($r['html'], 'href="' . $tab) !== false, "вкладка $tab");
+    }
+    assert_true(strpos($r['html'], 'Уведомления в Telegram') !== false, 'блок бота');
 });
 
 run_tests();

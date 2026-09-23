@@ -100,12 +100,66 @@ function resume_site_session(): bool {
     return true;
 }
 
-function is_admin(): bool { return !empty($_SESSION['admin']); }
+// ---------------------------------------------------------------------------
+//  Роли. Админы и модераторы входят на сайт так же, как все, — через Roblox
+//  (api/roblox_callback.php кладёт в сессию user_id). Права дают списки
+//  Roblox id в config.php:
+//    admin_ids     — вся панель: тирлист, новости, реклама, обращения;
+//    moderator_ids — только обращения (/admin/support).
+//
+//  Роль сверяется со списком на каждом запросе и в сессии не хранится: id,
+//  вычеркнутый из конфига, теряет доступ сразу, а не когда истечёт сессия.
+//  Список в конфиге, а не колонка в users: выдать права может только тот, у
+//  кого есть доступ к серверу, и никакой запрос с сайта этого не сделает.
+//
+//  Входа по паролю больше нет — api/login.php оставлен заглушкой.
+// ---------------------------------------------------------------------------
 
-// Без куки админской сессии быть не может — отказ сразу, без пустой сессии
-// под каждый анонимный запрос.
+// Список Roblox id из конфига: только цифры, без ведущих нулей, без повторов.
+// Кривое значение пропускается, а не роняет страницу.
+function config_id_list(array $cfg, string $key): array {
+    $raw = isset($cfg[$key]) && is_array($cfg[$key]) ? $cfg[$key] : [];
+    $ids = [];
+    foreach ($raw as $id) {
+        $id = is_int($id) ? (string)$id : (is_string($id) ? trim($id) : '');
+        if (preg_match('/^\d{1,20}\z/', $id)) {
+            $id = ltrim($id, '0');
+            if ($id !== '') { $ids[] = $id; }
+        }
+    }
+    return array_values(array_unique($ids));
+}
+
+// 'admin', 'moderator' или '' — аноним и обычный игрок. Кто есть в обоих
+// списках, тот админ.
+function site_role(array $session, array $cfg): string {
+    $uid = $session['user_id'] ?? '';
+    $uid = is_string($uid) ? $uid : '';
+    if ($uid === '') { return ''; }
+    if (in_array($uid, config_id_list($cfg, 'admin_ids'), true)) { return 'admin'; }
+    if (in_array($uid, config_id_list($cfg, 'moderator_ids'), true)) { return 'moderator'; }
+    return '';
+}
+
+// Роль того, чья сессия открыта. Анониму конфиг не читается вовсе.
+function current_role(): string {
+    if (empty($_SESSION['user_id'])) { return ''; }
+    return site_role($_SESSION, app_config());
+}
+
+function is_admin(): bool { return current_role() === 'admin'; }
+
+// Обращения разбирают и модераторы, и админы.
+function is_moderator(): bool { return current_role() !== ''; }
+
+// Без куки прав быть не может — отказ сразу, без пустой сессии под каждый
+// анонимный запрос.
 function require_admin(): void {
     if (!resume_site_session() || !is_admin()) { json_out(['error' => 'unauthorized'], 401); exit; }
+}
+
+function require_moderator(): void {
+    if (!resume_site_session() || !is_moderator()) { json_out(['error' => 'unauthorized'], 401); exit; }
 }
 
 // State-changing endpoints must be POST. Without this a bare GET — an <img>
@@ -243,49 +297,7 @@ function json_state_read(string $path): ?array {
 }
 
 // ---------------------------------------------------------------------------
-//  Login throttle — brute-force guard keyed by client IP.
-//  State is a small JSON file in the system temp dir: no DB table, works on
-//  any shared host. Failures escalate into a timed lockout.
-// ---------------------------------------------------------------------------
-function throttle_file(string $key): string {
-    return rtrim(sys_get_temp_dir(), "/\\") . '/nexus_login_' . sha1($key) . '.json';
-}
-
-function throttle_read(string $key): array {
-    $d = json_state_read(throttle_file($key));
-    return [
-        'fails' => (int)($d['fails'] ?? 0),
-        'until' => (int)($d['until'] ?? 0),
-    ];
-}
-
-// Seconds the caller must wait before another attempt is accepted (0 = now).
-function throttle_retry_after(string $key, int $now): int {
-    $s = throttle_read($key);
-    return max(0, $s['until'] - $now);
-}
-
-// Record a failed attempt; locks out once $maxFails is reached. Returns the
-// new failure count. A lock that has already expired resets the counter, so a
-// later typo costs one attempt rather than an instant re-lock.
-function throttle_register_failure(string $key, int $now, int $maxFails = 5, int $lockSeconds = 300): int {
-    return json_state_update(throttle_file($key), function ($s) use ($now, $maxFails, $lockSeconds) {
-        $prevUntil = (int)($s['until'] ?? 0);
-        $expired = $prevUntil > 0 && $prevUntil <= $now;
-        $fails = $expired ? 1 : (int)($s['fails'] ?? 0) + 1;
-        $until = $fails >= $maxFails ? $now + $lockSeconds : 0;
-        return [$fails, ['fails' => $fails, 'until' => $until]];
-    }, 1);
-}
-
-function throttle_clear(string $key): void {
-    $f = throttle_file($key);
-    if (is_file($f)) { @unlink($f); }
-}
-
-// ---------------------------------------------------------------------------
-//  Sliding-window rate limit — caps how often one client may hit an endpoint
-//  (the login throttle above punishes FAILURES; this caps raw frequency).
+//  Sliding-window rate limit — caps how often one client may hit an endpoint.
 //  Same storage approach: a JSON file per bucket+key in the temp dir, so it
 //  needs no DB table and works on any shared host. Failing open on file I/O
 //  errors is deliberate — a broken temp dir should not take the feature down.
@@ -309,10 +321,11 @@ function rate_limit_allow(string $bucket, string $key, int $max, int $windowSeco
     }, true);
 }
 
-// Уборка: файлы лимитов и троттлинга, которых не трогали сутки. Окна у всех
-// лимитов — не больше часа, такой файл уже ничего не помнит. Раньше на каждый
-// новый адрес файл оставался навсегда, и флуд с тысяч адресов копил бы их в
-// счёт лимита inode.
+// Уборка: файлы лимитов, которых не трогали сутки. Окна у всех лимитов — не
+// больше часа, такой файл уже ничего не помнит. Раньше на каждый новый адрес
+// файл оставался навсегда, и флуд с тысяч адресов копил бы их в счёт лимита
+// inode. nexus_login_* — остатки троттлинга входа по паролю, которого больше
+// нет: уйдут сами через сутки.
 const RATE_FILE_MAX_AGE = 86400;
 
 function rate_gc(string $dir, int $now, int $maxAge = RATE_FILE_MAX_AGE): int {

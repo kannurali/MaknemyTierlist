@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/../_bootstrap.php';
 require_once __DIR__ . '/metrika.php';
+require_once __DIR__ . '/roblox_oauth.php';
 
 // Admin pages are per-session and must never sit in a proxy or a bfcache.
 function admin_page_headers(): void {
@@ -17,17 +18,34 @@ function admin_page_headers(): void {
     header('X-Robots-Tag: noindex, nofollow');
 }
 
-// Lets an administrator through; hands anyone else the login form and ends the
-// request. Deliberately answers 200 rather than 401: a 401 without a
-// WWW-Authenticate header is malformed, and some shared hosts swap the body
-// for their own ErrorDocument, which would replace the form with a stock page.
-function admin_page_guard(string $title): void {
-    // Без куки админом быть нельзя — форма входа отдаётся без новой сессии,
-    // иначе каждый заход на /admin оставлял бы на сервере файл сессии.
+// Пускает того, чья роль подходит ($need: 'admin' — вся панель, 'moderator' —
+// обращения, туда же пускают и админов), остальным отдаёт экран входа и
+// заканчивает запрос. Модератора, открывшего страницу админа, уводит к
+// обращениям — другой панели у него нет.
+//
+// Экран входа отвечает 200, а не 401/403: без WWW-Authenticate 401 — кривой
+// ответ, а часть хостингов подменяет тело ошибок своим ErrorDocument, и вместо
+// экрана человек увидел бы стандартную страницу хостера.
+function admin_page_guard(string $title, string $need = 'admin'): void {
+    // Без куки прав быть не может — экран отдаётся без новой сессии, иначе
+    // каждый заход на /admin оставлял бы на сервере файл сессии.
     resume_site_session();
     admin_page_headers();
-    if (is_admin()) { return; }
-    admin_login_page($title);
+    $role = current_role();
+    if ($role === 'admin' || ($role === 'moderator' && $need === 'moderator')) {
+        // Возврат с Roblox приходит с меткой ?login=ok. Страницы панели, кроме
+        // тирлиста, js/topbar.js не грузят, и снять метку из адреса некому.
+        if (isset($_GET['login'])) {
+            header('Location: ' . admin_return_path(), true, 303);
+            exit;
+        }
+        return;
+    }
+    if ($role === 'moderator') {
+        header('Location: /admin/support', true, 303);
+        exit;
+    }
+    admin_login_page($title, (string)($_SESSION['user_id'] ?? ''));
     exit;
 }
 
@@ -78,21 +96,27 @@ function admin_render_public_page(string $file): ?string {
 }
 
 // Top bar shared by every panel. $active is 'tier', 'news', 'promo' or 'support'.
+// Модератор видит одну вкладку — обращения: других страниц ему не открыть.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
 function admin_nav(string $active): string {
-    $tier  = $active === 'tier'  ? ' is-active' : '';
-    $news  = $active === 'news'  ? ' is-active' : '';
-    $promo = $active === 'promo' ? ' is-active' : '';
-    $help  = $active === 'support' ? ' is-active' : '';
+    $tabs = is_admin()
+        ? [
+            'tier'    => ['/admin', 'Тирлист'],
+            'news'    => ['/admin/news', 'Новости'],
+            'promo'   => ['/admin/promo', 'Реклама'],
+            'support' => ['/admin/support', 'Обращения'],
+        ]
+        : ['support' => ['/admin/support', 'Обращения']];
+    $links = '';
+    foreach ($tabs as $key => [$href, $label]) {
+        $on = $key === $active ? ' is-active' : '';
+        $links .= "  <a class=\"adm-nav-tab{$on}\" href=\"{$href}\">{$label}</a>\n";
+    }
     return <<<HTML
 <nav class="adm-nav">
   <span class="adm-nav-brand">MAKNEMY<b>ADMIN</b></span>
-  <a class="adm-nav-tab{$tier}" href="/admin">Тирлист</a>
-  <a class="adm-nav-tab{$news}" href="/admin/news">Новости</a>
-  <a class="adm-nav-tab{$promo}" href="/admin/promo">Реклама</a>
-  <a class="adm-nav-tab{$help}" href="/admin/support">Обращения</a>
-  <span class="adm-nav-gap"></span>
+{$links}  <span class="adm-nav-gap"></span>
   <a class="adm-nav-out" href="/" target="_blank" rel="noopener">Сайт ↗</a>
   <form class="adm-nav-exit" method="post" action="/admin/logout">
     <button class="adm-nav-out" type="submit">Выйти</button>
@@ -101,11 +125,55 @@ function admin_nav(string $active): string {
 HTML;
 }
 
-// Standalone login page. The password goes to /api/login.php — the same
-// endpoint as before, so the lockout after five misses still applies — and on
-// success we simply reload: the guard above then renders the real page.
-function admin_login_page(string $title): void {
+// Куда вернуть человека после входа через Roblox: на ту же страницу панели,
+// без параметров (в них могла остаться метка прошлой неудачной попытки).
+function admin_return_path(): string {
+    $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    return roblox_safe_return(is_string($path) && $path !== '' ? $path : '/admin');
+}
+
+// Экран вместо панели. Пароля нет: кнопка ведёт на вход через Roblox
+// (api/roblox_start.php), и возврат приходит обратно сюда же, где страж
+// сверяет Roblox id со списками в config.php.
+//
+// $uid — кто уже вошёл на сайт, но прав не имеет. Ему экран показывает его
+// Roblox id: именно это число владелец вписывает в admin_ids или
+// moderator_ids, а узнать его иначе человеку негде.
+function admin_login_page(string $title, string $uid): void {
     $t = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+
+    if ($uid !== '') {
+        $id   = htmlspecialchars($uid, ENT_QUOTES, 'UTF-8');
+        $body = <<<HTML
+  <h1>Нет доступа</h1>
+  <p class="adm-muted">Этот аккаунт Roblox не админ и не модератор сайта.</p>
+  <p class="adm-muted">Roblox ID: <b class="adm-gate-id">{$id}</b>. Доступ выдаёт владелец сайта — вписывает этот номер в config.php.</p>
+  <form method="post" action="/admin/logout">
+    <button class="adm-btn" type="submit">Выйти из аккаунта</button>
+  </form>
+  <a class="adm-btn" href="/">На сайт</a>
+HTML;
+    } elseif (!roblox_oauth_enabled(app_config())) {
+        $body = <<<HTML
+  <h1>{$t}</h1>
+  <p class="adm-err">Вход через Roblox не настроен: в config.php нет ключей приложения Roblox.</p>
+HTML;
+    } else {
+        $flags = [
+            'cancelled' => 'Вход отменён.',
+            'expired'   => 'Вход занял слишком много времени — попробуйте ещё раз.',
+            'error'     => 'Не удалось войти — попробуйте ещё раз.',
+        ];
+        $flag = isset($_GET['login']) && is_string($_GET['login']) ? $_GET['login'] : '';
+        $err  = isset($flags[$flag]) ? "\n  <p class=\"adm-err\">{$flags[$flag]}</p>" : '';
+        $href = htmlspecialchars('/api/roblox_start.php?return=' . rawurlencode(admin_return_path()), ENT_QUOTES, 'UTF-8');
+        $body = <<<HTML
+  <h1>{$t}</h1>
+  <p class="adm-muted">Панель открывается аккаунтом Roblox администратора или модератора.</p>{$err}
+  <a class="adm-btn primary" href="{$href}">Войти через Roblox</a>
+HTML;
+    }
+
     header('Content-Type: text/html; charset=utf-8');
     echo <<<HTML
 <!DOCTYPE html>
@@ -117,49 +185,13 @@ function admin_login_page(string $title): void {
 <meta name="robots" content="noindex,nofollow" />
 <title>Вход — {$t}</title>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-<link rel="stylesheet" href="/css/admin-shell.css?v=3" />
+<link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 </head>
 <body class="adm-gate-body">
-<form class="adm-gate" id="gateForm" autocomplete="on">
+<main class="adm-gate">
   <div class="adm-gate-brand">MAKNEMY<b>ADMIN</b></div>
-  <h1>{$t}</h1>
-  <p class="adm-muted">Введите пароль администратора.</p>
-  <input type="password" id="gatePass" autocomplete="current-password" placeholder="Пароль" autofocus />
-  <button class="adm-btn primary" type="submit" id="gateGo">Войти</button>
-  <div class="adm-err" id="gateErr" hidden></div>
-</form>
-<script>
-(function () {
-  var form = document.getElementById("gateForm");
-  var pass = document.getElementById("gatePass");
-  var go   = document.getElementById("gateGo");
-  var err  = document.getElementById("gateErr");
-  function fail(msg) { err.hidden = false; err.textContent = msg; go.disabled = false; pass.select(); }
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    err.hidden = true;
-    go.disabled = true;
-    fetch("/api/login.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pass.value })
-    })
-      .then(function (r) { return r.json().catch(function () { return {}; })
-        .then(function (j) { return { status: r.status, j: j }; }); })
-      .then(function (res) {
-        if (res.j && res.j.error === "too_many_attempts") {
-          fail("Слишком много попыток. Подождите " + (res.j.retry_after || 300) + " с.");
-          return;
-        }
-        if (res.status !== 200 || !res.j || !res.j.ok) { fail("Неверный пароль."); return; }
-        // Перезагрузка, а не показ панели из JS: разметку редактора отдаёт
-        // сервер, и до входа её в этой вкладке просто нет.
-        location.reload();
-      })
-      .catch(function () { fail("Сервер недоступен. Панель работает только там, где отвечает PHP."); });
-  });
-})();
-</script>
+{$body}
+</main>
 </body>
 </html>
 HTML;
