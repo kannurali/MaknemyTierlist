@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/support.php';
+require_once __DIR__ . '/lib/telegram.php';
 
 // Обращение в поддержку — POST /api/support.php {"body":"..."}
 
@@ -19,4 +20,9 @@ if (!defined('TESTING')) {
     $body = read_json_body();
     [$status, $payload] = support_submit(db(), $me, $body['body'] ?? '', time());
     json_out($payload, $status);
+
+    // Модераторам в Telegram — после ответа, как и уведомления чата.
+    if ($status === 200) {
+        tg_after_support(db(), app_config(), $me);
+    }
 }

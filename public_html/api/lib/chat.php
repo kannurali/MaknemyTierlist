@@ -291,6 +291,46 @@ function chat_messages(PDO $pdo, string $me, int $threadId): array {
     return $out;
 }
 
+/**
+ * Отметить ветку прочитанной: человек видит её до сообщения $lastId
+ * включительно, и прямо сейчас. Этим живут уведомления в Telegram
+ * (api/lib/telegram.php): кто сидит в диалоге, тому бот не пишет.
+ *
+ * last_read_id назад не двигается. Страница показывает последние
+ * CHAT_PAGE_SIZE сообщений, и опоздавший ответ старого запроса не должен
+ * «разчитать» то, что человек уже видел.
+ *
+ * Своими руками, а не ON DUPLICATE KEY: тесты гоняются на SQLite. rowCount у
+ * MySQL считает только ИЗМЕНЁННЫЕ строки, поэтому ноль бывает и у
+ * существующей строки (тот же id в ту же секунду) — вставка тогда упирается
+ * в первичный ключ, и это не ошибка.
+ *
+ * Таблицы может не быть (миграция 2026-09-23-telegram.sql выполняется
+ * руками) — тогда отметка просто не ставится, чат работает как раньше.
+ */
+function chat_mark_read(PDO $pdo, int $threadId, string $me, int $lastId, int $now): void {
+    if ($me === '' || $threadId <= 0) { return; }
+    try {
+        $up = $pdo->prepare(
+            'UPDATE chat_reads
+                SET last_read_id = CASE WHEN last_read_id > :id THEN last_read_id ELSE :id END,
+                    seen_at = :at
+              WHERE thread_id = :t AND user_id = :u'
+        );
+        $up->execute([':id' => $lastId, ':at' => $now, ':t' => $threadId, ':u' => $me]);
+        if ($up->rowCount() > 0) { return; }
+        try {
+            $pdo->prepare('INSERT INTO chat_reads (thread_id, user_id, last_read_id, seen_at, notified_id)
+                           VALUES (:t, :u, :id, :at, 0)')
+                ->execute([':t' => $threadId, ':u' => $me, ':id' => $lastId, ':at' => $now]);
+        } catch (PDOException $e) {
+            // строка уже есть и уже совпадает с тем, что мы хотели записать
+        }
+    } catch (PDOException $e) {
+        // таблицы chat_reads ещё нет
+    }
+}
+
 /** Отправка сообщения. Возвращает [код, тело] как остальные обработчики. */
 function chat_send(PDO $pdo, string $me, int $threadId, string $body, int $now): array {
     if ($me === '')                            { return [401, ['ok' => false, 'error' => 'not_logged_in']]; }

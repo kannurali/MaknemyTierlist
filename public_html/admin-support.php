@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/api/lib/admin_page.php';
 require_once __DIR__ . '/api/lib/support.php';
+require_once __DIR__ . '/api/lib/telegram.php';
 admin_page_guard('Центр обращений');
 
 // Список обращений со страницы /support. Печатается сервером целиком, без
@@ -69,6 +70,40 @@ if (!$ready) {
     $list = "<ul class=\"sp-list\">\n{$rows}</ul>";
 }
 
+// Бот уведомлений. Модераторы — аккаунты сайта из moderator_ids в config.php;
+// о новом обращении бот пишет тем из них, кто подключил Telegram колокольчиком
+// в чате. Здесь видно, сколько подключилось, и есть кнопка установки вебхука.
+$tg   = tg_config(app_config());
+$flag = isset($_GET['tg']) && is_string($_GET['tg']) ? $_GET['tg'] : '';
+if (!tg_enabled($tg)) {
+    $bot = '<p class="adm-muted">Бот не настроен: впишите <code>tg_bot_token</code> и <code>tg_bot_name</code> в config.php.</p>';
+} else {
+    $linked = 0;
+    if ($tg['moderators']) {
+        try {
+            $in = implode(',', array_fill(0, count($tg['moderators']), '?'));
+            $st = db()->prepare("SELECT COUNT(*) FROM tg_links WHERE user_id IN ($in)");
+            $st->execute($tg['moderators']);
+            $linked = (int)$st->fetchColumn();
+        } catch (Throwable $e) {
+            $linked = 0;
+        }
+    }
+    $name  = support_h('@' . $tg['name']);
+    $mods  = count($tg['moderators']);
+    $note  = '';
+    if ($flag === 'ok')   { $note = '<p class="sp-bot-note is-ok">Вебхук подключён.</p>'; }
+    if ($flag === 'fail') { $note = '<p class="sp-bot-note is-fail">Telegram не принял вебхук — проверьте токен в config.php.</p>'; }
+    $bot = <<<HTML
+<p>Бот {$name}. Модераторов в config.php: {$mods}, подключили Telegram: {$linked}.</p>
+  <form method="post" action="/api/tg_setup.php">
+    <button class="adm-btn" type="submit">Подключить вебхук</button>
+  </form>
+  {$note}
+HTML;
+}
+$botBox = "<section class=\"sp-bot\">\n  <h2 class=\"sp-bot-title\">Уведомления в Telegram</h2>\n  {$bot}\n</section>";
+
 $nav = admin_nav('support');
 echo <<<HTML
 <!DOCTYPE html>
@@ -81,12 +116,13 @@ echo <<<HTML
 <title>Обращения — панель управления</title>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=3" />
-<link rel="stylesheet" href="/css/support-admin.css?v=1" />
+<link rel="stylesheet" href="/css/support-admin.css?v=2" />
 </head>
 <body class="sp-admin">
 {$nav}
 <main class="sp-main">
   <h1 class="sp-title">Центр обращений <span class="adm-muted">новых: {$fresh}</span></h1>
+  {$botBox}
   {$list}
 </main>
 </body>

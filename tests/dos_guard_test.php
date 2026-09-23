@@ -84,7 +84,8 @@ test('session-bound and writing endpoints never ask for the cache', function () 
     foreach (['admin.php', 'admin-news.php', 'admin-promo.php', 'admin-logout.php', 'api/lib/admin_page.php',
               'api/session.php', 'api/login.php', 'api/logout.php', 'api/save.php', 'api/upload.php',
               'api/news_save.php', 'api/news_delete.php', 'api/like.php', 'api/news_like.php',
-              'api/roblox_start.php', 'api/roblox_callback.php'] as $f) {
+              'api/roblox_start.php', 'api/roblox_callback.php',
+              'api/tg_link.php', 'api/tg_webhook.php', 'api/tg_setup.php'] as $f) {
         $src = dg_read("$PUB/$f");
         assert_eq(false, strpos($src, 'page_lscache('), "$f: page_lscache");
         assert_eq(false, strpos($src, 'lscache_public('), "$f: lscache_public");
