@@ -1033,12 +1033,13 @@ a.tr-nick:focus-visible { text-decoration: underline; text-underline-offset: .15
   .tn-warn-text,
   .tn-warn-sign { font-size: 15px; }
 
-  .sp-page { padding: 24px 12px 60px; }
+  .sp-page { --u: 1px; padding: 20px 12px 48px; }
   .sp-card { padding: 26px 18px 10px; border-radius: 18px; }
+  .sp-icon { width: 72px; height: 58px; margin-bottom: 14px; }
   .sp-title { font-size: 28px; margin-bottom: 22px; }
-  .sp-lead { font-size: 17px; margin-bottom: 16px; }
+  .sp-lead { max-width: none; font-size: 17px; margin-bottom: 16px; }
   .sp-form { margin-top: 22px; }
-  .sp-input { min-height: 150px; padding: 14px 16px; border-radius: 14px; }
+  .sp-input { min-height: 150px; padding: 14px 16px; border-radius: 14px; font-size: 16px; }
   .sp-actions { margin: 10px 0 14px; justify-content: center; }
   .sp-send,
   .sp-direct { flex: 1 1 200px; padding: 0 18px; font-size: 18px; }

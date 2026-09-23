@@ -212,7 +212,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=33" />
+<link rel="stylesheet" href="css/design-page.css?v=34" />
 
 <link rel="stylesheet" href="css/news-design.css?v=20" />
 

@@ -38,8 +38,8 @@ page_lscache();
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=8" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=33" />
-<link rel="stylesheet" href="css/trading.css?v=2" />
+<link rel="stylesheet" href="css/design-page.css?v=34" />
+<link rel="stylesheet" href="css/trading.css?v=4" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
