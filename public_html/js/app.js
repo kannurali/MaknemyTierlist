@@ -1166,7 +1166,7 @@
 
     const img = document.createElement("img");
     img.className = "ptn-dock-img";
-    img.src = cre.src;
+    img.src = promo.srcFor(cre);
     img.alt = tx("ad.imageAlt");
     img.draggable = false;
     img.decoding = "async";
@@ -1206,7 +1206,7 @@
     el.hidden = false;
 
     const img = document.createElement("img");
-    img.src = cre.src;
+    img.src = promo.srcFor(cre);
     img.alt = tx("ad.imageAlt");
     img.draggable = false;
     img.decoding = "async";
@@ -1274,8 +1274,7 @@
 
     const cre = promo.creativeFor(camp, "popup");
     if (!cre) return;
-    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const src = (reduced && cre.anim && cre.poster) ? cre.poster : cre.src;
+    const src = promo.srcFor(cre);
 
     const img = $("#promoPopImg");
     let done = false;

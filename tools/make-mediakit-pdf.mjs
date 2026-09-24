@@ -16,6 +16,8 @@
 //   npm init -y && npm install playwright && npx playwright install chromium
 //
 // Chromium only: page.pdf() does not exist in the other engines.
+// PW_CHANNEL=chrome prints with the installed Chrome when Playwright's own
+// browser was never downloaded.
 //
 // The dark background is kept on purpose. The file goes to an advertiser
 // over a messenger and is read on a screen; inverted to white, the dark
@@ -31,7 +33,7 @@ const OUT = resolve(ROOT, 'docs/mediakit/mediakit.pdf');
 
 mkdirSync(dirname(OUT), { recursive: true });
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || undefined });
 const page = await browser.newPage({ viewport: { width: 1100, height: 1400 } });
 const problems = [];
 page.on('pageerror', e => problems.push('JS: ' + e));
