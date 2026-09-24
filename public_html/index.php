@@ -140,13 +140,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="stylesheet" href="css/base.css?v=12" />
+<link rel="stylesheet" href="css/base.css?v=13" />
 <link rel="stylesheet" href="css/styles.css?v=60" />
 
-<link rel="stylesheet" href="css/topbar.css?v=12" />
+<link rel="stylesheet" href="css/topbar.css?v=13" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=11" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=12" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 
@@ -551,7 +551,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <script src="js/i18n.js?v=56" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=57" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 

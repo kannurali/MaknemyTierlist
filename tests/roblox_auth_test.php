@@ -522,7 +522,8 @@ test('пользователь сессии несёт знак у ника', fu
                             'display_name' => 'maknemy', 'avatar_url' => ''], 1000);
     roblox_touch_user($db, ['roblox_id' => '42', 'username' => 'someone',
                             'display_name' => 'Someone', 'avatar_url' => ''], 1000);
-    assert_eq('/assets/design/logo-mk.png', roblox_load_user($db, '2841062255')['logo'], 'у Maknemy — MK');
+    assert_eq(['src' => '/assets/design/logo-mk.png', 'role' => 'owner'], roblox_load_user($db, '2841062255')['logo'],
+        'у Maknemy — MK, владелец');
     assert_eq(null, roblox_load_user($db, '42')['logo'], 'у остальных знака нет');
 });
 

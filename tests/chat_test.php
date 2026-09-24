@@ -745,9 +745,10 @@ test('без таблицы удалений чат работает, а уда�
 test('собеседник несёт знак у ника из общего списка', function () {
     $row = ['roblox_id' => 2841062255, 'username' => 'Shamill_prod', 'display_name' => 'maknemy',
             'avatar_url' => '', 'last_login_at' => 0, 'last_seen_at' => 0];
-    assert_eq('/assets/design/logo-mk.png', chat_user_row($row, CH_NOW)['logo'], 'у Maknemy — MK');
+    assert_eq(['src' => '/assets/design/logo-mk.png', 'role' => 'owner'], chat_user_row($row, CH_NOW)['logo'], 'у Maknemy — MK, владелец');
     $row['roblox_id'] = 8755256557;
-    assert_eq('/assets/design/logo-fool.png', chat_user_row($row, CH_NOW)['logo'], 'у The Fool — шут');
+    assert_eq(['src' => '/assets/design/logo-fool.png', 'role' => 'developer'], chat_user_row($row, CH_NOW)['logo'],
+        'у The Fool — шут, разработчик');
     $row['roblox_id'] = 42;
     assert_eq(null, chat_user_row($row, CH_NOW)['logo'], 'у остальных знака нет');
 });

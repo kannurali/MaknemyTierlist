@@ -15,6 +15,8 @@
     "user.mine": "Мой профиль",
     "user.profile": "Профиль в Roblox",
     "user.logout": "Выйти",
+    "nick.owner": "Владелец",
+    "nick.developer": "Разработчик",
     "user.admin": "Админка",
     "user.support": "Обращения",
     "user.cancelled": "Вход отменён",
@@ -196,11 +198,19 @@
 
     name.textContent = user.display || user.name || "";
     if (user.logo) {
+      var key = "nick." + user.logo.role;
+      var badge = document.createElement("span");
+      badge.className = "nx-nick-badge";
+      badge.setAttribute("role", "img");
+      badge.setAttribute("data-tip", key);
+      badge.setAttribute("data-i18n-label", key);
+      badge.setAttribute("aria-label", tx(key));
       var logo = document.createElement("img");
       logo.className = "nx-nick-logo";
-      logo.src = user.logo;
+      logo.src = user.logo.src;
       logo.alt = "";
-      name.appendChild(logo);
+      badge.appendChild(logo);
+      name.appendChild(badge);
     }
     var nick = document.createElement("span");
     nick.textContent = user.name ? "@" + user.name : "";
@@ -324,4 +334,74 @@
       })
       .catch(function () {});
   }
+
+  var tip = null;
+  var tipFor = null;
+  var tipPinned = false;
+
+  function badgeOf(node) {
+    return node && node.closest ? node.closest(".nx-nick-badge") : null;
+  }
+
+  function showTip(badge, pinned) {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "nx-nick-tip";
+      tip.setAttribute("aria-hidden", "true");
+      document.body.appendChild(tip);
+    }
+    tip.textContent = tx(badge.getAttribute("data-tip")) || "";
+    var r = badge.getBoundingClientRect();
+    var below = r.top < 56;
+    tip.classList.toggle("is-below", below);
+    tip.style.left = Math.round(r.left + r.width / 2) + "px";
+    tip.style.top = Math.round(below ? r.bottom : r.top) + "px";
+    tip.hidden = false;
+    tipFor = badge;
+    tipPinned = pinned;
+  }
+
+  function hideTip() {
+    if (tip) tip.hidden = true;
+    tipFor = null;
+    tipPinned = false;
+  }
+
+  document.addEventListener("click", function (e) {
+    var badge = badgeOf(e.target);
+    if (!badge) {
+      if (tipPinned) hideTip();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (tipFor === badge && tipPinned) hideTip();
+    else showTip(badge, true);
+  }, true);
+
+  document.addEventListener("pointerover", function (e) {
+    if (e.pointerType !== "mouse" || tipPinned) return;
+    var badge = badgeOf(e.target);
+    if (badge && badge !== tipFor) showTip(badge, false);
+  });
+
+  document.addEventListener("pointerout", function (e) {
+    if (e.pointerType !== "mouse" || tipPinned || !tipFor) return;
+    if (badgeOf(e.target) === tipFor && !tipFor.contains(e.relatedTarget)) hideTip();
+  });
+
+  document.addEventListener("focusin", function (e) {
+    if (e.target.classList && e.target.classList.contains("nx-nick-badge")) showTip(e.target, false);
+  });
+
+  document.addEventListener("focusout", function (e) {
+    if (!tipPinned && tipFor && e.target === tipFor) hideTip();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && tipFor) hideTip();
+  });
+
+  document.addEventListener("scroll", function () { if (tipFor) hideTip(); }, true);
+  window.addEventListener("resize", function () { if (tipFor) hideTip(); });
 })();

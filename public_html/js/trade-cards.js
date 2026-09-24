@@ -13,12 +13,20 @@
     return node;
   }
 
-  function nickLogo(user) {
+  function nickLogo(user, tx, focusable) {
     if (!user || !user.logo) { return null; }
+    const key = "nick." + user.logo.role;
+    const badge = el("span", "nx-nick-badge");
+    badge.setAttribute("role", "img");
+    badge.setAttribute("data-tip", key);
+    badge.setAttribute("data-i18n-label", key);
+    badge.setAttribute("aria-label", tx(key));
+    if (focusable) { badge.tabIndex = 0; }
     const img = el("img", "nx-nick-logo");
-    img.src = user.logo;
+    img.src = user.logo.src;
     img.alt = "";
-    return img;
+    badge.appendChild(img);
+    return badge;
   }
 
   function icon(id, cls) {
@@ -193,7 +201,7 @@
         nick = el("span", "tr-nick", offer.author.nick);
       }
       nick.id = nickId;
-      const logo = nickLogo(offer.author);
+      const logo = nickLogo(offer.author, tx, nick.tagName !== "A");
       if (logo) { nick.appendChild(logo); }
       who.appendChild(nick);
       if (offer.author.handle) { who.appendChild(el("span", "tr-handle", offer.author.handle)); }

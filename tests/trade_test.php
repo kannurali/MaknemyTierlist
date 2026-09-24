@@ -497,7 +497,8 @@ test('автор объявления несёт знак у ника', function
     $ins->execute([8755256557, 'kan_nurali', 'TheFool', '', NOW - 999, NOW - 999]);
     $ins->execute([101, 'alice', 'Alice', '', NOW - 999, NOW - 999]);
     $a = trade_authors($pdo, ['8755256557', '101'], NOW);
-    assert_eq('/assets/design/logo-fool.png', $a['8755256557']['logo'], 'у The Fool — шут');
+    assert_eq(['src' => '/assets/design/logo-fool.png', 'role' => 'developer'], $a['8755256557']['logo'],
+        'у The Fool — шут, разработчик');
     assert_eq(null, $a['101']['logo'], 'у остальных знака нет');
 });
 
