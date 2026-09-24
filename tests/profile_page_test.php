@@ -98,6 +98,10 @@ function pf_fixture_db(string $file): void {
                    $now, 'a <b>bold</b> claim', 0, 0]);
     // Без имени вовсе: у Roblox не обязательны ни display_name, ни username.
     $ins->execute(['900000011', '', '', '', $now - 86400, $now, $now, null, 0, 0]);
+    // Владелец сайта и разработчик — настоящие roblox_id из PROFILE_OWNER_ID и
+    // PROFILE_NICK_LOGOS: у них блок «Обо мне» и знаки у ника.
+    $ins->execute(['2841062255', 'Shamill_prod', 'maknemy', '', $now - 86400, $now, $now, null, 2, 0]);
+    $ins->execute(['8755256557', 'kan_nurali', 'TheFool', '', $now - 86400, $now, $now, null, 0, 0]);
 }
 
 // $extra — дополнительные ключи config.php (например admin_ids).
@@ -1274,6 +1278,70 @@ test('с чужого профиля можно написать человек�
     assert_true($mine !== null, 'своя страница отрендерилась');
     if ($mine === null) { return; }
     assert_eq(0, substr_count($mine['html'], 'pf-write'), 'на своём профиле кнопки нет');
+});
+
+// Блок «Обо мне и проекте Maknemy» переехал с главной в профиль владельца.
+// Он принадлежит человеку, а не странице: его видно и самому Maknemy, и любому
+// вошедшему, кто открыл его профиль, и больше нигде.
+test('«Обо мне и проекте Maknemy» стоит только в профиле владельца', function () use ($PUB) {
+    $i18n = pf_read($PUB . '/js/i18n.js');
+    foreach (['profile.ownerTitle', 'profile.ownerP1', 'profile.ownerP5', 'profile.ownerList6',
+              'profile.ownerSocial', 'profile.ownerTg1', 'profile.ownerTgChat'] as $key) {
+        pf_assert_key($i18n, $key);
+    }
+    assert_eq(0, preg_match('/"home\.(aboutTitle|aboutP\d|social\w+|telegram\w+)"/', $i18n),
+        'старых ключей главной в словаре не осталось');
+
+    $peer = pf_render('900000001', '2841062255');
+    $self = pf_render('2841062255', '');
+    $other = pf_render('900000001', '900000004');
+    assert_true($peer !== null && $self !== null && $other !== null, 'страницы отрендерились');
+    if ($peer === null || $self === null || $other === null) { return; }
+
+    foreach (['чужой взгляд' => $peer['html'], 'сам владелец' => $self['html']] as $who => $html) {
+        assert_true(strpos($html, 'class="pf-owner"') !== false, "$who: блок на месте");
+        assert_true(strpos($html, 'data-i18n="profile.ownerTitle">Обо мне и проекте Maknemy</h2>') !== false,
+            "$who: с заголовком");
+        assert_true(strpos($html, 'href="https://t.me/mksvtnchat"') !== false, "$who: со ссылками");
+    }
+    assert_eq(0, substr_count($other['html'], 'pf-owner'), 'у остальных игроков блока нет');
+
+    // Блок стоит между карточкой и объявлениями, а не внутри карточки: у той
+    // на телефоне своя раскладка через order.
+    $html = $peer['html'];
+    assert_true(strpos($html, 'class="pf-owner"') > strpos($html, 'class="pf-stats-note"')
+        && strpos($html, 'class="pf-owner"') < strpos($html, 'class="pf-trades"'),
+        'между карточкой и объявлениями');
+
+    $css = pf_read($PUB . '/css/profile.css');
+    $phone = substr($css, strpos($css, '@media (max-width: 900px)'));
+    assert_true(strpos($phone, '.pf-owner {') !== false, 'на телефоне у блока свои размеры в px');
+});
+
+test('с главной блок «Обо мне» убран, кнопка ведёт в профиль владельца', function () use ($PUB) {
+    $home = pf_read($PUB . '/home.php');
+    assert_eq(0, substr_count($home, 'hm-about'), 'секции на главной нет');
+    assert_eq(0, substr_count($home, 'href="#about"'), 'якоря на неё тоже');
+    assert_true(strpos($home, 'href="/profile?id=2841062255"') !== false, 'кнопка «обо мне» ведёт в профиль');
+    assert_eq(0, preg_match('/hm-about|hm-social/', pf_read($PUB . '/css/home.css')), 'мёртвых стилей не осталось');
+});
+
+test('у ника владельца и разработчика стоит их знак', function () use ($PUB) {
+    $mk    = pf_render('900000001', '2841062255');
+    $fool  = pf_render('8755256557', '');
+    $other = pf_render('900000001', '900000004');
+    assert_true($mk !== null && $fool !== null && $other !== null, 'страницы отрендерились');
+    if ($mk === null || $fool === null || $other === null) { return; }
+
+    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">maknemy<img class="pf-nick-logo" src="assets/design/logo-mk.png" alt="" /></h1>~',
+        $mk['html']), 'у Maknemy — MK');
+    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">TheFool<img class="pf-nick-logo" src="assets/design/logo-fool.png" alt="" /></h1>~',
+        $fool['html']), 'у The Fool — шут');
+    assert_eq(0, substr_count($other['html'], 'pf-nick-logo'), 'у остальных знака нет');
+
+    foreach (['logo-mk.png', 'logo-fool.png'] as $f) {
+        assert_true(is_file($PUB . '/assets/design/' . $f), "$f лежит на месте");
+    }
 });
 
 run_tests();
