@@ -63,7 +63,10 @@ function pf_assert_key(string $i18n, string $key): void {
 
 const PF_MARK = '___NX_PROFILE_RENDER___';
 
-function pf_fixture_db(string $file): void {
+// $tables — какие таблицы Telegram завести: tg (привязки), prefs
+// (переключатели), linked (свой профиль подключён), newsOff (и выключил
+// новости).
+function pf_fixture_db(string $file, array $tables = []): void {
     @unlink($file);
     $pdo = new PDO('sqlite:' . $file);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -103,10 +106,34 @@ function pf_fixture_db(string $file): void {
     $ins->execute(['2841062255', 'Shamill_prod', 'maknemy', '', $now - 86400, $now, $now, null, 2, 0]);
     $ins->execute(['8755256557', 'kan_nurali', 'TheFool', '', $now - 86400, $now, $now, null, 0, 0]);
     $ins->execute(['3964875859', 'DANIKtyda', 'Agent_Tele2', '', $now - 86400, $now, $now, null, 0, 0]);
+
+    // Зеркалят docs/migrations/2026-09-23-telegram.sql и 2026-09-25-tg-prefs.sql.
+    if (!empty($tables['tg'])) {
+        $pdo->exec("CREATE TABLE tg_links (user_id INTEGER NOT NULL PRIMARY KEY, chat_id INTEGER NOT NULL,
+            tg_name TEXT NOT NULL DEFAULT '', lang TEXT NOT NULL DEFAULT 'ru', linked_at INTEGER NOT NULL)");
+        $pdo->exec("CREATE TABLE tg_codes (code_hash TEXT NOT NULL PRIMARY KEY, user_id INTEGER NOT NULL,
+            lang TEXT NOT NULL DEFAULT 'ru', expires_at INTEGER NOT NULL)");
+        $pdo->exec('CREATE TABLE chat_reads (thread_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
+            last_read_id INTEGER NOT NULL DEFAULT 0, seen_at INTEGER NOT NULL DEFAULT 0,
+            notified_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (thread_id, user_id))');
+    }
+    if (!empty($tables['prefs'])) {
+        $pdo->exec('CREATE TABLE tg_prefs (user_id INTEGER NOT NULL PRIMARY KEY,
+            prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
+    }
+    if (!empty($tables['linked'])) {
+        // Имя с разметкой: на страницу оно обязано уехать экранированным.
+        $pdo->prepare('INSERT INTO tg_links (user_id, chat_id, tg_name, lang, linked_at) VALUES (?, ?, ?, ?, ?)')
+            ->execute(['900000001', 555, '@mks_<tg>', 'ru', $now]);
+    }
+    if (!empty($tables['newsOff'])) {
+        $pdo->exec("INSERT INTO tg_prefs (user_id, prices, news) VALUES (900000001, 1, 0)");
+    }
 }
 
-// $extra — дополнительные ключи config.php (например admin_ids).
-function pf_render(string $me, string $id, array $extra = []): ?array {
+// $extra — дополнительные ключи config.php (например admin_ids), $tables —
+// таблицы Telegram в базе (см. pf_fixture_db).
+function pf_render(string $me, string $id, array $extra = [], array $tables = []): ?array {
     if (!function_exists('shell_exec')) { return null; }
     $php  = PHP_BINARY !== '' ? PHP_BINARY : 'php';
     // Имя уникальное на процесс и на вызов: два прогона набора рядом (или
@@ -117,7 +144,7 @@ function pf_render(string $me, string $id, array $extra = []): ?array {
     $dbf  = $tmp . '/nx_profile_' . $tag . '.sqlite';
     $cfgf = $tmp . '/nx_profile_' . $tag . '_config.php';
 
-    pf_fixture_db($dbf);
+    pf_fixture_db($dbf, $tables);
     file_put_contents($cfgf, '<?php return ' . var_export(array_merge([
         'dsn' => 'sqlite:' . $dbf, 'db_user' => '', 'db_pass' => '', 'images_dir' => '',
         'deploy_secret' => '', 'deploy_repo' => '', 'deploy_path' => '', 'deploy_branch' => '',
@@ -1428,6 +1455,83 @@ test('знак у ника подписан: Владелец и Разрабо�
     // знак уезжал на отдельную строку, мельчал до 13 px и тускнел.
     assert_true(strpos(pf_read($PUB . '/css/topbar.css'), '.mk-user-name span:not(.nx-nick-badge) {') !== false,
         'в меню шапки знак стоит в строке с именем');
+});
+
+// --------------------------------------------------------------------------
+//  Колокольчик уведомлений в Telegram
+// --------------------------------------------------------------------------
+
+const PF_TG = ['tg_bot_token' => '123456789:AAHfakeTokenForTestsOnly_abcdefghij', 'tg_bot_name' => 'MaknemyBot'];
+
+test('колокольчик Telegram — только на своём профиле и только с настроенным ботом', function () {
+    $mine = pf_render('900000001', '', PF_TG, ['tg' => true, 'prefs' => true]);
+    assert_true($mine !== null, 'страница отрендерилась');
+    if ($mine === null) { return; }
+    $h = $mine['html'];
+    assert_true(strpos($h, 'id="pfBell"') !== false, 'колокольчик на своём профиле');
+    assert_true(strpos($h, 'data-on="false"') !== false, 'не подключён — выключен');
+    assert_true(strpos($h, '<div class="pf-notify" id="pfNotify" hidden') !== false, 'панель закрыта до нажатия');
+    assert_true(strpos($h, 'aria-controls="pfNotify"') !== false, 'кнопка знает свою панель');
+    assert_true(strpos($h, 'id="pfNotifyGo" href="https://t.me/" target="_blank" rel="noopener" data-i18n') !== false, 'кнопка подключения видна');
+    assert_true(strpos($h, 'id="pfNotifyOff" type="button" hidden') !== false, '«Отключить» спрятана');
+    assert_eq(1, preg_match('~data-topic="prices" checked~', $h), 'цены по умолчанию включены');
+    assert_eq(1, preg_match('~data-topic="news" checked~', $h), 'новости по умолчанию включены');
+    assert_eq(2, substr_count($h, 'role="switch"'), 'два переключателя');
+    assert_true(strpos($h, '<script src="js/profile-notify.js?v=') !== false, 'скрипт колокольчика подключён');
+
+    $meta = pf_inside($h, '<div class="pf-meta">');
+    assert_true($meta !== null && strpos($meta, 'id="pfBell"') !== false, 'колокольчик в строке статуса');
+    assert_true($meta !== null && strpos($meta, 'id="pfNotify"') === false, 'а панель — после неё, отдельным блоком');
+
+    $peer = pf_render('900000001', '900000004', PF_TG, ['tg' => true, 'prefs' => true]);
+    assert_eq(0, substr_count($peer['html'], 'pfBell'), 'на чужом профиле колокольчика нет');
+    assert_eq(0, substr_count($peer['html'], 'profile-notify.js'), 'и скрипта нет');
+
+    $off = pf_render('900000001', '', [], ['tg' => true, 'prefs' => true]);
+    assert_eq(0, substr_count($off['html'], 'pfBell'), 'бот не настроен — колокольчика нет');
+    assert_eq(0, substr_count($off['html'], 'profile-notify.js'), 'и скрипта нет');
+
+    $bare = pf_render('900000001', '', PF_TG);
+    assert_eq(200, $bare['status'], 'без таблиц Telegram профиль открывается');
+    assert_eq(0, substr_count($bare['html'], 'pfBell'), 'и колокольчика нет');
+});
+
+test('колокольчик профиля: подключённый человек и его выбор', function () {
+    $r = pf_render('900000001', '', PF_TG, ['tg' => true, 'prefs' => true, 'linked' => true, 'newsOff' => true]);
+    assert_true($r !== null, 'страница отрендерилась');
+    if ($r === null) { return; }
+    $h = $r['html'];
+    assert_true(strpos($h, 'data-on="true"') !== false, 'колокольчик включён');
+    assert_true(strpos($h, 'data-linked="1"') !== false, 'скрипт знает, что подключён');
+    assert_true(strpos($h, 'data-name="@mks_&lt;tg&gt;"') !== false, 'имя в Telegram экранировано');
+    assert_true(strpos($h, 'Уведомления приходят в Telegram: @mks_&lt;tg&gt;.') !== false, 'сервер сразу пишет, куда идут');
+    assert_true(strpos($h, 'id="pfNotifyGo" href="https://t.me/" target="_blank" rel="noopener" hidden') !== false, 'подключать уже нечего');
+    assert_true(strpos($h, 'id="pfNotifyOff" type="button" data-i18n') !== false, '«Отключить» видна');
+    assert_eq(1, preg_match('~data-topic="prices" checked~', $h), 'цены включены');
+    assert_eq(0, preg_match('~data-topic="news" checked~', $h), 'новости выключены');
+
+    $old = pf_render('900000001', '', PF_TG, ['tg' => true]);
+    assert_true(strpos($old['html'], 'id="pfBell"') !== false, 'до миграции tg_prefs подключение работает');
+    assert_eq(0, substr_count($old['html'], 'data-topic='), 'а переключателей нет');
+});
+
+test('колокольчик профиля: ключи словаря и телефонная раскладка', function () use ($PUB) {
+    $i18n = pf_read($PUB . '/js/i18n.js');
+    foreach (['profile.notifyIntro', 'profile.notifyTopics', 'profile.notifyPrices', 'profile.notifyNews',
+              'profile.notifySaveError', 'chat.notify', 'chat.notifyConnect', 'chat.notifyOff',
+              'chat.notifyLinked', 'chat.notifyMod', 'chat.notifyWait', 'chat.notifyFailed'] as $key) {
+        pf_assert_key($i18n, $key);
+    }
+
+    $js = pf_read($PUB . '/js/profile-notify.js');
+    assert_true(strpos($js, "action: 'status'") !== false, 'ждёт привязку опросом');
+    assert_true(strpos($js, "action: 'prefs'") !== false, 'переключатели пишут на сервер');
+    assert_true(strpos($js, 'mk:langchange') !== false, 'перерисовывается при смене языка');
+
+    $css = pf_read($PUB . '/css/profile.css');
+    $phone = substr($css, strpos($css, '@media (max-width: 900px)'));
+    assert_eq(1, preg_match('~\.pf-bell\s*\{[^}]*position:\s*static~', $phone), 'на телефоне колокольчик в строке статуса');
+    assert_eq(1, preg_match('~\.pf-notify\s*\{[^}]*position:\s*static~', $phone), 'а панель — в потоке карточки');
 });
 
 run_tests();

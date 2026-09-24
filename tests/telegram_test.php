@@ -19,12 +19,14 @@ require __DIR__ . '/../public_html/api/tg_webhook.php';
 //    сидит в этом диалоге;
 //  - привязать чужой аккаунт нельзя: код одноразовый, хранится хешем, а
 //    chat_id приходит только от Telegram с верным секретом;
-//  - без таблиц и без токена чат работает как раньше.
+//  - без таблиц и без токена чат работает как раньше;
+//  - о ценах и новостях бот пишет всем подключившимся, кроме тех, кто это
+//    выключил в профиле, и только когда цена правда сменилась.
 
 const TG_NOW   = 1790000000;
 const TG_TOKEN = '123456789:AAHfakeTokenForTestsOnly_abcdefghij';
 
-function tg_db(bool $withTg = true): PDO {
+function tg_db(bool $withTg = true, bool $withPrefs = true): PDO {
     $pdo = test_db();
     $pdo->exec('CREATE TABLE chat_threads (
         id      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,6 +73,14 @@ function tg_db(bool $withTg = true): PDO {
             seen_at      INTEGER NOT NULL DEFAULT 0,
             notified_id  INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (thread_id, user_id)
+        )');
+    }
+    if ($withTg && $withPrefs) {
+        // Зеркалит docs/migrations/2026-09-25-tg-prefs.sql.
+        $pdo->exec('CREATE TABLE tg_prefs (
+            user_id INTEGER NOT NULL PRIMARY KEY,
+            prices  INTEGER NOT NULL DEFAULT 1,
+            news    INTEGER NOT NULL DEFAULT 1
         )');
     }
     return $pdo;
@@ -255,7 +265,7 @@ test('/stop отвязывает, а любой другой текст полу
 
     $hello = tg_handle_update($p, tg_start_update(555, 'привет', ['language_code' => 'en']), TG_NOW);
     assert_eq(tg_text('hello', 'en'), $hello['text'], 'подсказка на языке Telegram');
-    assert_eq('https://maknemy.com/chat', $hello['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка на чат');
+    assert_eq('https://maknemy.com/profile', $hello['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка на профиль');
     assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM tg_links')->fetchColumn(), 'привязка на месте');
 
     $stop = tg_handle_update($p, tg_start_update(555, '/stop'), TG_NOW);
@@ -516,6 +526,336 @@ test('установка вебхука отдаёт адрес сайта и с
 
     $fail = [];
     assert_eq(false, tg_setup_webhook(tg_recorder($fail, ['ok' => false, 'error_code' => 401]), TG_TOKEN), 'чужой токен');
+});
+
+// --------------------------------------------------------------------------
+//  Что присылать: переключатели в профиле
+// --------------------------------------------------------------------------
+
+test('пока человек ничего не выключал, приходит всё', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    assert_eq(['prices' => true, 'news' => true], tg_prefs_get($p, '101'));
+    assert_eq(null, tg_prefs_get(tg_db(true, false), '101'), 'нет таблицы — переключателей нет');
+});
+
+test('переключатель меняет только своё, и только настоящим true/false', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+
+    [$code, $out] = tg_prefs_set($p, '101', ['news' => false]);
+    assert_eq(200, $code);
+    assert_eq(['prices' => true, 'news' => false], $out['prefs']);
+    assert_eq(['prices' => true, 'news' => false], tg_prefs_get($p, '101'), 'записано');
+
+    tg_prefs_set($p, '101', ['prices' => false]);
+    assert_eq(['prices' => false, 'news' => false], tg_prefs_get($p, '101'), 'второй не сбросил первый');
+    tg_prefs_set($p, '101', ['news' => true]);
+    assert_eq(['prices' => false, 'news' => true], tg_prefs_get($p, '101'));
+    assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM tg_prefs')->fetchColumn(), 'одна строка на человека');
+
+    assert_eq(400, tg_prefs_set($p, '101', ['prices' => 0])[0], 'ноль — не false');
+    assert_eq(400, tg_prefs_set($p, '101', ['news' => 'нет'])[0], 'строка — не false');
+    assert_eq(['prices' => false, 'news' => true], tg_prefs_get($p, '101'), 'кривой запрос ничего не поменял');
+
+    assert_eq(401, tg_prefs_set($p, '', ['news' => false])[0], 'аноним');
+    assert_eq(401, tg_prefs_set($p, '999', ['news' => false])[0], 'нет в users');
+    assert_eq(503, tg_prefs_set(tg_db(true, false), '101', ['news' => false])[0], 'нет таблицы');
+});
+
+test('выбор переживает отключение и новое подключение Telegram', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_prefs_set($p, '101', ['prices' => false]);
+    tg_link_row($p, '101', 555);
+    tg_unlink($p, '101');
+    $code = tg_code_from(tg_link_start($p, tg_cfg(), '101', 'ru', TG_NOW)[1]['url']);
+    tg_handle_update($p, tg_start_update(777, '/start ' . $code), TG_NOW);
+    assert_eq(['prices' => false, 'news' => true], tg_prefs_get($p, '101'));
+});
+
+test('колокольчик профиля видит и привязку, и переключатели', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_link_row($p, '101', 555);
+    tg_prefs_set($p, '101', ['news' => false]);
+    assert_eq(
+        ['on' => true, 'linked' => true, 'name' => '@someone', 'mod' => false, 'prefs' => ['prices' => true, 'news' => false]],
+        tg_profile_status($p, tg_cfg(), '101')
+    );
+    assert_eq(null, tg_profile_status($p, tg_config([]), '101')['prefs'], 'бот выключен');
+    assert_eq(null, tg_profile_status(tg_db(true, false), tg_cfg(), '101')['prefs'], 'нет таблицы');
+});
+
+test('эндпоинт колокольчика: состояние и переключатели', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    $cfg = ['tg_bot_token' => TG_TOKEN, 'tg_bot_name' => 'MaknemyBot'];
+
+    [$code, $out] = handle_tg_link($p, $cfg, '101', ['action' => 'status'], TG_NOW);
+    assert_eq(200, $code);
+    assert_eq(false, $out['tg']['linked']);
+    assert_eq(['prices' => true, 'news' => true], $out['tg']['prefs']);
+    assert_eq(401, handle_tg_link($p, $cfg, '', ['action' => 'status'], TG_NOW)[0], 'аноним');
+
+    [$code, $out] = handle_tg_link($p, $cfg, '101', ['action' => 'prefs', 'prices' => false], TG_NOW);
+    assert_eq(200, $code);
+    assert_eq(['prices' => false, 'news' => true], $out['prefs']);
+
+    assert_eq(30, tg_link_limit('link'), 'ссылки — как раньше');
+    assert_eq(60, tg_link_limit('prefs'));
+    assert_eq(0, tg_link_limit('status'), 'опрос состояния не упирается в лимит');
+});
+
+// --------------------------------------------------------------------------
+//  Цены в тирлисте
+// --------------------------------------------------------------------------
+
+function tg_tier(array $items): array {
+    $out = [];
+    foreach ($items as $id => $pair) { $out[] = ['id' => $id, 'name' => $pair[0], 'value' => $pair[1], 'type' => 'f']; }
+    return ['tiers' => [['id' => 't1', 'label' => 'MK', 'items' => $out]]];
+}
+
+test('цена читается так же, как в тирлисте', function () {
+    assert_eq(25000.0, tg_price_number('25000'));
+    assert_eq(25000.0, tg_price_number('25 000'));
+    assert_eq(25000.0, tg_price_number('25k'));
+    assert_eq(1500000.0, tg_price_number('1,5кк'));
+    assert_eq(0.4, tg_price_number('0,4'));
+    assert_eq(null, tg_price_number('скоро'));
+    assert_eq(null, tg_price_number(''));
+});
+
+test('изменения цен: сменившиеся и новые, по порядку тирлиста', function () {
+    $old = tg_tier(['a' => ['Dragon', '25000'], 'b' => ['Kitsune', '30000'], 'c' => ['Yeti', '500'], 'd' => ['Gone', '1']]);
+    $new = tg_tier(['b' => ['Kitsune', '28000'], 'a' => ['Dragon', '27000'], 'c' => ['Yeti', '500'], 'e' => ['Tiger', '4000']]);
+    assert_eq([
+        ['name' => 'Kitsune', 'from' => '30000', 'to' => '28000'],
+        ['name' => 'Dragon',  'from' => '25000', 'to' => '27000'],
+        ['name' => 'Tiger',   'from' => null,    'to' => '4000'],
+    ], tg_price_changes($old, $new), 'удалённый Gone молчит, Yeti без изменений');
+});
+
+test('ценой не считаются переименование, пробелы и та же цена другой записью', function () {
+    $old = tg_tier(['a' => ['Dragon', '25000'], 'b' => ['Kitsune', '30000'], 'c' => ['Yeti', '1000']]);
+    $new = tg_tier(['a' => ['Dragon (West)', '25000'], 'b' => ['Kitsune', ' 30 000 '], 'c' => ['Yeti', '1k']]);
+    assert_eq([], tg_price_changes($old, $new));
+});
+
+test('первое сохранение и пустая цена молчат', function () {
+    $new = tg_tier(['a' => ['Dragon', '25000']]);
+    assert_eq([], tg_price_changes([], $new), 'сравнивать не с чем');
+    assert_eq([], tg_price_changes(['tiers' => 'мусор'], $new), 'кривое прежнее состояние');
+    $old = tg_tier(['a' => ['Dragon', '25000'], 'b' => ['Kitsune', '']]);
+    assert_eq([], tg_price_changes($old, tg_tier(['a' => ['Dragon', ''], 'b' => ['Kitsune', '']])), 'цену стёрли — не новость');
+    assert_eq(
+        [['name' => 'Kitsune', 'from' => null, 'to' => '30000']],
+        tg_price_changes($old, tg_tier(['a' => ['Dragon', '25000'], 'b' => ['Kitsune', '30000']])),
+        'цена появилась'
+    );
+});
+
+test('кривые предметы не роняют сравнение, перевод строки в имени — пробел', function () {
+    $old = ['tiers' => [['items' => [['id' => 'a', 'name' => 'Dragon', 'value' => '1'], 'мусор', ['name' => 'без id', 'value' => '1']]], 'мусор']];
+    $new = ['tiers' => [['items' => [['id' => 'a', 'name' => "Dra\ngon", 'value' => 2], ['id' => 'a', 'name' => 'Дубль', 'value' => '3']]]]];
+    assert_eq([['name' => 'Dra gon', 'from' => '1', 'to' => '2']], tg_price_changes($old, $new));
+});
+
+test('текст о ценах: стрелки, новые, «и ещё N»', function () {
+    $changes = [
+        ['name' => 'Dragon',  'from' => '25000', 'to' => '27000'],
+        ['name' => 'Kitsune', 'from' => '30000', 'to' => '28k'],
+        ['name' => 'Tiger',   'from' => null,    'to' => '4000'],
+        ['name' => 'Yeti',    'from' => '?',     'to' => '500'],
+    ];
+    assert_eq(
+        "📊 Обновились цены в тирлисте\n\n📈 Dragon: 25000 → 27000\n📉 Kitsune: 30000 → 28k\n🆕 Tiger: 4000\n✏️ Yeti: ? → 500",
+        tg_prices_text($changes, 'ru')
+    );
+
+    $many = [];
+    for ($i = 1; $i <= TG_PRICE_LINES + 3; $i++) { $many[] = ['name' => 'Item' . $i, 'from' => '1', 'to' => '2']; }
+    $lines = explode("\n", tg_prices_text($many, 'en'));
+    assert_eq('📊 Tier list prices updated', $lines[0]);
+    assert_eq(2 + TG_PRICE_LINES + 1, count($lines), 'заголовок, пустая строка, список, хвост');
+    assert_eq('…and 3 more', end($lines));
+});
+
+test('о ценах узнают все подключившиеся, кроме выключивших', function () {
+    $p = tg_db();
+    foreach (['101', '202', '303', '404'] as $id) { tg_user($p, $id, 'u' . $id); }
+    tg_link_row($p, '101', 1001);
+    tg_link_row($p, '202', 2002, 'en');
+    tg_link_row($p, '303', 3003);
+    tg_prefs_set($p, '303', ['prices' => false]);
+    tg_prefs_set($p, '404', ['news' => false]);   // без Telegram — некуда писать
+
+    $log = [];
+    $quiet = function (int $us): void {};
+    $changes = [['name' => 'Dragon', 'from' => '25000', 'to' => '27000']];
+    assert_eq(2, tg_notify_prices($p, tg_cfg(), tg_recorder($log), $changes, $quiet));
+    assert_eq([1001, 2002], array_map(function ($c) { return $c[1]['chat_id']; }, $log));
+
+    assert_eq("📊 Обновились цены в тирлисте\n\n📈 Dragon: 25000 → 27000", $log[0][1]['text']);
+    assert_eq('📊 Tier list prices updated', explode("\n", $log[1][1]['text'])[0], 'на языке человека');
+    $kb = $log[0][1]['reply_markup']['inline_keyboard'];
+    assert_eq(['Открыть тирлист', 'https://maknemy.com/tierlist'], [$kb[0][0]['text'], $kb[0][0]['url']]);
+    assert_eq(['Настроить уведомления', 'https://maknemy.com/profile'], [$kb[1][0]['text'], $kb[1][0]['url']]);
+
+    assert_eq(0, tg_notify_prices($p, tg_cfg(), tg_recorder($log), [], $quiet), 'нечего сообщать');
+});
+
+test('рассылка: один чат на два аккаунта — одно сообщение, пауза между сообщениями', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_user($p, '102', 'ann_alt');
+    tg_user($p, '202', 'bob');
+    tg_link_row($p, '101', 1001);
+    tg_link_row($p, '102', 1001);
+    tg_link_row($p, '202', 2002);
+
+    $log = [];
+    $naps = [];
+    $sleep = function (int $us) use (&$naps): void { $naps[] = $us; };
+    assert_eq(2, tg_notify_prices($p, tg_cfg(), tg_recorder($log), [['name' => 'A', 'from' => '1', 'to' => '2']], $sleep));
+    assert_eq([1001, 2002], array_map(function ($c) { return $c[1]['chat_id']; }, $log));
+    assert_eq([TG_BROADCAST_GAP], $naps, 'пауза только между сообщениями');
+});
+
+test('рассылка: 429 — подождать и повторить, 403 — отвязать', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_user($p, '202', 'bob');
+    tg_link_row($p, '101', 1001);
+    tg_link_row($p, '202', 2002);
+
+    $calls = [];
+    $naps  = [];
+    $send = function (string $method, array $params) use (&$calls): ?array {
+        $calls[] = $params['chat_id'];
+        if ($params['chat_id'] === 2002) { return ['ok' => false, 'error_code' => 403]; }
+        if (count($calls) === 1) { return ['ok' => false, 'error_code' => 429, 'parameters' => ['retry_after' => 3]]; }
+        return ['ok' => true];
+    };
+    $sleep = function (int $us) use (&$naps): void { $naps[] = $us; };
+    assert_eq(1, tg_notify_prices($p, tg_cfg(), $send, [['name' => 'A', 'from' => '1', 'to' => '2']], $sleep));
+    assert_eq([1001, 1001, 2002], $calls, 'после 429 — повтор тому же');
+    assert_eq([3000000, TG_BROADCAST_GAP], $naps, 'ждали сколько сказал Telegram');
+    assert_eq(['101'], array_map('strval', $p->query('SELECT user_id FROM tg_links')->fetchAll(PDO::FETCH_COLUMN)), 'заблокировавший отвязан');
+});
+
+test('сохранение тирлиста: бот пишет только когда цены сменились', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_link_row($p, '101', 1001);
+    $cfg = ['tg_bot_token' => TG_TOKEN, 'tg_bot_name' => 'MaknemyBot'];
+    $quiet = function (int $us): void {};
+
+    $old = tg_tier(['a' => ['Dragon', '25000']]);
+    $p->prepare('UPDATE tierlist SET data = ?, rev = 1 WHERE id = 1')->execute([json_encode($old)]);
+    assert_eq($old, tg_tierlist_state($p), 'прежнее состояние читается из базы');
+
+    $log = [];
+    tg_after_prices($p, $cfg, tg_tierlist_state($p), tg_tier(['a' => ['Dragon', '25000']]), tg_recorder($log), $quiet);
+    assert_eq([], $log, 'сохранили без смены цен — тишина');
+
+    tg_after_prices($p, $cfg, tg_tierlist_state($p), tg_tier(['a' => ['Dragon', '26000']]), tg_recorder($log), $quiet);
+    assert_eq(1, count($log), 'цена сменилась — одно сообщение');
+    assert_true(strpos($log[0][1]['text'], 'Dragon: 25000 → 26000') !== false, 'в нём что и как сменилось');
+
+    $none = [];
+    tg_after_prices($p, [], $old, tg_tier(['a' => ['Dragon', '1']]), tg_recorder($none), $quiet);
+    assert_eq([], $none, 'бот не настроен — тишина');
+    assert_eq([], tg_tierlist_state(test_db()), 'пустой тирлист — пустое состояние');
+    $gone = test_db();
+    $gone->exec('DELETE FROM tierlist');
+    assert_eq([], tg_tierlist_state($gone), 'строки нет — тоже, а не ошибка');
+});
+
+test('публикация новости: бот пишет про новый пост', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_link_row($p, '101', 1001);
+    $id = tg_news_row($p, 'Обновление', 'Текст', TG_NOW * 1000);
+    $log = [];
+    tg_after_news($p, ['tg_bot_token' => TG_TOKEN, 'tg_bot_name' => 'MaknemyBot'], $id, TG_NOW, tg_recorder($log), function (int $us): void {});
+    assert_eq(1, count($log));
+    assert_eq("📰 Обновление\n\nТекст", $log[0][1]['text']);
+});
+
+test('админка видит, сколько людей получают каждую рассылку', function () {
+    $p = tg_db();
+    foreach (['101', '202', '303'] as $id) { tg_user($p, $id, 'u' . $id); }
+    tg_link_row($p, '101', 1001);
+    tg_link_row($p, '202', 2002);
+    tg_link_row($p, '303', 3003);
+    tg_prefs_set($p, '202', ['prices' => false]);
+    tg_prefs_set($p, '303', ['news' => false, 'prices' => false]);
+    assert_eq(['linked' => 3, 'prices' => 1, 'news' => 2], tg_audience($p));
+    assert_eq(['linked' => 0, 'prices' => 0, 'news' => 0], tg_audience(tg_db()), 'пусто');
+    assert_eq(null, tg_audience(tg_db(true, false)), 'миграция не выполнена');
+});
+
+test('без таблицы настроек или без бота рассылки молчат', function () {
+    $p = tg_db(true, false);
+    tg_user($p, '101', 'ann');
+    tg_link_row($p, '101', 1001);
+    $log = [];
+    $changes = [['name' => 'A', 'from' => '1', 'to' => '2']];
+    assert_eq(0, tg_notify_prices($p, tg_cfg(), tg_recorder($log), $changes), 'миграция не выполнена');
+    assert_eq(0, tg_notify_prices(tg_db(), tg_config([]), tg_recorder($log), $changes), 'бот не настроен');
+    assert_eq(0, tg_notify_prices(tg_db(false), tg_cfg(), tg_recorder($log), $changes), 'таблиц Telegram нет');
+    assert_eq([], $log);
+});
+
+// --------------------------------------------------------------------------
+//  Новости
+// --------------------------------------------------------------------------
+
+function tg_news_row(PDO $p, string $titleRu, string $bodyRu, int $publishedAt, string $titleEn = '', string $bodyEn = ''): int {
+    $p->prepare('INSERT INTO news (category, title_ru, title_en, body_ru, body_en, published_at) VALUES (?, ?, ?, ?, ?, ?)')
+      ->execute(['game', $titleRu, $titleEn, $bodyRu, $bodyEn, $publishedAt]);
+    return (int)$p->lastInsertId();
+}
+
+test('о новой новости узнают все, кроме выключивших, со ссылкой на пост', function () {
+    $p = tg_db();
+    foreach (['101', '202', '303'] as $id) { tg_user($p, $id, 'u' . $id); }
+    tg_link_row($p, '101', 1001);
+    tg_link_row($p, '202', 2002, 'en');
+    tg_link_row($p, '303', 3003);
+    tg_prefs_set($p, '303', ['news' => false]);
+    $id = tg_news_row($p, 'Обновление 27', "Вышло обновление.\nНовые фрукты.", TG_NOW * 1000, 'Update 27', 'The update is out.');
+
+    $log = [];
+    assert_eq(2, tg_notify_news($p, tg_cfg(), tg_recorder($log), $id, TG_NOW, function (int $us): void {}));
+    assert_eq("📰 Обновление 27\n\nВышло обновление. Новые фрукты.", $log[0][1]['text']);
+    assert_eq("📰 Update 27\n\nThe update is out.", $log[1][1]['text'], 'английский — тем, кто подключался по-английски');
+    $kb = $log[0][1]['reply_markup']['inline_keyboard'];
+    assert_eq(['Читать на сайте', 'https://maknemy.com/news/' . $id], [$kb[0][0]['text'], $kb[0][0]['url']]);
+    assert_eq('https://maknemy.com/profile', $kb[1][0]['url']);
+});
+
+test('нет английского — русский; длинный текст обрезается по слову', function () {
+    $long = str_repeat('слово ', 80);
+    $text = tg_news_text(['title_ru' => 'Заголовок', 'title_en' => '', 'body_ru' => $long, 'body_en' => ''], 'en');
+    $parts = explode("\n\n", $text);
+    assert_eq('📰 Заголовок', $parts[0]);
+    assert_true(mb_strlen($parts[1]) <= TG_NEWS_EXCERPT + 1, 'не длиннее выдержки');
+    assert_eq('слово…', mb_substr($parts[1], -6), 'по целому слову, с многоточием');
+    assert_eq(1, preg_match('//u', $text), 'валидный UTF-8');
+});
+
+test('пост задним числом и чужой id не рассылаются', function () {
+    $p = tg_db();
+    tg_user($p, '101', 'ann');
+    tg_link_row($p, '101', 1001);
+    $old = tg_news_row($p, 'Архив', 'Старое', (TG_NOW - TG_NEWS_FRESH - 60) * 1000);
+    $log = [];
+    assert_eq(0, tg_notify_news($p, tg_cfg(), tg_recorder($log), $old, TG_NOW), 'перенос старой записи');
+    assert_eq(0, tg_notify_news($p, tg_cfg(), tg_recorder($log), 999, TG_NOW), 'поста нет');
+    assert_eq([], $log);
 });
 
 run_tests();

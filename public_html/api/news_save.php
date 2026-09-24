@@ -2,6 +2,7 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/news_blocks.php';
 require_once __DIR__ . '/lib/translate.php';
+require_once __DIR__ . '/lib/telegram.php';
 
 // Допустимые категории. Тот же список лежит в js/news.js — если добавляется
 // четвёртая, править надо оба места, иначе редактор предложит то, что сервер
@@ -279,6 +280,13 @@ if (!defined('TESTING')) {
     require_post();
     require_admin();
     $nowMs = (int)round(microtime(true) * 1000);
-    [$status, $payload] = handle_news_save(db(), read_json_body(), $nowMs, 'tr_google_request');
+    $body  = read_json_body();
+    [$status, $payload] = handle_news_save(db(), $body, $nowMs, 'tr_google_request');
     json_out($payload, $status);
+
+    // Новый пост (без id в запросе; правка старого приходит с id) —
+    // подписчикам в Telegram, уже после ответа редактору.
+    if ($status === 200 && read_row_id($body) === 0) {
+        tg_after_news(db(), app_config(), (int)$payload['id'], intdiv($nowMs, 1000));
+    }
 }
