@@ -363,14 +363,14 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=12" fetchpriority="high"></script>
+  <script src="js/promo.js?v=13" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=6" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=25" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=26" fetchpriority="high"></script>
 </body>
 </html>
 <?php endif; ?>

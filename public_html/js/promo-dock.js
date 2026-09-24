@@ -67,7 +67,7 @@
 
     var img = document.createElement("img");
     img.className = "ptn-dock-img";
-    img.src = cre.src;
+    img.src = promo.srcFor(cre);
 
     img.alt = "";
     img.decoding = "async";

@@ -14,6 +14,7 @@
     popup: { label: "Всплывающее окно",   w: 800,  h: 800,  maxW: 900,  maxH: 900,  bytes: 400000, animBytes: 900000 }
   };
   var SLOTS = ["strip", "rail", "dock", "popup"];
+  var ANIM_MAX_S = 15;
 
   var $ = function (s) { return document.querySelector(s); };
   var doc = { v: 1, rev: 0, campaigns: [] };
@@ -165,7 +166,7 @@
       var s = document.createElement("div");
       s.className = "slot-spec";
       s.textContent = spec.w + "×" + spec.h + " · статика ≤ " + kb(spec.bytes) +
-        " · анимация ≤ " + kb(spec.animBytes);
+        " · анимация ≤ " + kb(spec.animBytes) + " и ≤ " + ANIM_MAX_S + " с со всеми повторами";
       el.appendChild(s);
 
       var prev = document.createElement("div");
@@ -197,8 +198,7 @@
       if (cre && cre.anim) {
         var p = fileBtn(cre.poster && cre.poster !== cre.src ? "Постер ✓" : "Постер", slot, "poster", c);
         if (!cre.poster || cre.poster === cre.src) p.classList.add("poster-need");
-        p.title = "Статичный кадр: он показывается при отключённой анимации, " +
-                  "по кнопке паузы и в PNG-постере";
+        p.title = "Статичный кадр: он показывается при отключённой анимации и в PNG-постере";
         row.appendChild(p);
       }
       if (cre) {
@@ -302,7 +302,10 @@
     slotError(slot, "");
     hint("загружаю макет…");
     isAnimatedFile(file)
-      .then(function (anim) { return anim ? readRaw(file) : compress(file, spec); })
+      .then(function (anim) {
+        if (anim && field === "poster") throw new Error("постер — один статичный кадр: PNG, JPG или WebP без анимации");
+        return anim ? readRaw(file) : compress(file, spec);
+      })
       .then(function (dataUrl) {
         return fetch(API_UPLOAD, {
           method: "POST",
@@ -326,7 +329,7 @@
           c.creatives[slot].w = j.w;
           c.creatives[slot].h = j.h;
           c.creatives[slot].anim = j.anim;
-          if (!c.creatives[slot].poster && j.anim) c.creatives[slot].poster = j.url;
+          c.creatives[slot].poster = j.anim ? j.url : "";
         }
         if (c.slots.indexOf(slot) < 0) c.slots.push(slot);
         markDirty();
