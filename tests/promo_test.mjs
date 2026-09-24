@@ -455,6 +455,36 @@ test('normalizeDoc exposes the slot list the rest of the code shares', () => {
     assert.deepEqual(SLOTS, ['strip', 'rail', 'dock', 'popup']);
 });
 
+// ------------------------------------------------------------------ srcFor
+
+// Постер вместо анимации при «уменьшить движение». Через srcFor идут борта и
+// полоса внизу на всех страницах: раньше они брали src напрямую и крутили
+// анимацию и тем, кто её отключил.
+test('srcFor swaps an animation for its poster only when motion is reduced', () => {
+    const { rail, dock } = normalizeDoc({ campaigns: [{ id: 'a', creatives: {
+        rail: { src: '/images/a.gif', anim: true, poster: '/images/a.png' },
+        dock: { src: '/images/b.gif', anim: true }
+    } }] }).campaigns[0].creatives;
+    assert.equal(PROMO.srcFor(rail, true), '/images/a.png');
+    assert.equal(PROMO.srcFor(rail, false), '/images/a.gif');
+    assert.equal(PROMO.srcFor(dock, true), '/images/b.gif', 'no poster: the animation is all there is');
+    const still = { src: '/images/s.webp', anim: false, poster: '/images/other.png' };
+    assert.equal(PROMO.srcFor(still, true), '/images/s.webp', 'a still is never swapped');
+    assert.equal(PROMO.srcFor(null, true), '');
+});
+
+test('srcFor asks the system setting when the caller does not say', () => {
+    const anim = { src: '/images/a.gif', anim: true, poster: '/images/a.png' };
+    assert.equal(PROMO.srcFor(anim), '/images/a.gif', 'node has no matchMedia');
+    const saved = globalThis.matchMedia;
+    globalThis.matchMedia = q => ({ matches: q === '(prefers-reduced-motion: reduce)' });
+    try {
+        assert.equal(PROMO.srcFor(anim), '/images/a.png');
+    } finally {
+        if (saved === undefined) { delete globalThis.matchMedia; } else { globalThis.matchMedia = saved; }
+    }
+});
+
 // -------------------------------------------------- popupPick / HOUSE_TG
 
 // Собственное объявление о телеграм-канале — то, что видит посетитель, пока

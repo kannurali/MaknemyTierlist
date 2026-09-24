@@ -73,6 +73,41 @@ function webp_plain(): string {
     return 'RIFF' . pack('V', 4 + strlen($chunk)) . 'WEBP' . $chunk;
 }
 
+// A GIF with explicit per-frame delays in centiseconds and, unless $loops is
+// null, an application block carrying that loop count.
+function gif_timed(array $delaysCs, ?int $loops, int $w = 1, int $h = 1, string $app = 'NETSCAPE2.0'): string {
+    $out  = 'GIF89a' . pack('v', $w) . pack('v', $h);
+    $out .= chr(0x80) . chr(0) . chr(0);                                  // global colour table, 2 entries
+    $out .= str_repeat(chr(0), 3) . str_repeat(chr(0xFF), 3);             // the table itself
+    if ($loops !== null) {
+        $out .= chr(0x21) . chr(0xFF) . chr(11) . $app                    // application extension
+              . chr(3) . chr(1) . pack('v', $loops) . chr(0);
+    }
+    foreach ($delaysCs as $cs) {
+        $out .= chr(0x21) . chr(0xF9) . chr(4) . chr(0) . pack('v', $cs) . chr(0) . chr(0);
+        $out .= chr(0x2C) . pack('v', 0) . pack('v', 0)
+              . pack('v', $w) . pack('v', $h) . chr(0);                   // image descriptor
+        $out .= chr(2) . chr(3) . chr(0x4C) . chr(0x01) . chr(0) . chr(0); // LZW size, one sub-block, end
+    }
+    return $out . chr(0x3B);
+}
+
+// Animated WebP skeleton: VP8X with the animation bit and the canvas size, ANIM
+// with the loop count unless null, one ANMF per duration. The frames carry no
+// image data: the timing walk never reads it and getimagesize needs only VP8X.
+function webp_timed(array $durationsMs, ?int $loops, int $w = 1, int $h = 1): string {
+    $u24 = function (int $n): string { return substr(pack('V', $n), 0, 3); };
+    $chunk = function (string $id, string $payload): string {
+        return $id . pack('V', strlen($payload)) . $payload . (strlen($payload) & 1 ? chr(0) : '');
+    };
+    $body = $chunk('VP8X', chr(0x02) . str_repeat(chr(0), 3) . $u24($w - 1) . $u24($h - 1));
+    if ($loops !== null) { $body .= $chunk('ANIM', str_repeat(chr(0), 4) . pack('v', $loops)); }
+    foreach ($durationsMs as $ms) {
+        $body .= $chunk('ANMF', $u24(0) . $u24(0) . $u24($w - 1) . $u24($h - 1) . $u24($ms) . chr(0));
+    }
+    return 'RIFF' . pack('V', 4 + strlen($body)) . 'WEBP' . $body;
+}
+
 function gd_image(int $w, int $h, string $ext = 'png'): string {
     $im = imagecreatetruecolor($w, $h);
     imagefilledrectangle($im, 0, 0, $w - 1, $h - 1, imagecolorallocate($im, 200, 40, 90));
@@ -156,6 +191,55 @@ test('is_animated_bytes dispatches on the sniffed format', function () {
     assert_eq(true, is_animated_bytes(webp_vp8x(true)), 'animated webp');
     assert_eq(false, is_animated_bytes(base64_decode(PNG_1X1)), 'png is never animated');
     assert_eq(false, is_animated_bytes('hello'), 'junk');
+});
+
+// --------------------------------------------------------------------------
+// Animation timing
+// --------------------------------------------------------------------------
+
+test('gif_scan sums the frame delays and reads the loop block', function () {
+    $s = gif_scan(gif_timed([50, 50, 100], null));
+    assert_eq(3, $s['frames'], 'frames');
+    assert_eq(2000, $s['ms'], 'one cycle in ms');
+    assert_eq(null, $s['loops'], 'no loop block');
+    assert_eq(3, gif_scan(gif_timed([50, 50], 3))['loops'], 'NETSCAPE2.0');
+    assert_eq(0, gif_scan(gif_timed([50, 50], 0, 1, 1, 'ANIMEXTS1.0'))['loops'], 'the older ANIMEXTS1.0 name');
+    assert_eq(null, gif_scan(gif_timed([50, 50], 3, 1, 1, 'XMP DataXMP'))['loops'], 'a foreign app block is not a loop count');
+});
+
+test('gif_scan plays near-zero delays for 100 ms, like every browser', function () {
+    // 0 and 1 cs are what broken encoders write for "fast"; browsers show both
+    // for 100 ms. 2 cs is 20 ms and is taken as written.
+    assert_eq(220, gif_scan(gif_timed([0, 1, 2], null))['ms'], '100 + 100 + 20');
+    assert_eq(400, gif_scan(gif_bytes(4))['ms'], 'the old fixture: four frames of 10 cs');
+});
+
+test('gif_scan counts only the frames before a break', function () {
+    $whole = gif_timed([100, 100, 100], null);
+    // 24 bytes a frame plus the trailer: this stops inside frame three's
+    // control block, before its descriptor.
+    $cut = substr($whole, 0, strlen($whole) - 21);
+    $s = gif_scan($cut);
+    assert_eq(2, $s['frames'], 'two whole frames');
+    assert_eq(2000, $s['ms'], 'and only their time');
+    assert_eq(true, is_animated_gif($cut), 'still animated');
+});
+
+test('webp_scan reads ANIM and ANMF and clamps tiny durations', function () {
+    $s = webp_scan(webp_timed([500, 0, 1500], 2));
+    assert_eq(3, $s['frames'], 'frames');
+    assert_eq(2100, $s['ms'], '500 + 100 + 1500');
+    assert_eq(2, $s['loops'], 'loop count');
+    assert_eq(null, webp_scan(webp_timed([500], null))['loops'], 'no ANIM chunk');
+    assert_eq(0, webp_scan(webp_plain())['frames'], 'a still has no frames');
+});
+
+test('animation_timing counts GIF repeats after the first play, WebP plays in total', function () {
+    assert_eq(['ms' => 1000, 'plays' => 1], animation_timing(gif_timed([100], null)), 'gif without a block plays once');
+    assert_eq(['ms' => 1000, 'plays' => 3], animation_timing(gif_timed([100], 2)), 'gif: 2 repeats = 3 plays');
+    assert_eq(0, animation_timing(gif_timed([100], 0))['plays'], 'gif 0 = forever');
+    assert_eq(['ms' => 1000, 'plays' => 2], animation_timing(webp_timed([1000], 2)), 'webp: 2 = 2 plays');
+    assert_eq(0, animation_timing(webp_timed([1000], 0))['plays'], 'webp 0 = forever');
 });
 
 // --------------------------------------------------------------------------
@@ -245,6 +329,38 @@ test('save_creative_bytes enforces the byte caps, separately for stills and anim
     $ok = gif_bytes(1, 1200, 300, "\x4C\x01\x00", 380000);
     $r = save_creative_bytes($ok, $dir, 'strip');
     assert_eq(false, $r['anim'], 'accepted below the still cap');
+});
+
+test('save_creative_bytes takes an animation that stops at exactly 15 s', function () {
+    $dir = tmp_dir_c();
+    // Ten frames of 0.5 s = 5 s a cycle; two repeats = three plays = 15 s.
+    $r = save_creative_bytes(gif_timed(array_fill(0, 10, 50), 2, 1200, 300), $dir, 'strip');
+    assert_eq(true, $r['anim'], 'gif accepted');
+    // 5 s, three plays in total.
+    $r = save_creative_bytes(webp_timed([5000], 3, 320, 1200), $dir, 'rail');
+    assert_eq(true, $r['anim'], 'webp accepted');
+    assert_eq(320, $r['w'], 'webp size read from VP8X');
+});
+
+test('save_creative_bytes refuses an animation that runs past 15 s', function () {
+    $dir = tmp_dir_c();
+    $gif = gif_timed(array_fill(0, 10, 50), 3, 1200, 300);          // 5 s x 4 plays
+    assert_throws_msg(function () use ($dir, $gif) { save_creative_bytes($gif, $dir, 'strip'); },
+        'animation too long: 20.0 s (5.0 s x 4 plays), max 15 s', 'gif repeats counted');
+    assert_throws_msg(function () use ($dir) {
+        save_creative_bytes(webp_timed([8000, 8000], 1, 640, 200), $dir, 'dock');
+    }, 'animation too long: 16.0 s', 'one long webp cycle');
+    assert_eq([], glob($dir . '/*'), 'nothing written');
+});
+
+test('save_creative_bytes refuses an animation that loops forever', function () {
+    $dir = tmp_dir_c();
+    assert_throws_msg(function () use ($dir) {
+        save_creative_bytes(gif_timed([10, 10], 0, 1200, 300), $dir, 'strip');
+    }, 'animation loops forever', 'gif');
+    assert_throws_msg(function () use ($dir) {
+        save_creative_bytes(webp_timed([100, 100], 0, 800, 800), $dir, 'popup');
+    }, 'animation loops forever', 'webp');
 });
 
 test('save_creative_bytes rejects unknown slots and unsupported formats', function () {

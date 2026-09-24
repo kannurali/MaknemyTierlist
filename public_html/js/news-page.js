@@ -445,7 +445,7 @@
     if (el.parentElement) el.parentElement.hidden = false;
 
     const img = document.createElement("img");
-    img.src = cre.src;
+    img.src = promo.srcFor(cre);
     img.alt = tx("ad.imageAlt");
     img.loading = "lazy";
     img.decoding = "async";

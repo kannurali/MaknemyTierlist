@@ -221,6 +221,14 @@ const CREATIVE_SPECS = [
 ];
 const CREATIVE_FORMATS = ['png', 'jpg', 'webp', 'gif'];
 
+// An animation has to stop by itself: 15 s in total, every repeat included
+// (the IAB display guideline; Google Ads allows 30). Nothing on the page stops
+// it for the visitor: the carousel never advances on its own, and the rails
+// and the phone bar stay on screen for the whole visit, so an endless loop
+// keeps moving beside the content for as long as anyone reads the page. The
+// media kit promises this number to advertisers - change both together.
+const CREATIVE_MAX_ANIM_MS = 15000;
+
 // Walks the GIF block structure instead of counting Graphic Control Extension
 // signatures. The popular "substr_count($bytes, "\x21\xF9\x04") > 1" trick is
 // wrong: that byte sequence occurs inside LZW-compressed pixel data by chance,
@@ -229,38 +237,58 @@ const CREATIVE_FORMATS = ['png', 'jpg', 'webp', 'gif'];
 // a creative we cannot parse is treated as a still image, and the dimension
 // gate downstream still protects us.
 function is_animated_gif(string $bytes): bool {
+    return gif_scan($bytes)['frames'] > 1;
+}
+
+// The walk itself. Besides the frames it collects what the duration cap needs:
+// the play time of one cycle and the NETSCAPE2.0 loop count (null when the
+// block is absent). It stops where it stops understanding the file, which is
+// also where browsers stop showing it, so the totals describe the frames a
+// visitor actually sees.
+function gif_scan(string $bytes): array {
+    $out = ['frames' => 0, 'ms' => 0, 'loops' => null];
     $len = strlen($bytes);
     // 6 byte header + 7 byte Logical Screen Descriptor.
-    if ($len < 13) { return false; }
+    if ($len < 13) { return $out; }
     $packed = ord($bytes[10]);
     $pos = 13;
     if ($packed & 0x80) { $pos += 3 * (1 << (($packed & 0x07) + 1)); }
 
-    $frames = 0;
+    $delay = 0;                                         // centiseconds, for the next frame
     while ($pos < $len) {
         $block = ord($bytes[$pos]);
         if ($block === 0x3B) { break; }                 // trailer
         if ($block === 0x21) {                          // extension: label + sub-blocks
-            $pos += 2;
-            $pos = gif_skip_subblocks($bytes, $pos);
-            if ($pos < 0) { return false; }
+            $label = $pos + 1 < $len ? ord($bytes[$pos + 1]) : -1;
+            $body = $pos + 2;
+            if ($label === 0xF9 && $body + 3 < $len && ord($bytes[$body]) >= 4) {
+                // Graphic Control: the delay of the frame that follows it.
+                $delay = ord($bytes[$body + 2]) | (ord($bytes[$body + 3]) << 8);
+            } elseif ($label === 0xFF && $body + 15 < $len && ord($bytes[$body]) === 11
+                && in_array(substr($bytes, $body + 1, 11), ['NETSCAPE2.0', 'ANIMEXTS1.0'], true)
+                && ord($bytes[$body + 12]) >= 3 && ord($bytes[$body + 13]) === 1) {
+                $out['loops'] = ord($bytes[$body + 14]) | (ord($bytes[$body + 15]) << 8);
+            }
+            $pos = gif_skip_subblocks($bytes, $body);
+            if ($pos < 0) { break; }
             continue;
         }
         if ($block === 0x2C) {                          // image descriptor = one frame
-            $frames++;
-            if ($frames > 1) { return true; }
-            if ($pos + 10 > $len) { return false; }
+            $out['frames']++;
+            $out['ms'] += anim_frame_ms($delay * 10);
+            $delay = 0;
+            if ($pos + 10 > $len) { break; }
             $lpacked = ord($bytes[$pos + 9]);
             $pos += 10;                                 // 1 separator + 9 descriptor
             if ($lpacked & 0x80) { $pos += 3 * (1 << (($lpacked & 0x07) + 1)); }
             $pos += 1;                                  // LZW minimum code size
             $pos = gif_skip_subblocks($bytes, $pos);
-            if ($pos < 0) { return false; }
+            if ($pos < 0) { break; }
             continue;
         }
-        return false;                                   // not a structure we understand
+        break;                                          // not a structure we understand
     }
-    return $frames > 1;
+    return $out;
 }
 
 // Sub-block chain: [len][len bytes]...[0x00]. Returns the offset just past the
@@ -296,14 +324,62 @@ function is_animated_bytes(string $bytes): bool {
     return false;
 }
 
+// Browsers play a frame delay of 10 ms or less as 100 ms (Chrome, Firefox and
+// Safari agree: broken encoders write 0 meaning "the default"). Summing the raw
+// values would let a zero-delay GIF pass the duration cap as 0 s while every
+// visitor watches it for 100 ms a frame.
+function anim_frame_ms(int $ms): int {
+    return $ms <= 10 ? 100 : $ms;
+}
+
+// Animated WebP keeps its timing in chunks: ANIM carries the loop count, and
+// each frame is an ANMF chunk with its duration in ms at payload bytes 12..14.
+function webp_scan(string $bytes): array {
+    $out = ['frames' => 0, 'ms' => 0, 'loops' => null];
+    $len = strlen($bytes);
+    if ($len < 12 || strncmp($bytes, 'RIFF', 4) !== 0 || substr($bytes, 8, 4) !== 'WEBP') { return $out; }
+    $pos = 12;
+    while ($pos + 8 <= $len) {
+        $id = substr($bytes, $pos, 4);
+        $size = unpack('V', substr($bytes, $pos + 4, 4))[1];
+        $body = $pos + 8;
+        if ($id === 'ANIM' && $body + 6 <= $len) {
+            $out['loops'] = ord($bytes[$body + 4]) | (ord($bytes[$body + 5]) << 8);
+        } elseif ($id === 'ANMF' && $body + 15 <= $len) {
+            $out['frames']++;
+            $out['ms'] += anim_frame_ms(ord($bytes[$body + 12]) | (ord($bytes[$body + 13]) << 8)
+                | (ord($bytes[$body + 14]) << 16));
+        }
+        $pos = $body + $size + ($size & 1);             // chunks are padded to an even size
+    }
+    return $out;
+}
+
+// How long an animation runs: one cycle in ms and the number of cycles shown,
+// 0 meaning forever. The formats count loops differently and browsers follow
+// both (Chrome and Firefox alike): a GIF's NETSCAPE2.0 value is the number of
+// REPEATS after the first play, and a GIF without the block plays once; a
+// WebP's ANIM value is the number of plays in total. 0 is forever in both.
+function animation_timing(string $bytes): array {
+    if (image_ext_for($bytes) === 'gif') {
+        $s = gif_scan($bytes);
+        $plays = $s['loops'] === null ? 1 : ($s['loops'] === 0 ? 0 : $s['loops'] + 1);
+    } else {
+        $s = webp_scan($bytes);
+        $plays = $s['loops'] === null ? 1 : $s['loops'];
+    }
+    return ['ms' => $s['ms'], 'plays' => $plays];
+}
+
 // Stores an advertising creative and reports back what was actually stored.
 // Returns ['url' => '/images/<sha1>.<ext>', 'w' => int, 'h' => int, 'anim' => bool].
 //
 // Oversized STATIC creatives are fixed silently. Oversized ANIMATED creatives
 // are rejected, naming both the delivered and the allowed size: there is no way
 // to resize an animation without a dedicated encoder, and "no Composer / no
-// external PHP packages" is a project rule. The message is meant to be
-// forwarded to the advertiser verbatim.
+// external PHP packages" is a project rule. So is an animation that runs past
+// CREATIVE_MAX_ANIM_MS or loops forever: cutting it short is the same missing
+// encoder. The message is meant to be forwarded to the advertiser verbatim.
 function save_creative_bytes(string $bytes, string $dir, string $slot): array {
     if (!isset(CREATIVE_SPECS[$slot])) {
         throw new RuntimeException('unknown ad slot: ' . $slot);
@@ -322,6 +398,22 @@ function save_creative_bytes(string $bytes, string $dir, string $slot): array {
             'creative too large: %d bytes, max %d for %s %s',
             strlen($bytes), $cap, $slot, $anim ? 'animation' : 'still'
         ));
+    }
+
+    if ($anim) {
+        $t = animation_timing($bytes);
+        if ($t['plays'] === 0) {
+            throw new RuntimeException(sprintf(
+                'animation loops forever: it must stop within %d s in total for %s, set a loop count',
+                CREATIVE_MAX_ANIM_MS / 1000, $slot
+            ));
+        }
+        if ($t['ms'] * $t['plays'] > CREATIVE_MAX_ANIM_MS) {
+            throw new RuntimeException(sprintf(
+                'animation too long: %.1F s (%.1F s x %d plays), max %d s in total for %s',
+                $t['ms'] * $t['plays'] / 1000, $t['ms'] / 1000, $t['plays'], CREATIVE_MAX_ANIM_MS / 1000, $slot
+            ));
+        }
     }
 
     // getimagesizefromstring is core PHP, not GD, so dimensions are validated

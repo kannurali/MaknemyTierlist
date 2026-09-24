@@ -80,6 +80,14 @@
     return String(c.src || "").trim() ? c : null;
   }
 
+  function srcFor(creative, reduced) {
+    if (!creative) { return ""; }
+    var still = reduced === undefined
+      ? !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      : !!reduced;
+    return (still && creative.anim && creative.poster) ? creative.poster : creative.src;
+  }
+
   function onPage(campaign, page) {
     if (!campaign) { return false; }
     var list = campaign.pages;
@@ -477,6 +485,7 @@
     dayBoundsMsk: dayBoundsMsk,
     inWindow: inWindow,
     creativeFor: creativeFor,
+    srcFor: srcFor,
     onPage: onPage,
     eligible: eligible,
     pickWeighted: pickWeighted,

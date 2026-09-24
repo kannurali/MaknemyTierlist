@@ -273,13 +273,13 @@ page_lscache();
   </div>
 
   <script src="js/i18n.js?v=59" fetchpriority="high"></script>
-  <script src="js/promo.js?v=12" fetchpriority="high"></script>
+  <script src="js/promo.js?v=13" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=6" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/trade-cards.js?v=4" fetchpriority="high"></script>
-  <script src="js/trading-page.js?v=3" fetchpriority="high"></script>
+  <script src="js/trading-page.js?v=4" fetchpriority="high"></script>
 </body>
 </html>

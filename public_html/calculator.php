@@ -425,12 +425,12 @@ page_lscache();
   </div>
 
   <script src="js/i18n.js?v=59" fetchpriority="high"></script>
-  <script src="js/promo.js?v=12" fetchpriority="high"></script>
+  <script src="js/promo.js?v=13" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=5" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=6" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/calculator-page.js?v=20" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=21" fetchpriority="high"></script>
 </body>
 </html>
