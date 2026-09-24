@@ -74,7 +74,7 @@ elseif ($pfMe !== '' && $pfId !== '') { $pfState = 'missing'; }
 $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 
 $pfOwner = $pfState === 'card' && $pfWho === PROFILE_OWNER_ID;
-$pfLogo  = $pfState === 'card' ? profile_nick_logo($pfWho) : null;
+$pfLogo  = $pfState === 'card' ? nick_logo($pfWho) : null;
 
 // Вход в панель со своего профиля: кнопку видят только те, кого config.php
 // записал в admin_ids (вся панель) или moderator_ids (обращения) — см.
@@ -131,10 +131,10 @@ $pfTitle = $pfNick !== ''
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=11" />
+<link rel="stylesheet" href="css/base.css?v=12" />
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=11" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=10" />
 <?php if ($pfState === 'card'): ?>
@@ -522,7 +522,7 @@ $pfTitle = $pfNick !== ''
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=2" defer></script>
+  <script src="js/trade-cards.js?v=3" defer></script>
   <script src="js/profile-trades.js?v=2" defer></script>
 <?php endif; ?>
 </body>

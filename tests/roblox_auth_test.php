@@ -445,7 +445,8 @@ test('время присутствия не уезжает в ответ шап
     ra_user($db);
     $s = handle_session(function () use ($db) { return $db; }, ['user_id' => '42'], $CFG_ON, 7000);
     assert_eq(false, array_key_exists('seen', $s['user']), 'поля seen в ответе нет');
-    assert_eq(['id', 'name', 'display', 'avatar', 'profile'], array_keys($s['user']),
+    // logo — знак у ника в меню шапки (api/lib/nick_logo.php), у большинства null.
+    assert_eq(['id', 'name', 'display', 'avatar', 'profile', 'logo'], array_keys($s['user']),
         'ответ несёт ровно то, что нужно шапке');
 });
 
@@ -512,6 +513,17 @@ test('миграция присутствия согласована со схе
         'та же колонка описана в schema.sql');
     assert_true(strpos($mig, 'BIGINT UNSIGNED NOT NULL DEFAULT 0') !== false,
         'и тем же типом');
+});
+
+// Меню в шапке показывает знак у своего ника — поле logo в пользователе сессии.
+test('пользователь сессии несёт знак у ника', function () {
+    $db = test_db();
+    roblox_touch_user($db, ['roblox_id' => '2841062255', 'username' => 'Shamill_prod',
+                            'display_name' => 'maknemy', 'avatar_url' => ''], 1000);
+    roblox_touch_user($db, ['roblox_id' => '42', 'username' => 'someone',
+                            'display_name' => 'Someone', 'avatar_url' => ''], 1000);
+    assert_eq('/assets/design/logo-mk.png', roblox_load_user($db, '2841062255')['logo'], 'у Maknemy — MK');
+    assert_eq(null, roblox_load_user($db, '42')['logo'], 'у остальных знака нет');
 });
 
 run_tests();

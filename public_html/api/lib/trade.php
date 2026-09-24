@@ -348,6 +348,7 @@ function trade_authors(PDO $pdo, array $ids, int $now): array {
             'nick'     => $nick,
             'handle'   => $name !== '' ? '@' . $name : '',
             'avatar'   => $avatar,
+            'logo'     => nick_logo((string)$r['roblox_id']),
             'status'   => ($seen > 0 && ($now - $seen) <= PROFILE_ONLINE_WINDOW) ? 'online' : 'offline',
             'likes'    => (int)($r['likes'] ?? 0),
             'dislikes' => (int)($r['dislikes'] ?? 0),

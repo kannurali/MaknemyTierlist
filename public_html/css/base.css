@@ -310,3 +310,11 @@ body.protected img {
   font-family: var(--ui); resize: vertical; min-height: 64px; line-height: 1.35;
 }
 .field textarea:focus { outline: none; border-color: var(--cyan); }
+
+.nx-nick-logo {
+  display: inline-block;
+  width: auto;
+  height: .82em;
+  margin-left: .3em;
+  vertical-align: -.04em;
+}
