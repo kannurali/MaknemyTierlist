@@ -183,6 +183,7 @@
       "user.support":           "Обращения",
       "nick.owner":             "Владелец",
       "nick.developer":         "Разработчик",
+      "nick.designer":          "Дизайнер",
 
       "user.cancelled":         "Вход отменён",
       "user.expired":           "Вход занял слишком много времени — попробуйте ещё раз",
@@ -871,6 +872,7 @@
       "user.support":           "Support inbox",
       "nick.owner":             "Owner",
       "nick.developer":         "Developer",
+      "nick.designer":          "Designer",
       "user.cancelled":         "Login cancelled",
       "user.expired":           "Login took too long — please try again",
       "user.error":             "Could not log in — please try again",

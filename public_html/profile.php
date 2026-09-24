@@ -79,7 +79,7 @@ $pfLogo  = $pfState === 'card' ? nick_logo($pfWho) : null;
 // ниже: ключ словаря и русский текст считаются здесь, а переключает язык
 // data-i18n-label. Всплывающую подсказку рисует js/topbar.js по data-tip.
 $pfLogoKey = $pfLogo !== null ? 'nick.' . $pfLogo['role'] : '';
-$pfLogoRu  = $pfLogo !== null ? (['owner' => 'Владелец', 'developer' => 'Разработчик'][$pfLogo['role']] ?? '') : '';
+$pfLogoRu  = $pfLogo !== null ? (['owner' => 'Владелец', 'developer' => 'Разработчик', 'designer' => 'Дизайнер'][$pfLogo['role']] ?? '') : '';
 
 // Вход в панель со своего профиля: кнопку видят только те, кого config.php
 // записал в admin_ids (вся панель) или moderator_ids (обращения) — см.
@@ -139,7 +139,7 @@ $pfTitle = $pfNick !== ''
 <link rel="stylesheet" href="css/base.css?v=13" />
 <link rel="stylesheet" href="css/topbar.css?v=13" />
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=12" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=13" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=10" />
 <?php if ($pfState === 'card'): ?>
@@ -522,7 +522,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=57" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=58" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=4" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfState === 'card'): ?>

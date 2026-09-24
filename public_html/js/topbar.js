@@ -17,6 +17,7 @@
     "user.logout": "Выйти",
     "nick.owner": "Владелец",
     "nick.developer": "Разработчик",
+    "nick.designer": "Дизайнер",
     "user.admin": "Админка",
     "user.support": "Обращения",
     "user.cancelled": "Вход отменён",

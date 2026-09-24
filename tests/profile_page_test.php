@@ -102,6 +102,7 @@ function pf_fixture_db(string $file): void {
     // NICK_LOGOS (api/lib/nick_logo.php): у них блок «Обо мне» и знаки у ника.
     $ins->execute(['2841062255', 'Shamill_prod', 'maknemy', '', $now - 86400, $now, $now, null, 2, 0]);
     $ins->execute(['8755256557', 'kan_nurali', 'TheFool', '', $now - 86400, $now, $now, null, 0, 0]);
+    $ins->execute(['3964875859', 'DANIKtyda', 'Agent_Tele2', '', $now - 86400, $now, $now, null, 0, 0]);
 }
 
 // $extra — дополнительные ключи config.php (например admin_ids).
@@ -1339,6 +1340,13 @@ test('у ника владельца и разработчика стоит их
         $fool['html']), 'у The Fool — шут');
     assert_eq(0, substr_count($other['html'], 'pf-nick-logo'), 'у остальных знака нет');
 
+    $des = pf_render('900000001', '3964875859');
+    assert_true($des !== null, 'профиль дизайнера отрендерился');
+    if ($des !== null) {
+        assert_true(strpos($des['html'], 'id="pfNick">Agent_Tele2<span class="nx-nick-badge" tabindex="0" role="img" data-tip="nick.designer" data-i18n-label="nick.designer" aria-label="Дизайнер"><img class="pf-nick-logo" src="/assets/design/logo-bolt.png" alt="" /></span></h1>') !== false,
+            'у дизайнера — молния с подписью «Дизайнер»');
+    }
+
     foreach (['logo-mk.png', 'logo-fool.png'] as $f) {
         assert_true(is_file($PUB . '/assets/design/' . $f), "$f лежит на месте");
     }
@@ -1387,6 +1395,10 @@ test('знак у ника подписан: Владелец и Разрабо�
     assert_true(strpos($i18n, '"nick.developer":         "Разработчик"') !== false, 'The Fool — Разработчик');
     assert_true(strpos($i18n, '"nick.owner":             "Owner"') !== false, 'по-английски Owner');
     assert_true(strpos($i18n, '"nick.developer":         "Developer"') !== false, 'по-английски Developer');
+    assert_true(strpos($i18n, '"nick.designer":          "Дизайнер"') !== false, 'дизайнер — Дизайнер');
+    assert_true(strpos($i18n, '"nick.designer":          "Designer"') !== false, 'по-английски Designer');
+    assert_eq(['src' => '/assets/design/logo-bolt.png', 'role' => 'designer'], nick_logo('3964875859'),
+        'у дизайнера (DANIKtyda) — молния');
 
     foreach (['trade-cards.js', 'chat-page.js', 'topbar.js'] as $f) {
         $js = pf_read($PUB . '/js/' . $f);

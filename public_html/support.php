@@ -36,7 +36,7 @@ page_lscache();
 <link rel="stylesheet" href="css/topbar.css?v=13" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=12" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=13" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/trading.css?v=4" />
@@ -177,7 +177,7 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
-  <script src="js/i18n.js?v=57" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=58" fetchpriority="high"></script>
   <script src="js/support-page.js?v=1" defer></script>
 </body>
 </html>
