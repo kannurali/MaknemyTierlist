@@ -1333,9 +1333,9 @@ test('у ника владельца и разработчика стоит их
     assert_true($mk !== null && $fool !== null && $other !== null, 'страницы отрендерились');
     if ($mk === null || $fool === null || $other === null) { return; }
 
-    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">maknemy<img class="pf-nick-logo" src="/assets/design/logo-mk.png" alt="" /></h1>~',
+    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">maknemy<span class="nx-nick-badge" tabindex="0" role="img" data-tip="nick.owner" data-i18n-label="nick.owner" aria-label="Владелец"><img class="pf-nick-logo" src="/assets/design/logo-mk.png" alt="" /></span></h1>~',
         $mk['html']), 'у Maknemy — MK');
-    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">TheFool<img class="pf-nick-logo" src="/assets/design/logo-fool.png" alt="" /></h1>~',
+    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">TheFool<span class="nx-nick-badge" tabindex="0" role="img" data-tip="nick.developer" data-i18n-label="nick.developer" aria-label="Разработчик"><img class="pf-nick-logo" src="/assets/design/logo-fool.png" alt="" /></span></h1>~',
         $fool['html']), 'у The Fool — шут');
     assert_eq(0, substr_count($other['html'], 'pf-nick-logo'), 'у остальных знака нет');
 
@@ -1350,12 +1350,14 @@ test('у ника владельца и разработчика стоит их
 // грузит каждая страница.
 test('знак у ника рисуют трейдинг, чат и шапка', function () use ($PUB) {
     require_once $PUB . '/api/lib/nick_logo.php';
-    foreach (NICK_LOGOS as $id => $src) {
+    foreach (NICK_LOGOS as $id => $logo) {
+        $src = $logo['src'];
         assert_true(is_file($PUB . $src), "$src лежит на месте");
         assert_eq('/', $src[0], "$src — абсолютный путь: скрипты вставляют его и на /trading/new");
     }
     $trade = pf_read($PUB . '/js/trade-cards.js');
-    assert_true(strpos($trade, 'const logo = nickLogo(offer.author);') !== false, 'карточка объявления');
+    assert_true(strpos($trade, 'const logo = nickLogo(offer.author, tx, nick.tagName !== "A");') !== false,
+        'карточка объявления; фокус у знака только вне ссылки на профиль');
     $chat = pf_read($PUB . '/js/chat-page.js');
     assert_true(strpos($chat, 'var logo = nickLogo(t.peer);') !== false, 'список диалогов');
     assert_true(strpos($chat, 'var logo = nickLogo(peer);') !== false, 'заголовок переписки');
@@ -1368,6 +1370,52 @@ test('знак у ника рисуют трейдинг, чат и шапка',
     foreach (['chat.php', 'trading.php', 'trade-new.php', 'profile.php', 'home.php'] as $page) {
         assert_true(strpos(pf_read($PUB . '/' . $page), 'css/base.css?v=') !== false, "$page грузит base.css");
     }
+});
+
+// По наведению, фокусу и нажатию на знак всплывает подпись: у Maknemy
+// «Владелец», у The Fool «Разработчик». Подсказка одна на страницу и висит
+// на body с position: fixed — ник в карточке трейда и в меню шапки обрезан
+// overflow: hidden, и подсказка внутри него обрезалась бы вместе с ним.
+// Нажатие на знак внутри ссылки на профиль не уводит со страницы.
+test('знак у ника подписан: Владелец и Разработчик', function () use ($PUB) {
+    require_once $PUB . '/api/lib/nick_logo.php';
+    $i18n = pf_read($PUB . '/js/i18n.js');
+    foreach (NICK_LOGOS as $logo) {
+        pf_assert_key($i18n, 'nick.' . $logo['role']);
+    }
+    assert_true(strpos($i18n, '"nick.owner":             "Владелец"') !== false, 'Maknemy — Владелец');
+    assert_true(strpos($i18n, '"nick.developer":         "Разработчик"') !== false, 'The Fool — Разработчик');
+    assert_true(strpos($i18n, '"nick.owner":             "Owner"') !== false, 'по-английски Owner');
+    assert_true(strpos($i18n, '"nick.developer":         "Developer"') !== false, 'по-английски Developer');
+
+    foreach (['trade-cards.js', 'chat-page.js', 'topbar.js'] as $f) {
+        $js = pf_read($PUB . '/js/' . $f);
+        $q = $f === 'chat-page.js' ? "'" : '"';
+        assert_true(strpos($js, 'setAttribute(' . $q . 'data-tip' . $q . ', key)') !== false, "$f: знак несёт ключ подписи");
+        assert_true(strpos($js, 'setAttribute(' . $q . 'data-i18n-label' . $q . ', key)') !== false,
+            "$f: подпись для скринридера переключается с языком");
+    }
+
+    $top = pf_read($PUB . '/js/topbar.js');
+    assert_true(strpos($top, '"nick.owner": "Владелец",') !== false, 'у шапки есть запасная подпись без словаря');
+    assert_true(strpos($top, 'document.addEventListener("click", function (e) {
+    var badge = badgeOf(e.target);') !== false, 'нажатие ловится на всей странице');
+    assert_true(strpos($top, "e.preventDefault();
+    e.stopPropagation();
+    if (tipFor === badge && tipPinned) hideTip();") !== false, 'и не открывает ссылку и диалог под знаком');
+    assert_true(strpos($top, '}, true);') !== false, 'до обработчиков ссылки и кнопки — на погружении');
+    assert_true(strpos($top, 'if (e.pointerType !== "mouse" || tipPinned) return;') !== false,
+        'наведение — только мышью: на телефоне подпись открывает нажатие');
+    assert_true(strpos($top, 'document.addEventListener("focusin"') !== false, 'и фокус с клавиатуры');
+
+    $css = pf_read($PUB . '/css/base.css');
+    assert_true(strpos($css, '.nx-nick-tip {') !== false && strpos($css, 'position: fixed;') !== false,
+        'подсказка вне обрезающих контейнеров');
+
+    // Правило строки «@ник» в меню шапки задевало любой span внутри имени:
+    // знак уезжал на отдельную строку, мельчал до 13 px и тускнел.
+    assert_true(strpos(pf_read($PUB . '/css/topbar.css'), '.mk-user-name span:not(.nx-nick-badge) {') !== false,
+        'в меню шапки знак стоит в строке с именем');
 });
 
 run_tests();

@@ -181,6 +181,8 @@
       "user.logout":            "Выйти",
       "user.admin":             "Админка",
       "user.support":           "Обращения",
+      "nick.owner":             "Владелец",
+      "nick.developer":         "Разработчик",
 
       "user.cancelled":         "Вход отменён",
       "user.expired":           "Вход занял слишком много времени — попробуйте ещё раз",
@@ -867,6 +869,8 @@
       "user.logout":            "Log out",
       "user.admin":             "Admin panel",
       "user.support":           "Support inbox",
+      "nick.owner":             "Owner",
+      "nick.developer":         "Developer",
       "user.cancelled":         "Login cancelled",
       "user.expired":           "Login took too long — please try again",
       "user.error":             "Could not log in — please try again",

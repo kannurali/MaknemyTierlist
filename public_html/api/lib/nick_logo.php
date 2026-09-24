@@ -12,12 +12,16 @@
 // The Fool (Roblox kan_nurali) — шут. Ключи — roblox_id, пути абсолютные:
 // скрипты вставляют их на страницах вроде /trading/new, где относительный
 // путь уехал бы в /trading/assets/….
+//
+// role — кто это: по наведению и нажатию на знак всплывает подпись
+// «Владелец» / «Разработчик». Сама подпись живёт в словаре (nick.<role> в
+// js/i18n.js), сюда уходит только ключ: язык переключается без перезагрузки.
 const NICK_LOGOS = [
-    '2841062255' => '/assets/design/logo-mk.png',
-    '8755256557' => '/assets/design/logo-fool.png',
+    '2841062255' => ['src' => '/assets/design/logo-mk.png',   'role' => 'owner'],
+    '8755256557' => ['src' => '/assets/design/logo-fool.png', 'role' => 'developer'],
 ];
 
-/** Путь к знаку у ника этого игрока, либо null — знака у него нет. */
-function nick_logo(string $id): ?string {
+/** Знак у ника этого игрока — ['src' => путь, 'role' => роль], либо null. */
+function nick_logo(string $id): ?array {
     return NICK_LOGOS[$id] ?? null;
 }

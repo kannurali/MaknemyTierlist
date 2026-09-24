@@ -75,6 +75,11 @@ $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 
 $pfOwner = $pfState === 'card' && $pfWho === PROFILE_OWNER_ID;
 $pfLogo  = $pfState === 'card' ? nick_logo($pfWho) : null;
+// Подпись знака («Владелец» / «Разработчик») — тем же приёмом, что статус
+// ниже: ключ словаря и русский текст считаются здесь, а переключает язык
+// data-i18n-label. Всплывающую подсказку рисует js/topbar.js по data-tip.
+$pfLogoKey = $pfLogo !== null ? 'nick.' . $pfLogo['role'] : '';
+$pfLogoRu  = $pfLogo !== null ? (['owner' => 'Владелец', 'developer' => 'Разработчик'][$pfLogo['role']] ?? '') : '';
 
 // Вход в панель со своего профиля: кнопку видят только те, кого config.php
 // записал в admin_ids (вся панель) или moderator_ids (обращения) — см.
@@ -131,10 +136,10 @@ $pfTitle = $pfNick !== ''
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=12" />
-<link rel="stylesheet" href="css/topbar.css?v=12" />
+<link rel="stylesheet" href="css/base.css?v=13" />
+<link rel="stylesheet" href="css/topbar.css?v=13" />
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=11" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=12" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=10" />
 <?php if ($pfState === 'card'): ?>
@@ -262,7 +267,7 @@ $pfTitle = $pfNick !== ''
       </nav>
 <?php endif; ?>
 
-      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?><?php if ($pfLogo !== null): ?><img class="pf-nick-logo" src="<?= $pfLogo ?>" alt="" /><?php endif; ?></h1>
+      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?><?php if ($pfLogo !== null): ?><span class="nx-nick-badge" tabindex="0" role="img" data-tip="<?= $pfLogoKey ?>" data-i18n-label="<?= $pfLogoKey ?>" aria-label="<?= $pfLogoRu ?>"><img class="pf-nick-logo" src="<?= $pfLogo['src'] ?>" alt="" /></span><?php endif; ?></h1>
 <?php if ($pfCard['handle'] !== null): ?>
       <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php endif; ?>
@@ -517,12 +522,12 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=56" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=57" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=4" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=3" defer></script>
+  <script src="js/trade-cards.js?v=4" defer></script>
   <script src="js/profile-trades.js?v=2" defer></script>
 <?php endif; ?>
 </body>

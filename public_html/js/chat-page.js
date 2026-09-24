@@ -32,11 +32,19 @@
 
   function nickLogo(user) {
     if (!user || !user.logo) { return null; }
+    var key = 'nick.' + user.logo.role;
+    var badge = document.createElement('span');
+    badge.className = 'nx-nick-badge';
+    badge.setAttribute('role', 'img');
+    badge.setAttribute('data-tip', key);
+    badge.setAttribute('data-i18n-label', key);
+    badge.setAttribute('aria-label', tx(key, ''));
     var img = document.createElement('img');
     img.className = 'nx-nick-logo';
-    img.src = user.logo;
+    img.src = user.logo.src;
     img.alt = '';
-    return img;
+    badge.appendChild(img);
+    return badge;
   }
 
   function copyAllowed(node) {

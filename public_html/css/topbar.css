@@ -331,7 +331,7 @@ a.mk-avatar { text-decoration: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mk-user-name span {
+.mk-user-name span:not(.nx-nick-badge) {
   display: block;
   font-weight: 400;
   font-size: 13px;
