@@ -5,6 +5,11 @@ require_once __DIR__ . '/lib/trade.php';
 // Лента объявлений — GET /api/trades.php[?q=строка][&before=N]
 // Свои объявления для профиля — GET /api/trades.php?view=mine
 // Сколько ещё можно опубликовать — GET /api/trades.php?view=quota
+// Живые объявления игрока для его профиля — GET /api/trades.php?view=user&id=<roblox_id>
+//
+// view=user отвечает только вошедшему, как и сам профиль (profile.php): лента
+// показывает объявления вразброс, а список «всё, что есть у этого человека»
+// по номеру — это уже справка о нём, и анониму её не выдаём.
 //
 // Ленту видят все, не только вошедшие: объявление — это то, что человек сам
 // решил показать, и доска, которую нельзя посмотреть до входа, никого не
@@ -30,6 +35,16 @@ function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cf
             if ($view === 'mine') { $out['offers'] = trade_mine_all($pdo, $me, $now); }
         }
         if ($view === 'mine' && !isset($out['offers'])) { $out['offers'] = []; }
+        return [200, $out];
+    }
+
+    if ($view === 'user') {
+        $raw = isset($get['id']) && is_string($get['id']) ? $get['id'] : '';
+        $who = preg_match('/^\d{1,20}\z/', $raw) === 1 ? ltrim($raw, '0') : '';
+        $out = ['ok' => true, 'ready' => trade_ready($pdo), 'authed' => $me !== '', 'offers' => []];
+        if ($me !== '' && $out['ready'] && $who !== '') {
+            $out['offers'] = trade_user_live($pdo, $who, $me, $now);
+        }
         return [200, $out];
     }
 

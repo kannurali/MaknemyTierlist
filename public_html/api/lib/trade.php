@@ -490,6 +490,23 @@ function trade_mine_all(PDO $pdo, string $me, int $now): array {
 }
 
 /**
+ * Живые объявления одного человека — для его профиля, который смотрит другой
+ * трейдер: «что у него сейчас есть на обмен». Только то, что стоит в ленте;
+ * снятые, истёкшие и сделки остаются делом автора (trade_mine_all), чужому
+ * они ничего не дают. Больше TRADE_ACTIVE_MAX живых не бывает.
+ */
+function trade_user_live(PDO $pdo, string $userId, string $me, int $now): array {
+    if ($userId === '' || !trade_ready($pdo)) { return []; }
+    [$live, $params] = trade_live_sql('o', $now);
+    $st = $pdo->prepare("SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at, o.closed_at
+                           FROM trade_offers o
+                          WHERE o.user_id = ? AND $live
+                       ORDER BY o.id DESC LIMIT " . TRADE_ACTIVE_MAX);
+    $st->execute(array_merge([$userId], $params));
+    return trade_rows_out($pdo, $st->fetchAll(PDO::FETCH_ASSOC), $me, $now);
+}
+
+/**
  * По объявлению написали из чата: отметить отклик, чтобы оно не ушло из
  * ленты через TRADE_QUIET_TTL.
  *

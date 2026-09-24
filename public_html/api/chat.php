@@ -25,12 +25,6 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
         ]];
     }
 
-    $threads = chat_threads($pdo, $me, $now);
-    foreach ($threads as &$t) {
-        if ($t['last']) { $t['last']['mine'] = ($t['last']['sender'] === $me); }
-    }
-    unset($t);
-
     // Номер ветки приходит из адреса. Строгая проверка: только цифры, иначе
     // ветка не выбрана. В запрос непроверенное не уезжает — всё через
     // плейсхолдеры, — но принимать «12abc» за 12 незачем.
@@ -38,6 +32,14 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
     if ($threadRaw !== null && preg_match('/^\d{1,10}\z/', $threadRaw)) {
         $thread = (int)$threadRaw;
     }
+
+    // Запрошенную ветку список держит, даже если человек удалил её у себя:
+    // он открыл её сам (например, «Написать» в профиле), и писать в неё можно.
+    $threads = chat_threads($pdo, $me, $now, $thread);
+    foreach ($threads as &$t) {
+        if ($t['last']) { $t['last']['mine'] = ($t['last']['sender'] === $me); }
+    }
+    unset($t);
 
     // Ветка по умолчанию — самая свежая. Открывать чат ни на чём, когда
     // переписки есть, значит показывать пустоту вместо содержимого.

@@ -134,7 +134,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=8" />
-<?php if ($pfSelf): ?>
+<?php if ($pfState === 'card'): ?>
 <link rel="stylesheet" href="css/trading.css?v=4" />
 <?php endif; ?>
 <?php echo metrika_counter_html(); ?>
@@ -204,7 +204,7 @@ $pfTitle = $pfNick !== ''
     </button>
   </header>
 
-<?php if ($pfSelf): ?>
+<?php if ($pfState === 'card'): ?>
   <svg class="tr-sprite" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="trGrad" x1="0" y1="0" x2="0" y2="1">
@@ -384,6 +384,14 @@ $pfTitle = $pfNick !== ''
       <p class="tr-state" id="pfTradesState" role="status" aria-live="polite"></p>
       <ol class="tr-feed" id="pfTrades" aria-labelledby="pfTradesTitle"></ol>
     </section>
+<?php else: ?>
+    <section class="pf-trades" aria-labelledby="pfTradesTitle">
+      <div class="pf-trades-head">
+        <h2 class="pf-trades-title" id="pfTradesTitle" data-i18n="profile.tradesPeerTitle">Объявления игрока</h2>
+      </div>
+      <p class="tr-state" id="pfTradesState" role="status" aria-live="polite"></p>
+      <ol class="tr-feed" id="pfTrades" data-user="<?= htmlspecialchars($pfWho, ENT_QUOTES, 'UTF-8') ?>" aria-labelledby="pfTradesTitle"></ol>
+    </section>
 <?php endif; ?>
 <?php endif; ?>
   </main>
@@ -400,13 +408,13 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=54" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=55" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=3" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
-<?php if ($pfSelf): ?>
+<?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=1" defer></script>
-  <script src="js/profile-trades.js?v=1" defer></script>
+  <script src="js/trade-cards.js?v=2" defer></script>
+  <script src="js/profile-trades.js?v=2" defer></script>
 <?php endif; ?>
 </body>
 </html>

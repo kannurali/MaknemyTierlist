@@ -22,6 +22,7 @@
   var rail      = $('ctRail');
   var railToggle= $('ctRailToggle');
   var shell     = $('ctShell');
+  var delBtn    = $('ctDelete');
 
   if (!list || !log) { return; }
 
@@ -510,7 +511,7 @@
   var notifyText  = $('ctNotifyText');
   var notifyGo    = $('ctNotifyGo');
   var notifyOff   = $('ctNotifyOff');
-  var roomHead    = bell ? bell.closest('.ct-room-head') : null;
+  var roomHead    = roomTitle.closest('.ct-room-head');
 
   var TG_URL = 'https://t.me/';
 
@@ -648,6 +649,11 @@
     var keepAt   = keepScroll ? log.scrollTop : 0;
 
     roomTitleFor(peer);
+
+    if (delBtn) {
+      delBtn.hidden = !peer;
+      if (roomHead) { roomHead.classList.toggle('has-del', !!peer); }
+    }
 
     var from = keepScroll && peer ? sameHead(messages) : -1;
     if (from >= 0) {
@@ -799,6 +805,7 @@
       log.textContent = '';
       compose.hidden = true;
       review.hidden = true;
+      if (delBtn) { delBtn.hidden = true; }
       pageEmpty.hidden = false;
       pageEmpty.textContent = tx('chat.error', 'Не удалось загрузить чаты. Попробуйте обновить страницу.');
     } finally {
@@ -912,6 +919,45 @@
       ? tx('chat.reviewSaved', 'Отзыв сохранён')
       : tx('chat.reviewFailed', 'Отзыв не сохранился');
   });
+
+  function lastShownId() {
+    var max = 0;
+    log.querySelectorAll('.ct-msg').forEach(function (m) {
+      var id = Number(m.dataset.id) || 0;
+      if (id > max) { max = id; }
+    });
+    return max;
+  }
+
+  if (delBtn) {
+    delBtn.addEventListener('click', async function () {
+      var id = state.thread;
+      var open = state.threads.filter(function (t) { return t.id === id; })[0];
+      if (!id || !open) { return; }
+      var ask = i18n
+        ? i18n.t('chat.deleteConfirm', lang(), { nick: open.peer.nick })
+        : 'Удалить чат с ' + open.peer.nick + '?';
+      if (!window.confirm(ask)) { return; }
+
+      delBtn.disabled = true;
+      var r = await post('/api/chat_delete.php', { thread: id, upto: lastShownId() });
+      delBtn.disabled = false;
+
+      if (r.ok && r.data && r.data.ok) {
+        delete drafts[id];
+        delete offerRef[id];
+        delete reviewDrafts[id];
+        state.thread = 0;
+        lastSig = '';
+        load(0);
+        return;
+      }
+      roomEmpty.hidden = false;
+      roomEmpty.textContent = (r.data && r.data.error === 'rate_limited')
+        ? tx('chat.tooFast', 'Слишком часто. Подождите немного.')
+        : tx('chat.deleteFailed', 'Не удалось удалить чат. Попробуйте ещё раз.');
+    });
+  }
   function railOpen(next) {
     if (!railToggle) { return; }
     shell.classList.toggle('rail-open', next);

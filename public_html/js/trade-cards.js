@@ -177,7 +177,7 @@
 
       const who = el("div", "tr-who");
       let nick;
-      if (st.authed && !offer.mine) {
+      if (st.authed && !offer.mine && env.linkNick !== false) {
         nick = el("a", "tr-nick", offer.author.nick);
         nick.href = "/profile?id=" + encodeURIComponent(offer.author.id);
         nick.title = tx("trade.profile");

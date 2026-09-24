@@ -345,4 +345,42 @@ test('таблицы трейдинга в schema.sql совпадают с ми
     }
 });
 
+// Чужой профиль показывает, что у человека сейчас есть на обмен. Кнопок
+// автора там нет: карточки чужие, с них можно только написать.
+test('в чужом профиле — живые объявления игрока', function () use ($PUB) {
+    $s = tp_read($PUB . '/profile.php');
+    $a = strpos($s, 'data-i18n="profile.tradesPeerTitle"');
+    assert_true($a !== false, 'блок «Объявления игрока»');
+    $else = strrpos(substr($s, 0, $a), '<?php else: ?>');
+    $self = strrpos(substr($s, 0, $a), '<?php if ($pfSelf): ?>');
+    assert_true($else !== false && $else > $self, 'в ветке чужого профиля');
+    $block = substr($s, $else, strpos($s, '<?php endif; ?>', $a) - $else);
+    assert_true(strpos($block, 'data-user="<?= htmlspecialchars($pfWho, ENT_QUOTES, \'UTF-8\') ?>"') !== false,
+        'список знает, чей профиль');
+    assert_eq(false, strpos($block, 'href="/trading/new"'), 'кнопки «Создать» у чужого нет');
+    assert_eq(false, strpos($block, 'pfTradesQuota'), 'и чужой квоты тоже');
+
+    foreach (['<link rel="stylesheet" href="css/trading.css', '<svg class="tr-sprite"', '<script src="js/profile-trades.js'] as $needle) {
+        $at = strpos($s, $needle);
+        assert_true($at !== false, "есть: $needle");
+        $cond = strrpos(substr($s, 0, $at), '<?php if (');
+        assert_eq("<?php if (\$pfState === 'card'): ?>", substr($s, $cond, strlen("<?php if (\$pfState === 'card'): ?>")),
+            "$needle — на любом открытом профиле");
+    }
+
+    $js = tp_read($PUB . '/js/profile-trades.js');
+    assert_true(strpos($js, '"/api/trades.php?view=user&id="') !== false, 'чужие объявления — отдельным видом');
+    assert_true(strpos($js, 'encodeURIComponent(peer)') !== false, 'номер уходит экранированным');
+    assert_true(strpos($js, 'linkNick: !peer') !== false, 'ник на своём же профиле не ссылается сам на себя');
+    $cards = tp_read($PUB . '/js/trade-cards.js');
+    assert_true(strpos($cards, 'env.linkNick !== false') !== false, 'модуль карточек это умеет');
+
+    $i18n = tp_read($PUB . '/js/i18n.js');
+    $enAt = strpos($i18n, "\n    en: {");
+    foreach (['profile.tradesPeerTitle', 'profile.tradesPeerEmpty'] as $k) {
+        assert_eq(1, substr_count(substr($i18n, 0, $enAt), '"' . $k . '":'), "ru: $k");
+        assert_eq(1, substr_count(substr($i18n, $enAt), '"' . $k . '":'), "en: $k");
+    }
+});
+
 run_tests();

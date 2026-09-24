@@ -9,6 +9,9 @@
 
   const LANG_KEY = "nexus-lang-v1";
   const API_MINE = "/api/trades.php?view=mine";
+  const API_USER = "/api/trades.php?view=user&id=";
+
+  const peer = list.dataset.user || "";
 
   let lang = I18N.pickLang(
     (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
@@ -28,9 +31,10 @@
     error: false
   };
 
-  const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: () => "/profile" });
+  const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: () => "/profile", linkNick: !peer });
 
   function renderQuota() {
+    if (!quotaEl) return;
     const q = state.quota;
     if (!q) { quotaEl.hidden = true; return; }
     quotaEl.hidden = false;
@@ -53,7 +57,7 @@
     if (state.error) { msg = tx("trade.loadError"); }
     else if (!state.ready) { msg = tx("trade.notReady"); }
     else if (state.offers === null) { msg = tx("trade.loading"); }
-    else if (!state.offers.length) { msg = tx("profile.tradesEmpty"); }
+    else if (!state.offers.length) { msg = tx(peer ? "profile.tradesPeerEmpty" : "profile.tradesEmpty"); }
     stateEl.textContent = msg;
     stateEl.hidden = !msg;
     (state.offers || []).forEach(o => list.appendChild(cards.buildCard(o)));
@@ -62,7 +66,8 @@
 
   async function load() {
     try {
-      const r = await fetch(API_MINE, { cache: "no-store", credentials: "same-origin" });
+      const url = peer ? API_USER + encodeURIComponent(peer) : API_MINE;
+      const r = await fetch(url, { cache: "no-store", credentials: "same-origin" });
       if (!r.ok) { throw new Error("http " + r.status); }
       const d = await r.json();
       state.ready = !!d.ready;

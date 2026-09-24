@@ -138,9 +138,46 @@ function bccomp_safe(string $a, string $b): int {
 }
 
 /**
- * Диалоги пользователя, свежие сверху. [] для «никто» и когда таблиц нет.
+ * Где человек удалил у себя переписку: thread_id → номер последнего
+ * удалённого сообщения. Сообщения с номером не больше него он больше не
+ * видит, а ветка пропадает из его списка, пока в ней не появится новое.
+ *
+ * Удаление одностороннее: сами сообщения в базе остаются, у собеседника
+ * ничего не меняется. Иначе любой мог бы стереть у другого переписку со
+ * своими обещаниями по сделке — а по ней потом разбираются в поддержке.
+ *
+ * Таблицы может не быть (миграция 2026-09-24-chat-clears.sql выполняется
+ * руками) — тогда удалённого нет, чат работает как раньше.
  */
-function chat_threads(PDO $pdo, string $me, int $now): array {
+function chat_cleared(PDO $pdo, string $me, ?int $threadId = null): array {
+    if ($me === '') { return []; }
+    try {
+        if ($threadId === null) {
+            $st = $pdo->prepare('SELECT thread_id, cleared_id FROM chat_clears WHERE user_id = :u');
+            $st->execute([':u' => $me]);
+        } else {
+            $st = $pdo->prepare('SELECT thread_id, cleared_id FROM chat_clears WHERE user_id = :u AND thread_id = :t');
+            $st->execute([':u' => $me, ':t' => $threadId]);
+        }
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[(int)$r['thread_id']] = (int)$r['cleared_id'];
+        }
+        return $out;
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * Диалоги пользователя, свежие сверху. [] для «никто» и когда таблиц нет.
+ *
+ * Удалённые у себя ветки (chat_cleared) в списке не показываются, пока в них
+ * не написали снова. Исключение — $keep: ветка, которую человек открыл сам
+ * (кнопка «Написать» в профиле, карточка объявления). Иначе такой диалог
+ * открылся бы без собеседника в шапке и без поля ввода.
+ */
+function chat_threads(PDO $pdo, string $me, int $now, int $keep = 0): array {
     if ($me === '' || !chat_ready($pdo)) { return []; }
 
     $st = $pdo->prepare(
@@ -158,18 +195,27 @@ function chat_threads(PDO $pdo, string $me, int $now): array {
     foreach ($rows as $r) {
         $peerIds[] = ((string)$r['a_id'] === $me) ? (string)$r['b_id'] : (string)$r['a_id'];
     }
-    $peers = chat_users_by_id($pdo, $peerIds, $now);
-    $last  = chat_last_messages($pdo, array_column($rows, 'id'));
+    $peers   = chat_users_by_id($pdo, $peerIds, $now);
+    $last    = chat_last_messages($pdo, array_column($rows, 'id'));
+    $cleared = chat_cleared($pdo, $me);
 
     $out = [];
     foreach ($rows as $r) {
+        $id     = (int)$r['id'];
         $peerId = ((string)$r['a_id'] === $me) ? (string)$r['b_id'] : (string)$r['a_id'];
         $peer   = $peers[$peerId] ?? null;
         if (!$peer) { continue; }   // собеседник ещё не заходил на сайт
+        $lastMsg = $last[$id] ?? null;
+        // Последнее сообщение удалено вместе с остальными — ветки для меня нет.
+        // Превью тоже не показываем: удалённое не должно всплывать в списке.
+        if (isset($cleared[$id]) && (!$lastMsg || $lastMsg['id'] <= $cleared[$id])) {
+            if ($id !== $keep) { continue; }
+            $lastMsg = null;
+        }
         $out[] = [
-            'id'     => (int)$r['id'],
+            'id'     => $id,
             'peer'   => $peer,
-            'last'   => $last[(int)$r['id']] ?? null,
+            'last'   => $lastMsg,
             'lastAt' => (int)$r['last_at'],
         ];
     }
@@ -204,7 +250,7 @@ function chat_last_messages(PDO $pdo, array $threadIds): array {
     // две записи одной секундой дали бы неопределённый порядок, а id растёт
     // строго.
     $st = $pdo->prepare(
-        "SELECT m.thread_id, m.body, m.sender_id, m.created_at
+        "SELECT m.id, m.thread_id, m.body, m.sender_id, m.created_at
            FROM chat_messages m
            JOIN (SELECT thread_id, MAX(id) AS mx FROM chat_messages
                   WHERE thread_id IN ($in) GROUP BY thread_id) t
@@ -214,6 +260,7 @@ function chat_last_messages(PDO $pdo, array $threadIds): array {
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $out[(int)$r['thread_id']] = [
+            'id'     => (int)$r['id'],
             'body'   => (string)$r['body'],
             'mine'   => null,   // проставляет вызывающий: он знает, кто «я»
             'sender' => (string)$r['sender_id'],
@@ -288,11 +335,14 @@ function chat_is_member(PDO $pdo, string $me, int $threadId): bool {
 
 function chat_messages(PDO $pdo, string $me, int $threadId): array {
     if (!chat_ready($pdo) || !chat_is_member($pdo, $me, $threadId)) { return []; }
+    // Удалённое у себя (chat_cleared) не отдаём вовсе, а не прячем на
+    // странице: иначе оно вернулось бы от первого же взгляда в ответ сервера.
+    $from = chat_cleared($pdo, $me, $threadId)[$threadId] ?? 0;
     $st = $pdo->prepare(
-        'SELECT id, sender_id, body, created_at FROM chat_messages WHERE thread_id = :t
+        'SELECT id, sender_id, body, created_at FROM chat_messages WHERE thread_id = :t AND id > :from
        ORDER BY id DESC LIMIT ' . (int)CHAT_PAGE_SIZE
     );
-    $st->execute([':t' => $threadId]);
+    $st->execute([':t' => $threadId, ':from' => $from]);
     // Тянем свежие, показываем по возрастанию: LIMIT обязан отрезать старые,
     // а не новые.
     $rows = array_reverse($st->fetchAll(PDO::FETCH_ASSOC));
@@ -346,6 +396,56 @@ function chat_mark_read(PDO $pdo, int $threadId, string $me, int $lastId, int $n
     } catch (PDOException $e) {
         // таблицы chat_reads ещё нет
     }
+}
+
+/**
+ * Удалить диалог у себя. [код, тело] — как у остальных обработчиков.
+ *
+ * Удаляется всё, что было в ветке до $upto включительно — последнего
+ * сообщения, которое человек видел на странице. Не «всё на момент нажатия»:
+ * собеседник мог написать, пока человек смотрел на подтверждение, и такое
+ * сообщение молча пропало бы непрочитанным. $upto не больше последнего
+ * сообщения ветки; null — удалить всё, что есть.
+ *
+ * Граница назад не двигается: повторное удаление из старой вкладки не
+ * должно вернуть уже удалённое.
+ *
+ * Своими руками, а не ON DUPLICATE KEY — по той же причине, что в
+ * chat_mark_read: тесты гоняются на SQLite.
+ */
+function chat_clear(PDO $pdo, string $me, int $threadId, ?int $upto, int $now): array {
+    if ($me === '')                            { return [401, ['ok' => false, 'error' => 'not_logged_in']]; }
+    if (!chat_ready($pdo))                     { return [503, ['ok' => false, 'error' => 'not_ready']]; }
+    if (!chat_is_member($pdo, $me, $threadId)) { return [403, ['ok' => false, 'error' => 'not_a_member']]; }
+
+    $st = $pdo->prepare('SELECT MAX(id) FROM chat_messages WHERE thread_id = :t');
+    $st->execute([':t' => $threadId]);
+    $max = (int)$st->fetchColumn();
+    $cut = ($upto !== null && $upto >= 0) ? min($upto, $max) : $max;
+
+    try {
+        $up = $pdo->prepare(
+            'UPDATE chat_clears
+                SET cleared_id = CASE WHEN cleared_id > :c THEN cleared_id ELSE :c END,
+                    cleared_at = :at
+              WHERE thread_id = :t AND user_id = :u'
+        );
+        $up->execute([':c' => $cut, ':at' => $now, ':t' => $threadId, ':u' => $me]);
+        if ($up->rowCount() === 0) {
+            try {
+                $pdo->prepare('INSERT INTO chat_clears (thread_id, user_id, cleared_id, cleared_at)
+                               VALUES (:t, :u, :c, :at)')
+                    ->execute([':t' => $threadId, ':u' => $me, ':c' => $cut, ':at' => $now]);
+            } catch (PDOException $e) {
+                // строка уже есть и совпадает с тем, что мы хотели записать
+            }
+        }
+    } catch (PDOException $e) {
+        // таблицы chat_clears ещё нет
+        return [503, ['ok' => false, 'error' => 'not_ready']];
+    }
+
+    return [200, ['ok' => true, 'thread' => $threadId]];
 }
 
 /** Отправка сообщения. Возвращает [код, тело] как остальные обработчики. */
