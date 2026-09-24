@@ -2,6 +2,7 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 require_once __DIR__ . '/api/lib/profile.php';
+require_once __DIR__ . '/api/lib/telegram.php';
 
 // Профиль игрока — /profile и /profile?id=<roblox_id> (Figma «профиль», node
 // 244:7400). Разбор решений по вёрстке и данным — в docs/profile-page.md;
@@ -93,6 +94,22 @@ $pfPanel = $pfSelf ? current_role() : '';
 // открывался бы с «не в сети», и это видел бы ровно тот, про кого написано.
 if ($pfSelf) { $pfCard['status'] = 'online'; }
 
+// Колокольчик уведомлений в Telegram — только на своём профиле и только когда
+// бот настроен и его таблицы на месте. Здесь же переключатели «что ещё
+// присылать» (цены, новости); без таблицы tg_prefs их нет, а подключение
+// работает. Разбор — в api/lib/telegram.php.
+$pfTg = null;
+if ($pfSelf) {
+    $pfTg = tg_profile_status($pfPdo, tg_config(app_config()), $pfMe);
+    if (!$pfTg['on']) { $pfTg = null; }
+}
+$pfTgText = '';
+if ($pfTg !== null) {
+    $pfTgText = $pfTg['linked']
+        ? 'Уведомления приходят в Telegram' . ($pfTg['name'] !== '' ? ': ' . $pfTg['name'] : '') . '.'
+        : 'Подключите Telegram — бот напишет, когда вам ответят в чате, а ещё об изменениях цен в тирлисте и новостях.';
+}
+
 // 404 у несуществующего профиля — настоящий, а не нарисованный: по ссылке из
 // чужого сообщения может прийти и робот, и краулер мессенджера, и «200 OK» на
 // пустой странице им сказало бы, что адрес рабочий.
@@ -141,7 +158,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=13" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/profile.css?v=10" />
+<link rel="stylesheet" href="css/profile.css?v=11" />
 <?php if ($pfState === 'card'): ?>
 <link rel="stylesheet" href="css/trading.css?v=4" />
 <?php endif; ?>
@@ -286,6 +303,15 @@ $pfTitle = $pfNick !== ''
              aria-label="<?= $pfStatusRu ?>">
           <i data-state="online"></i><i data-state="offline"></i>
         </div>
+<?php if ($pfTg !== null): ?>
+        <button class="pf-bell" type="button" id="pfBell"
+                aria-expanded="false" aria-controls="pfNotify"
+                data-on="<?= $pfTg['linked'] ? 'true' : 'false' ?>"
+                data-i18n-label="chat.notify" aria-label="Уведомления в Telegram"
+                data-i18n-title="chat.notify" title="Уведомления в Telegram">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 3.2.8 5.1 1.6 6.2.4.5 0 1.3-.6 1.3H5c-.6 0-1-.8-.6-1.3C5.2 15.1 6 13.2 6 10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.8 20.2a2.4 2.4 0 0 0 4.4 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+<?php endif; ?>
 
         <p class="pf-react">
           <span class="pf-react-item">
@@ -301,6 +327,33 @@ $pfTitle = $pfNick !== ''
         </p>
       </div>
 
+<?php if ($pfTg !== null): ?>
+      <div class="pf-notify" id="pfNotify" hidden
+           data-linked="<?= $pfTg['linked'] ? '1' : '0' ?>"
+           data-name="<?= htmlspecialchars($pfTg['name'], ENT_QUOTES, 'UTF-8') ?>"
+           data-mod="<?= $pfTg['mod'] ? '1' : '0' ?>">
+        <p class="pf-notify-title" data-i18n="chat.notify">Уведомления в Telegram</p>
+        <p class="pf-notify-text" id="pfNotifyText" role="status" aria-live="polite"><?= htmlspecialchars($pfTgText, ENT_QUOTES, 'UTF-8') ?></p>
+        <div class="pf-notify-actions">
+          <a class="pf-notify-go" id="pfNotifyGo" href="https://t.me/" target="_blank" rel="noopener"<?= $pfTg['linked'] ? ' hidden' : '' ?> data-i18n="chat.notifyConnect">Подключить Telegram</a>
+          <button class="pf-notify-off" id="pfNotifyOff" type="button"<?= $pfTg['linked'] ? '' : ' hidden' ?> data-i18n="chat.notifyOff">Отключить</button>
+        </div>
+<?php if ($pfTg['prefs'] !== null): ?>
+        <div class="pf-notify-prefs" role="group" aria-labelledby="pfNotifyTopics">
+          <p class="pf-notify-sub" id="pfNotifyTopics" data-i18n="profile.notifyTopics">Что ещё присылать</p>
+          <label class="pf-check">
+            <input type="checkbox" role="switch" data-topic="prices"<?= $pfTg['prefs']['prices'] ? ' checked' : '' ?> />
+            <span data-i18n="profile.notifyPrices">Изменения цен в тирлисте</span>
+          </label>
+          <label class="pf-check">
+            <input type="checkbox" role="switch" data-topic="news"<?= $pfTg['prefs']['news'] ? ' checked' : '' ?> />
+            <span data-i18n="profile.notifyNews">Новости</span>
+          </label>
+          <p class="pf-notify-err" id="pfNotifyErr" role="alert" hidden></p>
+        </div>
+<?php endif; ?>
+      </div>
+<?php endif; ?>
 <?php if ($pfPanel !== ''): ?>
       <a class="pf-panel" href="<?= $pfPanel === 'admin' ? '/admin' : '/admin/support' ?>">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5 4.5 5.4v5.9c0 4.7 3.2 8.9 7.5 10.2 4.3-1.3 7.5-5.5 7.5-10.2V5.4L12 2.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.6 12 2.4 2.4 4.4-4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -522,9 +575,12 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=58" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=59" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=4" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
+<?php if ($pfTg !== null): ?>
+  <script src="js/profile-notify.js?v=1" defer></script>
+<?php endif; ?>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
   <script src="js/trade-cards.js?v=4" defer></script>

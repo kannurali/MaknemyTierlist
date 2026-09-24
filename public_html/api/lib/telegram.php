@@ -1,8 +1,9 @@
 <?php
-// Уведомления в Telegram: «вам написали в чате» и «новое обращение в
-// поддержку» для модераторов.
+// Уведомления в Telegram: «вам написали в чате», «новое обращение в
+// поддержку» для модераторов и две рассылки всем подключившимся — изменения
+// цен в тирлисте и новые новости (их можно выключить в профиле, см. tg_prefs).
 //
-// Как человек подключается. Колокольчик в /chat просит у api/tg_link.php
+// Как человек подключается. Колокольчик в /chat или в профиле просит у api/tg_link.php
 // одноразовую ссылку t.me/<бот>?start=<код>. Человек жмёт Start, Telegram
 // присылает «/start <код>» на api/tg_webhook.php, и только в этот момент
 // появляется связь аккаунт сайта → chat_id. Первым бот написать не может, так
@@ -272,32 +273,132 @@ function tg_status(PDO $pdo, array $tg, string $me): array {
 }
 
 // --------------------------------------------------------------------------
+//  Что присылать: настройки из колокольчика в профиле
+// --------------------------------------------------------------------------
+
+// О чём, кроме чата, бот пишет всем подключившимся. Ключ — колонка tg_prefs.
+// Строки нет — человек ничего не выключал, и всё включено: подключил
+// Telegram, значит, хочет знать.
+//
+// Настройки живут отдельно от tg_links: переподключение (новый /start после
+// /stop или после блокировки бота) пересоздаёт привязку, а выбор человека
+// должен пережить это. И выставить их можно ещё до подключения.
+const TG_TOPICS = ['prices', 'news'];
+
+/**
+ * Что человек хочет получать. null — таблицы нет (миграция
+ * 2026-09-25-tg-prefs.sql не выполнена): переключатели не показываются,
+ * рассылки молчат.
+ */
+function tg_prefs_get(PDO $pdo, string $me): ?array {
+    try {
+        $st = $pdo->prepare('SELECT prices, news FROM tg_prefs WHERE user_id = :u');
+        $st->execute([':u' => $me]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return null;
+    }
+    $out = [];
+    foreach (TG_TOPICS as $t) { $out[$t] = $row ? (int)$row[$t] === 1 : true; }
+    return $out;
+}
+
+/**
+ * Переключатели из профиля: {"prices": true, "news": false}. Не пришедший
+ * ключ остаётся как был. Только настоящие true/false: «0» или «нет» из
+ * кривого запроса не должны молча выключить рассылку.
+ */
+function tg_prefs_set(PDO $pdo, string $me, array $body): array {
+    if ($me === '') { return [401, ['ok' => false, 'error' => 'not_logged_in']]; }
+    $prefs = tg_prefs_get($pdo, $me);
+    if ($prefs === null) { return [503, ['ok' => false, 'error' => 'not_ready']]; }
+
+    foreach (TG_TOPICS as $t) {
+        if (!array_key_exists($t, $body)) { continue; }
+        if (!is_bool($body[$t])) { return [400, ['ok' => false, 'error' => 'bad_prefs']]; }
+        $prefs[$t] = $body[$t];
+    }
+
+    $st = $pdo->prepare('SELECT 1 FROM users WHERE roblox_id = :u');
+    $st->execute([':u' => $me]);
+    if ($st->fetchColumn() === false) { return [401, ['ok' => false, 'error' => 'not_logged_in']]; }
+
+    $args = [':u' => $me, ':p' => $prefs['prices'] ? 1 : 0, ':n' => $prefs['news'] ? 1 : 0];
+    $has = $pdo->prepare('SELECT 1 FROM tg_prefs WHERE user_id = :u');
+    $has->execute([':u' => $me]);
+    if ($has->fetchColumn() === false) {
+        try {
+            $pdo->prepare('INSERT INTO tg_prefs (user_id, prices, news) VALUES (:u, :p, :n)')->execute($args);
+            return [200, ['ok' => true, 'prefs' => $prefs]];
+        } catch (PDOException $e) {
+            // Второй переключатель, нажатый следом, вставил строку первым —
+            // дальше обычное обновление.
+        }
+    }
+    $pdo->prepare('UPDATE tg_prefs SET prices = :p, news = :n WHERE user_id = :u')->execute($args);
+    return [200, ['ok' => true, 'prefs' => $prefs]];
+}
+
+// Для /admin/support: сколько людей подключили Telegram и сколько из них
+// получают каждую рассылку. null — таблиц нет.
+function tg_audience(PDO $pdo): ?array {
+    try {
+        $row = $pdo->query(
+            'SELECT COUNT(*) AS linked,
+                    SUM(CASE WHEN p.user_id IS NULL OR p.prices = 1 THEN 1 ELSE 0 END) AS prices,
+                    SUM(CASE WHEN p.user_id IS NULL OR p.news = 1 THEN 1 ELSE 0 END) AS news
+               FROM tg_links l LEFT JOIN tg_prefs p ON p.user_id = l.user_id'
+        )->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return null;
+    }
+    return ['linked' => (int)$row['linked'], 'prices' => (int)$row['prices'], 'news' => (int)$row['news']];
+}
+
+// Колокольчик в профиле: то же, что в чате, и вдобавок переключатели.
+function tg_profile_status(PDO $pdo, array $tg, string $me): array {
+    $s = tg_status($pdo, $tg, $me);
+    $s['prefs'] = $s['on'] ? tg_prefs_get($pdo, $me) : null;
+    return $s;
+}
+
+// --------------------------------------------------------------------------
 //  Входящие от Telegram
 // --------------------------------------------------------------------------
 
 function tg_text(string $key, string $lang): string {
     $t = [
         'ru' => [
-            'linked'  => 'Готово! Напишу, когда вам ответят на maknemy.com. Отключить — /stop или колокольчик в чате.',
-            'expired' => 'Ссылка устарела. Откройте чат на maknemy.com и нажмите колокольчик ещё раз.',
-            'stopped' => 'Уведомления отключены. Включить снова — колокольчик в чате на maknemy.com.',
-            'hello'   => 'Я сообщаю о новых сообщениях на maknemy.com. Чтобы включить уведомления, откройте чат на сайте и нажмите колокольчик.',
-            'openSite'=> 'Открыть чат',
+            'linked'  => 'Готово! Напишу, когда вам ответят на maknemy.com, а ещё — об изменениях цен в тирлисте и новостях. Что присылать, выбирается колокольчиком в профиле на сайте. Отключить всё — /stop.',
+            'expired' => 'Ссылка устарела. Откройте профиль на maknemy.com и нажмите колокольчик ещё раз.',
+            'stopped' => 'Уведомления отключены. Включить снова — колокольчик в профиле на maknemy.com.',
+            'hello'   => 'Я сообщаю о новых сообщениях в чате, изменениях цен в тирлисте и новостях maknemy.com. Чтобы включить уведомления, откройте профиль на сайте и нажмите колокольчик.',
+            'openSite'=> 'Открыть профиль',
             'chat'    => 'Новое сообщение от %s',
             'openChat'=> 'Открыть чат',
             'support' => 'Новое обращение в поддержку от %s',
             'openTickets' => 'Открыть обращения',
+            'prices'  => 'Обновились цены в тирлисте',
+            'pricesMore'   => '…и ещё %d',
+            'openTierlist' => 'Открыть тирлист',
+            'readNews'     => 'Читать на сайте',
+            'settings'     => 'Настроить уведомления',
         ],
         'en' => [
-            'linked'  => 'Done! I will let you know when someone messages you on maknemy.com. To turn it off, send /stop or use the bell in the chat.',
-            'expired' => 'This link has expired. Open the chat on maknemy.com and tap the bell again.',
-            'stopped' => 'Notifications are off. To turn them back on, use the bell in the chat on maknemy.com.',
-            'hello'   => 'I let you know about new messages on maknemy.com. To turn notifications on, open the chat on the site and tap the bell.',
-            'openSite'=> 'Open chat',
+            'linked'  => 'Done! I will let you know when someone messages you on maknemy.com, and also about tier list price changes and news. Choose what to receive with the bell on your profile on the site. To turn everything off, send /stop.',
+            'expired' => 'This link has expired. Open your profile on maknemy.com and tap the bell again.',
+            'stopped' => 'Notifications are off. To turn them back on, use the bell on your profile on maknemy.com.',
+            'hello'   => 'I let you know about new chat messages, tier list price changes and news on maknemy.com. To turn notifications on, open your profile on the site and tap the bell.',
+            'openSite'=> 'Open profile',
             'chat'    => 'New message from %s',
             'openChat'=> 'Open chat',
             'support' => 'New support request from %s',
             'openTickets' => 'Open requests',
+            'prices'  => 'Tier list prices updated',
+            'pricesMore'   => '…and %d more',
+            'openTierlist' => 'Open tier list',
+            'readNews'     => 'Read on the site',
+            'settings'     => 'Notification settings',
         ],
     ];
     return $t[tg_lang($lang)][$key];
@@ -311,6 +412,15 @@ function tg_message(int $chatId, string $text, ?string $button = null, ?string $
     if ($button !== null && $url !== null) {
         $out['reply_markup'] = ['inline_keyboard' => [[['text' => $button, 'url' => $url]]]];
     }
+    return $out;
+}
+
+// То же с несколькими кнопками, каждая своей строкой: [[подпись, адрес], …].
+function tg_message_buttons(int $chatId, string $text, array $buttons): array {
+    $rows = [];
+    foreach ($buttons as $b) { $rows[] = [['text' => $b[0], 'url' => $b[1]]]; }
+    $out = ['chat_id' => $chatId, 'text' => $text];
+    if ($rows) { $out['reply_markup'] = ['inline_keyboard' => $rows]; }
     return $out;
 }
 
@@ -339,7 +449,7 @@ function tg_handle_update(PDO $pdo, array $update, int $now): ?array {
             return ['method' => 'sendMessage'] + tg_message($chatId, tg_text('linked', $linked));
         }
         return ['method' => 'sendMessage']
-            + tg_message($chatId, tg_text('expired', $lang), tg_text('openSite', $lang), TG_SITE . '/chat');
+            + tg_message($chatId, tg_text('expired', $lang), tg_text('openSite', $lang), TG_SITE . '/profile');
     }
 
     if (preg_match('~^/stop(?:@\w+)?\z~', $text)) {
@@ -348,7 +458,7 @@ function tg_handle_update(PDO $pdo, array $update, int $now): ?array {
     }
 
     return ['method' => 'sendMessage']
-        + tg_message($chatId, tg_text('hello', $lang), tg_text('openSite', $lang), TG_SITE . '/chat');
+        + tg_message($chatId, tg_text('hello', $lang), tg_text('openSite', $lang), TG_SITE . '/profile');
 }
 
 // --------------------------------------------------------------------------
@@ -464,6 +574,234 @@ function tg_notify_support(PDO $pdo, array $tg, callable $send, string $authorId
     return $sent;
 }
 
+// --------------------------------------------------------------------------
+//  Рассылки: цены в тирлисте и новости
+// --------------------------------------------------------------------------
+
+// Сколько предметов перечисляется в уведомлении о ценах; дальше — «…и ещё
+// N». Длинный список на экране телефона всё равно никто не дочитает.
+const TG_PRICE_LINES = 15;
+
+// Пауза между сообщениями рассылки, микросекунды. Telegram пропускает боту
+// около 30 сообщений в секунду, дальше отвечает 429.
+const TG_BROADCAST_GAP = 40000;
+
+// Пост, датированный раньше этого (секунды назад), при публикации не
+// рассылается: это перенос старой записи задним числом, а не новость.
+const TG_NEWS_FRESH = 172800;
+
+// Сколько символов текста идёт под заголовком новости.
+const TG_NEWS_EXCERPT = 220;
+
+/**
+ * Разослать всем подключившимся, кто не выключил тему $topic. Возвращает,
+ * скольким ушло.
+ *
+ * $build($lang) → [текст, [[подпись, адрес], …]] — собирается раз на язык.
+ * Telegram-чат, привязанный к двум аккаунтам сайта, получает одно сообщение.
+ * $sleep — пауза в микросекундах; тесты подставляют пустую.
+ *
+ * На 429 Telegram говорит, сколько подождать: ждём (не дольше 30 секунд) и
+ * повторяем один раз. Заблокировавшие бота отвязываются, как и в чате.
+ * Нет таблицы tg_prefs — запрос падает, и рассылка молчит до миграции.
+ */
+function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callable $build, ?callable $sleep = null): int {
+    if (!in_array($topic, TG_TOPICS, true)) { return 0; }
+    if (!tg_enabled($tg) || !tg_ready($pdo)) { return 0; }
+    $sleep = $sleep ?? function (int $us): void { usleep($us); };
+
+    try {
+        $rows = $pdo->query(
+            "SELECT l.chat_id, l.lang FROM tg_links l
+               LEFT JOIN tg_prefs p ON p.user_id = l.user_id
+              WHERE p.user_id IS NULL OR p.$topic = 1
+              ORDER BY l.linked_at, l.user_id"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return 0;
+    }
+
+    $made = [];
+    $seen = [];
+    $sent = 0;
+    foreach ($rows as $r) {
+        $chatId = (int)$r['chat_id'];
+        if (isset($seen[$chatId])) { continue; }
+        $seen[$chatId] = true;
+
+        $lang = tg_lang($r['lang']);
+        if (!isset($made[$lang])) { $made[$lang] = $build($lang); }
+        $msg = tg_message_buttons($chatId, $made[$lang][0], $made[$lang][1]);
+
+        if (count($seen) > 1) { $sleep(TG_BROADCAST_GAP); }
+        $res = $send('sendMessage', $msg);
+        if (is_array($res) && (int)($res['error_code'] ?? 0) === 429) {
+            $wait = (int)($res['parameters']['retry_after'] ?? 1);
+            $sleep(max(1, min(30, $wait)) * 1000000);
+            $res = $send('sendMessage', $msg);
+        }
+        if (tg_after_send($pdo, $chatId, $res)) { $sent++; }
+    }
+    return $sent;
+}
+
+// Строка из чужого ввода для текста уведомления: без управляющих символов и
+// переводов строк (иначе одно имя разорвало бы список), не длиннее $max.
+function tg_clean_line(string $s, int $max): string {
+    $s = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $s) ?? '';
+    $s = trim(preg_replace('/\s+/u', ' ', $s) ?? '');
+    return mb_substr($s, 0, $max);
+}
+
+// Тирлист как он лежит в базе — до сохранения, чтобы было с чем сравнить.
+function tg_tierlist_state(PDO $pdo): array {
+    try {
+        $raw = $pdo->query('SELECT data FROM tierlist WHERE id = 1')->fetchColumn();
+    } catch (PDOException $e) {
+        return [];
+    }
+    $d = is_string($raw) ? json_decode($raw, true) : null;
+    return is_array($d) ? $d : [];
+}
+
+// Предметы тирлиста — [id, имя, цена] по порядку тиров. Состояние присылает
+// админка, поэтому каждое поле проверяется, а не берётся на веру.
+function tg_tier_items(array $state): array {
+    $out = [];
+    $tiers = is_array($state['tiers'] ?? null) ? $state['tiers'] : [];
+    foreach ($tiers as $tier) {
+        if (!is_array($tier) || !is_array($tier['items'] ?? null)) { continue; }
+        foreach ($tier['items'] as $it) {
+            if (!is_array($it)) { continue; }
+            $id = $it['id'] ?? '';
+            if (!is_string($id) || $id === '') { continue; }
+            $name  = is_string($it['name'] ?? null) ? $it['name'] : '';
+            $value = $it['value'] ?? '';
+            $value = is_string($value) || is_int($value) || is_float($value) ? (string)$value : '';
+            $out[] = ['id' => $id, 'name' => tg_clean_line($name, 64), 'value' => tg_clean_line($value, 24)];
+        }
+    }
+    return $out;
+}
+
+// Число из цены так, как его читает тирлист (parseVal в js/app.js): пробелы
+// долой, запятая — точка, «k»/«к» — тысячи, «kk»/«кк» — миллионы. null — не
+// число.
+function tg_price_number(string $v): ?float {
+    $s = mb_strtolower(preg_replace('/\s+/u', '', $v) ?? '');
+    $s = preg_replace('/,/', '.', $s, 1) ?? '';
+    $mult = 1.0;
+    while (preg_match('/(kk|кк)$/u', $s)) { $mult *= 1e6; $s = mb_substr($s, 0, -2); }
+    while (preg_match('/(k|к)$/u', $s))   { $mult *= 1e3; $s = mb_substr($s, 0, -1); }
+    $s = preg_replace('/[^\d.\-]/', '', $s) ?? '';
+    if (!preg_match('/^-?\d*\.?\d+/', $s, $m)) { return null; }
+    return (float)$m[0] * $mult;
+}
+
+/**
+ * Что поменялось в ценах: [['name', 'from', 'to'], …] по порядку тирлиста.
+ * from = null — раньше цены не было (новый предмет или пустое поле).
+ *
+ * Предмет узнаётся по id: переименование и перенос в другой тир ценой не
+ * считаются, удалённый предмет молчит. «25000» → «25 000» — та же цена, и
+ * о ней тоже молчим.
+ *
+ * Пустое прежнее состояние — самое первое сохранение: «новыми» оказались бы
+ * все предметы разом, поэтому молчим и здесь.
+ */
+function tg_price_changes(array $old, array $new): array {
+    $before = [];
+    foreach (tg_tier_items($old) as $it) { $before[$it['id']] = $it['value']; }
+    if (!$before) { return []; }
+
+    $out  = [];
+    $seen = [];
+    foreach (tg_tier_items($new) as $it) {
+        if (isset($seen[$it['id']])) { continue; }
+        $seen[$it['id']] = true;
+        if ($it['value'] === '' || $it['name'] === '') { continue; }
+
+        $was = $before[$it['id']] ?? '';
+        if ($was === $it['value']) { continue; }
+        if ($was !== '') {
+            $a = tg_price_number($was);
+            $b = tg_price_number($it['value']);
+            if ($a !== null && $b !== null && $a == $b) { continue; }
+        }
+        $out[] = ['name' => $it['name'], 'from' => $was === '' ? null : $was, 'to' => $it['value']];
+    }
+    return $out;
+}
+
+function tg_prices_text(array $changes, string $lang): string {
+    $lines = [];
+    foreach (array_slice($changes, 0, TG_PRICE_LINES) as $c) {
+        if ($c['from'] === null) {
+            $lines[] = '🆕 ' . $c['name'] . ': ' . $c['to'];
+            continue;
+        }
+        $a = tg_price_number($c['from']);
+        $b = tg_price_number($c['to']);
+        $mark = '✏️';
+        if ($a !== null && $b !== null) { $mark = $b > $a ? '📈' : '📉'; }
+        $lines[] = $mark . ' ' . $c['name'] . ': ' . $c['from'] . ' → ' . $c['to'];
+    }
+    $more = count($changes) - count($lines);
+    if ($more > 0) { $lines[] = sprintf(tg_text('pricesMore', $lang), $more); }
+    return '📊 ' . tg_text('prices', $lang) . "\n\n" . implode("\n", $lines);
+}
+
+// Заголовок и начало текста новости на языке человека. Английского нет —
+// русский: пустое сообщение хуже непереведённого.
+function tg_news_text(array $post, string $lang): string {
+    $pick = function (string $ru, string $en) use ($lang): string {
+        return ($lang === 'en' && trim($en) !== '') ? $en : $ru;
+    };
+    $title = tg_clean_line($pick((string)$post['title_ru'], (string)$post['title_en']), 200);
+    $body  = tg_clean_line($pick((string)$post['body_ru'], (string)$post['body_en']), 2000);
+
+    if (mb_strlen($body) > TG_NEWS_EXCERPT) {
+        $cut   = mb_substr($body, 0, TG_NEWS_EXCERPT);
+        $space = mb_strrpos($cut, ' ');
+        if ($space !== false && $space > TG_NEWS_EXCERPT * 0.6) { $cut = mb_substr($cut, 0, $space); }
+        $body = (preg_replace('/[\s.,;:!?—–-]+$/u', '', $cut) ?? $cut) . '…';
+    }
+    return '📰 ' . $title . ($body !== '' ? "\n\n" . $body : '');
+}
+
+function tg_notify_prices(PDO $pdo, array $tg, callable $send, array $changes, ?callable $sleep = null): int {
+    if (!$changes) { return 0; }
+    return tg_broadcast($pdo, $tg, $send, 'prices', function (string $lang) use ($changes): array {
+        return [tg_prices_text($changes, $lang), [
+            [tg_text('openTierlist', $lang), TG_SITE . '/tierlist'],
+            [tg_text('settings', $lang), TG_SITE . '/profile'],
+        ]];
+    }, $sleep);
+}
+
+// Новый пост → всем, кто не выключил новости. $now — секунды.
+function tg_notify_news(PDO $pdo, array $tg, callable $send, int $newsId, int $now, ?callable $sleep = null): int {
+    $st = $pdo->prepare('SELECT id, title_ru, title_en, body_ru, body_en, published_at FROM news WHERE id = :id');
+    $st->execute([':id' => $newsId]);
+    $post = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$post) { return 0; }
+    // published_at — миллисекунды.
+    if ((int)$post['published_at'] < ($now - TG_NEWS_FRESH) * 1000) { return 0; }
+
+    return tg_broadcast($pdo, $tg, $send, 'news', function (string $lang) use ($post): array {
+        return [tg_news_text($post, $lang), [
+            [tg_text('readNews', $lang), TG_SITE . '/news/' . (int)$post['id']],
+            [tg_text('settings', $lang), TG_SITE . '/profile'],
+        ]];
+    }, $sleep);
+}
+
+// Рассылка идёт после ответа и тянется дольше обычного запроса: паузы между
+// сообщениями плюс ожидание Telegram. Лимит времени поднимается только ей.
+function tg_long_run(): void {
+    if (function_exists('set_time_limit')) { @set_time_limit(600); }
+}
+
 // Обёртки для эндпоинтов: ответ уже ушёл, дальше — только уведомление, и
 // любая его ошибка остаётся в журнале, а не у посетителя.
 function tg_after_chat_send(PDO $pdo, array $cfg, string $me, int $threadId, int $messageId, int $now): void {
@@ -485,6 +823,35 @@ function tg_after_support(PDO $pdo, array $cfg, string $authorId): void {
         tg_notify_support($pdo, $tg, tg_http($tg['token']), $authorId);
     } catch (Throwable $e) {
         error_log('tg support notify: ' . $e->getMessage());
+    }
+}
+
+// Админка сохранила тирлист. $old — состояние из базы до сохранения.
+// $send и $sleep подставляют тесты; на бою — настоящий Telegram.
+function tg_after_prices(PDO $pdo, array $cfg, array $old, array $new, ?callable $send = null, ?callable $sleep = null): void {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return; }
+    $changes = tg_price_changes($old, $new);
+    if (!$changes) { return; }
+    tg_finish_response();
+    tg_long_run();
+    try {
+        tg_notify_prices($pdo, $tg, $send ?? tg_http($tg['token']), $changes, $sleep);
+    } catch (Throwable $e) {
+        error_log('tg prices notify: ' . $e->getMessage());
+    }
+}
+
+// Админка опубликовала новый пост (правка старого сюда не приходит).
+function tg_after_news(PDO $pdo, array $cfg, int $newsId, int $now, ?callable $send = null, ?callable $sleep = null): void {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return; }
+    tg_finish_response();
+    tg_long_run();
+    try {
+        tg_notify_news($pdo, $tg, $send ?? tg_http($tg['token']), $newsId, $now, $sleep);
+    } catch (Throwable $e) {
+        error_log('tg news notify: ' . $e->getMessage());
     }
 }
 

@@ -73,7 +73,8 @@ if (!$ready) {
 
 // Бот уведомлений. Модераторы — аккаунты сайта из moderator_ids в config.php;
 // о новом обращении бот пишет тем из них, кто подключил Telegram колокольчиком
-// в чате. Здесь видно, сколько подключилось, и есть кнопка установки вебхука.
+// в чате или в профиле. Здесь видно, сколько подключилось, сколько получают
+// рассылки цен и новостей, и есть кнопка установки вебхука.
 // Блок только для админов: вебхук ставит api/tg_setup.php, а он требует админа.
 $tg   = tg_config(app_config());
 $flag = isset($_GET['tg']) && is_string($_GET['tg']) ? $_GET['tg'] : '';
@@ -95,11 +96,21 @@ if (!is_admin()) {
     }
     $name  = support_h('@' . $tg['name']);
     $mods  = count($tg['moderators']);
+    $aud   = null;
+    try {
+        $aud = tg_audience(db());
+    } catch (Throwable $e) {
+        $aud = null;
+    }
+    $reach = $aud !== null
+        ? "<p>Подключили Telegram: {$aud['linked']}. Получают изменения цен: {$aud['prices']}, новости: {$aud['news']}.</p>"
+        : '<p class="adm-muted">Рассылки цен и новостей молчат: выполните миграцию <code>docs/migrations/2026-09-25-tg-prefs.sql</code>.</p>';
     $note  = '';
     if ($flag === 'ok')   { $note = '<p class="sp-bot-note is-ok">Вебхук подключён.</p>'; }
     if ($flag === 'fail') { $note = '<p class="sp-bot-note is-fail">Telegram не принял вебхук — проверьте токен в config.php.</p>'; }
     $bot = <<<HTML
 <p>Бот {$name}. Модераторов в config.php: {$mods}, подключили Telegram: {$linked}.</p>
+  {$reach}
   <form method="post" action="/api/tg_setup.php">
     <button class="adm-btn" type="submit">Подключить вебхук</button>
   </form>

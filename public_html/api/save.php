@@ -2,6 +2,7 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/images.php';
 require_once __DIR__ . '/lib/validate.php';
+require_once __DIR__ . '/lib/telegram.php';
 
 function handle_save(PDO $pdo, array $state, string $imagesDir, int $revMs): array {
     // Structure only at this point. The size cap must NOT run yet: a client
@@ -32,6 +33,15 @@ if (!defined('TESTING')) {
     require_admin();
     $cfg = app_config();
     $revMs = (int)round(microtime(true) * 1000);
-    [$status, $payload] = handle_save(db(), read_json_body(), $cfg['images_dir'], $revMs);
+    $pdo   = db();
+    $body  = read_json_body();
+    // Прежнее состояние — до записи: по нему бот видит, какие цены сменились.
+    $before = tg_enabled(tg_config($cfg)) ? tg_tierlist_state($pdo) : [];
+    [$status, $payload] = handle_save($pdo, $body, $cfg['images_dir'], $revMs);
     json_out($payload, $status);
+
+    // Подписчикам в Telegram — уже после ответа админке.
+    if ($status === 200) {
+        tg_after_prices($pdo, $cfg, $before, $body);
+    }
 }
