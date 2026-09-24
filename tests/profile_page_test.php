@@ -268,6 +268,22 @@ test('меню открывается и закрывается анимацие
     }
 });
 
+// На телефоне открытое меню занимает пол-экрана под ником, поэтому там оно
+// стартует свёрнутым. Скрипт идёт с defer, и до него свёрнутость держит CSS
+// через :not(.is-ready) — иначе меню мелькнёт открытым и схлопнется.
+test('на телефоне меню стартует свёрнутым и не мелькает открытым', function () use ($PUB) {
+    $js  = pf_read($PUB . '/js/profile-page.js');
+    $css = pf_read($PUB . '/css/profile.css');
+    assert_true(strpos($js, "matchMedia('(max-width: 900px)').matches") !== false, 'скрипт узнаёт телефон');
+    assert_true(strpos($js, 'setMenu(false, true);') !== false, 'и сворачивает меню без анимации');
+    assert_true(strpos($js, "menu.classList.add('is-ready');") !== false, 'после чего снимает CSS-заглушку');
+    $phone = substr($css, strpos($css, '@media (max-width: 900px)'));
+    assert_true(strpos($phone, '.pf-menu:not(.is-ready) .pf-menu-list { display: none; }') !== false,
+        'до скрипта список на телефоне спрятан');
+    assert_true(strpos($css, '.pf-menu:not(.is-ready)') > strpos($css, '@media (max-width: 900px)'),
+        'заглушка только для телефона: на компьютере меню открыто');
+});
+
 test('чужой профиль: те же данные, но без операций с аккаунтом', function () {
     $r = pf_render('900000001', '900000004');
     assert_true($r !== null, 'страница отрендерилась');

@@ -133,7 +133,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/profile.css?v=8" />
+<link rel="stylesheet" href="css/profile.css?v=9" />
 <?php if ($pfState === 'card'): ?>
 <link rel="stylesheet" href="css/trading.css?v=4" />
 <?php endif; ?>
@@ -409,7 +409,7 @@ $pfTitle = $pfNick !== ''
   </footer>
 
   <script src="js/i18n.js?v=55" fetchpriority="high"></script>
-  <script src="js/profile-page.js?v=3" defer></script>
+  <script src="js/profile-page.js?v=4" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>

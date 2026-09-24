@@ -204,7 +204,7 @@
       return { width: r.width + 'px', height: r.height + 'px' };
     };
 
-    var setMenu = function (open) {
+    var setMenu = function (open, instant) {
       var mine = ++turn;
       var from = size();
       if (running) { running.cancel(); running = null; }
@@ -215,7 +215,7 @@
       menu.classList.toggle('is-closed', !open);
       list.hidden = !open;
 
-      if (!menu.animate || (still && still.matches)) { return; }
+      if (instant || !menu.animate || (still && still.matches)) { return; }
 
       var to = size();
       if (!open) { list.hidden = false; }
@@ -233,6 +233,11 @@
         if (!open) { list.hidden = true; }
       };
     };
+
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+      setMenu(false, true);
+    }
+    menu.classList.add('is-ready');
 
     toggle.addEventListener('click', function () {
       setMenu(toggle.getAttribute('aria-expanded') !== 'true');

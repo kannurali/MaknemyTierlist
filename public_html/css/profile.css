@@ -797,7 +797,11 @@
     border-radius: 14px;
   }
 
-  .pf-menu.is-closed { width: 52px; }
+  .pf-menu.is-closed,
+  .pf-menu:not(.is-ready) { width: 52px; }
+  .pf-menu:not(.is-ready) .pf-menu-list { display: none; }
+  .pf-menu:not(.is-ready) .pf-menu-toggle span { transform-origin: left center; }
+  .pf-menu:not(.is-ready) .pf-menu-toggle span:nth-child(2) { transform: scaleX(.7); }
   .pf-menu-toggle { width: 24px; margin: 0 0 10px 14px; padding: 4px 0; }
   .pf-menu-toggle span { height: 3px; border-radius: 16px; }
   .pf-menu-toggle span + span { margin-top: 3px; }
