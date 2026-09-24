@@ -23,6 +23,23 @@ const PROFILE_ONLINE_WINDOW = 300;
 // VARCHAR(280) и должна помещаться в него целиком после обрезки.
 const PROFILE_ABOUT_MAX = 280;
 
+// Владелец сайта Maknemy (Roblox Shamill_prod). Только в его профиле стоит
+// блок «Обо мне и проекте Maknemy» — раньше он был на главной.
+const PROFILE_OWNER_ID = '2841062255';
+
+// Знак рядом с ником: у Maknemy — «MK», как в подвале сайта (только без
+// прозрачных полей, чтобы высота знака совпала с буквами ника), у
+// разработчика The Fool (Roblox kan_nurali) — шут. Номера — roblox_id.
+const PROFILE_NICK_LOGOS = [
+    '2841062255' => 'assets/design/logo-mk.png',
+    '8755256557' => 'assets/design/logo-fool.png',
+];
+
+/** Путь к знаку у ника этого игрока, либо null — знака у него нет. */
+function profile_nick_logo(string $id): ?string {
+    return PROFILE_NICK_LOGOS[$id] ?? null;
+}
+
 /**
  * roblox_id из чего угодно недоверенного, либо пустая строка. Один разборщик
  * и для сессии, и для ?id=: правило «настоящий roblox_id» должно быть

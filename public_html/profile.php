@@ -73,6 +73,9 @@ elseif ($pfMe !== '' && $pfId !== '') { $pfState = 'missing'; }
 
 $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 
+$pfOwner = $pfState === 'card' && $pfWho === PROFILE_OWNER_ID;
+$pfLogo  = $pfState === 'card' ? profile_nick_logo($pfWho) : null;
+
 // Вход в панель со своего профиля: кнопку видят только те, кого config.php
 // записал в admin_ids (вся панель) или moderator_ids (обращения) — см.
 // site_role() в api/_bootstrap.php. На чужом профиле её нет никогда: права
@@ -133,7 +136,7 @@ $pfTitle = $pfNick !== ''
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/profile.css?v=9" />
+<link rel="stylesheet" href="css/profile.css?v=10" />
 <?php if ($pfState === 'card'): ?>
 <link rel="stylesheet" href="css/trading.css?v=4" />
 <?php endif; ?>
@@ -259,7 +262,7 @@ $pfTitle = $pfNick !== ''
       </nav>
 <?php endif; ?>
 
-      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?></h1>
+      <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?><?php if ($pfLogo !== null): ?><img class="pf-nick-logo" src="<?= $pfLogo ?>" alt="" /><?php endif; ?></h1>
 <?php if ($pfCard['handle'] !== null): ?>
       <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php endif; ?>
@@ -374,6 +377,112 @@ $pfTitle = $pfNick !== ''
       <p class="pf-stats-note" data-i18n="<?= $pfSelf ? 'profile.statsNote' : 'profile.statsNotePeer' ?>"><?= $pfSelf ? 'Чем больше сделок — тем выше опыт!' : 'Сделки за всё время' ?></p>
     </section>
 
+<?php if ($pfOwner): ?>
+    <section class="pf-owner" aria-labelledby="pfOwnerTitle">
+      <h2 class="pf-owner-title" id="pfOwnerTitle" data-i18n="profile.ownerTitle">Обо мне и проекте Maknemy</h2>
+      <div class="pf-owner-body">
+        <p data-i18n="profile.ownerP1">Меня зовут Максим, но в интернете я известен как Maknemy. Я Roblox-креатор, блогер и дизайнер, специализирующийся на игре Blox Fruits.</p>
+        <p data-i18n="profile.ownerP2">Я создаю новости, обзоры обновлений, тирлисты, гайды, теории и материалы об игровой экономике и трейдах. Моя цель — не просто рассказывать о происходящем в игре, а помогать игрокам разбираться в предметах, принимать более выгодные решения и всегда оставаться в курсе важных событий.</p>
+        <p data-i18n="profile.ownerP3">Maknemy.com — мой главный проект и независимый фанатский сайт для игроков Blox Fruits. Он создан как удобное место, где собраны самые необходимые инструменты и информация для игры:</p>
+        <ul class="pf-owner-list">
+          <li data-i18n="profile.ownerList1">актуальный тирлист предметов</li>
+          <li data-i18n="profile.ownerList2">калькулятор трейдов</li>
+          <li data-i18n="profile.ownerList3">цены и оценки фруктов, перманентов, геймпассов, скинов и мутаций</li>
+          <li data-i18n="profile.ownerList4">новости и обновления Blox Fruits</li>
+          <li data-i18n="profile.ownerList5">полезные материалы для игроков</li>
+          <li data-i18n="profile.ownerList6">информация об игровой экономике и изменениях цен</li>
+        </ul>
+        <p data-i18n="profile.ownerP4">Сайт помогает игрокам оценивать стоимость предметов, проверять выгодность трейдов и следить за изменениями экономики после обновлений. Проект развивается вместе с игрой и создаётся прежде всего для русскоязычного сообщества и игроков из СНГ.</p>
+        <p data-i18n="profile.ownerP5">Моя цель — сделать maknemy.com самым полезным и удобным фанатским проектом по Blox Fruits: местом, куда игроки заходят перед трейдом, после обновления и просто для поиска актуальной информации об игре.</p>
+      </div>
+
+      <div class="pf-owner-social">
+        <h3 class="pf-owner-social-title" data-i18n="profile.ownerSocial">Соцсети</h3>
+        <ul class="pf-owner-links">
+          <li>
+            <a class="pf-owner-link" href="https://youtube.com/@maknemy" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M10 9v6l5.2-3L10 9Z" fill="currentColor"/>
+              </svg>
+              <span data-i18n="profile.ownerYoutube">YouTube</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://www.tiktok.com/@maknemy" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M14 3c.4 2.6 2.1 4.4 4.5 4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTiktok">TikTok</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://www.twitch.tv/maknemy" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 3h18v11l-4 4h-4l-3 3v-3H3V3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M10 8v5M15 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTwitch">Twitch</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://x.com/mksvtn" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4l16 16M20 4 4 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span data-i18n="profile.ownerX">X (Twitter)</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://t.me/maknemy" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTg1">@maknemy</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://t.me/mksvtn" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTg2">@mksvtn</span>
+            </a>
+          </li>
+        </ul>
+
+        <h3 class="pf-owner-social-title" data-i18n="profile.ownerTgTitle">Telegram-проекты</h3>
+        <ul class="pf-owner-links">
+          <li>
+            <a class="pf-owner-link" href="https://t.me/theMaknemy" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTgMain">Основной канал</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://t.me/bftierlist" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTgTierlist">Maknemy Tierlist</span>
+            </a>
+          </li>
+          <li>
+            <a class="pf-owner-link" href="https://t.me/mksvtnchat" target="_blank" rel="noopener">
+              <svg class="pf-owner-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M21 3 2 10.5l6.2 2.2M21 3l-3.3 17-6.5-5M21 3 8.2 12.7m0 0v5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="profile.ownerTgChat">Чат подписчиков</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+<?php endif; ?>
+
 <?php if ($pfSelf): ?>
     <section class="pf-trades" aria-labelledby="pfTradesTitle">
       <div class="pf-trades-head">
@@ -408,7 +517,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=55" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=56" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=4" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfState === 'card'): ?>
