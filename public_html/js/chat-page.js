@@ -30,6 +30,15 @@
 
   var COPY_OK = 'input, textarea, .ct-nick, .ct-handle, .ct-peer-link';
 
+  function nickLogo(user) {
+    if (!user || !user.logo) { return null; }
+    var img = document.createElement('img');
+    img.className = 'nx-nick-logo';
+    img.src = user.logo;
+    img.alt = '';
+    return img;
+  }
+
   function copyAllowed(node) {
     var el = node && node.nodeType === 1 ? node : (node ? node.parentElement : null);
     return !!(el && el.closest && el.closest(COPY_OK));
@@ -115,6 +124,8 @@
       var nick = document.createElement('span');
       nick.className = 'ct-nick';
       nick.textContent = t.peer.nick;
+      var logo = nickLogo(t.peer);
+      if (logo) { nick.appendChild(logo); }
       meta.appendChild(nick);
 
       var handle = document.createElement('span');
@@ -154,6 +165,8 @@
     a.className = 'ct-peer-link';
     a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);
     a.textContent = peer.nick;
+    var logo = nickLogo(peer);
+    if (logo) { a.appendChild(logo); }
     a.setAttribute('aria-label', tx('chat.peerProfile', 'Профиль игрока') + ' ' + peer.nick);
     a.title = tx('chat.peerProfile', 'Профиль игрока');
     a.draggable = false;

@@ -88,12 +88,12 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=11" />
+<link rel="stylesheet" href="css/base.css?v=12" />
 
 <link rel="stylesheet" href="css/topbar.css?v=12" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=10" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=11" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/home.css?v=20" />

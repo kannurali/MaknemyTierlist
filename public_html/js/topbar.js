@@ -195,6 +195,13 @@
     name.className = "mk-user-name";
 
     name.textContent = user.display || user.name || "";
+    if (user.logo) {
+      var logo = document.createElement("img");
+      logo.className = "nx-nick-logo";
+      logo.src = user.logo;
+      logo.alt = "";
+      name.appendChild(logo);
+    }
     var nick = document.createElement("span");
     nick.textContent = user.name ? "@" + user.name : "";
     name.appendChild(nick);

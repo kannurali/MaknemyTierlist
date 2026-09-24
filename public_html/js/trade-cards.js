@@ -13,6 +13,14 @@
     return node;
   }
 
+  function nickLogo(user) {
+    if (!user || !user.logo) { return null; }
+    const img = el("img", "nx-nick-logo");
+    img.src = user.logo;
+    img.alt = "";
+    return img;
+  }
+
   function icon(id, cls) {
     const svg = document.createElementNS(SVG_NS, "svg");
     svg.setAttribute("class", cls);
@@ -185,6 +193,8 @@
         nick = el("span", "tr-nick", offer.author.nick);
       }
       nick.id = nickId;
+      const logo = nickLogo(offer.author);
+      if (logo) { nick.appendChild(logo); }
       who.appendChild(nick);
       if (offer.author.handle) { who.appendChild(el("span", "tr-handle", offer.author.handle)); }
       head.appendChild(who);

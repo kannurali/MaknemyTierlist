@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/nick_logo.php';
+
 // Вход через Roblox — официальный OAuth 2.0 / OpenID Connect самого Roblox
 // (https://apis.roblox.com/oauth/.well-known/openid-configuration).
 //
@@ -233,6 +235,7 @@ function roblox_load_user(PDO $pdo, string $robloxId): ?array {
         'display' => (string)$row['display_name'],
         'avatar'  => (string)$row['avatar_url'],
         'profile' => roblox_profile_url((string)$row['roblox_id']),
+        'logo'    => nick_logo((string)$row['roblox_id']),
         'seen'    => array_key_exists('last_seen_at', $row) ? (int)$row['last_seen_at'] : null,
     ];
 }

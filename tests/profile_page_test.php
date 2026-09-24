@@ -99,7 +99,7 @@ function pf_fixture_db(string $file): void {
     // Без имени вовсе: у Roblox не обязательны ни display_name, ни username.
     $ins->execute(['900000011', '', '', '', $now - 86400, $now, $now, null, 0, 0]);
     // Владелец сайта и разработчик — настоящие roblox_id из PROFILE_OWNER_ID и
-    // PROFILE_NICK_LOGOS: у них блок «Обо мне» и знаки у ника.
+    // NICK_LOGOS (api/lib/nick_logo.php): у них блок «Обо мне» и знаки у ника.
     $ins->execute(['2841062255', 'Shamill_prod', 'maknemy', '', $now - 86400, $now, $now, null, 2, 0]);
     $ins->execute(['8755256557', 'kan_nurali', 'TheFool', '', $now - 86400, $now, $now, null, 0, 0]);
 }
@@ -1333,14 +1333,40 @@ test('у ника владельца и разработчика стоит их
     assert_true($mk !== null && $fool !== null && $other !== null, 'страницы отрендерились');
     if ($mk === null || $fool === null || $other === null) { return; }
 
-    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">maknemy<img class="pf-nick-logo" src="assets/design/logo-mk.png" alt="" /></h1>~',
+    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">maknemy<img class="pf-nick-logo" src="/assets/design/logo-mk.png" alt="" /></h1>~',
         $mk['html']), 'у Maknemy — MK');
-    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">TheFool<img class="pf-nick-logo" src="assets/design/logo-fool.png" alt="" /></h1>~',
+    assert_true((bool)preg_match('~<h1 class="pf-nick" id="pfNick">TheFool<img class="pf-nick-logo" src="/assets/design/logo-fool.png" alt="" /></h1>~',
         $fool['html']), 'у The Fool — шут');
     assert_eq(0, substr_count($other['html'], 'pf-nick-logo'), 'у остальных знака нет');
 
     foreach (['logo-mk.png', 'logo-fool.png'] as $f) {
         assert_true(is_file($PUB . '/assets/design/' . $f), "$f лежит на месте");
+    }
+});
+
+// Знак у ника виден не только в профиле: карточки объявлений (трейдинг и
+// объявления в профиле), чат (список диалогов и заголовок переписки) и меню
+// в шапке. Все берут путь из поля logo, стиль общий — в base.css, которую
+// грузит каждая страница.
+test('знак у ника рисуют трейдинг, чат и шапка', function () use ($PUB) {
+    require_once $PUB . '/api/lib/nick_logo.php';
+    foreach (NICK_LOGOS as $id => $src) {
+        assert_true(is_file($PUB . $src), "$src лежит на месте");
+        assert_eq('/', $src[0], "$src — абсолютный путь: скрипты вставляют его и на /trading/new");
+    }
+    $trade = pf_read($PUB . '/js/trade-cards.js');
+    assert_true(strpos($trade, 'const logo = nickLogo(offer.author);') !== false, 'карточка объявления');
+    $chat = pf_read($PUB . '/js/chat-page.js');
+    assert_true(strpos($chat, 'var logo = nickLogo(t.peer);') !== false, 'список диалогов');
+    assert_true(strpos($chat, 'var logo = nickLogo(peer);') !== false, 'заголовок переписки');
+    $top = pf_read($PUB . '/js/topbar.js');
+    assert_true(strpos($top, 'logo.className = "nx-nick-logo";') !== false, 'меню в шапке');
+    foreach (['trade-cards.js' => $trade, 'chat-page.js' => $chat] as $f => $js) {
+        assert_true(strpos($js, 'nx-nick-logo') !== false, "$f вешает общий класс");
+    }
+    assert_true(strpos(pf_read($PUB . '/css/base.css'), '.nx-nick-logo {') !== false, 'стиль общий, в base.css');
+    foreach (['chat.php', 'trading.php', 'trade-new.php', 'profile.php', 'home.php'] as $page) {
+        assert_true(strpos(pf_read($PUB . '/' . $page), 'css/base.css?v=') !== false, "$page грузит base.css");
     }
 });
 
