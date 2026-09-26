@@ -8,20 +8,23 @@
 
 Исходники нарисованы владельцем и лежат в tools/art:
 
-  giveaway-arcsteel-wide.webp    1290×403  — полоса тир-листа и нижняя плашка
-  giveaway-arcsteel-square.webp  2000×2000 — окно
-  giveaway-arcsteel-tall.webp    500×2000  — борт
+  giveaway-arcsteel-wide.webp    1290×403  — полоса тир-листа
+  giveaway-arcsteel-dock.jpg     640×200   — нижняя плашка
+  giveaway-arcsteel-rail.jpg     300×1200  — борт
+  giveaway-arcsteel-popup.webp   800×800   — окно
 
-Пропорции исходников не совпадают со слотами, а текст в них стоит впритык к
-краям, поэтому обрезать нельзя: у полосы 4:1 любое окно режет либо «РОЗЫГРЫШ»
-сверху, либо плашку «В ТЕЛЕГРАМ» снизу, у борта 320×1200 — «УЧАСТВУЙ». Вместо
-обрезки холст расширяется по бокам: картинка масштабируется по высоте слота,
-а недостающая ширина добирается зеркальным продолжением фона с размытием.
+Пропорции полосы и борта не совпадают со слотами, а текст в них стоит впритык
+к краям, поэтому обрезать нельзя: у полосы 4:1 любое окно режет либо
+«РОЗЫГРЫШ» сверху, либо плашку «В ТЕЛЕГРАМ» снизу, а борт 300×1200 в боксе
+с `object-fit: cover` потерял бы по ~37 px сверху и снизу. Вместо обрезки
+холст расширяется по бокам: картинка масштабируется по высоте слота, а
+недостающая ширина добирается зеркальным продолжением фона с размытием.
 Края исходников — тёмный размытый арт без текста, так что дорисованные поля
 читаются как продолжение фона.
 
-Нижняя плашка 640×200 — ровно 3.2:1, как и широкий исходник: чистое
-масштабирование. Окно 800×800 — тоже.
+Нижняя плашка и окно нарисованы ровно в размер слота. Окно уже в WebP и
+копируется как есть; плашка и борт пришли в JPEG, и второе сжатие на q84
+даёт заметную грязь, поэтому у них q90.
 
 Размеры и потолки веса — CREATIVE_SPECS в api/lib/images.php.
 
@@ -29,18 +32,19 @@
 """
 import argparse
 import pathlib
+import shutil
 
 from PIL import Image, ImageFilter
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ART = ROOT / "tools" / "art"
 
-# Слот -> (исходник, ширина, высота).
+# Слот -> (исходник, ширина, высота, качество WebP).
 SLOTS = {
-    "strip": ("giveaway-arcsteel-wide.webp", 1200, 300),
-    "dock": ("giveaway-arcsteel-wide.webp", 640, 200),
-    "rail": ("giveaway-arcsteel-tall.webp", 320, 1200),
-    "popup": ("giveaway-arcsteel-square.webp", 800, 800),
+    "strip": ("giveaway-arcsteel-wide.webp", 1200, 300, 84),
+    "dock": ("giveaway-arcsteel-dock.jpg", 640, 200, 90),
+    "rail": ("giveaway-arcsteel-rail.jpg", 320, 1200, 90),
+    "popup": ("giveaway-arcsteel-popup.webp", 800, 800, 84),
 }
 
 
@@ -76,15 +80,19 @@ def fit(src, w, h):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(ROOT / "public_html" / "assets" / "promo"))
-    ap.add_argument("--quality", type=int, default=84)
     args = ap.parse_args()
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    for slot, (name, w, h) in SLOTS.items():
-        img = fit(ART / name, w, h)
+    for slot, (name, w, h, quality) in SLOTS.items():
+        src = ART / name
         path = out / f"giveaway-{slot}.webp"
-        img.save(path, "WEBP", quality=args.quality, method=6)
-        print(f"{path.name}: {img.size[0]}x{img.size[1]} {path.stat().st_size} bytes")
+        with Image.open(src) as probe:
+            exact = probe.size == (w, h) and probe.format == "WEBP"
+        if exact:
+            shutil.copyfile(src, path)
+        else:
+            fit(src, w, h).save(path, "WEBP", quality=quality, method=6)
+        print(f"{path.name}: {w}x{h} {path.stat().st_size} bytes")
 
 
 if __name__ == "__main__":
