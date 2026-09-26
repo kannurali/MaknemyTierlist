@@ -272,7 +272,7 @@ test('центр обращений: форма, «написать лично»
     $s = tp_read($PUB . '/support.php');
     assert_true(strpos($s, 'id="spForm"') !== false, 'форма');
     assert_true(strpos($s, 'maxlength="1000"') !== false, 'предел как на сервере (SUPPORT_BODY_MAX)');
-    assert_true(strpos($s, 'href="https://t.me/theMaknemy"') !== false, '«написать лично» — Telegram из прототипа');
+    assert_true(strpos($s, 'class="sp-direct" href="https://t.me/maknemy"') !== false, '«написать лично» — личный Telegram Maknemy, не канал');
     assert_true((bool)preg_match('/id="spThanks"[^>]*hidden/', $s), 'окно благодарности скрыто до отправки');
     $js = tp_read($PUB . '/js/support-page.js');
     assert_true(strpos($js, '"/api/support.php"') !== false, 'отправка');

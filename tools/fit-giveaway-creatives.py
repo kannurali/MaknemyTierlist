@@ -9,7 +9,7 @@
 Исходники нарисованы владельцем и лежат в tools/art:
 
   giveaway-arcsteel-wide.webp    1290×403  — полоса тир-листа и нижняя плашка
-  giveaway-arcsteel-square.webp  2000×2000 — окно
+  giveaway-arcsteel-popup.webp   800×800   — окно
   giveaway-arcsteel-tall.webp    500×2000  — борт
 
 Пропорции исходников не совпадают со слотами, а текст в них стоит впритык к
@@ -21,7 +21,8 @@
 читаются как продолжение фона.
 
 Нижняя плашка 640×200 — ровно 3.2:1, как и широкий исходник: чистое
-масштабирование. Окно 800×800 — тоже.
+масштабирование. Исходник окна нарисован ровно 800×800 и копируется как
+есть, без пересжатия.
 
 Размеры и потолки веса — CREATIVE_SPECS в api/lib/images.php.
 
@@ -29,6 +30,7 @@
 """
 import argparse
 import pathlib
+import shutil
 
 from PIL import Image, ImageFilter
 
@@ -40,7 +42,7 @@ SLOTS = {
     "strip": ("giveaway-arcsteel-wide.webp", 1200, 300),
     "dock": ("giveaway-arcsteel-wide.webp", 640, 200),
     "rail": ("giveaway-arcsteel-tall.webp", 320, 1200),
-    "popup": ("giveaway-arcsteel-square.webp", 800, 800),
+    "popup": ("giveaway-arcsteel-popup.webp", 800, 800),
 }
 
 
@@ -81,10 +83,15 @@ def main():
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for slot, (name, w, h) in SLOTS.items():
-        img = fit(ART / name, w, h)
+        src = ART / name
         path = out / f"giveaway-{slot}.webp"
-        img.save(path, "WEBP", quality=args.quality, method=6)
-        print(f"{path.name}: {img.size[0]}x{img.size[1]} {path.stat().st_size} bytes")
+        with Image.open(src) as probe:
+            exact = probe.size == (w, h)
+        if exact:
+            shutil.copyfile(src, path)
+        else:
+            fit(src, w, h).save(path, "WEBP", quality=args.quality, method=6)
+        print(f"{path.name}: {w}x{h} {path.stat().st_size} bytes")
 
 
 if __name__ == "__main__":

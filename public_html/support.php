@@ -141,7 +141,7 @@ page_lscache();
         <p class="sp-status" id="spStatus" role="status" aria-live="polite"></p>
         <div class="sp-actions">
           <button class="sp-send" id="spSend" type="submit" data-i18n="support.send">Отправить</button>
-          <a class="sp-direct" href="https://t.me/theMaknemy" target="_blank" rel="noopener" data-i18n="support.direct">Написать лично</a>
+          <a class="sp-direct" href="https://t.me/maknemy" target="_blank" rel="noopener" data-i18n="support.direct">Написать лично</a>
         </div>
       </form>
     </section>
