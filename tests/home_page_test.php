@@ -717,6 +717,12 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true(is_file($PUB . '/assets/promo/giveaway-' . $slot . '.webp'),
             "макет розыгрыша для слота $slot должен лежать в репозитории");
     }
+    // Каждый путь из promo.js, включая анимации и их постеры, — файл на диске.
+    preg_match_all('#/assets/promo/[a-z0-9-]+\.webp#', $promo, $m);
+    assert_true(count($m[0]) > 0, 'promo.js ссылается на макеты в assets/promo');
+    foreach (array_unique($m[0]) as $path) {
+        assert_true(is_file($PUB . $path), "promo.js ссылается на $path, а файла нет");
+    }
 
     // Playerok — платное размещение, и живёт оно там же, где свои кампании:
     // в коде с макетами в репозитории. Отличие одно — список страниц, из-за
