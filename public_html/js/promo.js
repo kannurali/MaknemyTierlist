@@ -416,9 +416,9 @@
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip: { src: "/assets/promo/giveaway-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
-      rail:  { src: "/assets/promo/giveaway-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
-      dock:  { src: "/assets/promo/giveaway-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
-      popup: { src: "/assets/promo/giveaway-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+      rail:  { src: "/assets/promo/giveaway-rail-anim.webp",  w: 320, h: 1200, anim: true, poster: "/assets/promo/giveaway-rail.webp" },
+      dock:  { src: "/assets/promo/giveaway-dock-anim.webp",  w: 640, h: 200,  anim: true, poster: "/assets/promo/giveaway-dock.webp" },
+      popup: { src: "/assets/promo/giveaway-popup-anim.webp", w: 800, h: 800,  anim: true, poster: "/assets/promo/giveaway-popup.webp" }
     },
 
     popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },

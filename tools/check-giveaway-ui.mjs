@@ -36,8 +36,8 @@ function check(name, ok, detail) {
     if (!ok) failed++;
 }
 
-async function open(viewport, url, wait = 2500, adLink = GIVEAWAY_POST) {
-    const context = await browser.newContext({ viewport });
+async function open(viewport, url, wait = 2500, adLink = GIVEAWAY_POST, ctx = {}) {
+    const context = await browser.newContext({ viewport, ...ctx });
     const page = await context.newPage();
     await page.route('**/api/promo.php*', r => r.fulfill({
         status: 200, contentType: 'application/json',
@@ -62,8 +62,8 @@ const src = sel => [...document.querySelectorAll(sel)].map(n => (n.tagName === '
 // --- лента тирлиста + борта на трёх страницах (широкий экран) --------------
 for (const [name, url, railSel, rail, adLink] of [
     ['тирлист', '/index.php', '.ptn-rail', 'playerok-rail.webp', PLAYEROK_LINK],
-    ['лента', '/news.php', '.nw-rail', 'giveaway-rail.webp', GIVEAWAY_POST],
-    ['калькулятор', '/calculator.php', '.tc-rail', 'giveaway-rail.webp', GIVEAWAY_POST]
+    ['лента', '/news.php', '.nw-rail', 'giveaway-rail-anim.webp', GIVEAWAY_POST],
+    ['калькулятор', '/calculator.php', '.tc-rail', 'giveaway-rail-anim.webp', GIVEAWAY_POST]
 ]) {
     const { context, page, errors } = await open({ width: 1600, height: 950 }, url, 2500, adLink);
     const rails = await page.evaluate(src, railSel);
@@ -81,10 +81,21 @@ for (const [name, url, railSel, rail, adLink] of [
     await context.close();
 }
 
+// --- prefers-reduced-motion: вместо анимации статичный постер ---------------
+{
+    const { context, page, errors } = await open({ width: 1600, height: 950 }, '/calculator.php', 2500,
+        GIVEAWAY_POST, { reducedMotion: 'reduce' });
+    const rails = await page.evaluate(src, '.tc-rail');
+    check('калькулятор, reduced motion: борта показывают постер giveaway-rail.webp',
+        rails.length >= 2 && rails.every(s => has(s, 'giveaway-rail.webp')), rails);
+    check('калькулятор, reduced motion: без ошибок в консоли', errors.length === 0, errors);
+    await context.close();
+}
+
 // --- нижняя полоса (телефон) ----------------------------------------------
 for (const [name, url, dock] of [
     ['тирлист', '/index.php', 'playerok-dock.webp'],
-    ['лента', '/news.php', 'giveaway-dock.webp']
+    ['лента', '/news.php', 'giveaway-dock-anim.webp']
 ]) {
     const { context, page, errors } = await open({ width: 390, height: 844 }, url);
     const strip = await page.evaluate(src, '.ptn-dock');
@@ -97,7 +108,7 @@ for (const [name, url, dock] of [
 // --- окно (всплывает через POPUP delayMs = 12 с) ---------------------------
 for (const [name, url, img, link] of [
     ['тирлист', '/index.php', 'playerok-popup.webp', PLAYEROK_LINK],
-    ['лента', '/news.php', 'giveaway-popup.webp', GIVEAWAY_POST]
+    ['лента', '/news.php', 'giveaway-popup-anim.webp', GIVEAWAY_POST]
 ]) {
     const { context, page } = await open({ width: 1280, height: 900 }, url, 14000, link);
     const popup = await page.evaluate(() => ({

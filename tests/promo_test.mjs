@@ -593,6 +593,12 @@ test('HOUSE_GIVEAWAY ships a creative for every slot', () => {
         assert.ok(cre, `у слота ${slot} должен быть макет`);
         assert.ok(cre.src.startsWith('/assets/promo/'),
             'макеты лежат в репозитории: объявление обязано работать на чистой установке');
+        // Анимации показываются всем, кроме prefers-reduced-motion: тем нужен
+        // статичный постер, иначе srcFor отдаст ту же анимацию.
+        if (cre.anim) {
+            assert.ok(cre.poster.startsWith('/assets/promo/') && cre.poster !== cre.src,
+                `у анимированного макета ${slot} должен быть свой статичный постер`);
+        }
     }
     // Текст окна — ключи словаря: своё объявление говорит на языке интерфейса.
     assert.ok(HOUSE_GIVEAWAY.textKey && HOUSE_GIVEAWAY.ctaKey);
