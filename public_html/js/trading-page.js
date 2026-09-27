@@ -45,6 +45,10 @@
 
   const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: loginUrl });
 
+  const feedAds = window.NX_PROMO_FEED && window.PROMO
+    ? NX_PROMO_FEED.create({ page: PROMO_PAGE, tx: tx, build: NX_PROMO_FEED.card })
+    : null;
+
   function render() {
     const mineList = $("#trMine");
     const feed = $("#trFeed");
@@ -61,6 +65,7 @@
     feed.textContent = "";
     const list = showMine ? state.offers.filter(o => !o.mine) : state.offers;
     list.forEach(o => feed.appendChild(cards.buildCard(o)));
+    if (feedAds) { feedAds.place(feed, ".tr-card"); }
 
     let msg = "";
     let good = false;
@@ -216,6 +221,11 @@
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null)
       .then(doc => {
+        if (feedAds) {
+          feedAds.setDoc(doc);
+          feedAds.place($("#trFeed"), ".tr-card");
+        }
+
         if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE);
 
         if (window.NX_PROMO_POPUP) {
@@ -249,6 +259,7 @@
       b.setAttribute("aria-pressed", String(on));
     });
 
+    if (feedAds) { feedAds.reset(); }
     render();
   }
 

@@ -33,6 +33,10 @@
 
   const tx = key => I18N.t(key, lang);
 
+  const feedAds = window.NX_PROMO_FEED && window.PROMO
+    ? NX_PROMO_FEED.create({ page: PROMO_PAGE, tx: tx, build: NX_PROMO_FEED.banner })
+    : null;
+
   const NEWS_LIKED_KEY = "nexus-news-liked-v1";
 
   function readLikedMap() {
@@ -280,6 +284,7 @@
     stateEl.hidden = true;
     feedEl.innerHTML = "";
     for (const post of visible) { feedEl.append(cardFor(post)); }
+    if (feedAds) { feedAds.place(feedEl, ".nw-card"); }
     focusLinkedPost();
   }
 
@@ -367,6 +372,7 @@
       b.classList.toggle("active", on);
       b.setAttribute("aria-pressed", String(on));
     }
+    if (feedAds) { feedAds.reset(); }
     renderFilters();
     render();
 
@@ -489,6 +495,11 @@
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null)
       .then(doc => {
+        if (feedAds) {
+          feedAds.setDoc(doc);
+          feedAds.place(feedEl, ".nw-card");
+        }
+
         if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE);
 
         if (window.NX_PROMO_POPUP) window.NX_PROMO_POPUP.mount({ doc, isAdmin, page: PROMO_PAGE });
