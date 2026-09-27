@@ -479,6 +479,8 @@
       "promo.giveawayCta":      "Участвовать",
       "promo.playerokText":     "Фрукты, мутации, скины и донат — по лучшим ценам на Playerok",
       "promo.playerokCta":      "Перейти на Playerok",
+      "promo.houseSlotText":    "Разместите здесь свою рекламу",
+      "promo.houseSlotCta":     "Написать",
 
       "footer.addLinkBtn":      "＋ ссылка",
       "footer.urlPrompt":       "Ссылка (URL). Можно без https:// — подставится сам:",
@@ -1167,6 +1169,8 @@
       "promo.giveawayCta":      "Enter the giveaway",
       "promo.playerokText":     "Fruits, mutations, skins and top-ups at the best prices on Playerok",
       "promo.playerokCta":      "Go to Playerok",
+      "promo.houseSlotText":    "Place your ad here",
+      "promo.houseSlotCta":     "Contact us",
 
       "footer.addLinkBtn":      "＋ link",
       "footer.urlPrompt":       "Link (URL). You can omit https:// — it is added automatically:",

@@ -160,7 +160,7 @@ $pfTitle = $pfNick !== ''
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=11" />
 <?php if ($pfState === 'card'): ?>
-<link rel="stylesheet" href="css/trading.css?v=4" />
+<link rel="stylesheet" href="css/trading.css?v=5" />
 <?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -575,7 +575,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=59" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=60" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=4" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfTg !== null): ?>

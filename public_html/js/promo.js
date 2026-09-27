@@ -387,6 +387,8 @@
     href: "https://t.me/mksvtnc",
     text: "",
     cta: "",
+    textKey: "promo.houseSlotText",
+    ctaKey: "promo.houseSlotCta",
     erid: "",
     slots: ["strip", "rail", "dock"],
     creatives: {
