@@ -88,6 +88,59 @@
     return (still && creative.anim && creative.poster) ? creative.poster : creative.src;
   }
 
+  function stampFor(campaign, nowMs) {
+    var s = campaign && campaign.stamp;
+    if (!s || typeof s !== "object" || !s.topKey || !s.mainKey) { return null; }
+    var now = Number(nowMs);
+    if (!isFinite(now)) { return null; }
+    var day = String(s.day == null ? "" : s.day).trim();
+    if (day !== "") {
+      var b = dayBoundsMsk(day);
+      if (!b || now < b.startMs || now > b.endMs) { return null; }
+    }
+    return s;
+  }
+
+  function stampOn(img, campaign, slot, t, nowMs) {
+    var doc = root.document;
+    var host = img && img.parentNode;
+    if (!doc || !host) { return null; }
+    var hosted = !!(host.classList && host.classList.contains("ptn-stamp-host"));
+    if (hosted) {
+      var old = host.querySelector(".ptn-stamp");
+      if (old) { host.removeChild(old); }
+    }
+    var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
+    var s = stampFor(campaign, now);
+    var cre = creativeFor(campaign, slot);
+    if (!s || !cre) { return null; }
+    if (!hosted) {
+      var wrap = doc.createElement("span");
+      wrap.className = "ptn-stamp-host";
+      host.insertBefore(wrap, img);
+      wrap.appendChild(img);
+      host = wrap;
+    }
+    var layer = doc.createElement("span");
+    layer.className = "ptn-stamp";
+    var fit = doc.createElement("span");
+    fit.className = "ptn-stamp-fit";
+    var w = Number(cre.w), h = Number(cre.h);
+    fit.style.setProperty("--ptn-r", String(w > 0 && h > 0 ? w / h : 1));
+    var mark = doc.createElement("span");
+    mark.className = "ptn-stamp-mark ptn-stamp-" + slot;
+    [["small", s.topKey], ["b", s.mainKey]].forEach(function (p) {
+      var line = doc.createElement(p[0]);
+      line.setAttribute("data-i18n", p[1]);
+      line.textContent = typeof t === "function" ? t(p[1]) : p[1];
+      mark.appendChild(line);
+    });
+    fit.appendChild(mark);
+    layer.appendChild(fit);
+    host.appendChild(layer);
+    return layer;
+  }
+
   function onPage(campaign, page) {
     if (!campaign) { return false; }
     var list = campaign.pages;
@@ -413,6 +466,7 @@
     cta: "",
     textKey: "promo.giveawayText",
     ctaKey: "promo.giveawayCta",
+    stamp: { day: "2026-10-01", topKey: "promo.stampTop", mainKey: "promo.stampMain" },
 
     erid: "",
     slots: ["strip", "rail", "dock", "popup"],
@@ -488,6 +542,8 @@
     inWindow: inWindow,
     creativeFor: creativeFor,
     srcFor: srcFor,
+    stampFor: stampFor,
+    stampOn: stampOn,
     onPage: onPage,
     eligible: eligible,
     pickWeighted: pickWeighted,

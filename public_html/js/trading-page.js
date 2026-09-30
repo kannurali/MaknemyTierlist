@@ -183,6 +183,7 @@
     img.decoding = "async";
     img.draggable = false;
     el.appendChild(img);
+    promo.stampOn(img, camp, "rail", tx);
 
     const chip = document.createElement("span");
     chip.className = "ptn-chip";

@@ -75,6 +75,7 @@
     if (cre.w) { img.width = cre.w; }
     if (cre.h) { img.height = cre.h; }
     el.appendChild(img);
+    promo.stampOn(img, camp, "dock", t);
 
     if (camp.erid) {
       var erid = document.createElement("span");

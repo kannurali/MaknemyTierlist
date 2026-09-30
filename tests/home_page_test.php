@@ -782,6 +782,22 @@ test('рекламное окно есть на тирлисте, ленте и 
     assert_true(strpos($home, 'js/promo.js') === false, 'на главной нет и модуля рекламы');
 });
 
+// Штамп «итоги сегодня» рисует promo.js на любой странице с рекламой, а
+// стили у него свои: без них разметка штампа вылезла бы голым текстом
+// поверх баннера.
+test('стили штампа подключены везде, где крутится реклама', function () use ($PUB) {
+    foreach (['index.php', 'news.php', 'calculator.php', 'trading.php', 'trade-new.php'] as $f) {
+        $html = read_file_or_fail($PUB . '/' . $f);
+        assert_true(strpos($html, 'js/promo.js') !== false, "$f: модуль рекламы");
+        assert_true(strpos($html, 'css/promo-stamp.css') !== false, "$f: стили штампа");
+    }
+    $css = read_file_or_fail($PUB . '/css/promo-stamp.css');
+    foreach (['popup', 'rail', 'dock', 'strip'] as $slot) {
+        assert_true(strpos($css, '.ptn-stamp-' . $slot) !== false, "у места $slot своё положение штампа");
+    }
+    assert_true(strpos($css, 'prefers-reduced-motion') !== false, 'при «уменьшить движение» штамп не бьёт');
+});
+
 // Объявление о канале — не демо-данные: файл лежит в репозитории и уезжает
 // на сайт. Размер держим в тех же рамках, что и креатив рекламодателя
 // (CREATIVE_SPECS['popup'] в api/lib/images.php), иначе своё объявление

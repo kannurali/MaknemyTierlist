@@ -89,6 +89,7 @@ page_lscache();
 <script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
+<link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <link rel="stylesheet" href="css/trading.css?v=5" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
@@ -272,16 +273,16 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=60" fetchpriority="high"></script>
-  <script src="js/promo.js?v=15" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=61" fetchpriority="high"></script>
+  <script src="js/promo.js?v=16" fetchpriority="high"></script>
 
-  <script src="js/promo-feed.js?v=1" fetchpriority="high"></script>
+  <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=6" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=7" fetchpriority="high"></script>
 
-  <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
+  <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/trade-cards.js?v=4" fetchpriority="high"></script>
-  <script src="js/trading-page.js?v=5" fetchpriority="high"></script>
+  <script src="js/trading-page.js?v=6" fetchpriority="high"></script>
 </body>
 </html>

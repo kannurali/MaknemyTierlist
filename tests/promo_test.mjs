@@ -815,3 +815,39 @@ test('купленная кампания всё ещё бьёт Playerok в о�
     };
     assert.equal(popupPick(doc, {}, now, 0, 'tierlist').id, 'paid');
 });
+
+// ------------------------------------------------ stampFor / штамп «итоги сегодня»
+
+test('штамп розыгрыша виден только в свой день по Москве', () => {
+    const b = dayBoundsMsk(HOUSE_GIVEAWAY.stamp.day);
+    assert.ok(b, 'день штампа — корректная дата');
+    assert.equal(PROMO.stampFor(HOUSE_GIVEAWAY, b.startMs), HOUSE_GIVEAWAY.stamp);
+    assert.equal(PROMO.stampFor(HOUSE_GIVEAWAY, b.endMs), HOUSE_GIVEAWAY.stamp);
+    assert.equal(PROMO.stampFor(HOUSE_GIVEAWAY, b.startMs - 1), null, 'накануне ещё нет');
+    assert.equal(PROMO.stampFor(HOUSE_GIVEAWAY, b.endMs + 1), null, 'назавтра уже нет');
+});
+
+test('без штампа или без ключей текста кампания показывается как раньше', () => {
+    const now = Date.now();
+    assert.equal(PROMO.stampFor(PLAYEROK, now), null);
+    assert.equal(PROMO.stampFor(null, now), null);
+    assert.equal(PROMO.stampFor({ stamp: { topKey: 'a' } }, now), null);
+    assert.equal(PROMO.stampFor({ stamp: { day: '2026-13-40', topKey: 'a', mainKey: 'b' } }, now), null);
+    assert.deepEqual(PROMO.stampFor({ stamp: { topKey: 'a', mainKey: 'b' } }, now), { topKey: 'a', mainKey: 'b' });
+});
+
+test('stampOn без DOM ничего не делает и не падает', () => {
+    const img = { parentNode: {} };
+    assert.equal(PROMO.stampOn(img, HOUSE_GIVEAWAY, 'popup', k => k, Date.now()), null);
+    assert.equal(PROMO.stampOn(null, HOUSE_GIVEAWAY, 'popup', k => k, Date.now()), null);
+});
+
+test('текст штампа переведён на оба языка', () => {
+    const I18N = require('../public_html/js/i18n.js');
+    for (const lang of ['ru', 'en']) {
+        for (const key of [HOUSE_GIVEAWAY.stamp.topKey, HOUSE_GIVEAWAY.stamp.mainKey]) {
+            const s = I18N.t(key, lang);
+            assert.ok(s && s !== key, `${lang}: ${key}`);
+        }
+    }
+});
