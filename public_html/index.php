@@ -556,9 +556,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=16" fetchpriority="high"></script>
+  <script src="js/promo.js?v=17" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=79" fetchpriority="high"></script>
+  <script src="js/app.js?v=80" fetchpriority="high"></script>
 </body>
 </html>

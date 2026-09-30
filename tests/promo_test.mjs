@@ -733,10 +733,15 @@ test('eligible отсекает купленную кампанию на чуж�
 //  Playerok
 // ============================================================================
 
+// Оплаченное время Playerok кончилось 30 сентября: всё, что проверяет его
+// работу, смотрит на день внутри размещения, а не на Date.now().
+const PLAYEROK_RUN = Date.parse('2026-09-20T12:00:00Z');
+
 test('PLAYEROK занимает все четыре места и только тирлист', () => {
     assert.deepEqual(PLAYEROK.slots, ['strip', 'rail', 'dock', 'popup']);
     assert.deepEqual(PLAYEROK.pages, ['tierlist']);
     assert.equal(PLAYEROK.enabled, true);
+    assert.equal(PLAYEROK.end, '2026-09-30');
     assert.equal(safeHref(PLAYEROK.href), 'https://plrk.co/p/Maknemy0509');
     assert.equal(PLAYEROK.advertiser, 'Playerok');
     for (const slot of SLOTS) {
@@ -755,8 +760,8 @@ test('PLAYEROK занимает все четыре места и только �
     }
 });
 
-test('houseFor отдаёт Playerok все места тирлиста', () => {
-    const now = Date.now();
+test('пока размещение шло, houseFor отдавал Playerok все места тирлиста', () => {
+    const now = PLAYEROK_RUN;
     for (const slot of SLOTS) {
         assert.equal(houseFor(slot, now, 'tierlist').id, PLAYEROK.id, `слот ${slot}`);
     }
@@ -772,8 +777,8 @@ test('houseFor оставляет ленте и калькулятору роз�
     }
 });
 
-test('когда розыгрыш кончится, Playerok остаётся на тирлисте', () => {
-    const now = Date.now();
+test('без розыгрыша Playerok в своё время оставался на тирлисте', () => {
+    const now = PLAYEROK_RUN;
     HOUSE_GIVEAWAY.enabled = false;
     try {
         assert.equal(houseFor('rail', now, 'tierlist').id, PLAYEROK.id);
@@ -786,26 +791,24 @@ test('когда розыгрыш кончится, Playerok остаётся н
     }
 });
 
-test('дата окончания выключает Playerok сама, без правки кода', () => {
-    const now = Date.parse('2026-10-05T12:00:00Z');
-    PLAYEROK.end = '2026-10-04';
-    try {
-        assert.equal(houseFor('rail', now, 'tierlist').id, HOUSE_GIVEAWAY.id);
-        assert.equal(houseFor('popup', now, 'tierlist').id, HOUSE_GIVEAWAY.id);
-    } finally {
-        PLAYEROK.end = '';
+test('с 1 октября по Москве все места тирлиста отдаются розыгрышу', () => {
+    const last = dayBoundsMsk('2026-09-30');
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, last.endMs, 'tierlist').id, PLAYEROK.id, `30 сентября ещё Playerok: ${slot}`);
+        assert.equal(houseFor(slot, last.endMs + 1, 'tierlist').id, HOUSE_GIVEAWAY.id, `1 октября уже розыгрыш: ${slot}`);
     }
+    assert.equal(popupPick({}, {}, last.endMs + 1, 0, 'tierlist').id, HOUSE_GIVEAWAY.id);
 });
 
-test('в окне тирлиста Playerok, на остальных страницах — своё объявление', () => {
-    const now = Date.now();
+test('в окне тирлиста шёл Playerok, на остальных страницах — своё объявление', () => {
+    const now = PLAYEROK_RUN;
     assert.equal(popupPick({}, {}, now, 0, 'tierlist').id, PLAYEROK.id);
     assert.equal(popupPick({}, {}, now, 0, 'news').id, HOUSE_GIVEAWAY.id);
     assert.equal(popupPick({}, {}, now, 0, 'calc').id, HOUSE_GIVEAWAY.id);
 });
 
-test('купленная кампания всё ещё бьёт Playerok в окне тирлиста', () => {
-    const now = Date.now();
+test('купленная кампания била Playerok в окне тирлиста', () => {
+    const now = PLAYEROK_RUN;
     const doc = {
         campaigns: [{
             id: 'paid', enabled: true, weight: 1, href: 'https://shop.example/',

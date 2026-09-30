@@ -488,7 +488,7 @@
     enabled: true,
     weight: 1,
     start: "",
-    end: "",
+    end: "2026-09-30",
     href: "https://plrk.co/p/Maknemy0509",
     text: "",
     cta: "",
