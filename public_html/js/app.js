@@ -753,6 +753,11 @@
     return !!link && !!href && link.replace(/\/+$/, "") === href.replace(/\/+$/, "");
   }
 
+  function legacyEnded() {
+    return !!promo && legacySameAs(promo.PLAYEROK)
+      && !(promo.PLAYEROK.enabled && promo.inWindow(promo.PLAYEROK, Date.now()));
+  }
+
   function renderPromoBlock() {
     const list = stripOrder();
     if (list.length) return renderPromoStrip(list);
@@ -761,7 +766,7 @@
       const house = houseFor("strip");
 
       const sellable = house && house.id === promo.HOUSE_SLOT.id;
-      if (house && (legacyAdEmpty() || (!sellable && legacySameAs(house)))) {
+      if (house && (legacyAdEmpty() || legacyEnded() || (!sellable && legacySameAs(house)))) {
         return renderPromoStrip([house]);
       }
     }
