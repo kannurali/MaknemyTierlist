@@ -60,6 +60,7 @@
     writeSeen(root.PROMO.recordPopupShown(readSeen(), camp.id, Date.now()));
 
     $("#promoPopImg").src = src;
+    root.PROMO.stampOn($("#promoPopImg"), camp, "popup", function (k) { return t(k, ""); });
     setCopy($("#promoPopTitle"), camp.textKey, camp.text, null);
 
     var cta = $("#promoPopCta");

@@ -1,0 +1,69 @@
+.ptn-stamp-host {
+  position: relative;
+  display: block;
+  height: 100%;
+  line-height: 0;
+  isolation: isolate;
+}
+
+.ptn-stamp {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  container-type: size;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ptn-stamp-fit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(100cqw, 100cqh * var(--ptn-r, 1));
+  aspect-ratio: var(--ptn-r, 1);
+  translate: -50% -50%;
+  container-type: inline-size;
+}
+
+.ptn-stamp-mark {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%) rotate(var(--rot));
+  display: grid;
+  justify-items: center;
+  gap: .05em;
+  padding: .28em .5em .2em;
+  font-family: var(--display);
+  font-size: var(--f);
+  font-weight: 400;
+  line-height: .95;
+  white-space: nowrap;
+  color: #fff4c8;
+  background: rgba(110, 0, 0, .62);
+  border: max(3px, .16em) double currentColor;
+  border-radius: .14em;
+  text-shadow: 0 .04em 0 rgba(60, 0, 0, .8);
+  box-shadow: 0 0 0 .08em rgba(60, 0, 0, .5), 0 .2em .8em rgba(0, 0, 0, .5);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.4 2.25'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.4 2.25'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: ptnStampSlam 6s cubic-bezier(.2, .9, .3, 1.2) infinite;
+}
+.ptn-stamp-mark small { font-size: .52em; letter-spacing: .12em; }
+.ptn-stamp-mark b { font-weight: 400; letter-spacing: .04em; }
+
+@keyframes ptnStampSlam {
+  0% { scale: 2.3; opacity: 0; }
+  5% { scale: .93; opacity: 1; }
+  8% { scale: 1.04; }
+  11%, 100% { scale: 1; opacity: 1; }
+}
+
+.ptn-stamp-popup { --x: 73%; --y: 58%; --f: 10cqw; --rot: -11deg; }
+.ptn-stamp-rail  { --x: 50%; --y: 92.5%; --f: 16.5cqw; --rot: -8deg; }
+.ptn-stamp-dock  { --x: 84%; --y: 55%; --f: 5.8cqw; --rot: -9deg; }
+.ptn-stamp-strip { --x: 86%; --y: 52%; --f: 4.4cqw; --rot: -9deg; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ptn-stamp-mark { animation: none; }
+}

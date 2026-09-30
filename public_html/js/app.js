@@ -927,6 +927,7 @@
         img.draggable = false;
         img.decoding = "async";
         wrap.appendChild(img);
+        promo.stampOn(img, camp, "strip", tx);
         slide.appendChild(wrap);
       }
 
@@ -1173,6 +1174,7 @@
     if (cre.w) img.width = cre.w;
     if (cre.h) img.height = cre.h;
     dock.appendChild(img);
+    promo.stampOn(img, camp, "dock", tx);
 
     const dockErid = promoEridNode(camp);
     if (dockErid) dock.appendChild(dockErid);
@@ -1212,6 +1214,7 @@
     img.decoding = "async";
     img.loading = "lazy";
     el.appendChild(img);
+    promo.stampOn(img, camp, "rail", tx);
 
     const chip = document.createElement("span");
     chip.className = "ptn-chip";
@@ -1293,6 +1296,7 @@
 
     const pop = $("#promoPop");
     $("#promoPopImg").src = src;
+    promo.stampOn($("#promoPopImg"), camp, "popup", tx);
 
     setPromoCopy($("#promoPopTitle"), camp.textKey, camp.text, null);
     const cta = $("#promoPopCta");

@@ -149,6 +149,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
+<link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -551,13 +552,13 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <script src="js/i18n.js?v=60" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=61" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=15" fetchpriority="high"></script>
+  <script src="js/promo.js?v=16" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=78" fetchpriority="high"></script>
+  <script src="js/app.js?v=79" fetchpriority="high"></script>
 </body>
 </html>

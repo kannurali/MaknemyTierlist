@@ -92,6 +92,11 @@
     return img;
   }
 
+  function stamp(img, camp, env) {
+    var promo = root.PROMO;
+    if (promo && promo.stampOn) { promo.stampOn(img, camp, "strip", env.tx); }
+  }
+
   function erid(camp) {
     return camp && camp.erid ? el("span", "ptn-erid", "erid: " + camp.erid) : null;
   }
@@ -101,7 +106,7 @@
     wrap.setAttribute("aria-label", env.tx("ad.imageAlt"));
     var box = frame(camp, env, "nw-ptn-in");
     var img = picture(camp, env, "nw-ptn-img");
-    if (img) { box.appendChild(img); }
+    if (img) { box.appendChild(img); stamp(img, camp, env); }
     if (camp) {
       box.appendChild(el("span", "ptn-chip", env.tx("ad.chip")));
       var mark = erid(camp);
@@ -123,7 +128,7 @@
       head.appendChild(el("span", "tr-ptn-text", c.text));
       if (box.tagName === "A" && c.cta) { head.appendChild(el("span", "tr-ptn-cta", c.cta)); }
       var img = picture(camp, env, "tr-ptn-img");
-      if (img) { media.appendChild(img); }
+      if (img) { media.appendChild(img); stamp(img, camp, env); }
       var mark = erid(camp);
       if (mark) { media.appendChild(mark); }
     }

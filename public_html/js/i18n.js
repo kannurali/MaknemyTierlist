@@ -477,6 +477,8 @@
 
       "promo.giveawayText":     "Розыгрыш Arcsteel Magnet в нашем телеграм-канале",
       "promo.giveawayCta":      "Участвовать",
+      "promo.stampTop":         "ИТОГИ УЖЕ",
+      "promo.stampMain":        "СЕГОДНЯ",
       "promo.playerokText":     "Фрукты, мутации, скины и донат — по лучшим ценам на Playerok",
       "promo.playerokCta":      "Перейти на Playerok",
       "promo.houseSlotText":    "Разместите здесь свою рекламу",
@@ -1167,6 +1169,8 @@
       "promo.houseTgCta":       "Open the channel",
       "promo.giveawayText":     "Arcsteel Magnet giveaway in our Telegram channel",
       "promo.giveawayCta":      "Enter the giveaway",
+      "promo.stampTop":         "RESULTS",
+      "promo.stampMain":        "TODAY",
       "promo.playerokText":     "Fruits, mutations, skins and top-ups at the best prices on Playerok",
       "promo.playerokCta":      "Go to Playerok",
       "promo.houseSlotText":    "Place your ad here",

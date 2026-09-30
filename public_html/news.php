@@ -216,6 +216,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
+<link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 
 <link rel="stylesheet" href="css/news-design.css?v=21" />
 
@@ -359,20 +360,20 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </div>
   </div>
 
-  <script src="js/i18n.js?v=60" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=61" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=15" fetchpriority="high"></script>
+  <script src="js/promo.js?v=16" fetchpriority="high"></script>
 
-  <script src="js/promo-feed.js?v=1" fetchpriority="high"></script>
+  <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=6" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=7" fetchpriority="high"></script>
 
-  <script src="js/promo-popup.js?v=3" fetchpriority="high"></script>
+  <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=27" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=28" fetchpriority="high"></script>
 </body>
 </html>
 <?php endif; ?>
