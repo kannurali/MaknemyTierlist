@@ -130,6 +130,7 @@
   .mk-top-toggle svg,
   .mk-top-lang,
   .mk-top-brand { transition: none; }
+  .mk-chat-badge { animation: none; }
 }
 
 .mk-top-brand {
@@ -289,6 +290,43 @@
   width: calc(30 * var(--u));
   height: calc(30 * var(--u));
   display: block;
+}
+
+.mk-chat-badge {
+  position: absolute;
+  top: calc(-4 * var(--u));
+  right: calc(-6 * var(--u));
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: max(16px, calc(21 * var(--u)));
+  height: max(16px, calc(21 * var(--u)));
+  padding: 0 max(4px, calc(6 * var(--u)));
+  border-radius: 999px;
+  background: #ff3b4f;
+  color: #fff;
+  font-family: "Oswald", "Arial Narrow", sans-serif;
+  font-size: max(11px, calc(14 * var(--u)));
+  line-height: 1;
+  box-shadow: 0 0 0 2px #05070d, 0 2px 6px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: mk-badge-in .28s cubic-bezier(.3, 1.6, .5, 1);
+}
+@keyframes mk-badge-in {
+  from { transform: scale(.3); opacity: 0; }
+}
+
+.mk-top.has-unread:not(.is-nav-open) .mk-top-toggle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: max(9px, calc(11 * var(--u)));
+  height: max(9px, calc(11 * var(--u)));
+  border-radius: 50%;
+  background: #ff3b4f;
+  box-shadow: 0 0 0 2px #05070d;
 }
 .mk-chat:hover,
 .mk-avatar:hover { filter: brightness(1.12); }

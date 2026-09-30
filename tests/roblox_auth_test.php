@@ -279,6 +279,30 @@ test('без таблицы users сайт не падает', function () use (
     assert_true($s['roblox'], 'кнопка входа при этом остаётся');
 });
 
+// Значок на кнопке чата: в скольких диалогах мне написали. Без таблиц чата
+// ноль, и шапка не падает.
+test('шапка узнаёт, в скольких диалогах непрочитанное', function () use ($CFG_ON) {
+    $db = test_db();
+    foreach (['42', '43', '44'] as $id) {
+        roblox_touch_user($db, ['roblox_id' => $id, 'username' => 'u' . $id, 'display_name' => 'U' . $id,
+                                'avatar_url' => ''], 1000);
+    }
+    $open = function () use ($db) { return $db; };
+    assert_eq(0, handle_session($open, ['user_id' => '42'], $CFG_ON)['unread'], 'чата нет — ноль');
+    assert_eq(0, handle_session($open, [], $CFG_ON)['unread'], 'аноним — ноль');
+
+    $db->exec('CREATE TABLE chat_threads (id INTEGER PRIMARY KEY, a_id INTEGER, b_id INTEGER, last_at INTEGER)');
+    $db->exec('CREATE TABLE chat_messages (id INTEGER PRIMARY KEY, thread_id INTEGER, sender_id INTEGER,
+                                           body TEXT, created_at INTEGER)');
+    $db->exec('CREATE TABLE chat_reads (thread_id INTEGER, user_id INTEGER, last_read_id INTEGER,
+                                        seen_at INTEGER, notified_id INTEGER, PRIMARY KEY (thread_id, user_id))');
+    $db->exec("INSERT INTO chat_threads VALUES (1, 42, 43, 0), (2, 42, 44, 0)");
+    $db->exec("INSERT INTO chat_messages VALUES (1, 1, 43, 'a', 0), (2, 1, 43, 'b', 0), (3, 2, 44, 'c', 0)");
+    assert_eq(2, handle_session($open, ['user_id' => '42'], $CFG_ON)['unread'], 'два диалога, а не три сообщения');
+    $db->exec("INSERT INTO chat_reads VALUES (1, 42, 2, 0, 0)");
+    assert_eq(1, handle_session($open, ['user_id' => '42'], $CFG_ON)['unread'], 'первый прочитан');
+});
+
 test('вход выключен — шапка узнаёт об этом', function () {
     $s = handle_session(function () { return test_db(); }, [], []);
     assert_eq(false, $s['roblox'], 'client_id не прописан');

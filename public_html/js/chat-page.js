@@ -154,6 +154,15 @@
       }
 
       b.appendChild(meta);
+
+      if (t.unread > 0) {
+        b.classList.add('is-unread');
+        var count = document.createElement('span');
+        count.className = 'ct-unread';
+        count.textContent = t.unread > 99 ? '99+' : String(t.unread);
+        b.appendChild(count);
+      }
+
       li.appendChild(b);
       list.appendChild(li);
     });
@@ -776,6 +785,10 @@
       if (!res.ok) { throw new Error('HTTP ' + res.status); }
       var d = await res.json();
       if (mine !== seq) { return; }
+
+      if (d.authed) {
+        document.dispatchEvent(new CustomEvent('mk:unread', { detail: d.unread || 0 }));
+      }
 
       var sig = JSON.stringify([d.thread, d.threads, d.messages, d.ready, d.authed, d.tg]);
       if (quiet && sig === lastSig) { return; }

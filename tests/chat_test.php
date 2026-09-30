@@ -753,4 +753,85 @@ test('собеседник несёт знак у ника из общего с�
     assert_eq(null, chat_user_row($row, CH_NOW)['logo'], 'у остальных знака нет');
 });
 
+// --------------------------------------------------------------------------
+//  Непрочитанное: значок на кнопке чата в шапке
+// --------------------------------------------------------------------------
+
+// docs/migrations/2026-09-23-telegram.sql — отметки «прочитано».
+function ch_reads(PDO $pdo): PDO {
+    $pdo->exec('CREATE TABLE chat_reads (
+        thread_id    INTEGER NOT NULL,
+        user_id      INTEGER NOT NULL,
+        last_read_id INTEGER NOT NULL DEFAULT 0,
+        seen_at      INTEGER NOT NULL DEFAULT 0,
+        notified_id  INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (thread_id, user_id)
+    )');
+    return $pdo;
+}
+
+test('непрочитанное — только чужие сообщения после отметки', function () {
+    $pdo = ch_reads(ch_db());
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A'); $b = ch_user($pdo, '33', 'B');
+    $c  = ch_user($pdo, '44', 'C');
+    $t  = ch_thread($pdo, $me, $a);
+    $u  = ch_thread($pdo, $me, $b);
+    $v  = ch_thread($pdo, $a, $c);
+    ch_msg($pdo, $t, $me, 'моё', CH_NOW);
+    $seen = ch_msg($pdo, $t, $a, 'раз', CH_NOW + 1);
+    chat_mark_read($pdo, $t, $me, $seen, CH_NOW + 2);
+    ch_msg($pdo, $t, $a, 'два', CH_NOW + 3);
+    ch_msg($pdo, $t, $a, 'три', CH_NOW + 4);
+    ch_msg($pdo, $u, $me, 'только я', CH_NOW);
+    ch_msg($pdo, $v, $c, 'чужой диалог', CH_NOW);
+
+    assert_eq([$t => 2], chat_unread($pdo, $me), 'два после отметки, своё и чужие ветки не в счёт');
+    assert_eq([$t => 1, $v => 1], chat_unread($pdo, $a), 'у собеседника — моё и от третьего');
+    assert_eq([], chat_unread($pdo, ''), 'аноним');
+});
+
+test('удалённое у себя непрочитанным не считается', function () {
+    $pdo = ch_reads(ch_db());
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    $old = ch_msg($pdo, $t, $a, 'старое', CH_NOW);
+    chat_clear($pdo, $me, $t, $old, CH_NOW + 1);
+    assert_eq([], chat_unread($pdo, $me), 'стёртое не всплывает счётчиком');
+    ch_msg($pdo, $t, $a, 'новое', CH_NOW + 2);
+    assert_eq([$t => 1], chat_unread($pdo, $me), 'новое после удаления — считается');
+});
+
+test('без chat_reads значка нет, без chat_clears считается без неё', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A');
+    $t  = ch_thread($pdo, $me, $a);
+    ch_msg($pdo, $t, $a, 'привет', CH_NOW);
+    assert_eq([], chat_unread($pdo, $me), 'не от чего считать — значка нет');
+    assert_eq([], chat_unread(test_db(), $me), 'и без таблиц чата');
+
+    ch_reads($pdo)->exec('DROP TABLE chat_clears');
+    assert_eq([$t => 1], chat_unread($pdo, $me), 'без удалений считается');
+});
+
+test('открытая ветка в ответе уже прочитана', function () {
+    $pdo = ch_reads(ch_db());
+    $me = ch_user($pdo, '11', 'ME'); $a = ch_user($pdo, '22', 'A'); $b = ch_user($pdo, '33', 'B');
+    $t  = ch_thread($pdo, $me, $a, CH_NOW + 10);
+    $u  = ch_thread($pdo, $me, $b, CH_NOW);
+    ch_msg($pdo, $t, $a, 'раз', CH_NOW + 5);
+    ch_msg($pdo, $u, $b, 'два', CH_NOW);
+    ch_msg($pdo, $u, $b, 'три', CH_NOW + 1);
+
+    [, $p] = handle_chat($pdo, ch_session($me), null, CH_NOW + 20);
+    assert_eq($t, $p['thread'], 'открылась свежая');
+    assert_eq([$t => 0, $u => 2], array_column($p['threads'], 'unread', 'id'), 'по веткам');
+    assert_eq(1, $p['unread'], 'в шапку — один диалог');
+
+    [, $p] = handle_chat($pdo, ch_session($me), (string)$u, CH_NOW + 30);
+    assert_eq(0, $p['unread'], 'открыл вторую — читать нечего');
+
+    [, $anon] = handle_chat($pdo, [], null, CH_NOW);
+    assert_eq(0, $anon['unread'], 'анониму ноль');
+});
+
 run_tests();

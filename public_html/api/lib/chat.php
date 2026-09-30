@@ -400,6 +400,53 @@ function chat_mark_read(PDO $pdo, int $threadId, string $me, int $lastId, int $n
 }
 
 /**
+ * Непрочитанное: thread_id → сколько сообщений собеседника пришло после
+ * отметки chat_mark_read. Ветки, где всё прочитано, в ответ не попадают, так
+ * что count() результата — число диалогов, где мне написали. Его показывает
+ * значок на кнопке чата в шапке.
+ *
+ * Удалённое у себя (chat_clears) непрочитанным не считается: человек стёр
+ * переписку, и возвращать её счётчиком незачем.
+ *
+ * Без таблицы chat_reads считать не от чего — непрочитанной оказалась бы вся
+ * переписка разом. Тогда [] и значка нет, как до миграции. Без chat_clears
+ * считаем без неё.
+ */
+function chat_unread(PDO $pdo, string $me): array {
+    if ($me === '') { return []; }
+    $sql = 'SELECT m.thread_id, COUNT(*) AS n
+              FROM chat_threads t
+              JOIN chat_messages m ON m.thread_id = t.id
+         LEFT JOIN chat_reads r ON r.thread_id = t.id AND r.user_id = :me
+                   %s
+             WHERE (t.a_id = :me OR t.b_id = :me)
+               AND m.sender_id <> :me
+               AND m.id > COALESCE(r.last_read_id, 0)
+                   %s
+          GROUP BY m.thread_id';
+    $variants = [
+        sprintf($sql, 'LEFT JOIN chat_clears c ON c.thread_id = t.id AND c.user_id = :me',
+                      'AND m.id > COALESCE(c.cleared_id, 0)'),
+        sprintf($sql, '', ''),
+    ];
+    foreach ($variants as $q) {
+        try {
+            $st = $pdo->prepare($q);
+            $st->execute([':me' => $me]);
+            $out = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $out[(int)$r['thread_id']] = (int)$r['n'];
+            }
+            return $out;
+        } catch (PDOException $e) {
+            // нет chat_clears — второй вариант без неё; нет chat_reads или
+            // самого чата — падает и он
+        }
+    }
+    return [];
+}
+
+/**
  * Удалить диалог у себя. [код, тело] — как у остальных обработчиков.
  *
  * Удаляется всё, что было в ветке до $upto включительно — последнего

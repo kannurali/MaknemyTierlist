@@ -322,6 +322,73 @@
     window.addEventListener("resize", function () { if (menuOpen) setMenuOpen(false); });
   }
 
+  var chatLink = head ? head.querySelector(".mk-chat") : null;
+  var unreadBadge = null;
+  var unreadOn = false;
+  var unreadPushed = false;
+  var unreadTimer = 0;
+  var unreadAt = 0;
+  var UNREAD_MS = 60000;
+  var UNREAD_WAKE_MS = 15000;
+
+  function setUnread(n) {
+    if (!chatLink) return;
+    n = Math.max(0, Math.floor(Number(n) || 0));
+    head.classList.toggle("has-unread", n > 0);
+    if (!n) {
+      if (unreadBadge && unreadBadge.parentNode) unreadBadge.parentNode.removeChild(unreadBadge);
+      return;
+    }
+    if (!unreadBadge) {
+      unreadBadge = document.createElement("span");
+      unreadBadge.className = "mk-chat-badge";
+      unreadBadge.setAttribute("aria-hidden", "true");
+    }
+    unreadBadge.textContent = n > 9 ? "9+" : String(n);
+    if (!unreadBadge.parentNode) chatLink.appendChild(unreadBadge);
+  }
+
+  function unreadLater() {
+    clearTimeout(unreadTimer);
+    if (!unreadOn || unreadPushed || document.hidden) return;
+    unreadTimer = setTimeout(unreadNow, UNREAD_MS);
+  }
+
+  function unreadNow() {
+    clearTimeout(unreadTimer);
+    if (!unreadOn || unreadPushed || document.hidden) return;
+    unreadAt = Date.now();
+    fetch(AUTH_STATE, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s || !s.user) { unreadOn = false; setUnread(0); return; }
+        if (!unreadPushed) setUnread(s.unread);
+      })
+      .catch(function () {})
+      .then(unreadLater);
+  }
+
+  function startUnread(n) {
+    if (!chatLink || unreadOn) return;
+    unreadOn = true;
+    unreadAt = Date.now();
+    if (!unreadPushed) setUnread(n);
+    unreadLater();
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!unreadOn) return;
+    if (document.hidden) { clearTimeout(unreadTimer); return; }
+    if (Date.now() - unreadAt > UNREAD_WAKE_MS) unreadNow();
+    else unreadLater();
+  });
+
+  document.addEventListener("mk:unread", function (e) {
+    unreadPushed = true;
+    clearTimeout(unreadTimer);
+    setUnread(e.detail);
+  });
+
   var avatarBtn = head ? head.querySelector(".mk-avatar") : null;
   if (avatarBtn && window.fetch && auth) {
     reportLogin(takeLoginFlag());
@@ -330,7 +397,10 @@
       .then(function (s) {
         var invited = takeInvite();
         if (!s || !s.roblox) return;
-        if (s.user) initUserMenu(avatarBtn, s.user, s.admin ? "admin" : s.moderator ? "support" : "");
+        if (s.user) {
+          initUserMenu(avatarBtn, s.user, s.admin ? "admin" : s.moderator ? "support" : "");
+          startUnread(s.unread);
+        }
         else if (s.roblox_public || invited) toLoginLink(avatarBtn);
       })
       .catch(function () {});
