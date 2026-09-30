@@ -143,10 +143,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/base.css?v=13" />
 <link rel="stylesheet" href="css/styles.css?v=60" />
 
-<link rel="stylesheet" href="css/topbar.css?v=13" />
+<link rel="stylesheet" href="css/topbar.css?v=14" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=13" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 

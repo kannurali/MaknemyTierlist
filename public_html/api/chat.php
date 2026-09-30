@@ -21,6 +21,7 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
         return [200, [
             'ok' => true, 'ready' => chat_ready($pdo), 'authed' => false,
             'me' => '', 'threads' => [], 'thread' => 0, 'messages' => [], 'review' => null,
+            'unread' => 0,
             'tg' => tg_status($pdo, $tg, ''),
         ]];
     }
@@ -60,6 +61,12 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
         chat_mark_read($pdo, $thread, $me, $last, $now);
     }
 
+    // Непрочитанное считается ПОСЛЕ отметки: открытая ветка уже прочитана, и
+    // значок в шапке не должен показывать её ещё десять секунд до перечитки.
+    $unread = chat_unread($pdo, $me);
+    foreach ($threads as &$t) { $t['unread'] = $unread[$t['id']] ?? 0; }
+    unset($t);
+
     return [200, [
         'ok'       => true,
         'ready'    => chat_ready($pdo),
@@ -69,6 +76,7 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
         'thread'   => $thread,
         'messages' => $messages,
         'review'   => $thread ? chat_my_review($pdo, $me, $thread) : null,
+        'unread'   => count($unread),
         'tg'       => tg_status($pdo, $tg, $me),
     ]];
 }

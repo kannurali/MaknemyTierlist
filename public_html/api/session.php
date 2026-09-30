@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/roblox_oauth.php';
+require_once __DIR__ . '/lib/chat.php';
 
 /**
  * Кто сейчас на сайте. Одна ручка на всё состояние входа:
@@ -13,6 +14,9 @@ require_once __DIR__ . '/lib/roblox_oauth.php';
  *            client_id не прописан, кнопка вела бы на 503.
  *   roblox_public — открыт ли вход всем. Пока нет, кнопку видят только
  *            пришедшие по ссылке с ?signin (см. roblox_login_public()).
+ *   unread — в скольких диалогах мне написали и я ещё не прочитал
+ *            (chat_unread). По нему шапка ставит значок на кнопку чата и,
+ *            пока вкладка открыта, раз в минуту перечитывает эту ручку.
  *
  * База открывается через $pdo() и только когда в сессии есть вошедший.
  * Ручку теперь дёргает шапка на каждой странице сайта, а не одна админка,
@@ -34,14 +38,16 @@ require_once __DIR__ . '/lib/roblox_oauth.php';
  * проверить, кроме как ждать минуту в тесте.
  */
 function handle_session(callable $pdo, array $session, array $cfg, ?int $now = null): array {
-    $user = null;
-    $uid  = (string)($session['user_id'] ?? '');
+    $user   = null;
+    $unread = 0;
+    $uid    = (string)($session['user_id'] ?? '');
     if ($uid !== '') {
         try {
             $conn = $pdo();
             $user = roblox_load_user($conn, $uid);
             if ($user !== null) {
                 roblox_touch_seen($conn, $user, $now ?? time());
+                $unread = count(chat_unread($conn, $uid));
             }
         } catch (PDOException $e) {
             // Таблицы users нет (не выполнен schema.sql) — считаем, что никто
@@ -61,6 +67,7 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
         'user'          => $user,
         'roblox'        => roblox_oauth_enabled($cfg),
         'roblox_public' => roblox_login_public($cfg),
+        'unread'        => $unread,
     ];
 }
 

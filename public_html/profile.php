@@ -154,9 +154,9 @@ $pfTitle = $pfNick !== ''
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <link rel="stylesheet" href="css/base.css?v=13" />
-<link rel="stylesheet" href="css/topbar.css?v=13" />
+<link rel="stylesheet" href="css/topbar.css?v=14" />
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=13" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/profile.css?v=11" />
 <?php if ($pfState === 'card'): ?>

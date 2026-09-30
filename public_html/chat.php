@@ -89,13 +89,13 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <link rel="stylesheet" href="css/base.css?v=13" />
 
-<link rel="stylesheet" href="css/topbar.css?v=13" />
+<link rel="stylesheet" href="css/topbar.css?v=14" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=13" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/chat.css?v=10" />
+<link rel="stylesheet" href="css/chat.css?v=11" />
 
 
 
@@ -340,7 +340,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
   <script src="js/i18n.js?v=60" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=16" defer></script>
+  <script src="js/chat-page.js?v=17" defer></script>
 
 
 </body>
