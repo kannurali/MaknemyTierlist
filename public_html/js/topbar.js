@@ -10,6 +10,7 @@
     "topbar.showNav": "Показать разделы",
     "topbar.hideNav": "Скрыть разделы",
 
+    "lang.switch": "Язык интерфейса",
     "user.login": "Войти через Roblox",
     "user.menu": "Меню профиля",
     "user.mine": "Мой профиль",
@@ -168,19 +169,14 @@
     return true;
   }
 
-  function toLoginLink(btn) {
+  function addLoginItem(menu) {
     var a = document.createElement("a");
-    a.className = btn.className;
+    a.className = "mk-user-item mk-user-login";
+    a.setAttribute("role", "menuitem");
     a.href = auth.startUrl();
-    a.innerHTML = btn.innerHTML;
-    var label = tx("user.login");
-    a.setAttribute("aria-label", label);
-    a.setAttribute("title", label);
-
-    a.setAttribute("data-i18n-label", "user.login");
-    a.setAttribute("data-i18n-title", "user.login");
-    btn.parentNode.replaceChild(a, btn);
-    return a;
+    a.textContent = tx("user.login");
+    a.setAttribute("data-i18n", "user.login");
+    menu.insertBefore(a, menu.firstChild);
   }
 
   var PANEL = {
@@ -188,12 +184,31 @@
     support: { href: "/admin/support", key: "user.support" }
   };
 
-  function buildMenu(user, panel) {
+  var langBox = document.getElementById("langSwitch");
+
+  function buildMenu() {
     var menu = document.createElement("div");
     menu.className = "mk-user-menu";
     menu.setAttribute("role", "menu");
     menu.hidden = true;
 
+    if (langBox) {
+      var lang = document.createElement("div");
+      lang.className = "mk-user-lang";
+      var label = document.createElement("span");
+      label.className = "mk-user-lang-label";
+      label.textContent = tx("lang.switch");
+      label.setAttribute("data-i18n", "lang.switch");
+      lang.appendChild(label);
+      lang.appendChild(langBox);
+      menu.appendChild(lang);
+    }
+
+    document.body.appendChild(menu);
+    return menu;
+  }
+
+  function fillUserMenu(menu, user, panel) {
     var name = document.createElement("div");
     name.className = "mk-user-name";
 
@@ -258,25 +273,15 @@
       auth.logout();
     });
 
-    menu.appendChild(name);
-    menu.appendChild(mine);
-    menu.appendChild(prof);
-    if (desk) menu.appendChild(desk);
+    var first = menu.firstChild;
+    menu.insertBefore(name, first);
+    menu.insertBefore(mine, first);
+    menu.insertBefore(prof, first);
+    if (desk) menu.insertBefore(desk, first);
     menu.appendChild(out);
-    document.body.appendChild(menu);
-    return menu;
   }
 
-  function initUserMenu(btn, user, panel) {
-    btn.removeAttribute("data-soon");
-    var label = tx("user.menu");
-    btn.setAttribute("aria-label", label);
-    btn.setAttribute("title", label);
-    btn.setAttribute("data-i18n-label", "user.menu");
-    btn.setAttribute("data-i18n-title", "user.menu");
-    btn.setAttribute("aria-haspopup", "menu");
-    btn.setAttribute("aria-expanded", "false");
-
+  function showUser(btn, menu, user, panel) {
     if (user.avatar) {
       var img = document.createElement("img");
       img.className = "mk-avatar-img";
@@ -288,8 +293,20 @@
       btn.textContent = "";
       btn.appendChild(img);
     }
+    fillUserMenu(menu, user, panel);
+  }
 
-    var menu = buildMenu(user, panel);
+  function initMenu(btn) {
+    btn.removeAttribute("data-soon");
+    var label = tx("user.menu");
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("title", label);
+    btn.setAttribute("data-i18n-label", "user.menu");
+    btn.setAttribute("data-i18n-title", "user.menu");
+    btn.setAttribute("aria-haspopup", "menu");
+    btn.setAttribute("aria-expanded", "false");
+
+    var menu = buildMenu();
     var menuOpen = false;
 
     function place() {
@@ -320,6 +337,7 @@
 
     window.addEventListener("scroll", function () { if (menuOpen) setMenuOpen(false); }, { passive: true });
     window.addEventListener("resize", function () { if (menuOpen) setMenuOpen(false); });
+    return menu;
   }
 
   var chatLink = head ? head.querySelector(".mk-chat") : null;
@@ -390,6 +408,7 @@
   });
 
   var avatarBtn = head ? head.querySelector(".mk-avatar") : null;
+  var avatarMenu = avatarBtn ? initMenu(avatarBtn) : null;
   if (avatarBtn && window.fetch && auth) {
     reportLogin(takeLoginFlag());
     fetch(AUTH_STATE, { cache: "no-store" })
@@ -398,10 +417,10 @@
         var invited = takeInvite();
         if (!s || !s.roblox) return;
         if (s.user) {
-          initUserMenu(avatarBtn, s.user, s.admin ? "admin" : s.moderator ? "support" : "");
+          showUser(avatarBtn, avatarMenu, s.user, s.admin ? "admin" : s.moderator ? "support" : "");
           startUnread(s.unread);
         }
-        else if (s.roblox_public || invited) toLoginLink(avatarBtn);
+        else if (s.roblox_public || invited) addLoginItem(avatarMenu);
       })
       .catch(function () {});
   }

@@ -89,10 +89,10 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <link rel="stylesheet" href="css/base.css?v=13" />
 
-<link rel="stylesheet" href="css/topbar.css?v=14" />
+<link rel="stylesheet" href="css/topbar.css?v=15" />
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=14" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/chat.css?v=11" />
@@ -141,6 +141,12 @@ header('Cache-Control: no-cache, must-revalidate');
           <a class="mk-pill" href="/calculator">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
+          </a>
+        </li>
+        <li>
+          <a class="mk-pill" href="/stock">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M2.4 7.6V16.1C2.4 17.15 3.25 18.05 4.3 18.05H14.7C15.75 18.05 16.6 17.15 16.6 16.1V7.6M7.15 18.05V13.3C7.15 12.25 8 11.4 9.05 11.4H9.95C11 11.4 11.85 12.25 11.85 13.3V18.05M0.95 5.7L2.6 1.9C2.85 1.3 3.45 0.95 4.1 0.95H14.9C15.55 0.95 16.15 1.3 16.4 1.9L18.05 5.7C18.05 7 16.95 8.1 15.65 8.1C14.3 8.1 13.25 7 13.25 5.7C13.25 7 12.15 8.1 10.85 8.1H8.15C6.85 8.1 5.75 7 5.75 5.7C5.75 7 4.7 8.1 3.35 8.1C2.05 8.1 0.95 7 0.95 5.7Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.stock">Сток</span>
           </a>
         </li>
         <li>
@@ -338,7 +344,7 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=61" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=62" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
   <script src="js/chat-page.js?v=17" defer></script>
 

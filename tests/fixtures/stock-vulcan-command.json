@@ -1,0 +1,51 @@
+{
+ "id": "1555358551919300713",
+ "type": 20,
+ "content": "",
+ "timestamp": "2026-10-01T23:19:35.942000+00:00",
+ "flags": 0,
+ "webhook_id": "1073950529140568074",
+ "embeds": [
+  {
+   "type": "rich",
+   "color": 16580352,
+   "fields": [
+    {
+     "name": "**NORMAL STOCK**",
+     "value": "<:spike:1300167770629214298> **Spike • <:money:1456628926276173845>`180,000`**\n<:ice:1300186837402521621> **Ice • <:money:1456628926276173845>`350,000`**\n<:light:1300167678287417495> **Light • <:money:1456628926276173845>`650,000`**\n<:gravity:1300186836014071848> **Gravity • <:money:1456628926276173845>`2,500,000`**\n\n-# <:clock:1182328726185312336> **Stock Change in** - <t:1790899211:R>",
+     "inline": false
+    },
+    {
+     "name": "**MIRAGE STOCK**",
+     "value": "<:bomb:1300167876149248021> **Bomb • <:money:1456628926276173845>`80,000`**\n<:dark:1300186771899945030> **Dark • <:money:1456628926276173845>`500,000`**\n<:diamond:1300186775448195184> **Diamond • <:money:1456628926276173845>`600,000`**\n<:rubber:1300167727003996321> **Rubber • <:money:1456628926276173845>`750,000`**\n<:buddha:1300167877269389425> **Buddha • <:money:1456628926276173845>`1,200,000`**\n<:pain:1300167735141072937> **Pain • <:money:1456628926276173845>`2,300,000`**\n\n-# <:clock:1182328726185312336> **Stock Change in** - <t:1790899272:R>",
+     "inline": false
+    }
+   ],
+   "author": {
+    "name": "Vulcan • Live Stock Bot",
+    "icon_url": "https://i.imgur.com/5v7ra2W.gif"
+   },
+   "content_scan_version": 4
+  }
+ ],
+ "components": [
+  {
+   "type": 1,
+   "id": 1,
+   "components": [
+    {
+     "type": 2,
+     "id": 2,
+     "style": 5,
+     "label": "Join Blox Fruits Trading Server",
+     "url": "https://discord.gg/bloxfruit"
+    }
+   ]
+  }
+ ],
+ "author": {
+  "id": "1073950529140568074",
+  "username": "Vulcan",
+  "bot": true
+ }
+}

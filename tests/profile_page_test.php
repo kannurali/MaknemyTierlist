@@ -638,7 +638,7 @@ test('в меню пользователя есть пункт «Мой проф
     assert_true(strpos($js, 'mine.href = PROFILE_PATH;') !== false, 'пункт ведёт на /profile');
     assert_true(strpos($js, 'mine.setAttribute("data-i18n", "user.mine");') !== false,
         'подпись пункта переводится');
-    assert_true(strpos($js, 'menu.appendChild(mine);') !== false, 'пункт попадает в меню');
+    assert_true(strpos($js, 'menu.insertBefore(mine, first);') !== false, 'пункт попадает в меню');
 
     // Ключ обязан быть в трёх местах: в обоих языках словаря и в FALLBACK
     // самого topbar.js. Без словаря I18N.t вернёт сам ключ строкой, без
@@ -649,11 +649,13 @@ test('в меню пользователя есть пункт «Мой проф
 
     // Порядок: свой профиль выше внешней ссылки на Roblox, выход — последним
     // и отбит волоском (деструктивное действие не должно стоять вплотную к
-    // навигационным).
-    $mine = strpos($js, 'menu.appendChild(mine);');
-    $prof = strpos($js, 'menu.appendChild(prof);');
+    // навигационным). Меню строится раньше, чем приходит сессия, и в нём уже
+    // лежит переключатель языка: пункты вошедшего встают ПЕРЕД ним, выход —
+    // после.
+    $mine = strpos($js, 'menu.insertBefore(mine, first);');
+    $prof = strpos($js, 'menu.insertBefore(prof, first);');
     $out  = strpos($js, 'menu.appendChild(out);');
-    assert_true($mine < $prof && $prof < $out, 'порядок пунктов: свой, Roblox, выход');
+    assert_true($mine !== false && $mine < $prof && $prof < $out, 'порядок пунктов: свой, Roblox, выход');
     assert_true(strpos($js, 'out.className = "mk-user-item mk-user-out";') !== false,
         'у выхода свой класс');
     assert_true(strpos(pf_read($PUB . '/css/topbar.css'), '.mk-user-out') !== false,
