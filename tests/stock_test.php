@@ -272,7 +272,7 @@ test('канал читается с последнего прочитанног
     assert_eq('/channels/' . SK_CHANNEL . '/messages?limit=50', $paths[0], 'первый раз — последние сообщения');
     assert_eq(['normal', 'mirage'], array_keys($r['new']), 'обе смены новые и свежие');
 
-    stock_pull($pdo, $sc, sk_discord([], $paths), SK_NOW + 60);
+    stock_pull($pdo, $sc, sk_discord([], $paths), SK_NOW + 60, true);
     assert_eq('/channels/' . SK_CHANNEL . '/messages?limit=50&after=1555358551919300713', $paths[1],
         'дальше — только после последнего прочитанного');
 });
@@ -291,6 +291,46 @@ test('Discord ответил ошибкой — курсор не двигает
     $r = stock_pull($pdo, stock_config(sk_cfg()), sk_discord([], $paths, 429), SK_NOW);
     assert_eq('discord_429', $r['error'], 'ошибка видна');
     assert_eq('0', stock_feed_get($pdo)['last_id'], 'курсор на месте');
+});
+
+// Сток меняется по расписанию, и время смены известно точно: между сменами
+// бот в Discord не ходит, с наступления смены — ходит, пока не придёт новый.
+test('бот спит до смены и просыпается в её момент', function () {
+    $ends  = SK_NOW + 3600;
+    $stock = [
+        'normal' => ['fruits' => [], 'ends' => $ends + 7200],
+        'mirage' => ['fruits' => [], 'ends' => $ends],
+    ];
+    assert_eq(false, stock_due($stock, $ends - 60, 0), 'за минуту до смены — спит');
+    assert_eq(true, stock_due($stock, $ends, $ends - 10), 'смена наступила — идёт, даже если только что ходил');
+    assert_eq(true, stock_due($stock, $ends + STOCK_WINDOW, $ends + STOCK_WINDOW - 60), 'ждёт новый сток до конца окна');
+    assert_eq(false, stock_due($stock, $ends + STOCK_WINDOW + 60, $ends + STOCK_WINDOW), 'Vulcan молчит — не каждую минуту');
+    assert_eq(true, stock_due($stock, $ends + STOCK_WINDOW + 400, $ends + STOCK_WINDOW), '…а раз в пять минут');
+});
+
+test('без расписания бот не засыпает навсегда', function () {
+    $none = ['normal' => null, 'mirage' => null];
+    assert_eq(true, stock_due($none, SK_NOW, SK_NOW), 'стока нет совсем — идёт сразу');
+    $half = ['normal' => ['fruits' => [], 'ends' => SK_NOW + 3600], 'mirage' => null];
+    assert_eq(false, stock_due($half, SK_NOW, SK_NOW - 60), 'одного вида нет — не каждую минуту');
+    assert_eq(true, stock_due($half, SK_NOW, SK_NOW - 400), '…а раз в пять минут');
+    $far = ['normal' => ['fruits' => [], 'ends' => SK_NOW + 86400], 'mirage' => ['fruits' => [], 'ends' => SK_NOW + 86400]];
+    assert_eq(true, stock_due($far, SK_NOW, SK_NOW - 400), 'смена неправдоподобно далеко — заглядывает раз в пять минут');
+});
+
+test('между сменами проход в Discord не ходит, -f ходит', function () {
+    $pdo = sk_db();
+    $paths = [];
+    $sc = stock_config(sk_cfg());
+    stock_pull($pdo, $sc, sk_discord([sk_command('900', SK_NOW - 30)], $paths), SK_NOW);
+    $r = stock_pull($pdo, $sc, sk_discord([], $paths), SK_NOW + 60);
+    assert_eq(true, $r['skipped'] ?? false, 'пропущено');
+    assert_eq(1, count($paths), 'второго запроса в Discord не было');
+    stock_pull($pdo, $sc, sk_discord([], $paths), SK_NOW + 60, true);
+    assert_eq(2, count($paths), 'с -f — был');
+    $r = stock_pull($pdo, $sc, sk_discord([], $paths), 1790899272 + 30);
+    assert_eq(false, isset($r['skipped']), 'смена Mirage наступила — идёт');
+    assert_eq(3, count($paths), 'запрос ушёл');
 });
 
 // --------------------------------------------------------------------------
@@ -326,7 +366,8 @@ test('о смене пишут только тем, чей фрукт в ней 
 
     $log = [];
     $r = stock_pull_and_notify($pdo, sk_cfg(), SK_NOW + 120,
-        sk_discord([sk_command('601', SK_NOW + 100)], $paths), sk_telegram($log), sk_no_sleep());
+        sk_discord([sk_command('601', SK_NOW + 100)], $paths), sk_telegram($log), sk_no_sleep(), true);
+    assert_eq(1, $r['read'], 'сообщение прочитано');
     assert_eq(0, $r['sent'], 'ответ на /stock посреди смены — второй рассылки нет');
     assert_eq([], $log, 'Telegram молчит');
 });

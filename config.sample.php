@@ -47,8 +47,9 @@ return [
 
     // --- Сток фруктов из Discord (api/lib/stock.php) -------------------
     // Сток публикует чужой бот Vulcan в канал нашего Discord-сервера, а наш
-    // бот (Fool's eyes) раз в минуту читает этот канал — cron в cPanel:
-    //   * * * * * /usr/local/bin/php /home/maknemyt/public_html/api/stock_pull.php >/dev/null 2>&1
+    // бот (Fool's eyes) читает этот канал в момент смены стока — cron в cPanel
+    // будит его в первые 15 минут каждого часа, в остальное время он спит:
+    //   0-15 * * * * /usr/local/bin/php /home/maknemyt/public_html/api/stock_pull.php >/dev/null 2>&1
     // Пустой токен или канал = сбор выключен, /stock показывает последний
     // известный сток.
     // Токен: discord.com/developers/applications → приложение → Bot → Reset Token.

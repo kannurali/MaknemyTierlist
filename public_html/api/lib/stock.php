@@ -48,6 +48,15 @@ const STOCK_FRESH = 900;
 // предел только против запроса, который попытается раздуть таблицу.
 const STOCK_WATCH_MAX = 60;
 
+// Сколько после наступившей смены (секунды) бот ходит в Discord на каждом
+// запуске cron, дожидаясь нового стока. Vulcan присылает его через несколько
+// секунд или пару минут; 20 минут — с большим запасом.
+const STOCK_WINDOW = 1200;
+
+// Если Vulcan молчит дольше STOCK_WINDOW (лёг, сменил канал), бот не долбит
+// Discord каждую минуту, а заглядывает раз в столько секунд.
+const STOCK_SLOW = 300;
+
 // Сколько сообщений канала забирается за раз. Канал пишется раз в два часа,
 // так что столько набирается только после долгого простоя.
 const STOCK_PULL_LIMIT = 50;
@@ -264,12 +273,43 @@ function stock_write(PDO $pdo, string $kind, array $fruits, ?int $ends, string $
 
 // Докуда прочитан канал и о каком сообщении админа уже предупредили.
 function stock_feed_get(PDO $pdo): array {
-    $row = $pdo->query('SELECT last_id, alerted_id FROM stock_feed WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+    $row = $pdo->query('SELECT last_id, alerted_id, polled_at FROM stock_feed WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
     if (!$row) {
         $pdo->exec("INSERT INTO stock_feed (id, last_id, alerted_id, polled_at) VALUES (1, '0', '0', 0)");
-        return ['last_id' => '0', 'alerted_id' => '0'];
+        return ['last_id' => '0', 'alerted_id' => '0', 'polled_at' => 0];
     }
-    return ['last_id' => (string)$row['last_id'], 'alerted_id' => (string)$row['alerted_id']];
+    return ['last_id' => (string)$row['last_id'], 'alerted_id' => (string)$row['alerted_id'], 'polled_at' => (int)$row['polled_at']];
+}
+
+/**
+ * Пора ли идти в Discord. Сток меняется по расписанию, и время ближайшей
+ * смены у нас есть точное — Vulcan кладёт его в каждый пост. Поэтому бот
+ * «спит», пока смена не наступила, а с её наступления ходит в канал на каждом
+ * запуске cron, пока не придёт новый сток: он сдвигает время смены вперёд, и
+ * бот снова засыпает до следующей.
+ *
+ * Ходить на каждом запуске, когда:
+ *  - стока нет совсем (первый запуск) — расписание неизвестно;
+ *  - ближайшая смена наступила не дальше STOCK_WINDOW назад.
+ * Раз в STOCK_SLOW — когда смена наступила давно, а нового стока всё нет
+ * (Vulcan молчит); когда смена неправдоподобно далеко (кривая метка) — иначе
+ * бот проспал бы её навсегда; когда одного из видов ещё не было или у него
+ * нет времени смены.
+ */
+function stock_due(array $stock, int $now, int $polledAt): bool {
+    $next = null;
+    $unknown = false;
+    foreach (STOCK_KINDS as $kind) {
+        $s = $stock[$kind] ?? null;
+        if ($s === null || empty($s['ends'])) { $unknown = true; continue; }
+        $next = $next === null ? (int)$s['ends'] : min($next, (int)$s['ends']);
+    }
+    if ($next === null) { return true; }
+    $slow = $now - $polledAt >= STOCK_SLOW;
+    if ($next > $now + max(STOCK_PERIODS) + STOCK_SAME_ROTATION) { return $slow; }
+    if ($now >= $next && $now - $next <= STOCK_WINDOW) { return true; }
+    if ($now >= $next || $unknown) { return $slow; }
+    return false;
 }
 
 function stock_feed_save(PDO $pdo, string $lastId, string $alertedId, int $now): void {
@@ -376,12 +416,19 @@ function stock_discord_http(string $token): callable {
  *
  * Самый первый проход (канал ещё не читали) берёт последние сообщения, но
  * не рассылает: всё, что старше STOCK_FRESH, рассылкой не считается.
+ *
+ * Между сменами проход в Discord не ходит вовсе (см. stock_due) и
+ * возвращает 'skipped' => true. $force — сходить в любом случае (ручной
+ * запуск с ключом -f).
  */
-function stock_pull(PDO $pdo, array $sc, callable $get, int $now): array {
+function stock_pull(PDO $pdo, array $sc, callable $get, int $now, bool $force = false): array {
     if ($sc['token'] === '' || $sc['channel'] === '') { return ['ok' => false, 'error' => 'off']; }
     if (!stock_ready($pdo)) { return ['ok' => false, 'error' => 'not_ready']; }
 
     $feed = stock_feed_get($pdo);
+    if (!$force && !stock_due(stock_read($pdo), $now, $feed['polled_at'])) {
+        return ['ok' => true, 'skipped' => true, 'read' => 0, 'new' => [], 'unparsed' => []];
+    }
     $path = '/channels/' . $sc['channel'] . '/messages?limit=' . STOCK_PULL_LIMIT;
     if ($feed['last_id'] !== '0') { $path .= '&after=' . $feed['last_id']; }
 
@@ -710,9 +757,9 @@ function stock_alert_admins(PDO $pdo, array $cfg, array $tg, callable $send): in
  * Проход cron целиком: забрать сток и разослать о новых сменах.
  * $get и $send подставляют тесты; на бою — настоящие Discord и Telegram.
  */
-function stock_pull_and_notify(PDO $pdo, array $cfg, int $now, ?callable $get = null, ?callable $send = null, ?callable $sleep = null): array {
+function stock_pull_and_notify(PDO $pdo, array $cfg, int $now, ?callable $get = null, ?callable $send = null, ?callable $sleep = null, bool $force = false): array {
     $sc  = stock_config($cfg);
-    $res = stock_pull($pdo, $sc, $get ?? stock_discord_http($sc['token']), $now);
+    $res = stock_pull($pdo, $sc, $get ?? stock_discord_http($sc['token']), $now, $force);
     if (empty($res['ok'])) { return $res; }
 
     $tg = tg_config($cfg);

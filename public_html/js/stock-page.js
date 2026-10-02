@@ -12,8 +12,9 @@
   var RARITIES = ["mythical", "legendary", "rare", "uncommon", "common", ""];
   var PERIODS = { normal: 14400, mirage: 7200 };
 
-  var POLL_MS = 60000;
+  var IDLE_MS = 300000;
   var SOON_MS = 20000;
+  var WAKE_LAG_MS = 15000;
   var STALE_AFTER = 900;
   var LINK_POLL_MS = 4000;
   var LINK_POLL_FOR = 15 * 60 * 1000;
@@ -220,11 +221,19 @@
   }
 
   function nextDelay() {
+    if (!data) return SOON_MS * 3;
     var n = now();
-    var soon = data && KINDS.some(function (k) {
-      return data[k] && data[k].ends && data[k].ends <= n && n - data[k].ends < STALE_AFTER;
+    var next = 0;
+    var soon = false;
+    KINDS.forEach(function (k) {
+      var e = data[k] && data[k].ends;
+      if (!e) return;
+      if (e <= n && n - e < STALE_AFTER) soon = true;
+      if (e > n && (!next || e < next)) next = e;
     });
-    return soon ? SOON_MS : POLL_MS;
+    if (soon) return SOON_MS;
+    if (next) return Math.max(SOON_MS, Math.min(IDLE_MS, (next - n) * 1000 + WAKE_LAG_MS));
+    return IDLE_MS;
   }
 
   function schedule() {

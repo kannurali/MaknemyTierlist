@@ -1,7 +1,13 @@
 <?php
-// Сбор стока из Discord — запускает cron в cPanel раз в минуту:
+// Сбор стока из Discord — запускает cron в cPanel в первые 15 минут каждого
+// часа (сток обоих дилеров меняется в начале часа):
 //
-//   * * * * * /usr/local/bin/php /home/maknemyt/public_html/api/stock_pull.php >/dev/null 2>&1
+//   0-15 * * * * /usr/local/bin/php /home/maknemyt/public_html/api/stock_pull.php >/dev/null 2>&1
+//
+// В Discord он при этом ходит только с наступления смены и до прихода нового
+// стока (stock_due в api/lib/stock.php), всё остальное время сразу выходит.
+// Ключи: -v — напечатать итог прохода, -f — сходить в Discord сейчас, не
+// дожидаясь смены (проверка после настройки).
 //
 // Только из командной строки. Из браузера — 404 (его же отдаёт и .htaccess):
 // иначе любой мог бы гонять запросы к Discord от имени нашего бота и упереться
@@ -24,7 +30,7 @@ require_once __DIR__ . '/lib/stock.php';
 $lock = @fopen(sys_get_temp_dir() . '/maknemy-stock-pull.lock', 'c');
 if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) { exit(0); }
 
-$res = stock_pull_and_notify(db(), app_config(), time());
+$res = stock_pull_and_notify(db(), app_config(), time(), null, null, null, in_array('-f', $argv ?? [], true));
 if (empty($res['ok']) && ($res['error'] ?? '') !== 'off') {
     error_log('stock pull: ' . ($res['error'] ?? 'unknown'));
 }
