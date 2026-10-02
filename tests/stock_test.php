@@ -447,7 +447,7 @@ test('get отдаёт отметки и состояние Telegram', function 
 //  Что видит страница
 // --------------------------------------------------------------------------
 
-test('список фруктов — из пермов тирлиста, картинка — у фрукта, если он есть', function () {
+test('список фруктов — из пермов тирлиста, картинка — перма', function () {
     $tier = ['tiers' => [['items' => [
         ['name' => 'Kitsune Fruit', 'type' => 'f', 'icon' => 'https://maknemy.com/images/kitsune-fruit.webp'],
         ['name' => 'Permanent Kitsune', 'type' => 'p', 'icon' => '/images/kitsune-perm.webp'],
@@ -468,8 +468,8 @@ test('список фруктов — из пермов тирлиста, кар
     assert_eq('legendary', $by['lightning']['rarity'], 'Lightning — легендарный');
     assert_eq('common', $by['spike']['rarity'], 'Spike — обычный');
     assert_eq('', $by['evil']['rarity'], 'без цены — без редкости');
-    assert_eq('https://maknemy.com/images/kitsune-fruit.webp', $by['kitsune']['icon'], 'картинка фрукта важнее перма');
-    assert_eq('/images/spike.png', $by['spike']['icon'], 'у дешёвого — перм');
+    assert_eq('/images/kitsune-perm.webp', $by['kitsune']['icon'], 'у всех фруктов картинка перма');
+    assert_eq('/images/spike.png', $by['spike']['icon'], 'у дешёвого — тоже перм');
     assert_eq('T-Rex', $by['trex']['name'], 'имя приведено');
     assert_eq('Lightning', $by['lightning']['name'], 'опечатка исправлена');
     assert_eq('Dragon', $by['dragon']['name'], 'без пояснения в скобках');
@@ -523,6 +523,24 @@ test('страница /stock: маршрут, подпись бота, свой
     assert_true((bool)preg_match('~<script src="js/stock-page\.js\?v=\d+"~', $page), 'скрипт страницы с версией');
     assert_true((bool)preg_match('~<link rel="stylesheet" href="css/stock\.css\?v=\d+"~', $page), 'стили с версией');
     assert_true(strpos(file_get_contents($pub . '/sitemap.xml'), 'https://maknemy.com/stock') !== false, 'в sitemap');
+});
+
+// Реклама как на трейдинге: борта по бокам, нижняя плашка на телефоне,
+// всплывашка — и вдобавок баннер по центру, как в тирлисте (слот strip).
+test('на /stock стоят все рекламные места', function () {
+    $pub  = __DIR__ . '/../public_html';
+    $page = file_get_contents($pub . '/stock.php');
+    foreach (['id="skRail"', 'id="skRailR"', 'id="skMid"', 'id="promoDock"', 'id="promoPop"'] as $slot) {
+        assert_true(strpos($page, $slot) !== false, "место $slot");
+    }
+    foreach (['promo.js', 'promo-feed.js', 'promo-dock.js', 'promo-popup.js'] as $js) {
+        assert_true((bool)preg_match('~<script src="js/' . preg_quote($js, '~') . '\?v=\d+"~', $page), "подключён $js");
+    }
+    assert_true(strpos($page, '<script src="js/promo.js') < strpos($page, '<script src="js/stock-page.js'), 'реклама раньше скрипта страницы');
+    $js = file_get_contents($pub . '/js/stock-page.js');
+    assert_true(strpos($js, 'NX_PROMO_FEED.banner(') !== false, 'баннер по центру — из модуля лент');
+    assert_true(strpos($js, 'NX_PROMO_DOCK.render(') !== false, 'нижняя плашка');
+    assert_true(strpos($js, 'NX_PROMO_POPUP.mount(') !== false, 'всплывашка');
 });
 
 test('подписи страницы есть в обоих языках словаря', function () {

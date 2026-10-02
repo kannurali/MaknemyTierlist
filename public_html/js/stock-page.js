@@ -5,6 +5,8 @@
   var WATCH = "/api/stock_watch.php";
   var LINK = "/api/tg_link.php";
   var SESSION = "/api/session.php";
+  var PROMO_API = "/api/promo.php";
+  var PROMO_PAGE = "calc";
   var TG_URL = "https://t.me/";
   var LANG_KEY = "nexus-lang-v1";
   var INVITE_KEY = "nexus-signin-v1";
@@ -24,6 +26,8 @@
 
   var data = null;
   var shown = false;
+  var promoDoc;
+  var stripPick = null;
   var loadFailed = false;
   var skew = 0;
   var pollTimer = 0;
@@ -481,6 +485,78 @@
     });
   }
 
+  function fillRail(node, camp) {
+    var promo = window.PROMO;
+    var cre = promo && camp ? promo.creativeFor(camp, "rail") : null;
+    if (!node || !cre || !cre.src) return;
+    node.textContent = "";
+    node.classList.add("has-ad");
+    var img = el("img");
+    img.src = promo.srcFor(cre);
+    img.alt = t("ad.imageAlt");
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.draggable = false;
+    node.appendChild(img);
+    promo.stampOn(img, camp, "rail", t);
+    var chip = el("span", "ptn-chip");
+    chip.textContent = t("ad.chip");
+    node.appendChild(chip);
+    if (camp.erid) {
+      var erid = el("span", "ptn-erid");
+      erid.textContent = "erid: " + camp.erid;
+      node.appendChild(erid);
+    }
+    var url = promo.safeHref(camp.href);
+    node.classList.toggle("has-link", !!url);
+    if (url) {
+      var open = function () { window.open(url, "_blank", "noopener"); };
+      node.onclick = open;
+      node.tabIndex = 0;
+      node.setAttribute("role", "link");
+      node.onkeydown = function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      };
+    }
+  }
+
+  function renderAds() {
+    var promo = window.PROMO;
+    if (!promo || promoDoc === undefined) return;
+
+    var mid = $("skMid");
+    if (mid && window.NX_PROMO_FEED) {
+      if (stripPick === null) stripPick = NX_PROMO_FEED.campaigns(promoDoc, PROMO_PAGE, Date.now(), Math.random)[0] || false;
+      if (stripPick) {
+        mid.textContent = "";
+        mid.appendChild(NX_PROMO_FEED.banner(stripPick, { page: PROMO_PAGE, tx: t }));
+        mid.classList.add("is-filled");
+      }
+    }
+
+    var paid = promoDoc ? promo.eligible(promo.normalizeDoc(promoDoc), "rail", Date.now(), PROMO_PAGE) : [];
+    var house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
+    var rails = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+    if (rails.length) {
+      fillRail($("skRail"), rails[0]);
+      fillRail($("skRailR"), rails[1] || rails[0]);
+    }
+  }
+
+  function renderPromo() {
+    if (!window.PROMO) return;
+    fetch(PROMO_API, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+      .then(function (doc) {
+        promoDoc = doc;
+        renderAds();
+        var dock = $("promoDock");
+        if (dock && window.NX_PROMO_DOCK) window.NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE);
+        if (window.NX_PROMO_POPUP) window.NX_PROMO_POPUP.mount({ doc: doc, busy: function () { return false; }, page: PROMO_PAGE });
+      });
+  }
+
   function apply(next) {
     if (!i18n) return;
     if (next) {
@@ -504,6 +580,7 @@
     });
     renderStock();
     renderWatch();
+    renderAds();
     document.dispatchEvent(new CustomEvent("mk:langchange", { detail: { lang: lang } }));
   }
 
@@ -530,4 +607,5 @@
   setInterval(tick, 1000);
   load();
   initWatch();
+  renderPromo();
 })();

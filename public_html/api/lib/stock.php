@@ -481,10 +481,10 @@ function stock_pull(PDO $pdo, array $sc, callable $get, int $now, bool $force = 
  *
  * Обычных фруктов («Kitsune Fruit», тип f) в тирлисте нет у дешёвых — Spike,
  * Bomb, Ice там только пермами («Permanent Spike», тип p). Поэтому список
- * строится по пермам, а картинка берётся у фрукта, если он есть: у пермов
- * часть картинок — арт способности, а не сам фрукт. Фрукт из стока, которого
- * в тирлисте нет (вышел новый), добавляется без картинки, чтобы его можно было
- * отметить сразу.
+ * строится по пермам, и картинка у всех фруктов — перма (решение владельца,
+ * чтобы сток выглядел одинаково). Картинка фрукта — только запасная, если у
+ * перма её нет. Фрукт из стока, которого в тирлисте нет (вышел новый),
+ * добавляется без картинки, чтобы его можно было отметить сразу.
  *
  * Возвращает [[key, name, icon, price, rarity], …]: сначала дорогие, как
  * мифические сверху в игре; фрукты без известной цены — в конце по алфавиту.
@@ -520,7 +520,7 @@ function stock_catalog(array $tierState, array $stock): array {
         $bare = trim(preg_replace('/\([^)]*\)/', '', $p['name']) ?? '');
         $raw  = strtolower(preg_replace('/[^A-Za-z0-9]/', '', $bare) ?? '');
         $name = $names[$key] ?? STOCK_ALIASES[$raw] ?? ucwords(strtolower($bare), " -");
-        $out[$key] = ['key' => $key, 'name' => $name, 'icon' => $fruit[$key] ?? $p['icon']];
+        $out[$key] = ['key' => $key, 'name' => $name, 'icon' => $p['icon'] !== '' ? $p['icon'] : ($fruit[$key] ?? '')];
     }
     foreach ($names as $key => $name) {
         if (!isset($out[$key])) { $out[$key] = ['key' => $key, 'name' => $name, 'icon' => $fruit[$key] ?? '']; }

@@ -86,7 +86,12 @@ page_lscache();
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
+<link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <link rel="stylesheet" href="css/stock.css?v=1" />
+
+<link rel="stylesheet" href="css/promo-dock.css?v=3" />
+
+<link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -164,6 +169,11 @@ page_lscache();
   </header>
 
   <main class="sk-page">
+   <div class="sk-frame">
+    <div class="sk-rail-slot" aria-hidden="true">
+      <aside class="sk-rail" id="skRail" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+    </div>
+
     <div class="sk-wrap">
 
       <header class="sk-head">
@@ -206,6 +216,8 @@ page_lscache();
         <span class="sk-source"><span data-i18n="stock.source">Данные: бот</span> <b>Fool's eyes</b></span>
       </p>
 
+      <div class="sk-mid" id="skMid"></div>
+
       <section class="sk-watch" id="watch" aria-labelledby="skWatchTitle" hidden>
         <div class="sk-watch-head">
           <h2 class="sk-watch-title" id="skWatchTitle" data-i18n="stock.watchTitle">Уведомления в Telegram</h2>
@@ -219,6 +231,11 @@ page_lscache();
       </section>
 
     </div>
+
+    <div class="sk-rail-slot is-right" aria-hidden="true">
+      <aside class="sk-rail" id="skRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+    </div>
+   </div>
   </main>
 
   <footer class="mk-foot">
@@ -237,8 +254,33 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
+  <div class="ptn-dock" id="promoDock" hidden
+       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
+
+  <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
+       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       aria-labelledby="promoPopTitle">
+    <div class="ptn-pop-card">
+      <button class="ptn-pop-close" id="promoPopClose" type="button"
+              data-i18n-label="promo.close" data-i18n-title="promo.close"
+              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+
+      <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" /></div>
+
+      <div class="ptn-pop-title" id="promoPopTitle"></div>
+      <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
+
+      <span class="ptn-erid" id="promoPopErid" hidden></span>
+    </div>
+  </div>
+
 
   <script src="js/i18n.js?v=62" fetchpriority="high"></script>
+  <script src="js/promo.js?v=17" fetchpriority="high"></script>
+  <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=7" fetchpriority="high"></script>
+  <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
   <script src="js/stock-page.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
