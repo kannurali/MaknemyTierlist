@@ -477,6 +477,19 @@ test('список фруктов — из пермов тирлиста, кар
     assert_eq('', $by['yeti']['icon'], 'новый фрукт из стока — без картинки, но в списке');
 });
 
+// Magnet вышел позже остальных (Update 30): 6 000 000 белли у дилера,
+// мифический. Без строки в таблице он стоял в группе «Другие».
+test('Magnet — мифический, между Kitsune и Tiger', function () {
+    $tier = ['tiers' => [['items' => [
+        ['name' => 'Permanent Magnet', 'type' => 'p', 'icon' => '/images/magnet.png'],
+        ['name' => 'Permanent Kitsune', 'type' => 'p', 'icon' => '/images/kitsune.png'],
+        ['name' => 'Permanent Tiger', 'type' => 'p', 'icon' => '/images/tiger.png'],
+    ]]]];
+    $cat = stock_catalog($tier, ['normal' => null, 'mirage' => null]);
+    assert_eq(['kitsune', 'magnet', 'tiger'], array_column($cat, 'key'), 'по цене');
+    assert_eq('mythical', $cat[1]['rarity'], 'мифический');
+});
+
 test('редкость считается по цене так же, как в игре', function () {
     assert_eq('common', stock_rarity(180000), 'Spike');
     assert_eq('uncommon', stock_rarity(250000), 'Flame — граница');
