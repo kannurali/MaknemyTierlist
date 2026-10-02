@@ -81,7 +81,8 @@ const STOCK_PRICES = [
     'portal' => 1900000, 'lightning' => 2100000, 'pain' => 2300000, 'blizzard' => 2400000,
     'gravity' => 2500000, 'mammoth' => 2700000, 'trex' => 2700000, 'dough' => 2800000,
     'shadow' => 2900000, 'venom' => 3000000, 'gas' => 3200000, 'control' => 3200000,
-    'spirit' => 3400000, 'tiger' => 5000000, 'yeti' => 5000000, 'kitsune' => 8000000,
+    'spirit' => 3400000, 'tiger' => 5000000, 'yeti' => 5000000, 'magnet' => 6000000,
+    'kitsune' => 8000000,
     'dragon' => 15000000,
 ];
 
