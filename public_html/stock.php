@@ -2,14 +2,16 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
-// Центр обращений — /support (Figma нода 272:2454, окно благодарности —
-// «оверлей» 272:2783). Ведут сюда «поддержка» на ленте трейдинга, «в
-// поддержку!» в предупреждении о безопасности и «Помощь» в меню профиля.
+// Сток фруктов — /stock.
 //
-// Обращение уходит в /api/support.php и видно администратору на
-// /admin/support. Писать может только вошедший через Roblox (ответ приходит
-// в личный чат сайта); остальным страница предлагает войти или «написать
-// лично» — ссылка на Telegram из прототипа макета.
+// Страница — каркас: сток, таймеры смены и список фруктов для уведомлений
+// наполняет js/stock-page.js по ответу /api/stock.php, а отметки человека — по
+// /api/stock_watch.php. Разметка от сессии не зависит, поэтому её можно
+// держать в кеше LiteSpeed, как трейдинг: кто вошёл, решает скрипт.
+//
+// Откуда сток и почему подписан ботом Fool's eyes — см. api/lib/stock.php.
+// Макета в Figma у страницы нет: она собрана из тех же элементов, что
+// трейдинг, — градиент шапки, стеклянные плашки, Bootshaus в заголовках.
 header('Cache-Control: no-cache, must-revalidate');
 page_lscache();
 ?>
@@ -22,10 +24,55 @@ page_lscache();
 
 <base href="/" />
 
-<title>Центр обращений | Maknemy Tier List</title>
-<meta name="description" content="Поддержка Maknemy: сообщите о недобросовестном трейдере или проблеме на сайте." />
-<link rel="canonical" href="https://maknemy.com/support" />
-<meta name="robots" content="noindex, follow" />
+<title>Сток Blox Fruits сейчас — обычный и Mirage | Maknemy</title>
+<meta name="description" content="Текущий сток фруктов Blox Fruits: что продают обычный дилер и дилер на острове Mirage, цены и точное время смены. Уведомления в Telegram о нужных фруктах." />
+<link rel="canonical" href="https://maknemy.com/stock" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Maknemy Tier List" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:url" content="https://maknemy.com/stock" />
+<meta property="og:title" content="Сток Blox Fruits сейчас" />
+<meta property="og:description" content="Обычный сток и Mirage, цены и время смены. Уведомления в Telegram о нужных фруктах." />
+<meta name="twitter:card" content="summary" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Сток Blox Fruits",
+      "url": "https://maknemy.com/stock",
+      "inLanguage": "ru",
+      "description": "Текущий сток фруктов Blox Fruits: обычный дилер и дилер Mirage, цены и время смены.",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "Maknemy Tier List",
+        "url": "https://maknemy.com/"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Maknemy",
+          "item": "https://maknemy.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Сток",
+          "item": "https://maknemy.com/stock"
+        }
+      ]
+    }
+  ]
+}
+</script>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
@@ -39,7 +86,12 @@ page_lscache();
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/trading.css?v=5" />
+<link rel="stylesheet" href="css/promo-stamp.css?v=1" />
+<link rel="stylesheet" href="css/stock.css?v=1" />
+
+<link rel="stylesheet" href="css/promo-dock.css?v=3" />
+
+<link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -86,7 +138,7 @@ page_lscache();
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/stock">
+          <a class="mk-pill" href="/stock" aria-current="page">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M2.4 7.6V16.1C2.4 17.15 3.25 18.05 4.3 18.05H14.7C15.75 18.05 16.6 17.15 16.6 16.1V7.6M7.15 18.05V13.3C7.15 12.25 8 11.4 9.05 11.4H9.95C11 11.4 11.85 12.25 11.85 13.3V18.05M0.95 5.7L2.6 1.9C2.85 1.3 3.45 0.95 4.1 0.95H14.9C15.55 0.95 16.15 1.3 16.4 1.9L18.05 5.7C18.05 7 16.95 8.1 15.65 8.1C14.3 8.1 13.25 7 13.25 5.7C13.25 7 12.15 8.1 10.85 8.1H8.15C6.85 8.1 5.75 7 5.75 5.7C5.75 7 4.7 8.1 3.35 8.1C2.05 8.1 0.95 7 0.95 5.7Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.stock">Сток</span>
           </a>
@@ -115,56 +167,75 @@ page_lscache();
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
-  <main class="sp-page">
-    <section class="sp-card" aria-labelledby="spTitle">
-      <svg class="sp-icon" viewBox="0 0 100 80" fill="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="spGrad" x1="0" y1="0" x2="100" y2="80" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
-          </linearGradient>
-        </defs>
-        <path d="M6 24c0-4.4 3.6-8 8-8h10L47 2.2C52.3-.9 59 2.9 59 9v62c0 6.1-6.7 9.9-12 6.8L24 64H14c-4.4 0-8-3.6-8-8V24Z" fill="url(#spGrad)"/>
-        <path d="M71 22c5.2 4.4 8.5 11 8.5 18S76.2 53.6 71 58" stroke="url(#spGrad)" stroke-width="7" stroke-linecap="round"/>
-        <path d="M83 12c8.2 7 13.3 17.1 13.3 28S91.2 61 83 68" stroke="url(#spGrad)" stroke-width="7" stroke-linecap="round"/>
-      </svg>
-      <h1 class="sp-title" id="spTitle" data-i18n="support.title">Центр обращений</h1>
 
-      <p class="sp-lead">
-        <span data-i18n="support.lead1a">Перед обращением просим</span>
-        <em data-i18n="support.lead1b">соблюдать вежливость</em>
-        <span data-i18n="support.lead1c">к персоналу и</span>
-        <em data-i18n="support.lead1d">не нести ложную информацию.</em>
-      </p>
-      <p class="sp-lead">
-        <span data-i18n="support.lead2a">Подробно опишите свою проблему, и мы оперативно поможем вам с</span>
-        <em data-i18n="support.lead2b">её решением!</em>
-      </p>
-
-      <form class="sp-form" id="spForm" novalidate>
-        <label class="tr-sr-only" for="spBody" data-i18n="support.label">Опишите свою проблему</label>
-        <textarea class="sp-input" id="spBody" rows="5" maxlength="1000"
-                  data-i18n-placeholder="support.placeholder" placeholder="Опишите свою проблему…"></textarea>
-        <p class="sp-status" id="spStatus" role="status" aria-live="polite"></p>
-        <div class="sp-actions">
-          <button class="sp-send" id="spSend" type="submit" data-i18n="support.send">Отправить</button>
-          <a class="sp-direct" href="https://t.me/maknemy" target="_blank" rel="noopener" data-i18n="support.direct">Написать лично</a>
-        </div>
-      </form>
-    </section>
-
-    <div class="sp-thanks" id="spThanks" role="dialog" aria-modal="true" aria-labelledby="spThanksTitle" hidden>
-      <div class="sp-thanks-card">
-        <button class="sp-thanks-close" id="spThanksClose" type="button" data-i18n-label="support.close" aria-label="Закрыть">✕</button>
-        <svg class="sp-thanks-hearts" viewBox="0 0 170 120" fill="none" aria-hidden="true">
-          <path d="M85 112C60 95 30 74 30 45 30 28 43 14 59 14c11 0 20 5.5 26 14 6-8.5 15-14 26-14 16 0 29 14 29 31 0 29-30 50-55 67Z" fill="#fff"/>
-          <path d="M22 118C13 112 2 104 2 93c0-6.3 4.8-11.5 10.8-11.5 3.9 0 7.1 2 9.2 5 2.1-3 5.3-5 9.2-5 6 0 10.8 5.2 10.8 11.5 0 11-11 19-20 25Z" fill="#fff"/>
-          <path d="M148 118c-9-6-20-14-20-25 0-6.3 4.8-11.5 10.8-11.5 3.9 0 7.1 2 9.2 5 2.1-3 5.3-5 9.2-5 6 0 10.8 5.2 10.8 11.5 0 11-11 19-20 25Z" fill="#fff"/>
-        </svg>
-        <h2 class="sp-thanks-title" id="spThanksTitle" data-i18n="support.thanksTitle">Спасибо за ваше доверие</h2>
-        <p class="sp-thanks-text" data-i18n="support.thanksText">В ближайшее время мы решим вашу проблему!</p>
-        <p class="sp-thanks-sign"><span data-i18n="support.thanksSign">С любовью</span> <img src="assets/design/wordmark.svg" alt="MAKNEMY" /></p>
-      </div>
+  <main class="sk-page">
+   <div class="sk-frame">
+    <div class="sk-rail-slot" aria-hidden="true">
+      <aside class="sk-rail" id="skRail" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
     </div>
+
+    <div class="sk-wrap">
+
+      <header class="sk-head">
+        <h1 class="sk-title" data-i18n="stock.title">Сток фруктов</h1>
+        <p class="sk-lead" data-i18n="stock.lead">Что прямо сейчас продают дилеры фруктов в Blox Fruits. Страница обновляется сама.</p>
+      </header>
+
+      <p class="sk-state" id="skState" role="status" aria-live="polite" data-i18n="stock.loading">Загружаем сток…</p>
+
+      <div class="sk-grid">
+        <section class="sk-dealer is-normal" data-kind="normal" aria-labelledby="skNormalTitle">
+          <div class="sk-dealer-head">
+            <h2 class="sk-dealer-name" id="skNormalTitle" data-i18n="stock.normal">Обычный сток</h2>
+            <p class="sk-dealer-note" data-i18n="stock.normalNote">Дилер в любом море, смена каждые 4 часа</p>
+          </div>
+          <div class="sk-clock">
+            <span class="sk-clock-label" data-i18n="stock.changeIn">Смена через</span>
+            <span class="sk-clock-time" data-left>—</span>
+          </div>
+          <div class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></div>
+          <ul class="sk-shelf" data-list aria-labelledby="skNormalTitle"></ul>
+        </section>
+
+        <section class="sk-dealer is-mirage" data-kind="mirage" aria-labelledby="skMirageTitle">
+          <div class="sk-dealer-head">
+            <h2 class="sk-dealer-name" id="skMirageTitle" data-i18n="stock.mirage">Сток Mirage</h2>
+            <p class="sk-dealer-note" data-i18n="stock.mirageNote">Дилер на острове Mirage, смена каждые 2 часа</p>
+          </div>
+          <div class="sk-clock">
+            <span class="sk-clock-label" data-i18n="stock.changeIn">Смена через</span>
+            <span class="sk-clock-time" data-left>—</span>
+          </div>
+          <div class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></div>
+          <ul class="sk-shelf" data-list aria-labelledby="skMirageTitle"></ul>
+        </section>
+      </div>
+
+      <p class="sk-meta">
+        <span class="sk-seen" id="skSeen"></span>
+        <span class="sk-source"><span data-i18n="stock.source">Данные: бот</span> <b>Fool's eyes</b></span>
+      </p>
+
+      <div class="sk-mid" id="skMid"></div>
+
+      <section class="sk-watch" id="watch" aria-labelledby="skWatchTitle" hidden>
+        <div class="sk-watch-head">
+          <h2 class="sk-watch-title" id="skWatchTitle" data-i18n="stock.watchTitle">Уведомления в Telegram</h2>
+          <p class="sk-watch-lead" data-i18n="stock.watchLead">Отметьте фрукты — бот напишет в Telegram, когда они появятся в стоке.</p>
+        </div>
+        <div class="sk-watch-bar">
+          <p class="sk-watch-msg" id="skWatchMsg" role="status" aria-live="polite"></p>
+          <a class="sk-btn" id="skWatchGo" href="#" hidden></a>
+        </div>
+        <div class="sk-groups" id="skCatalog" role="group" data-i18n-label="stock.catalog" aria-label="Фрукты для уведомлений"></div>
+      </section>
+
+    </div>
+
+    <div class="sk-rail-slot is-right" aria-hidden="true">
+      <aside class="sk-rail" id="skRailR" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+    </div>
+   </div>
   </main>
 
   <footer class="mk-foot">
@@ -183,7 +254,33 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
+  <div class="ptn-dock" id="promoDock" hidden
+       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
+
+  <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
+       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       aria-labelledby="promoPopTitle">
+    <div class="ptn-pop-card">
+      <button class="ptn-pop-close" id="promoPopClose" type="button"
+              data-i18n-label="promo.close" data-i18n-title="promo.close"
+              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+
+      <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" /></div>
+
+      <div class="ptn-pop-title" id="promoPopTitle"></div>
+      <a class="btn primary ptn-pop-cta" id="promoPopCta" href="#" target="_blank" rel="noopener nofollow"></a>
+
+      <span class="ptn-erid" id="promoPopErid" hidden></span>
+    </div>
+  </div>
+
+
   <script src="js/i18n.js?v=62" fetchpriority="high"></script>
-  <script src="js/support-page.js?v=1" defer></script>
+  <script src="js/promo.js?v=17" fetchpriority="high"></script>
+  <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=7" fetchpriority="high"></script>
+  <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
+  <script src="js/stock-page.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

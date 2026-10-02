@@ -36,7 +36,7 @@ $PAGES = ['home.php', 'index.php', 'news.php'];
 // без js/auth.js — то есть с неработающим меню входа. Оба раза ни одна
 // проверка этого не увидела: страницы не было ни в одном списке. Список для
 // новых проверок один, и в нём все шесть.
-$PAGES6 = ['home.php', 'index.php', 'news.php', 'calculator.php', 'profile.php', 'chat.php'];
+$PAGES6 = ['home.php', 'index.php', 'news.php', 'calculator.php', 'profile.php', 'chat.php', 'stock.php'];
 
 // --------------------------------------------------------------------------
 //  Шесть копий шапки
@@ -90,6 +90,26 @@ test('«Трейдинг» в шапке — рабочая ссылка на /t
         assert_eq(0, preg_match(
             '/<button class="mk-pill" type="button" data-soon [^>]*>\s*<svg viewBox="0 0 18 19"/', $s),
             "$f: и не оставаться кнопкой data-soon");
+    }
+});
+
+// «Сток» — пятая кнопка шапки (решение владельца, 2026-10-02): между
+// «Калькулятором» и «Новостями», на всех страницах с полной шапкой, включая
+// те, что в $PAGES6 не попали. Активна она только на самой /stock.
+test('«Сток» в шапке — пятая кнопка, ведёт на /stock на всех страницах', function () use ($PUB) {
+    $all = ['home.php', 'index.php', 'news.php', 'calculator.php', 'profile.php', 'chat.php',
+            'trading.php', 'trade-new.php', 'support.php', 'stock.php'];
+    foreach ($all as $f) {
+        $s = top_header($PUB, $f);
+        assert_eq(1, preg_match_all('/<a class="mk-pill" href="\/stock"( aria-current="page")?>/', $s, $m),
+            "$f: одна кнопка «Сток»");
+        assert_true(strpos($s, 'data-i18n="nav.stock"') !== false, "$f: подпись переводится");
+        $calc  = strpos($s, 'href="/calculator"');
+        $stock = strpos($s, 'href="/stock"');
+        $news  = strpos($s, 'href="/news"');
+        assert_true($calc < $stock && $stock < $news, "$f: между «Калькулятором» и «Новостями»");
+        $on = strpos($s, '<a class="mk-pill" href="/stock" aria-current="page">') !== false;
+        assert_eq($f === 'stock.php', $on, "$f: активна только на /stock");
     }
 });
 
@@ -274,18 +294,20 @@ test('чат — рабочая ссылка на /chat перед профил�
 // --------------------------------------------------------------------------
 
 // RU|EN стоял на каждой странице по-своему: в тулбаре тирлиста и ленты, в
-// .tc-extras калькулятора. Три места расходились при каждой правке, а на
-// прокрученной странице полоса с переключателем оставалась висеть над
-// содержимым, хотя шапка над ней уже свернулась. Теперь он в самой шапке —
-// один компонент на три страницы, и уезжает вместе с логотипом.
+// .tc-extras калькулятора. Три места расходились при каждой правке, поэтому
+// он переехал в общую шапку, один компонент на все страницы. 2026-10-02
+// владелец убрал его и оттуда — место в шапке ушло под пятую кнопку «Сток»,
+// а язык теперь выбирается в меню аватара (у гостя там же «Войти»).
 //
-// Главной в списке нет намеренно: сайт на ней только по-русски, словарь
-// js/i18n.js туда не подключён, и переключать там нечего.
-test('переключатель языка живёт в шапке, а не в полосе под ней', function () use ($PUB) {
-    foreach (['index.php', 'news.php', 'calculator.php'] as $f) {
+// Разметка переключателя осталась в шапке каждой страницы: скрипты страниц
+// вешают обработчик на #langSwitch, когда js/topbar.js ещё не загружен
+// (он defer). topbar.js переносит тот же узел в меню — обработчики едут
+// вместе с ним, а CSS прячет его в шапке, пока перенос не случился.
+test('переключатель языка — в меню аватара, а не в шапке', function () use ($PUB, $PAGES6) {
+    foreach ($PAGES6 as $f) {
         $head = top_header($PUB, $f);
         assert_true((bool)preg_match('/<div class="mk-top-lang lang-switch" id="langSwitch"/', $head),
-            "$f: переключатель должен стоять внутри шапки");
+            "$f: разметка переключателя на месте — её забирает topbar.js");
         // Обе половинки видны всегда: из одной кнопки не понять, какие языки
         // вообще есть (см. историю правок в design-page.css).
         assert_true((bool)preg_match('/data-lang="ru"/', $head), "$f: половинка RU");
@@ -297,8 +319,15 @@ test('переключатель языка живёт в шапке, а не в
     }
 
     $css = top_read($PUB . '/css/topbar.css');
-    assert_true((bool)preg_match('/\.mk-top\.is-stuck \.mk-top-lang \{[^}]*visibility: hidden;/s', $css),
-        'при прокрутке переключатель уезжает и уходит из таб-порядка');
+    assert_true(strpos($css, '.mk-top .mk-top-lang { display: none; }') !== false,
+        'в шапке переключатель не показывается');
+    $js = top_read($PUB . '/js/topbar.js');
+    assert_true(strpos($js, 'var langBox = document.getElementById("langSwitch");') !== false,
+        'topbar.js находит переключатель');
+    assert_true(strpos($js, 'lang.appendChild(langBox);') !== false,
+        'и переносит его в меню аватара');
+    assert_true(strpos($js, '"lang.switch": "Язык интерфейса"') !== false,
+        'подпись в меню на случай неподъехавшего словаря');
 });
 
 // --------------------------------------------------------------------------
@@ -334,10 +363,10 @@ test('карусель карточек не забирает указатель
 // проверяется, что правило не пропало из кода.
 test('кнопка входа — только по приглашению или когда вход открыт всем', function () use ($PUB) {
     $js = top_read($PUB . '/js/topbar.js');
-    assert_true(strpos($js, 'else if (s.roblox_public || invited) toLoginLink(avatarBtn);') !== false,
-        'ссылка входа только при открытом входе или по приглашению');
-    assert_eq(0, preg_match('/else toLoginLink\(avatarBtn\);/', $js),
-        'безусловной ссылки входа остаться не должно');
+    assert_true(strpos($js, 'else if (s.roblox_public || invited) addLoginItem(avatarMenu);') !== false,
+        'пункт входа только при открытом входе или по приглашению');
+    assert_eq(0, preg_match('/else addLoginItem\(avatarMenu\);/', $js),
+        'безусловного пункта входа остаться не должно');
     assert_true(strpos($js, 'var INVITE_KEY = "nexus-signin-v1";') !== false,
         'приглашение запоминается под своим ключом');
     assert_true(strpos($js, 'var INVITE_RE = /([?&])signin(=[^&]*)?(&|$)/;') !== false,

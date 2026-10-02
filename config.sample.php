@@ -45,6 +45,19 @@ return [
     // админ, которому нужны эти уведомления, вписывает себя и сюда.
     'moderator_ids' => [],
 
+    // --- Сток фруктов из Discord (api/lib/stock.php) -------------------
+    // Сток публикует чужой бот Vulcan в канал нашего Discord-сервера, а наш
+    // бот (Fool's eyes) читает этот канал в момент смены стока — cron в cPanel
+    // будит его в первые 15 минут каждого часа, в остальное время он спит:
+    //   0-15 * * * * /usr/local/bin/php /home/maknemyt/public_html/api/stock_pull.php >/dev/null 2>&1
+    // Пустой токен или канал = сбор выключен, /stock показывает последний
+    // известный сток.
+    // Токен: discord.com/developers/applications → приложение → Bot → Reset Token.
+    'discord_bot_token'     => '',
+    // id канала с постами Vulcan: Discord в режиме разработчика →
+    // правый клик по каналу → «Копировать ID канала».
+    'discord_stock_channel' => '',
+
     // --- GitHub push webhook (api/deploy.php) ---------------------------
     // Leave 'deploy_secret' empty to keep the endpoint disabled: it then
     // answers 503 and never runs anything.

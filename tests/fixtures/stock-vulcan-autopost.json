@@ -1,0 +1,57 @@
+{
+ "id": "1555369251483811931",
+ "type": 0,
+ "content": "",
+ "timestamp": "2026-10-02T00:02:06.917000+00:00",
+ "flags": 32768,
+ "webhook_id": "1555356529060749433",
+ "embeds": [],
+ "components": [
+  {
+   "type": 17,
+   "id": 1,
+   "accent_color": null,
+   "components": [
+    {
+     "type": 10,
+     "id": 2,
+     "content": "**Current Normal Stock**"
+    },
+    {
+     "type": 14,
+     "id": 3,
+     "spacing": 1,
+     "divider": true
+    },
+    {
+     "type": 10,
+     "id": 4,
+     "content": "<:flame:1300186767932002396> **Flame • <:money:1456628926276173845>`250,000`**\n<:eagle:1362700995137638420> **Eagle • <:money:1456628926276173845>`550,000`**"
+    },
+    {
+     "type": 14,
+     "id": 5,
+     "spacing": 1,
+     "divider": true
+    },
+    {
+     "type": 10,
+     "id": 6,
+     "content": "-# <:clock:1182328726185312336> **Stock Change in** - <t:1790913612:R>"
+    },
+    {
+     "type": 14,
+     "id": 7,
+     "spacing": 1,
+     "divider": true
+    }
+   ],
+   "spoiler": false
+  }
+ ],
+ "author": {
+  "id": "1555356529060749433",
+  "username": "Vulcan • Live Stock Bot",
+  "bot": true
+ }
+}

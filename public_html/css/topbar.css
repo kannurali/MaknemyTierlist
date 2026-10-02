@@ -128,7 +128,6 @@
   .mk-top-bar,
   .mk-top-toggle,
   .mk-top-toggle svg,
-  .mk-top-lang,
   .mk-top-brand { transition: none; }
   .mk-chat-badge { animation: none; }
 }
@@ -154,24 +153,7 @@
   display: block;
 }
 
-.mk-top-lang {
-  flex: 0 0 auto;
-  padding: calc(3 * var(--u));
-
-  transition: transform .28s ease, opacity .22s ease, visibility .28s;
-}
-.mk-top-lang .chip {
-  padding: calc(8 * var(--u)) calc(16 * var(--u));
-  min-width: calc(44 * var(--u));
-  font-size: calc(16 * var(--u));
-}
-
-.mk-top.is-stuck .mk-top-lang {
-  transform: translateX(calc(-100% - 41 * var(--u)));
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
+.mk-top .mk-top-lang { display: none; }
 
 .mk-top-bar {
   display: flex;
@@ -397,6 +379,26 @@ a.mk-avatar { text-decoration: none; }
 .mk-user-item:focus-visible { outline: 2px solid #bfe6ff; outline-offset: -2px; }
 .mk-user-item[disabled] { opacity: .5; cursor: default; }
 
+.mk-user-login { font-weight: 700; }
+
+.mk-user-lang {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 4px 4px 10px;
+}
+.mk-user-item + .mk-user-lang {
+  margin-top: 6px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.mk-user-lang-label {
+  font-size: 14px;
+  opacity: .72;
+}
+.mk-user-lang .lang-switch { flex: 0 0 auto; }
+
 .mk-user-out {
   margin-top: 6px;
   padding-top: 11px;
@@ -447,9 +449,6 @@ a.mk-avatar { text-decoration: none; }
   }
   .mk-top-word { width: 168px; }
   .mk-top-mark { width: 36px; height: 36px; }
-
-  .mk-top-lang { padding: 3px; }
-  .mk-top-lang .chip { padding: 7px 13px; min-width: 38px; font-size: 14px; }
 
   .mk-top-bar {
     height: 48px;
@@ -509,9 +508,6 @@ a.mk-avatar { text-decoration: none; }
 
   .mk-top-mark { width: 32px; height: 32px; }
 
-  .mk-top-lang { padding: 2px; }
-  .mk-top-lang .chip { padding: 6px 7px; min-width: 30px; font-size: 13px; }
-
   .mk-pill { width: 32px; height: 32px; padding: 0; }
   .mk-pill .mk-pill-text { display: none; }
   .mk-pill svg { width: 16px; height: 16px; }
@@ -537,7 +533,6 @@ a.mk-avatar { text-decoration: none; }
   .mk-top { gap: 7px; padding: 0 7px; }
 
   .mk-top-mark { width: 30px; height: 30px; }
-  .mk-top-lang .chip { padding: 6px 5px; min-width: 22px; font-size: 12px; }
 
   .mk-nav { gap: 8px; }
 
@@ -560,8 +555,6 @@ a.mk-avatar { text-decoration: none; }
 @media (max-width: 360px) {
   .mk-top { gap: 6px; padding: 0 5px; }
   .mk-top-mark { width: 28px; height: 28px; }
-  .mk-top-lang { padding: 2px; }
-  .mk-top-lang .chip { padding: 6px 4px; min-width: 20px; font-size: 11px; }
   .mk-nav { gap: 6px; }
 
   .mk-pill { width: 25px; height: 25px; }

@@ -65,10 +65,10 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # не шлёт, превращал бы каждый запрос флуда в промах мимо кеша, то есть в PHP
 # и MySQL. Такие запросы LiteSpeed отбивает 403 сам, не запуская PHP.
 #
-# state.php клиент зовёт без параметров вовсе, tierlist.php и promo.php — без
+# state.php и stock.php клиент зовёт без параметров вовсе, tierlist.php и promo.php — без
 # них или с ?rev=<число>.
 RewriteCond %{QUERY_STRING} .
-RewriteRule ^api/state\.php$ - [F,L]
+RewriteRule ^api/(state|stock)\.php$ - [F,L]
 
 RewriteCond %{QUERY_STRING} !^(rev=[0-9]{1,18})?$
 RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]
@@ -175,6 +175,21 @@ RewriteRule ^trade-new\.php$ /trading/new [L,R=301]
 
 RewriteRule ^trading$ /trading.php [L]
 RewriteRule ^trading/new$ /trade-new.php [L]
+
+# ---------------------------------- Сток ----------------------------------
+# Тот же приём, что у /trading: пути внутри stock.php документ-относительные,
+# и на /stock/ весь CSS с JS уехал бы в 404.
+RewriteRule ^stock/$ /stock [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^stock\.php$ /stock [L,R=301]
+
+RewriteRule ^stock$ /stock.php [L]
+
+# Сбор стока из Discord запускает только cron из командной строки. Из
+# браузера его не видно вовсе: иначе любой гонял бы запросы к Discord от
+# имени нашего бота. Скрипт и сам отвечает 404 веб-запросу — это вторая линия.
+RewriteRule ^api/stock_pull\.php$ - [R=404,L]
 
 # ----------------------------- Центр обращений -----------------------------
 RewriteRule ^support/$ /support [L,R=301]

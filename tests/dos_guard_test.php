@@ -34,9 +34,9 @@ test('.htaccess turns on the LiteSpeed cache lookup', function () use ($PUB) {
         'CacheLookup inside <IfModule LiteSpeed>');
 });
 
-test('state.php takes no query string at all', function () use ($PUB) {
+test('state.php and stock.php take no query string at all', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
-    assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/state\.php$ - [F,L]'), 'any query string is refused');
+    assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]'), 'any query string is refused');
 });
 
 test('tierlist.php and promo.php take nothing but ?rev=<digits>', function () use ($PUB) {
@@ -62,7 +62,7 @@ test('a path tail after .php is refused', function () use ($PUB) {
 test('the refusal rules sit between the redirects and the page rewrites', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
     $https = strpos($ht, 'RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]');
-    $state = strpos($ht, 'RewriteRule ^api/state\.php$ - [F,L]');
+    $state = strpos($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]');
     $pages = strpos($ht, 'RewriteRule ^tierlist$ /index.php [L]');
     assert_true($https !== false && $state !== false && $pages !== false, 'all rules found');
     assert_true($https < $state && $state < $pages, 'order');
