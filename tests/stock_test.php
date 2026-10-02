@@ -160,8 +160,21 @@ test('ответ Vulcan на /stock разбирается: оба вида, ц�
     assert_eq(1790899272, $s['mirage']['ends'], 'метка смены Mirage');
 });
 
-// Автопост при смене — новые компоненты Discord: контейнер с текстовыми
-// блоками, заголовок «Current Mirage Stock», по одному виду на сообщение.
+// Автопост при смене — новые компоненты Discord (flags 32768): контейнер
+// type 17 с текстовыми блоками type 10, заголовок «Current Normal Stock», по
+// одному виду на сообщение. Снят из канала 2026-10-02 в 00:02 UTC.
+test('настоящий автопост Vulcan разбирается: один вид, фрукты и время смены', function () {
+    $s = stock_parse_message(sk_fixture('autopost'));
+    assert_eq(['normal'], array_keys($s), 'только обычный сток');
+    assert_eq([
+        ['key' => 'flame', 'name' => 'Flame', 'price' => 250000],
+        ['key' => 'eagle', 'name' => 'Eagle', 'price' => 550000],
+    ], $s['normal']['fruits'], 'фрукты');
+    assert_eq(1790913612, $s['normal']['ends'], 'смена через четыре часа');
+});
+
+// Тот же формат с заголовком Mirage, упоминанием роли и кнопкой в контейнере
+// (так выглядел автопост в основном канале).
 test('автопост в новых компонентах Discord разбирается так же', function () {
     $msg = [
         'id' => '1', 'author' => ['bot' => true], 'content' => '', 'embeds' => [],
@@ -408,7 +421,12 @@ test('список фруктов — из пермов тирлиста, кар
     $cat = stock_catalog($tier, $stock);
     $by = [];
     foreach ($cat as $c) { $by[$c['key']] = $c; }
-    assert_eq(['dragon', 'evil', 'kitsune', 'lightning', 'spike', 'trex', 'yeti'], array_keys($by), 'ключи по алфавиту, без жетона');
+    assert_eq(['dragon', 'kitsune', 'trex', 'lightning', 'spike', 'yeti', 'evil'], array_column($cat, 'key'),
+        'дорогие сверху, без жетона; цена из стока важнее таблицы; без цены — в конце');
+    assert_eq('mythical', $by['dragon']['rarity'], 'Dragon — мифический');
+    assert_eq('legendary', $by['lightning']['rarity'], 'Lightning — легендарный');
+    assert_eq('common', $by['spike']['rarity'], 'Spike — обычный');
+    assert_eq('', $by['evil']['rarity'], 'без цены — без редкости');
     assert_eq('https://maknemy.com/images/kitsune-fruit.webp', $by['kitsune']['icon'], 'картинка фрукта важнее перма');
     assert_eq('/images/spike.png', $by['spike']['icon'], 'у дешёвого — перм');
     assert_eq('T-Rex', $by['trex']['name'], 'имя приведено');
@@ -416,6 +434,15 @@ test('список фруктов — из пермов тирлиста, кар
     assert_eq('Dragon', $by['dragon']['name'], 'без пояснения в скобках');
     assert_eq('', $by['evil']['icon'], 'чужой адрес картинки не проходит');
     assert_eq('', $by['yeti']['icon'], 'новый фрукт из стока — без картинки, но в списке');
+});
+
+test('редкость считается по цене так же, как в игре', function () {
+    assert_eq('common', stock_rarity(180000), 'Spike');
+    assert_eq('uncommon', stock_rarity(250000), 'Flame — граница');
+    assert_eq('rare', stock_rarity(650000), 'Light — граница');
+    assert_eq('legendary', stock_rarity(1000000), 'Quake — граница');
+    assert_eq('mythical', stock_rarity(2500000), 'Gravity — граница');
+    assert_eq('', stock_rarity(null), 'цена неизвестна');
 });
 
 test('ответ api/stock.php: сток, подпись источника, список фруктов', function () {
@@ -427,6 +454,9 @@ test('ответ api/stock.php: сток, подпись источника, с�
     assert_eq(SK_NOW, $out['normal']['seen'], 'когда видели');
     assert_eq(false, isset($out['normal']['message_id']), 'id сообщения Discord наружу не уходит');
     assert_eq(10, count($out['catalog']), 'список из фруктов стока, когда тирлиста нет');
+    assert_eq('mythical', $out['normal']['fruits'][3]['rarity'], 'у фрукта стока есть редкость');
+    assert_eq(14400, $out['normal']['period'], 'длина смены обычного — 4 часа');
+    assert_eq(7200, $out['mirage']['period'], 'Mirage — 2 часа');
 });
 
 // --------------------------------------------------------------------------
@@ -457,9 +487,16 @@ test('страница /stock: маршрут, подпись бота, свой
 test('подписи страницы есть в обоих языках словаря', function () {
     $i18n = file_get_contents(__DIR__ . '/../public_html/js/i18n.js');
     $page = file_get_contents(__DIR__ . '/../public_html/stock.php') . file_get_contents(__DIR__ . '/../public_html/js/stock-page.js');
-    preg_match_all('~(?:data-i18n(?:-label)?="|\bt\("|fmt\(")((?:stock|nav)\.[A-Za-z]+)~', $page, $m);
+    preg_match_all('~(?:data-i18n(?:-label)?="|\bt\("|fmt\(")((?:stock|nav)\.[A-Za-z]+)(?=")~', $page, $m);
     $keys = array_unique($m[1]);
     assert_true(count($keys) > 15, 'ключи нашлись');
+    // Ключи редкости собираются в скрипте из кусков («stock.r.» + редкость),
+    // поверка выше их не видит.
+    foreach (['common', 'uncommon', 'rare', 'legendary', 'mythical'] as $r) {
+        $keys[] = 'stock.r.' . $r;
+        $keys[] = 'stock.g.' . $r;
+    }
+    $keys[] = 'stock.g.other';
     foreach ($keys as $k) {
         assert_eq(2, substr_count($i18n, '"' . $k . '":'), "ключ $k в ru и en");
     }

@@ -9,6 +9,8 @@
   var LANG_KEY = "nexus-lang-v1";
   var INVITE_KEY = "nexus-signin-v1";
   var KINDS = ["normal", "mirage"];
+  var RARITIES = ["mythical", "legendary", "rare", "uncommon", "common", ""];
+  var PERIODS = { normal: 14400, mirage: 7200 };
 
   var POLL_MS = 60000;
   var SOON_MS = 20000;
@@ -20,6 +22,7 @@
   var lang = "ru";
 
   var data = null;
+  var shown = false;
   var loadFailed = false;
   var skew = 0;
   var pollTimer = 0;
@@ -102,14 +105,20 @@
     return pic;
   }
 
+  function byPrice(a, b) {
+    return (Number(b.price) || 0) - (Number(a.price) || 0);
+  }
+
   function renderStock() {
     var cat = catalog();
+    var fresh = !!data && !shown;
     KINDS.forEach(function (kind) {
-      var card = document.querySelector('.sk-card[data-kind="' + kind + '"]');
+      var card = document.querySelector('.sk-dealer[data-kind="' + kind + '"]');
       if (!card) return;
       var list = card.querySelector("[data-list]");
       var s = data && data[kind];
       list.textContent = "";
+      list.classList.toggle("is-fresh", fresh);
       if (!data) return;
       if (!s || !Array.isArray(s.fruits) || !s.fruits.length) {
         var none = el("li", "sk-none");
@@ -117,18 +126,26 @@
         list.appendChild(none);
         return;
       }
-      s.fruits.forEach(function (f) {
-        var li = el("li", "sk-fruit");
+      s.fruits.slice().sort(byPrice).forEach(function (f, i) {
+        var li = el("li", "sk-item");
+        li.dataset.rarity = f.rarity || "";
+        li.style.setProperty("--i", String(i));
         if (watch.keys[f.key]) li.classList.add("is-watched");
         li.appendChild(picture(f, cat));
-        var name = el("span", "sk-name");
+        var name = el("span", "sk-item-name");
         name.textContent = f.name;
         li.appendChild(name);
-        var cost = el("span", "sk-price");
+        if (f.rarity) {
+          var rar = el("span", "sk-item-rarity");
+          rar.textContent = t("stock.r." + f.rarity);
+          li.appendChild(rar);
+        }
+        var cost = el("span", "sk-item-price");
         cost.textContent = price(f.price);
         li.appendChild(cost);
         if (watch.keys[f.key]) {
           var star = el("span", "sk-star");
+          star.textContent = "★";
           star.setAttribute("role", "img");
           star.setAttribute("aria-label", t("stock.watched"));
           star.title = t("stock.watched");
@@ -137,7 +154,21 @@
         list.appendChild(li);
       });
     });
+    if (data) shown = true;
     tick();
+  }
+
+  function setClock(node, text, digits) {
+    if (node.dataset.text === text) return;
+    node.dataset.text = text;
+    node.textContent = "";
+    node.classList.toggle("is-text", !digits);
+    if (!digits) { node.textContent = text; return; }
+    for (var i = 0; i < text.length; i++) {
+      var ch = el("span", text.charAt(i) === ":" ? "c" : "d");
+      ch.textContent = text.charAt(i);
+      node.appendChild(ch);
+    }
   }
 
   function stale() {
@@ -162,14 +193,21 @@
   function tick() {
     var n = now();
     KINDS.forEach(function (kind) {
-      var card = document.querySelector('.sk-card[data-kind="' + kind + '"]');
+      var card = document.querySelector('.sk-dealer[data-kind="' + kind + '"]');
       if (!card) return;
       var left = card.querySelector("[data-left]");
+      var fill = card.querySelector("[data-fill]");
       var s = data && data[kind];
-      if (!s || !s.ends) left.textContent = "—";
-      else if (s.ends > n) left.textContent = clock(s.ends - n);
-      else left.textContent = t("stock.changing");
-      card.classList.toggle("is-changing", !!(s && s.ends && s.ends <= n));
+      var period = (s && s.period) || PERIODS[kind];
+      var changing = !!(s && s.ends && s.ends <= n);
+      if (!s || !s.ends) setClock(left, "—", false);
+      else if (!changing) setClock(left, clock(s.ends - n), true);
+      else setClock(left, t("stock.changing"), false);
+      var done = 0;
+      if (s && s.ends) done = changing ? 1 : Math.min(1, Math.max(0, 1 - (s.ends - n) / period));
+      fill.style.width = (done * 100).toFixed(2) + "%";
+      card.classList.toggle("is-changing", changing);
+      left.setAttribute("aria-label", t("stock.changeIn") + " " + left.textContent);
     });
 
     var seen = $("skSeen");
@@ -276,25 +314,37 @@
   }
 
   function renderCatalog() {
-    var list = $("skCatalog");
-    if (!list) return;
+    var box = $("skCatalog");
+    if (!box) return;
     var items = data && Array.isArray(data.catalog) ? data.catalog : [];
     var cat = catalog();
-    list.textContent = "";
-    items.forEach(function (c) {
-      var li = el("li");
-      var b = el("button", "sk-pick");
-      b.type = "button";
-      b.dataset.key = c.key;
-      var on = !!watch.keys[c.key];
-      b.setAttribute("aria-pressed", on ? "true" : "false");
-      if (!watch.user) b.setAttribute("aria-disabled", "true");
-      b.appendChild(picture({ key: c.key, name: c.name }, cat));
-      var name = el("span", "sk-pick-name");
-      name.textContent = c.name;
-      b.appendChild(name);
-      li.appendChild(b);
-      list.appendChild(li);
+    box.textContent = "";
+    RARITIES.forEach(function (r) {
+      var group = items.filter(function (c) { return (c.rarity || "") === r; });
+      if (!group.length) return;
+      var wrap = el("div", "sk-group");
+      wrap.dataset.rarity = r;
+      var title = el("h3", "sk-group-title");
+      title.textContent = t("stock.g." + (r || "other"));
+      wrap.appendChild(title);
+      var list = el("ul", "sk-picks");
+      group.forEach(function (c) {
+        var li = el("li");
+        var b = el("button", "sk-pick");
+        b.type = "button";
+        b.dataset.key = c.key;
+        var on = !!watch.keys[c.key];
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+        if (!watch.user) b.setAttribute("aria-disabled", "true");
+        b.appendChild(picture({ key: c.key, name: c.name }, cat));
+        var name = el("span", "sk-pick-name");
+        name.textContent = c.name;
+        b.appendChild(name);
+        li.appendChild(b);
+        list.appendChild(li);
+      });
+      wrap.appendChild(list);
+      box.appendChild(wrap);
     });
   }
 

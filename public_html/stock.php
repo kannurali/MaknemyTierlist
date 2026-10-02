@@ -174,20 +174,30 @@ page_lscache();
       <p class="sk-state" id="skState" role="status" aria-live="polite" data-i18n="stock.loading">Загружаем сток…</p>
 
       <div class="sk-grid">
-        <section class="sk-card" data-kind="normal" aria-labelledby="skNormalTitle">
-          <div class="sk-card-head">
-            <h2 class="sk-card-title" id="skNormalTitle" data-i18n="stock.normal">Обычный сток</h2>
-            <p class="sk-timer"><span class="sk-timer-label" data-i18n="stock.changeIn">Смена через</span> <span class="sk-left" data-left>—</span></p>
+        <section class="sk-dealer is-normal" data-kind="normal" aria-labelledby="skNormalTitle">
+          <div class="sk-dealer-head">
+            <h2 class="sk-dealer-name" id="skNormalTitle" data-i18n="stock.normal">Обычный сток</h2>
+            <p class="sk-dealer-note" data-i18n="stock.normalNote">Дилер в любом море, смена каждые 4 часа</p>
           </div>
-          <ul class="sk-fruits" data-list aria-labelledby="skNormalTitle"></ul>
+          <div class="sk-clock">
+            <span class="sk-clock-label" data-i18n="stock.changeIn">Смена через</span>
+            <span class="sk-clock-time" data-left>—</span>
+          </div>
+          <div class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></div>
+          <ul class="sk-shelf" data-list aria-labelledby="skNormalTitle"></ul>
         </section>
 
-        <section class="sk-card is-mirage" data-kind="mirage" aria-labelledby="skMirageTitle">
-          <div class="sk-card-head">
-            <h2 class="sk-card-title" id="skMirageTitle" data-i18n="stock.mirage">Сток Mirage</h2>
-            <p class="sk-timer"><span class="sk-timer-label" data-i18n="stock.changeIn">Смена через</span> <span class="sk-left" data-left>—</span></p>
+        <section class="sk-dealer is-mirage" data-kind="mirage" aria-labelledby="skMirageTitle">
+          <div class="sk-dealer-head">
+            <h2 class="sk-dealer-name" id="skMirageTitle" data-i18n="stock.mirage">Сток Mirage</h2>
+            <p class="sk-dealer-note" data-i18n="stock.mirageNote">Дилер на острове Mirage, смена каждые 2 часа</p>
           </div>
-          <ul class="sk-fruits" data-list aria-labelledby="skMirageTitle"></ul>
+          <div class="sk-clock">
+            <span class="sk-clock-label" data-i18n="stock.changeIn">Смена через</span>
+            <span class="sk-clock-time" data-left>—</span>
+          </div>
+          <div class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></div>
+          <ul class="sk-shelf" data-list aria-labelledby="skMirageTitle"></ul>
         </section>
       </div>
 
@@ -205,7 +215,7 @@ page_lscache();
           <p class="sk-watch-msg" id="skWatchMsg" role="status" aria-live="polite"></p>
           <a class="sk-btn" id="skWatchGo" href="#" hidden></a>
         </div>
-        <ul class="sk-catalog" id="skCatalog" data-i18n-label="stock.catalog" aria-label="Фрукты для уведомлений"></ul>
+        <div class="sk-groups" id="skCatalog" role="group" data-i18n-label="stock.catalog" aria-label="Фрукты для уведомлений"></div>
       </section>
 
     </div>

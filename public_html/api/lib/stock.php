@@ -25,6 +25,10 @@ require_once __DIR__ . '/telegram.php';
 
 const STOCK_KINDS = ['normal', 'mirage'];
 
+// Сколько длится смена у каждого дилера, секунды. Страница рисует по ней,
+// какая часть смены уже прошла.
+const STOCK_PERIODS = ['normal' => 14400, 'mirage' => 7200];
+
 const STOCK_DISCORD_API = 'https://discord.com/api/v10';
 
 // Подпись источника на странице. Решение владельца: сток подписан нашим
@@ -52,6 +56,39 @@ const STOCK_PULL_LIMIT = 50;
 // стоке тот же фрукт называется Lightning, и без этого у него не было бы
 // картинки, а в фильтре он стоял бы дважды.
 const STOCK_ALIASES = ['lighting' => 'Lightning'];
+
+// Цена фрукта у дилера в игре, белли. Нужна для двух вещей: порядка в списке
+// для уведомлений (дорогие сверху) и редкости фрукта, которую страница
+// показывает цветом, — у фрукта, которого сейчас нет в стоке, своей цены под
+// рукой нет. Цена из стока важнее этой таблицы: игра поменяет цену — сток
+// покажет новую сразу, а таблица догонит при следующей правке.
+// Новый фрукт, которого здесь нет, встаёт в конец списка без редкости.
+const STOCK_PRICES = [
+    'rocket' => 5000, 'spin' => 7500, 'blade' => 30000, 'spring' => 60000, 'bomb' => 80000,
+    'smoke' => 100000, 'spike' => 180000, 'flame' => 250000, 'ice' => 350000, 'sand' => 420000,
+    'dark' => 500000, 'eagle' => 550000, 'diamond' => 600000, 'light' => 650000, 'rubber' => 750000,
+    'ghost' => 940000, 'magma' => 960000, 'quake' => 1000000, 'buddha' => 1200000, 'love' => 1300000,
+    'creation' => 1400000, 'spider' => 1500000, 'sound' => 1700000, 'phoenix' => 1800000,
+    'portal' => 1900000, 'lightning' => 2100000, 'pain' => 2300000, 'blizzard' => 2400000,
+    'gravity' => 2500000, 'mammoth' => 2700000, 'trex' => 2700000, 'dough' => 2800000,
+    'shadow' => 2900000, 'venom' => 3000000, 'gas' => 3200000, 'control' => 3200000,
+    'spirit' => 3400000, 'tiger' => 5000000, 'yeti' => 5000000, 'kitsune' => 8000000,
+    'dragon' => 15000000,
+];
+
+/**
+ * Редкость по цене, как она устроена в игре: обычные дешевле 250 000,
+ * необычные — до 650 000, редкие — до миллиона, легендарные — до 2 500 000,
+ * дальше мифические. '' — цена неизвестна.
+ */
+function stock_rarity(?int $price): string {
+    if ($price === null || $price <= 0) { return ''; }
+    if ($price < 250000) { return 'common'; }
+    if ($price < 650000) { return 'uncommon'; }
+    if ($price < 1000000) { return 'rare'; }
+    if ($price < 2500000) { return 'legendary'; }
+    return 'mythical';
+}
 
 // --------------------------------------------------------------------------
 //  Разбор сообщения Vulcan
@@ -402,7 +439,9 @@ function stock_pull(PDO $pdo, array $sc, callable $get, int $now): array {
  * в тирлисте нет (вышел новый), добавляется без картинки, чтобы его можно было
  * отметить сразу.
  *
- * Возвращает [[key, name, icon], …] по алфавиту.
+ * Возвращает [[key, name, icon, price, rarity], …]: сначала дорогие, как
+ * мифические сверху в игре; фрукты без известной цены — в конце по алфавиту.
+ * price — из стока, если фрукт там сейчас есть, иначе из STOCK_PRICES.
  */
 function stock_catalog(array $tierState, array $stock): array {
     $perm  = [];
@@ -418,9 +457,13 @@ function stock_catalog(array $tierState, array $stock): array {
         }
     }
 
-    $names = [];
+    $names  = [];
+    $prices = STOCK_PRICES;
     foreach ($stock as $s) {
-        foreach (is_array($s['fruits'] ?? null) ? $s['fruits'] : [] as $f) { $names[$f['key']] = $f['name']; }
+        foreach (is_array($s['fruits'] ?? null) ? $s['fruits'] : [] as $f) {
+            $names[$f['key']]  = $f['name'];
+            $prices[$f['key']] = (int)$f['price'];
+        }
     }
 
     $out = [];
@@ -435,7 +478,19 @@ function stock_catalog(array $tierState, array $stock): array {
     foreach ($names as $key => $name) {
         if (!isset($out[$key])) { $out[$key] = ['key' => $key, 'name' => $name, 'icon' => $fruit[$key] ?? '']; }
     }
-    uasort($out, function (array $a, array $b): int { return strcmp($a['key'], $b['key']); });
+    foreach ($out as $key => $c) {
+        $price = $prices[$key] ?? null;
+        $out[$key]['price']  = $price;
+        $out[$key]['rarity'] = stock_rarity($price);
+    }
+    uasort($out, function (array $a, array $b): int {
+        if ($a['price'] !== $b['price']) {
+            if ($a['price'] === null) { return 1; }
+            if ($b['price'] === null) { return -1; }
+            return $b['price'] <=> $a['price'];
+        }
+        return strcmp($a['key'], $b['key']);
+    });
     return array_values($out);
 }
 
@@ -467,7 +522,10 @@ function stock_public(PDO $pdo, array $tierState): array {
     $out = ['ok' => true, 'source' => STOCK_SOURCE];
     foreach (STOCK_KINDS as $kind) {
         $s = $stock[$kind];
-        $out[$kind] = $s === null ? null : ['fruits' => $s['fruits'], 'ends' => $s['ends'], 'seen' => $s['seen']];
+        if ($s === null) { $out[$kind] = null; continue; }
+        $fruits = [];
+        foreach ($s['fruits'] as $f) { $fruits[] = $f + ['rarity' => stock_rarity((int)$f['price'])]; }
+        $out[$kind] = ['fruits' => $fruits, 'ends' => $s['ends'], 'seen' => $s['seen'], 'period' => STOCK_PERIODS[$kind]];
     }
     $out['catalog'] = stock_catalog($tierState, $stock);
     return $out;
