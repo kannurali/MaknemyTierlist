@@ -463,7 +463,7 @@
     enabled: true,
     weight: 1,
     start: "",
-    end: "",
+    end: "2026-10-03",
     href: "https://t.me/theMaknemy/5432",
     text: "",
     cta: "",
@@ -480,6 +480,31 @@
       popup: { src: "/assets/promo/giveaway-popup-anim.webp", w: 800, h: 800,  anim: true, poster: "/assets/promo/giveaway-popup.webp" }
     },
 
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
+  var HOUSE_CHANNEL = {
+    id: "house-tg-bloxfruits",
+    name: "house-tg-bloxfruits",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "",
+    end: "",
+    href: "https://t.me/+VQVMx_Imrus1Zjhi",
+    text: "",
+    cta: "",
+    textKey: "promo.channelText",
+    ctaKey: "promo.channelCta",
+    erid: "",
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip: { src: "/assets/promo/channel-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/channel-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/channel-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/channel-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+    },
     popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
     notes: ""
   };
@@ -521,6 +546,7 @@
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
     if (bookedFor(PLAYEROK, slot, now, page)) { return PLAYEROK; }
     if (bookedFor(HOUSE_GIVEAWAY, slot, now, page)) { return HOUSE_GIVEAWAY; }
+    if (bookedFor(HOUSE_CHANNEL, slot, now, page)) { return HOUSE_CHANNEL; }
     if (slot === "popup") { return HOUSE_TG; }
     return creativeFor(HOUSE_SLOT, slot) ? HOUSE_SLOT : null;
   }
@@ -556,6 +582,7 @@
     HOUSE_TG: HOUSE_TG,
     HOUSE_SLOT: HOUSE_SLOT,
     HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
+    HOUSE_CHANNEL: HOUSE_CHANNEL,
     PLAYEROK: PLAYEROK,
     houseFor: houseFor,
     popupPick: popupPick,

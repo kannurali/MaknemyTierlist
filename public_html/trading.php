@@ -280,8 +280,8 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=63" fetchpriority="high"></script>
-  <script src="js/promo.js?v=19" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=64" fetchpriority="high"></script>
+  <script src="js/promo.js?v=20" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
 
