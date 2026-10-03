@@ -417,6 +417,61 @@ test('увеличенные борта не наезжают на столби�
     assert_true($railT + $railH <= $frameH, 'борт должен помещаться в фрейм');
 });
 
+// Баннер между калькулятором и вердиктом (просьба владельца, 2026-10-03):
+// та же полоса 4:1, что в середине тирлиста. Он стоит под доской во всю её
+// ширину, вердикт уехал ниже, фрейм вырос под обоих. На телефоне координат
+// нет, порядок блоков задаёт разметка.
+test('баннер стоит между калькулятором и вердиктом и ни на кого не наезжает', function () use ($PUB) {
+    $calc = calc_read($PUB . '/calculator.php');
+    $board  = strpos($calc, '<div class="tc-board">');
+    $strip  = strpos($calc, '<aside class="tc-strip" id="tcStrip"');
+    $result = strpos($calc, '<section class="tc-result"');
+    assert_true($board !== false && $strip !== false && $result !== false,
+        'доска, баннер и вердикт должны быть в разметке');
+    assert_true($board < $strip && $strip < $result, 'баннер идёт после доски и до вердикта');
+
+    $css = calc_read($PUB . '/css/calculator.css');
+    $num = function (string $re) use ($css) {
+        assert_true((bool)preg_match($re, $css, $m), "не нашлось: $re");
+        return isset($m[1]) ? (float)$m[1] : -1.0;
+    };
+    $prop = function (string $sel, string $p) use ($num) {
+        return $num('/' . preg_quote($sel, '/') . ' \{[^}]*' . $p . ': calc\(([\d.]+) \* var\(--u\)\)/s');
+    };
+
+    $boardL = $prop('.tc-board', 'left');
+    $boardT = $prop('.tc-board', 'top');
+    $boardW = $prop('.tc-board', 'width');
+    $boardH = $prop('.tc-board', 'height');
+    $stripL = $prop('.tc-strip-slot', 'left');
+    $stripT = $prop('.tc-strip-slot', 'top');
+    $stripW = $prop('.tc-strip-slot', 'width');
+    $stripH = $prop('.tc-strip-slot', 'height');
+    $resT   = $prop('.tc-result', 'top');
+    $resH   = $prop('.tc-result', 'height');
+    $frameH = $prop('.tc-frame', 'height');
+
+    assert_eq($boardL, $stripL, 'баннер выровнен по доске слева');
+    assert_eq($boardW, $stripW, 'баннер во всю ширину доски');
+    assert_eq(4.0, $stripW / $stripH, 'пропорция полосы 4:1, как у макета 1200x300');
+    assert_true($boardT + $boardH < $stripT, 'баннер начинается ниже доски');
+    assert_true($stripT + $stripH < $resT, 'вердикт начинается ниже баннера');
+    assert_true($resT + $resH <= $frameH, 'вердикт помещается во фрейм');
+
+    assert_true((bool)preg_match('/@media \(max-width: 900px\) \{.*?\.tc-strip-slot \{[^}]*aspect-ratio: 4 \/ 1;/s', $css),
+        'на телефоне баннер держит 4:1 до ответа /api/promo.php');
+
+    // Баннер заполняет тот же код, что и борта: тот же отбор кампаний и та же
+    // плашка «РЕКЛАМА». Заглушку «Ваша реклама» борта и баннер не показывают.
+    $js = calc_read($PUB . '/js/calculator-page.js');
+    assert_true(strpos($js, 'fillAd(strip, promo.pickWeighted(banners, Math.random()), "strip")') !== false,
+        'баннер заполняется через fillAd()');
+    assert_true(strpos($js, 'const banners = promoList(doc, "strip")') !== false,
+        'кампании для баннера отбираются как для бортов');
+    assert_true(strpos($js, 'house.id !== promo.HOUSE_SLOT.id') !== false,
+        'картинка-заглушка в баннер и борта не попадает');
+});
+
 // Цены калькулятора — это цены тирлиста: отдельной копии нет, каталог собран
 // из того же /api/tierlist.php. Открытая вкладка обязана их догонять, иначе
 // правка в админке доезжала бы до неё только после F5.

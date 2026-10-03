@@ -495,9 +495,9 @@
 
   const PROMO_API = "/api/promo.php";
 
-  function fillRail(el, camp) {
+  function fillAd(el, camp, slot) {
     const promo = window.PROMO;
-    const cre = promo && camp ? promo.creativeFor(camp, "rail") : null;
+    const cre = promo && camp ? promo.creativeFor(camp, slot) : null;
     if (!cre || !cre.src) return false;
 
     el.textContent = "";
@@ -510,7 +510,7 @@
     img.decoding = "async";
     img.draggable = false;
     el.appendChild(img);
-    promo.stampOn(img, camp, "rail", tx);
+    promo.stampOn(img, camp, slot, tx);
 
     const chip = document.createElement("span");
     chip.className = "ptn-chip";
@@ -527,7 +527,11 @@
     const url = promo.safeHref(camp.href);
     el.classList.toggle("has-link", !!url);
     if (url) {
-      const open = () => window.open(url, "_blank", "noopener");
+      const open = () => {
+        try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot, page: PROMO_PAGE }); }
+        catch (_e) {}
+        window.open(url, "_blank", "noopener");
+      };
       el.onclick = open;
       el.tabIndex = 0;
       el.setAttribute("role", "link");
@@ -538,10 +542,20 @@
     return true;
   }
 
+  function promoList(doc, slot) {
+    const promo = window.PROMO;
+    const now = Date.now();
+    const paid = doc ? promo.eligible(promo.normalizeDoc(doc), slot, now, PROMO_PAGE) : [];
+    if (paid.length) return paid;
+    const house = promo.houseFor(slot, now, PROMO_PAGE);
+    return house && house.id !== promo.HOUSE_SLOT.id ? [house] : [];
+  }
+
   function renderPromo() {
     const promo = window.PROMO;
     const left = document.getElementById("tcRailL");
     const right = document.getElementById("tcRailR");
+    const strip = document.getElementById("tcStrip");
     const dock = document.getElementById("promoDock");
     if (!promo) return;
 
@@ -555,16 +569,18 @@
           window.NX_PROMO_POPUP.mount({ doc, busy: () => catalogState.open, page: PROMO_PAGE });
         }
 
+        if (strip) {
+          const banners = promoList(doc, "strip");
+          if (banners.length) fillAd(strip, promo.pickWeighted(banners, Math.random()), "strip");
+        }
+
         if (!left || !right) return;
 
-        const paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", Date.now(), PROMO_PAGE) : [];
-
-        const house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
-        const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+        const list = promoList(doc, "rail");
         if (!list.length) return;
-        fillRail(left, list[0]);
+        fillAd(left, list[0], "rail");
 
-        fillRail(right, list[1] || list[0]);
+        fillAd(right, list[1] || list[0], "rail");
       });
   }
 

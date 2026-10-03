@@ -725,11 +725,12 @@ test('нижняя полоса рекламы подключена на лен�
     }
 
     // Playerok — платное размещение, и живёт оно там же, где свои кампании:
-    // в коде с макетами в репозитории. Отличие одно — список страниц, из-за
-    // которого оно занимает только тирлист.
+    // в коде с макетами в репозитории. Отличие одно — список страниц: с
+    // октября это калькулятор, лента трейдов и создание объявления (у всех
+    // трёх PROMO_PAGE = "calc").
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
-    assert_true(strpos($promo, 'pages: ["tierlist"]') !== false,
-        'Playerok привязан к тирлисту, иначе он разольётся по всему сайту');
+    assert_true(strpos($promo, 'pages: ["calc"]') !== false,
+        'Playerok привязан к калькулятору и трейдингу, иначе он разольётся по всему сайту');
     foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/playerok-' . $slot . '.webp'),
             "макет Playerok для слота $slot должен лежать в репозитории");
@@ -745,6 +746,10 @@ test('нижняя полоса рекламы подключена на лен�
             'const PROMO_PAGE = "' . $id . '"') !== false,
             "$f: должна объявлять свою страницу как $id");
     }
+    // Сток делил страницу с калькулятором, пока на ней не было Playerok. Своя
+    // страница держит его снаружи: Playerok купил калькулятор и трейдинг.
+    assert_true(strpos(read_file_or_fail($PUB . '/js/stock-page.js'), 'var PROMO_PAGE = "stock"') !== false,
+        'js/stock-page.js: должна объявлять свою страницу как stock');
     // Оба вызова идут из того же запроса, что и борта: документ один.
     foreach (['js/news-page.js', 'js/calculator-page.js'] as $f) {
         $js = read_file_or_fail($PUB . '/' . $f);

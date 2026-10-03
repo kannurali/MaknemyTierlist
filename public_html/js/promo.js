@@ -6,7 +6,7 @@
 
   var CREATIVE_KEYS = SLOTS.concat(["dockMini"]);
 
-  var PAGES = ["tierlist", "news", "calc"];
+  var PAGES = ["tierlist", "news", "calc", "stock"];
 
   var MAX_STRIP_SLIDES = 8;
 
@@ -153,6 +153,7 @@
   function eligible(doc, slot, nowMs, page) {
     var d = normalizeDoc(doc);
     if (SLOTS.indexOf(slot) < 0) { return []; }
+    if (bookedFor(PLAYEROK, slot, nowMs, page)) { return [PLAYEROK]; }
     var out = [];
     for (var i = 0; i < d.campaigns.length; i++) {
       var c = d.campaigns[i];
@@ -484,20 +485,20 @@
   };
 
   var PLAYEROK = {
-    id: "playerok-2026-09",
-    name: "playerok-2026-09",
+    id: "playerok-2026-10",
+    name: "playerok-2026-10",
     advertiser: "Playerok",
     enabled: true,
     weight: 1,
-    start: "",
-    end: "2026-09-30",
-    href: "https://plrk.co/p/Maknemy0509",
+    start: "2026-10-03",
+    end: "",
+    href: "https://bit.ly/maknemy0310",
     text: "",
     cta: "",
     textKey: "promo.playerokText",
     ctaKey: "promo.playerokCta",
     erid: "",
-    pages: ["tierlist"],
+    pages: ["calc"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip: { src: "/assets/promo/playerok-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },

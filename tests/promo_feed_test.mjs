@@ -120,10 +120,14 @@ test('with nothing sold the feed shows the house banner of that page', () => {
     }
 });
 
-test('Playerok stays on the tier list and does not spill into the feeds', () => {
-    for (const page of ['news', 'calc']) {
-        assert.notEqual(campaigns(null, page, NOW)[0].id, PROMO.PLAYEROK.id, page);
-    }
+test('from 3 October Playerok owns the trading feed, the news feed stays without it', () => {
+    const run = Date.UTC(2026, 9, 5, 12);
+    assert.notEqual(campaigns(null, 'news', run)[0].id, PROMO.PLAYEROK.id, 'news');
+    assert.notEqual(campaigns(doc({}), 'news', run)[0].id, PROMO.PLAYEROK.id, 'news, with a sold banner');
+    assert.deepEqual(campaigns(null, 'calc', run).map(c => c.id), [PROMO.PLAYEROK.id], 'trading');
+    assert.deepEqual(campaigns(doc({}), 'calc', run).map(c => c.id), [PROMO.PLAYEROK.id],
+        'trading: Playerok outranks a banner sold through the admin panel');
+    assert.notEqual(campaigns(null, 'calc', NOW)[0].id, PROMO.PLAYEROK.id, 'trading before 3 October');
 });
 
 test('a sold strip banner takes every feed slot away from the house banner', () => {

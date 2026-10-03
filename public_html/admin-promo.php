@@ -115,7 +115,7 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/promo.js?v=18"></script>
+<script src="/js/promo.js?v=19"></script>
 <script src="/js/promo-admin.js?v=7"></script>
 </body>
 </html>
