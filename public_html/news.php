@@ -221,7 +221,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="stylesheet" href="css/news-design.css?v=21" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
-<link rel="stylesheet" href="css/promo-dock-mini.css?v=1" />
+<link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
 <link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
