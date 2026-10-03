@@ -753,9 +753,11 @@
     return !!link && !!href && link.replace(/\/+$/, "") === href.replace(/\/+$/, "");
   }
 
-  function legacyEnded() {
-    return !!promo && legacySameAs(promo.PLAYEROK)
-      && !(promo.PLAYEROK.enabled && promo.inWindow(promo.PLAYEROK, Date.now()));
+  const PLAYEROK_LINK = /^https?:\/\/(?:[^/?#]*\.)?(?:plrk\.co|playerok\.com)(?:[/?#:]|$)/i;
+
+  function legacyIsPlayerok() {
+    const link = normalizeHref((state && state.ad && state.ad.link) || "", "");
+    return !!promo && (PLAYEROK_LINK.test(link) || legacySameAs(promo.PLAYEROK));
   }
 
   function renderPromoBlock() {
@@ -766,7 +768,7 @@
       const house = houseFor("strip");
 
       const sellable = house && house.id === promo.HOUSE_SLOT.id;
-      if (house && (legacyAdEmpty() || legacyEnded() || (!sellable && legacySameAs(house)))) {
+      if (house && (legacyAdEmpty() || legacyIsPlayerok() || (!sellable && legacySameAs(house)))) {
         return renderPromoStrip([house]);
       }
     }
