@@ -4,6 +4,8 @@
 
   var SLOTS = ["strip", "rail", "dock", "popup"];
 
+  var CREATIVE_KEYS = SLOTS.concat(["dockMini"]);
+
   var PAGES = ["tierlist", "news", "calc"];
 
   var MAX_STRIP_SLIDES = 8;
@@ -353,9 +355,9 @@
 
       var creatives = {};
       var rawCre = (c.creatives && typeof c.creatives === "object") ? c.creatives : {};
-      for (var k = 0; k < SLOTS.length; k++) {
-        var cre = normalizeCreative(rawCre[SLOTS[k]]);
-        if (cre) { creatives[SLOTS[k]] = cre; }
+      for (var k = 0; k < CREATIVE_KEYS.length; k++) {
+        var cre = normalizeCreative(rawCre[CREATIVE_KEYS[k]]);
+        if (cre) { creatives[CREATIVE_KEYS[k]] = cre; }
       }
 
       out.push({
@@ -533,6 +535,7 @@
 
   var api = {
     SLOTS: SLOTS,
+    CREATIVE_KEYS: CREATIVE_KEYS,
     PAGES: PAGES,
     MAX_STRIP_SLIDES: MAX_STRIP_SLIDES,
     MSK_OFFSET_MS: MSK_OFFSET_MS,

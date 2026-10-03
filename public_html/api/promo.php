@@ -50,7 +50,8 @@ function promo_str($v): string {
 // have to stay unique and stable). Everything else is clamped silently - an
 // out-of-range weight is a slider mistake, not a reason to lose the edit.
 function promo_normalize(array $doc): array {
-    $slots = array_keys(CREATIVE_SPECS);
+    $slots = PROMO_SLOTS;
+    $creativeKeys = array_keys(CREATIVE_SPECS);
     $rawCampaigns = isset($doc['campaigns']) && is_array($doc['campaigns']) ? $doc['campaigns'] : [];
 
     $out = [];
@@ -76,7 +77,7 @@ function promo_normalize(array $doc): array {
 
         $creatives = [];
         $rawCre = is_array($c['creatives'] ?? null) ? $c['creatives'] : [];
-        foreach ($slots as $slot) {
+        foreach ($creativeKeys as $slot) {
             if (!is_array($rawCre[$slot] ?? null)) { continue; }
             $src = promo_str($rawCre[$slot]['src'] ?? '');
             if ($src === '') { continue; }

@@ -1,0 +1,125 @@
+.ptn-dock-tab,
+.ptn-dock-mini { display: none; }
+
+@media (max-width: 640px) {
+  .ptn-dock-tab {
+    display: block;
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    width: 56px;
+    height: 22px;
+    margin-left: -28px;
+    padding: 0;
+    border: 1px solid var(--panel-edge);
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    background: rgba(5, 9, 26, .94);
+    color: rgba(255, 255, 255, .85);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ptn-dock-tab::before {
+    content: "";
+    position: absolute;
+    top: -10px; right: -14px; bottom: 0; left: -14px;
+  }
+  .ptn-dock-tab::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translate(-50%, -75%) rotate(45deg);
+    transition: transform .2s ease;
+  }
+  .ptn-dock.is-mini .ptn-dock-tab::after {
+    transform: translate(-50%, -25%) rotate(-135deg);
+  }
+  .ptn-dock-tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  .ptn-dock.is-mini { cursor: pointer; }
+  .ptn-dock.is-mini > .ptn-dock-img,
+  .ptn-dock.is-mini > .ptn-stamp-host { display: none; }
+  .ptn-dock.is-mini:not(.is-mini-art) > .ptn-erid { display: none; }
+
+  .ptn-dock.is-mini .ptn-dock-mini {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding-right: 58px;
+  }
+  .ptn-dock-mini-thumb {
+    flex: none;
+    width: auto;
+    height: 40px;
+    border-radius: 6px;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .ptn-dock-mini-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+  }
+  .ptn-dock-mini-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-family: var(--ui);
+    font-size: 12px;
+    line-height: 1.25;
+    color: rgba(255, 255, 255, .92);
+  }
+  .ptn-dock-mini.has-erid .ptn-dock-mini-text { -webkit-line-clamp: 1; }
+  .ptn-dock-mini-erid {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: var(--ui);
+    font-size: 9px;
+    line-height: 1.3;
+    letter-spacing: .04em;
+    color: rgba(255, 255, 255, .6);
+  }
+
+  .ptn-dock.is-mini-art .ptn-dock-mini {
+    display: block;
+    height: auto;
+    padding-right: 0;
+  }
+  .ptn-dock-mini-art {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 48px;
+    object-fit: contain;
+    border-radius: 6px;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .ptn-dock.is-flip > .ptn-dock-img,
+  .ptn-dock.is-flip > .ptn-stamp-host,
+  .ptn-dock.is-flip > .ptn-dock-mini {
+    animation: ptn-dock-flip .24s ease-out both;
+  }
+  @keyframes ptn-dock-flip {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .ptn-dock-tab::after { transition: none; }
+  .ptn-dock.is-flip > .ptn-dock-img,
+  .ptn-dock.is-flip > .ptn-stamp-host,
+  .ptn-dock.is-flip > .ptn-dock-mini { animation: none; }
+}

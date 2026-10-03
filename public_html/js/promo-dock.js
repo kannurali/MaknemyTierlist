@@ -20,7 +20,7 @@
   function teardown(el) {
     el.textContent = "";
     el.hidden = true;
-    el.classList.remove("has-link");
+    el.classList.remove("has-link", "is-mini", "is-mini-art", "is-flip");
     el.onclick = null;
     el.onkeydown = null;
     el.removeAttribute("tabindex");
@@ -28,6 +28,124 @@
     document.body.classList.remove("has-promo-dock");
     document.body.style.removeProperty("--ptn-dock-h");
     if (ro) { ro.disconnect(); ro = null; }
+  }
+
+  var MINI_KEY = "nx-dock-mini-v1";
+  var MINI_TTL_MS = 24 * 60 * 60 * 1000;
+
+  function miniSaved() {
+    var at = 0;
+    try { at = Number(localStorage.getItem(MINI_KEY)) || 0; } catch (_) {}
+    return at > 0 && Date.now() - at < MINI_TTL_MS;
+  }
+
+  function miniSave(on) {
+    try {
+      if (on) { localStorage.setItem(MINI_KEY, String(Date.now())); }
+      else { localStorage.removeItem(MINI_KEY); }
+    } catch (_) {}
+  }
+
+  function miniGoal(camp, on) {
+    try {
+      if (typeof root.ym === "function") {
+        root.ym(111127188, "reachGoal", on ? "promo_dock_mini" : "promo_dock_full", { id: camp.id });
+      }
+    } catch (_) {}
+  }
+
+  function buildMini(el, camp, tr) {
+    var promo = root.PROMO;
+    var box = document.createElement("span");
+    box.className = "ptn-dock-mini";
+
+    var art = promo.creativeFor(camp, "dockMini");
+    var cre = art || promo.creativeFor(camp, "dock");
+    if (cre) {
+      var img = document.createElement("img");
+      img.className = art ? "ptn-dock-mini-art" : "ptn-dock-mini-thumb";
+      img.src = promo.srcFor(cre);
+      img.alt = "";
+      img.decoding = "async";
+      img.draggable = false;
+      if (cre.w) { img.width = cre.w; }
+      if (cre.h) { img.height = cre.h; }
+      box.appendChild(img);
+    }
+    el.classList.toggle("is-mini-art", !!art);
+
+    if (!art) {
+      var body = document.createElement("span");
+      body.className = "ptn-dock-mini-body";
+      var text = camp.textKey ? tr(camp.textKey) : camp.text;
+      if (text) {
+        var line = document.createElement("span");
+        line.className = "ptn-dock-mini-text";
+        if (camp.textKey) { line.setAttribute("data-i18n", camp.textKey); }
+        line.textContent = text;
+        body.appendChild(line);
+      }
+      if (camp.erid) {
+        var erid = document.createElement("span");
+        erid.className = "ptn-dock-mini-erid";
+        erid.textContent = "erid: " + camp.erid;
+        body.appendChild(erid);
+        box.classList.add("has-erid");
+      }
+      box.appendChild(body);
+    }
+
+    el.insertBefore(box, el.firstChild);
+    return box;
+  }
+
+  function mini(el, camp, opts) {
+    if (!el || !camp || !root.PROMO) { return; }
+    var tr = (opts && opts.t) || function (k) { return k; };
+    var open = (opts && opts.open) || null;
+    var box = null;
+    var flipT = 0;
+    el.classList.remove("is-mini-art", "is-flip");
+
+    var tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "ptn-dock-tab";
+    el.appendChild(tab);
+
+    var set = function (on, byUser) {
+      if (on && !box) { box = buildMini(el, camp, tr); }
+      el.classList.toggle("is-mini", on);
+      var key = on ? "promo.dockExpand" : "promo.dockCollapse";
+      tab.setAttribute("data-i18n-label", key);
+      tab.setAttribute("data-i18n-title", key);
+      tab.setAttribute("aria-label", tr(key));
+      tab.title = tr(key);
+      tab.setAttribute("aria-expanded", on ? "false" : "true");
+      if (!byUser) { return; }
+      miniSave(on);
+      miniGoal(camp, on);
+      el.classList.remove("is-flip");
+      void el.offsetWidth;
+      el.classList.add("is-flip");
+      clearTimeout(flipT);
+      flipT = setTimeout(function () { el.classList.remove("is-flip"); }, 400);
+    };
+
+    tab.onclick = function (e) {
+      e.stopPropagation();
+      set(!el.classList.contains("is-mini"), true);
+    };
+    el.onclick = function () {
+      if (el.classList.contains("is-mini")) { set(false, true); }
+      else if (open) { open(); }
+    };
+    el.onkeydown = function (e) {
+      if (e.target !== el || (e.key !== "Enter" && e.key !== " ")) { return; }
+      e.preventDefault();
+      el.onclick();
+    };
+
+    set(miniSaved(), false);
   }
 
   function render(el, doc, page) {
@@ -85,21 +203,16 @@
     }
 
     var url = promo.safeHref(camp.href);
+    var open = url ? function () { root.open(url, "_blank", "noopener"); } : null;
     el.classList.toggle("has-link", !!url);
     if (url) {
-      var open = function () { root.open(url, "_blank", "noopener"); };
-      el.onclick = open;
       el.tabIndex = 0;
       el.setAttribute("role", "link");
-      el.onkeydown = function (e) {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
-      };
     } else {
-      el.onclick = null;
-      el.onkeydown = null;
       el.removeAttribute("tabindex");
       el.removeAttribute("role");
     }
+    mini(el, camp, { t: function (k) { return t(k, k); }, open: open });
 
     el.hidden = false;
     document.body.classList.add("has-promo-dock");
@@ -119,5 +232,5 @@
     return true;
   }
 
-  root.NX_PROMO_DOCK = { render: render };
+  root.NX_PROMO_DOCK = { render: render, mini: mini };
 })(window);

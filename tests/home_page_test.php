@@ -753,6 +753,45 @@ test('нижняя полоса рекламы подключена на лен�
     }
 });
 
+// Полосу внизу можно свернуть в узкую строку, но не убрать: так просили, и
+// так честнее к рекламодателю. Сворачивание одно на все страницы, тирлист
+// включительно, иначе на тирлисте кнопки не будет или она поведёт себя
+// по-другому.
+test('полосу внизу можно свернуть в мини-строку на всех страницах', function () use ($PUB) {
+    $mod = read_file_or_fail($PUB . '/js/promo-dock.js');
+    assert_true(strpos($mod, 'mini: mini') !== false, 'сворачивание выставлено наружу для тирлиста');
+    assert_true(strpos($mod, 'mini(el, camp,') !== false, 'полоса на ленте и в калькуляторе сворачивается');
+    assert_true(strpos($mod, '"dockMini"') !== false, 'свой макет свёрнутой полосы');
+    assert_true(strpos($mod, '"nx-dock-mini-v1"') !== false, 'выбор посетителя запоминается');
+    assert_true(strpos($mod, 'localStorage') !== false && strpos($mod, 'catch (_)') !== false,
+        'без localStorage (приватный режим) полоса всё равно рисуется');
+    // Свёрнутая строка — тоже реклама: маркировка остаётся и в ней.
+    assert_true(substr_count($mod, '"erid: "') >= 2, 'erid есть и в свёрнутой строке');
+
+    $app = read_file_or_fail($PUB . '/js/app.js');
+    assert_true(strpos($app, 'NX_PROMO_DOCK.mini(dock, camp,') !== false,
+        'тирлист сворачивает полосу тем же модулем');
+
+    $index = read_file_or_fail($PUB . '/index.php');
+    $dockAt = strpos($index, '<script src="js/promo-dock.js');
+    $appAt = strpos($index, '<script src="js/app.js');
+    assert_true($dockAt !== false && $appAt !== false && $dockAt < $appAt,
+        'index.php: модуль полосы грузится раньше app.js, он нужен при первом рисовании');
+
+    foreach (['index.php', 'news.php', 'calculator.php', 'stock.php', 'trading.php', 'trade-new.php'] as $f) {
+        assert_true(strpos(read_file_or_fail($PUB . '/' . $f), 'css/promo-dock-mini.css') !== false,
+            "$f: стили свёрнутой полосы");
+    }
+    $css = read_file_or_fail($PUB . '/css/promo-dock-mini.css');
+    assert_true(strpos($css, '@media (max-width: 640px)') !== false, 'тот же порог телефона');
+    assert_true(strpos($css, 'prefers-reduced-motion') !== false, 'без анимации для тех, кто её отключил');
+
+    $i18n = read_file_or_fail($PUB . '/js/i18n.js');
+    foreach (['promo.dockCollapse', 'promo.dockExpand'] as $key) {
+        assert_true(substr_count($i18n, '"' . $key . '"') === 2, "$key: подпись на двух языках");
+    }
+});
+
 // Рекламное окно (слот "popup"). Раньше оно было только на тирлисте и только
 // под купленную кампанию: пока место не продано, окно молчало. Теперь у него
 // есть собственное объявление о телеграм-канале, и показывается оно на всех

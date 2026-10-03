@@ -455,6 +455,30 @@ test('normalizeDoc exposes the slot list the rest of the code shares', () => {
     assert.deepEqual(SLOTS, ['strip', 'rail', 'dock', 'popup']);
 });
 
+// Свёрнутая полоса внизу. Её макет — не отдельное место: купить «только
+// свёрнутую полосу» нельзя, она лишь другое лицо слота dock. Поэтому макет
+// хранится, а в список слотов и в отбор не попадает.
+test('normalizeDoc keeps the folded-dock creative but never books it as a slot', () => {
+    const d = normalizeDoc({
+        campaigns: [{
+            id: 'c1',
+            slots: ['dock', 'dockMini'],
+            creatives: {
+                dock: { src: '/i/dock.webp', w: 640, h: 200 },
+                dockMini: { src: '/i/mini.webp', w: 640, h: 80 }
+            }
+        }]
+    });
+    const c = d.campaigns[0];
+    assert.deepEqual(c.slots, ['dock']);
+    assert.deepEqual(Object.keys(c.creatives), ['dock', 'dockMini']);
+    assert.equal(c.creatives.dockMini.src, '/i/mini.webp');
+    assert.equal(c.creatives.dockMini.h, 80);
+    assert.deepEqual(eligible(d, 'dockMini', Date.now()), []);
+    assert.deepEqual(eligible(d, 'dock', Date.now()).map(x => x.id), ['c1']);
+    assert.deepEqual(PROMO.CREATIVE_KEYS, ['strip', 'rail', 'dock', 'popup', 'dockMini']);
+});
+
 // ------------------------------------------------------------------ srcFor
 
 // Постер вместо анимации при «уменьшить движение». Через srcFor идут борта и
