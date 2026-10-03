@@ -559,12 +559,12 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <script src="js/i18n.js?v=64" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=65" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=22" fetchpriority="high"></script>
-  <script src="js/promo-dock.js?v=8" fetchpriority="high"></script>
+  <script src="js/promo.js?v=23" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=9" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
   <script src="js/app.js?v=82" fetchpriority="high"></script>

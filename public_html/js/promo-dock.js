@@ -77,11 +77,12 @@
     if (!art) {
       var body = document.createElement("span");
       body.className = "ptn-dock-mini-body";
-      var text = camp.textKey ? tr(camp.textKey) : camp.text;
+      var key = promo.dockTextKey(camp) || camp.textKey;
+      var text = key ? tr(key) : camp.text;
       if (text) {
         var line = document.createElement("span");
         line.className = "ptn-dock-mini-text";
-        if (camp.textKey) { line.setAttribute("data-i18n", camp.textKey); }
+        if (key) { line.setAttribute("data-i18n", key); }
         line.textContent = text;
         body.appendChild(line);
       }

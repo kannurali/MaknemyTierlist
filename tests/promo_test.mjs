@@ -972,3 +972,20 @@ test('текст штампа переведён на оба языка', () => 
         }
     }
 });
+
+test('у TG-канала в свёрнутой полосе свой текст, остальные кампании берут общий', () => {
+    assert.equal(PROMO.dockTextKey({ id: 'c_muryn4isxftf' }), 'promo.channelDockText');
+    assert.equal(PROMO.dockTextKey({ id: 'house-tg-bloxfruits' }), 'promo.channelDockText');
+    assert.equal(PROMO.dockTextKey(PLAYEROK), '');
+    assert.equal(PROMO.dockTextKey({ id: 'toString' }), '');
+    assert.equal(PROMO.dockTextKey(null), '');
+});
+
+test('текст TG-канала для свёрнутой полосы переведён на оба языка', () => {
+    const I18N = require('../public_html/js/i18n.js');
+    for (const lang of ['ru', 'en']) {
+        const s = I18N.t('promo.channelDockText', lang);
+        assert.ok(s && s !== 'promo.channelDockText', lang);
+    }
+    assert.equal(I18N.t('promo.channelDockText', 'ru'), 'Здесь — новости, контент, розыгрыши и обновления проектов по Roblox');
+});

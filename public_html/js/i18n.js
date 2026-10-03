@@ -515,6 +515,7 @@
       "promo.close":            "Закрыть рекламу",
       "promo.dockCollapse":     "Свернуть рекламу",
       "promo.dockExpand":       "Развернуть рекламу",
+      "promo.channelDockText":  "Здесь — новости, контент, розыгрыши и обновления проектов по Roblox",
       "promo.cta":              "Перейти",
 
       "promo.houseTgText":      "Свежие цены, розыгрыши и новости Blox Fruits — в нашем телеграм-канале",
@@ -1256,6 +1257,7 @@
       "promo.close":            "Close the ad",
       "promo.dockCollapse":     "Collapse the ad",
       "promo.dockExpand":       "Expand the ad",
+      "promo.channelDockText":  "News, content, giveaways and Roblox project updates — all here",
       "promo.cta":              "Open",
       "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
       "promo.houseTgCta":       "Open the channel",
