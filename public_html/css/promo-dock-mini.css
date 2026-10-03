@@ -71,14 +71,14 @@
   .ptn-dock-mini-text {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     overflow: hidden;
     font-family: var(--ui);
-    font-size: 12px;
-    line-height: 1.25;
+    font-size: 11px;
+    line-height: 13px;
     color: rgba(255, 255, 255, .92);
   }
-  .ptn-dock-mini.has-erid .ptn-dock-mini-text { -webkit-line-clamp: 1; }
+  .ptn-dock-mini.has-erid .ptn-dock-mini-text { -webkit-line-clamp: 2; }
   .ptn-dock-mini-erid {
     overflow: hidden;
     white-space: nowrap;

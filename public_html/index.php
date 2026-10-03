@@ -150,7 +150,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
-<link rel="stylesheet" href="css/promo-dock-mini.css?v=1" />
+<link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
 </head>

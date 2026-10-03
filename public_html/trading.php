@@ -93,7 +93,7 @@ page_lscache();
 <link rel="stylesheet" href="css/trading.css?v=5" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
-<link rel="stylesheet" href="css/promo-dock-mini.css?v=1" />
+<link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
 <link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
