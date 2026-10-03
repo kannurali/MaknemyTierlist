@@ -5,7 +5,7 @@
   const $ = sel => document.querySelector(sel);
   const sideRoot = side => document.querySelector('.tc-side[data-side="' + side + '"]');
 
-  const PROMO_PAGE = "calc";
+  const PROMO_PAGE = (document.querySelector('meta[name="nx-promo-page"]') || {}).content || "calc";
 
   const LANG_KEY = "nexus-lang-v1";
 

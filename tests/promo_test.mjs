@@ -15,7 +15,7 @@ const {
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, PLAYEROK, houseFor, popupPick
+    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, PLAYEROK, houseFor, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -611,6 +611,8 @@ test('popupPick keeps the house ad running all week, not three days', () => {
 test('HOUSE_GIVEAWAY ships a creative for every slot', () => {
     assert.deepEqual(HOUSE_GIVEAWAY.slots, ['strip', 'rail', 'dock', 'popup']);
     assert.equal(HOUSE_GIVEAWAY.enabled, true);
+    // Розыгрыш кончился: с 4 октября его места занимает канал.
+    assert.equal(HOUSE_GIVEAWAY.end, '2026-10-03');
     assert.equal(safeHref(HOUSE_GIVEAWAY.href), 'https://t.me/theMaknemy/5432');
     for (const slot of SLOTS) {
         const cre = PROMO.creativeFor(HOUSE_GIVEAWAY, slot);
@@ -634,35 +636,22 @@ test('HOUSE_GIVEAWAY ships a creative for every slot', () => {
     assert.notEqual(HOUSE_GIVEAWAY.id, HOUSE_SLOT.id);
 });
 
-test('houseFor gives the giveaway every free slot while it runs', () => {
-    const now = Date.now();
-    for (const slot of SLOTS) {
-        assert.equal(houseFor(slot, now).id, HOUSE_GIVEAWAY.id, `слот ${slot}`);
-    }
-});
+// Пока розыгрыш шёл, он занимал все свободные места.
+const GIVEAWAY_RUN = Date.parse('2026-10-02T12:00:00Z');
+// После него свободные места — телеграм-канал.
+const CHANNEL_RUN = Date.parse('2026-10-05T12:00:00Z');
 
-test('houseFor falls back to the placeholder and the channel ad once it is off', () => {
-    const now = Date.now();
-    HOUSE_GIVEAWAY.enabled = false;
-    try {
-        assert.equal(houseFor('strip', now).id, HOUSE_SLOT.id);
-        assert.equal(houseFor('rail', now).id, HOUSE_SLOT.id);
-        assert.equal(houseFor('dock', now).id, HOUSE_SLOT.id);
-        // У заглушки окна нет намеренно — там объявление о канале.
-        assert.equal(houseFor('popup', now).id, HOUSE_TG.id);
-    } finally {
-        HOUSE_GIVEAWAY.enabled = true;
+test('houseFor gives the giveaway every free slot while it runs', () => {
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, GIVEAWAY_RUN).id, HOUSE_GIVEAWAY.id, `слот ${slot}`);
     }
 });
 
 test('houseFor respects the end date, so the giveaway drops out by itself', () => {
-    const now = Date.parse('2026-09-05T12:00:00Z');
-    HOUSE_GIVEAWAY.end = '2026-09-04';
-    try {
-        assert.equal(houseFor('strip', now).id, HOUSE_SLOT.id);
-        assert.equal(houseFor('popup', now).id, HOUSE_TG.id);
-    } finally {
-        HOUSE_GIVEAWAY.end = '';
+    const last = dayBoundsMsk('2026-10-03');
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, last.endMs).id, HOUSE_GIVEAWAY.id, `3 октября ещё розыгрыш: ${slot}`);
+        assert.equal(houseFor(slot, last.endMs + 1).id, HOUSE_CHANNEL.id, `4 октября уже канал: ${slot}`);
     }
 });
 
@@ -671,7 +660,67 @@ test('a paid campaign still beats the giveaway in the popup', () => {
         id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
         creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
     }] };
-    assert.equal(popupPick(doc, {}, Date.now(), 0.5).id, 'c_paid');
+    assert.equal(popupPick(doc, {}, GIVEAWAY_RUN, 0.5).id, 'c_paid');
+});
+
+// ------------------------------------------------ houseFor / HOUSE_CHANNEL
+
+// Телеграм-канал «BLOX FRUITS: Новости, Обновления, Находки» стоит во всех
+// свободных местах, где нет Playerok. Списка страниц у него нет: страницу
+// с Playerok тот забирает раньше, чем очередь доходит до канала.
+
+test('HOUSE_CHANNEL ships a creative for every slot', () => {
+    assert.deepEqual(HOUSE_CHANNEL.slots, ['strip', 'rail', 'dock', 'popup']);
+    assert.equal(HOUSE_CHANNEL.enabled, true);
+    assert.equal(HOUSE_CHANNEL.end, '');
+    assert.equal(HOUSE_CHANNEL.pages, undefined);
+    assert.equal(safeHref(HOUSE_CHANNEL.href), 'https://t.me/+VQVMx_Imrus1Zjhi');
+    const size = { strip: [1200, 300], rail: [320, 1200], dock: [640, 200], popup: [800, 800] };
+    for (const slot of SLOTS) {
+        const cre = PROMO.creativeFor(HOUSE_CHANNEL, slot);
+        assert.ok(cre, `у слота ${slot} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/channel-'),
+            'макеты лежат в репозитории: объявление обязано работать на чистой установке');
+        // Макет ровно в размер слота: бокс режет лишнее через object-fit: cover.
+        assert.deepEqual([cre.w, cre.h], size[slot], `размер макета ${slot}`);
+    }
+    assert.ok(HOUSE_CHANNEL.textKey && HOUSE_CHANNEL.ctaKey);
+    assert.equal(HOUSE_CHANNEL.popup.capHours, 24);
+    assert.ok(HOUSE_CHANNEL.popup.maxPerWeek >= 7);
+    assert.equal(HOUSE_CHANNEL.erid, '');
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, PLAYEROK]) {
+        assert.notEqual(HOUSE_CHANNEL.id, other.id);
+    }
+});
+
+test('houseFor gives the channel every free slot on every page without Playerok', () => {
+    for (const page of [undefined, 'tierlist', 'news', 'stock']) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, CHANNEL_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
+        }
+        assert.equal(popupPick({}, {}, CHANNEL_RUN, 0, page).id, HOUSE_CHANNEL.id, String(page));
+    }
+});
+
+test('houseFor falls back to the placeholder and the channel ad once it is off', () => {
+    HOUSE_CHANNEL.enabled = false;
+    try {
+        assert.equal(houseFor('strip', CHANNEL_RUN).id, HOUSE_SLOT.id);
+        assert.equal(houseFor('rail', CHANNEL_RUN).id, HOUSE_SLOT.id);
+        assert.equal(houseFor('dock', CHANNEL_RUN).id, HOUSE_SLOT.id);
+        // У заглушки окна нет намеренно — там объявление о канале.
+        assert.equal(houseFor('popup', CHANNEL_RUN).id, HOUSE_TG.id);
+    } finally {
+        HOUSE_CHANNEL.enabled = true;
+    }
+});
+
+test('a paid campaign still beats the channel in the popup', () => {
+    const doc = { campaigns: [{
+        id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
+        creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
+    }] };
+    assert.equal(popupPick(doc, {}, CHANNEL_RUN, 0.5).id, 'c_paid');
 });
 
 // -------------------------------------------------------- migrateLegacyAd
@@ -702,8 +751,8 @@ test('migrateLegacyAd handles a text-only banner with no image', () => {
 //  Привязка кампании к странице
 // ============================================================================
 
-test('PAGES перечисляет четыре страницы с рекламными местами', () => {
-    assert.deepEqual(PAGES, ['tierlist', 'news', 'calc', 'stock']);
+test('PAGES перечисляет пять страниц с рекламными местами', () => {
+    assert.deepEqual(PAGES, ['tierlist', 'news', 'calc', 'trading', 'stock']);
 });
 
 test('onPage: кампания без списка страниц идёт везде', () => {
@@ -753,17 +802,41 @@ test('eligible отсекает купленную кампанию на чуж�
     assert.deepEqual(eligible(doc, 'rail', now), []);
 });
 
+// Ради этого в панели и появились галочки страниц: у каждой страницы своя
+// реклама, а кампания без списка закрывает только те, где своей нет.
+test('у каждой страницы своя кампания из админки', () => {
+    const now = Date.parse('2026-09-15T12:00:00Z');
+    const rail = { rail: { src: '/images/r.webp', w: 320, h: 1200 } };
+    const doc = {
+        campaigns: [
+            { id: 'tl', enabled: true, href: 'https://a.example/', pages: ['tierlist'], slots: ['rail'], creatives: rail },
+            { id: 'nw', enabled: true, href: 'https://b.example/', pages: ['news', 'stock'], slots: ['rail'], creatives: rail },
+            { id: 'tr', enabled: true, href: 'https://c.example/', pages: ['trading'], slots: ['rail'], creatives: rail },
+            { id: 'all', enabled: true, href: 'https://d.example/', slots: ['rail'], creatives: rail }
+        ]
+    };
+    const ids = page => eligible(doc, 'rail', now, page).map(c => c.id);
+    assert.deepEqual(ids('tierlist'), ['tl', 'all']);
+    assert.deepEqual(ids('news'), ['nw', 'all']);
+    assert.deepEqual(ids('stock'), ['nw', 'all']);
+    assert.deepEqual(ids('trading'), ['tr', 'all']);
+    assert.deepEqual(ids('calc'), ['all']);
+    // С 3 октября калькулятор и трейдинг у Playerok, остальные страницы как были.
+    const run = Date.parse('2026-10-05T12:00:00Z');
+    assert.deepEqual(eligible(doc, 'rail', run, 'trading'), [PLAYEROK]);
+    assert.deepEqual(eligible(doc, 'rail', run, 'news').map(c => c.id), ['nw', 'all']);
+});
+
 // ============================================================================
 //  Playerok
 // ============================================================================
 
 // Второе размещение Playerok идёт с 3 октября 2026 года, без даты конца. Оно
-// занимает калькулятор, ленту трейдов и создание объявления: у всех трёх
-// страниц PROMO_PAGE = "calc". Сток объявляет свою страницу и сюда не входит.
+// занимает калькулятор ("calc"), ленту трейдов и создание объявления
+// ("trading"). Сток объявляет свою страницу и сюда не входит.
 const PLAYEROK_RUN = Date.parse('2026-10-05T12:00:00Z');
 
-// Кампания из админки идёт на всех страницах во всех местах: api/promo.php
-// теряет поле pages при сохранении.
+// Кампания из админки без списка страниц идёт на всех страницах во всех местах.
 const PAID_EVERYWHERE = {
     campaigns: [{
         id: 'paid', enabled: true, weight: 1, href: 'https://t.me/example',
@@ -779,7 +852,7 @@ const PAID_EVERYWHERE = {
 
 test('PLAYEROK занимает все четыре места калькулятора и трейдинга', () => {
     assert.deepEqual(PLAYEROK.slots, ['strip', 'rail', 'dock', 'popup']);
-    assert.deepEqual(PLAYEROK.pages, ['calc']);
+    assert.deepEqual(PLAYEROK.pages, ['calc', 'trading']);
     assert.equal(PLAYEROK.enabled, true);
     assert.equal(PLAYEROK.start, '2026-10-03');
     assert.equal(PLAYEROK.end, '');
@@ -798,26 +871,28 @@ test('PLAYEROK занимает все четыре места калькуля�
     // Новое размещение — новый id: свой счётчик показов окна и своя цель
     // promo_click в Метрике, сентябрьские цифры с октябрьскими не смешиваются.
     assert.notEqual(PLAYEROK.id, 'playerok-2026-09');
-    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY]) {
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL]) {
         assert.notEqual(PLAYEROK.id, other.id);
     }
 });
 
 test('houseFor отдаёт Playerok все места калькулятора и трейдинга', () => {
-    for (const slot of SLOTS) {
-        assert.equal(houseFor(slot, PLAYEROK_RUN, 'calc').id, PLAYEROK.id, `слот ${slot}`);
+    for (const page of ['calc', 'trading']) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, PLAYEROK.id, `${page} / ${slot}`);
+        }
+        assert.equal(popupPick({}, {}, PLAYEROK_RUN, 0, page).id, PLAYEROK.id, page);
     }
-    assert.equal(popupPick({}, {}, PLAYEROK_RUN, 0, 'calc').id, PLAYEROK.id);
 });
 
 test('тирлист, новости и сток остаются без Playerok', () => {
     for (const page of ['tierlist', 'news', 'stock']) {
         for (const slot of SLOTS) {
-            assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, HOUSE_GIVEAWAY.id, `${page} / ${slot}`);
+            assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
             assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page).map(c => c.id), ['paid'],
                 `${page} / ${slot}: купленная кампания на месте`);
         }
-        assert.equal(popupPick({}, {}, PLAYEROK_RUN, 0, page).id, HOUSE_GIVEAWAY.id, page);
+        assert.equal(popupPick({}, {}, PLAYEROK_RUN, 0, page).id, HOUSE_CHANNEL.id, page);
     }
 });
 
@@ -830,8 +905,10 @@ test('Playerok начинается 3 октября по Москве', () => {
 });
 
 test('на своих страницах Playerok перебивает кампанию из админки', () => {
-    for (const slot of SLOTS) {
-        assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, 'calc'), [PLAYEROK], slot);
+    for (const page of ['calc', 'trading']) {
+        for (const slot of SLOTS) {
+            assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page), [PLAYEROK], `${page} / ${slot}`);
+        }
     }
     assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'calc').id, PLAYEROK.id);
     assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'tierlist').id, 'paid');
@@ -854,7 +931,7 @@ test('выключенный Playerok возвращает место кампа
     PLAYEROK.enabled = false;
     try {
         assert.deepEqual(eligible(PAID_EVERYWHERE, 'rail', PLAYEROK_RUN, 'calc').map(c => c.id), ['paid']);
-        assert.equal(houseFor('rail', PLAYEROK_RUN, 'calc').id, HOUSE_GIVEAWAY.id);
+        assert.equal(houseFor('rail', PLAYEROK_RUN, 'calc').id, HOUSE_CHANNEL.id);
     } finally {
         PLAYEROK.enabled = true;
     }

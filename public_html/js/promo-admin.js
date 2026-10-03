@@ -8,7 +8,7 @@
   var PREVIEW_KEY = "nx-ptn-preview";
 
   var SPECS = {
-    strip: { label: "Полоса: тирлист, ленты новостей и трейдов", w: 1200, h: 300,  maxW: 1200, maxH: 400,  bytes: 400000, animBytes: 900000 },
+    strip: { label: "Полоса в середине страницы и в лентах", w: 1200, h: 300,  maxW: 1200, maxH: 400,  bytes: 400000, animBytes: 900000 },
     rail:  { label: "Боковой борт",       w: 320,  h: 1200, maxW: 320,  maxH: 1200, bytes: 300000, animBytes: 700000 },
     dock:  { label: "Полоса внизу (телефон)", w: 640, h: 200, maxW: 640, maxH: 200,  bytes: 200000, animBytes: 500000 },
     dockMini: { label: "Свёрнутая полоса внизу (необязательно)", w: 640, h: 80, maxW: 640, maxH: 80, bytes: 100000, animBytes: 250000,
@@ -16,6 +16,14 @@
     popup: { label: "Всплывающее окно",   w: 800,  h: 800,  maxW: 900,  maxH: 900,  bytes: 400000, animBytes: 900000 }
   };
   var SLOTS = ["strip", "rail", "dock", "popup"];
+  var PAGES = PROMO.PAGES;
+  var PAGE_LABELS = {
+    tierlist: "Тирлист",
+    news: "Новости",
+    calc: "Калькулятор",
+    trading: "Трейдинг и новое объявление",
+    stock: "Сток"
+  };
   var CREATIVE_KEYS = ["strip", "rail", "dock", "dockMini", "popup"];
   var ANIM_MAX_S = 15;
 
@@ -44,6 +52,14 @@
       if (doc.campaigns[i].id === current) return doc.campaigns[i];
     }
     return null;
+  }
+
+  function pageLabel(p) { return PAGE_LABELS[p] || p; }
+
+  function pagesOf(c) { return c.pages.length ? c.pages : PAGES; }
+
+  function playerokOn(page, slot, now) {
+    return PROMO.eligible(null, slot, now, page)[0] === PROMO.PLAYEROK;
   }
 
   function markDirty() { dirty = true; hint("есть несохранённые правки"); }
@@ -89,7 +105,8 @@
       var sub = document.createElement("div");
       sub.className = "li-sub";
       sub.textContent = (c.advertiser || "—") + " · " + fmtDate(c.start) + " – " + fmtDate(c.end) +
-        " · вес " + c.weight + " · " + (c.slots.length ? c.slots.join(", ") : "нет слотов");
+        " · вес " + c.weight + " · " + (c.slots.length ? c.slots.join(", ") : "нет слотов") +
+        " · " + (c.pages.length ? c.pages.map(pageLabel).join(", ") : "все страницы");
       li.appendChild(sub);
 
       li.addEventListener("click", function () { current = c.id; renderAll(); });
@@ -101,12 +118,15 @@
     var now = Date.now();
     var slot = c.slots[0];
     if (!slot) return "";
-    var pool = PROMO.eligible(doc, slot, now);
+    var free = pagesOf(c).filter(function (p) { return !playerokOn(p, slot, now); });
+    if (!free.length) return "(на этих страницах сейчас Playerok)";
+    var page = free[0];
+    var pool = PROMO.eligible(doc, slot, now, page);
     var total = pool.reduce(function (s, x) { return s + x.weight; }, 0);
     var mine = pool.filter(function (x) { return x.id === c.id; })
       .reduce(function (s, x) { return s + x.weight; }, 0);
     if (!total || !mine) return "(сейчас не показывается)";
-    return "≈ " + Math.round(mine / total * 100) + " % показов в «" + slot + "»";
+    return "≈ " + Math.round(mine / total * 100) + " % показов в «" + slot + "» · " + pageLabel(page);
   }
 
   function renderEditor() {
@@ -137,7 +157,49 @@
 
     $("#hrefErr").hidden = !(c.href === "" && $("#fHref").value.trim() !== "");
     $("#eridErr").hidden = true;
+    renderPages(c);
     renderSlots(c);
+  }
+
+  function pagesNote(text, bad) {
+    var el = $("#pagesNote");
+    el.textContent = text || "";
+    el.className = "pages-note" + (bad ? " bad" : "");
+  }
+
+  function renderPages(c) {
+    var box = $("#pages");
+    box.innerHTML = "";
+    var on = pagesOf(c);
+    PAGES.forEach(function (page) {
+      var lab = document.createElement("label");
+      lab.className = "page-chk";
+      var chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = on.indexOf(page) >= 0;
+      chk.dataset.page = page;
+      chk.addEventListener("change", function () {
+        var next = PAGES.filter(function (p) {
+          return p === page ? chk.checked : on.indexOf(p) >= 0;
+        });
+        if (!next.length) {
+          chk.checked = true;
+          pagesNote("Нужна хотя бы одна страница. Чтобы снять кампанию с показа, выключите «Показывать».", true);
+          return;
+        }
+        c.pages = next.length === PAGES.length ? [] : next;
+        markDirty(); renderAll();
+      });
+      lab.appendChild(chk);
+      lab.appendChild(document.createTextNode(pageLabel(page)));
+      box.appendChild(lab);
+    });
+
+    var now = Date.now();
+    var busy = on.filter(function (p) { return playerokOn(p, "strip", now); });
+    pagesNote(busy.length
+      ? "Сейчас там стоит Playerok и перебивает кампании из панели: " + busy.map(pageLabel).join(", ") + "."
+      : "");
   }
 
   function renderSlots(c) {
@@ -494,7 +556,9 @@
         sessionStorage.setItem(PREVIEW_KEY, JSON.stringify(doc));
 
         var w = window.open("/?promo_preview=1", "_blank");
+        var c = camp();
         if (!w) hint("браузер заблокировал новое окно", "bad");
+        else if (c && pagesOf(c).indexOf("tierlist") < 0) hint("предпросмотр открывает тирлист, а этой кампании там нет", "bad");
       } catch (e) {
         hint("не удалось открыть предпросмотр", "bad");
       }

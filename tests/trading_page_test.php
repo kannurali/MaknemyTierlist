@@ -176,7 +176,7 @@ test('скрипт ленты: API, чат с черновиком, закрыт
     assert_true(strpos($cards, 'CALC.buildCatalogIndex(CALC.flattenTierlist(d.tierlist))') !== false,
         'картинки и цены — из тирлиста, как у калькулятора');
     $js .= $cards;
-    assert_true(strpos($js, 'const PROMO_PAGE = "calc"') !== false, 'реклама — как у калькулятора');
+    assert_true(strpos($js, 'const PROMO_PAGE = "trading"') !== false, 'своя страница в панели рекламы');
     assert_true(strpos($js, 'promo.houseFor(') !== false, 'борт берёт объявление из общего модуля');
     assert_true(strpos($js, 'NX_PROMO_DOCK.render(dock, doc, PROMO_PAGE)') !== false, 'полоса тем же документом');
     assert_true(strpos($js, 'window.confirm(') !== false, 'закрытие переспрашивает');
