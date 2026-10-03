@@ -1155,6 +1155,7 @@
     }
 
     dock.innerHTML = "";
+    dock.classList.remove("is-mini", "is-mini-art", "is-flip");
     if (!list.length) {
       dock.hidden = true;
       document.body.classList.remove("has-promo-dock");
@@ -1187,12 +1188,17 @@
     if (dockErid) dock.appendChild(dockErid);
 
     const url = promo.safeHref(camp.href);
+    const open = url ? (() => openPromo(camp, "dock")) : null;
     dock.classList.toggle("has-link", !!url);
-    dock.onclick = url ? (() => openPromo(camp, "dock")) : null;
     dock.tabIndex = url ? 0 : -1;
-    dock.onkeydown = url ? (e => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPromo(camp, "dock"); }
-    }) : null;
+    if (window.NX_PROMO_DOCK && window.NX_PROMO_DOCK.mini) {
+      window.NX_PROMO_DOCK.mini(dock, camp, { t: tx, open: open });
+    } else {
+      dock.onclick = open;
+      dock.onkeydown = open ? (e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      }) : null;
+    }
 
     dock.hidden = false;
     document.body.classList.add("has-promo-dock");

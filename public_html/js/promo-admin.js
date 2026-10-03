@@ -11,9 +11,12 @@
     strip: { label: "Полоса: тирлист, ленты новостей и трейдов", w: 1200, h: 300,  maxW: 1200, maxH: 400,  bytes: 400000, animBytes: 900000 },
     rail:  { label: "Боковой борт",       w: 320,  h: 1200, maxW: 320,  maxH: 1200, bytes: 300000, animBytes: 700000 },
     dock:  { label: "Полоса внизу (телефон)", w: 640, h: 200, maxW: 640, maxH: 200,  bytes: 200000, animBytes: 500000 },
+    dockMini: { label: "Свёрнутая полоса внизу (необязательно)", w: 640, h: 80, maxW: 640, maxH: 80, bytes: 100000, animBytes: 250000,
+                note: "Показывается, когда посетитель свернул полосу. Плашка «РЕКЛАМА» — в правом верхнем углу. Без макета там уменьшенный макет полосы и текст кампании." },
     popup: { label: "Всплывающее окно",   w: 800,  h: 800,  maxW: 900,  maxH: 900,  bytes: 400000, animBytes: 900000 }
   };
   var SLOTS = ["strip", "rail", "dock", "popup"];
+  var CREATIVE_KEYS = ["strip", "rail", "dock", "dockMini", "popup"];
   var ANIM_MAX_S = 15;
 
   var $ = function (s) { return document.querySelector(s); };
@@ -140,27 +143,31 @@
   function renderSlots(c) {
     var box = $("#slots");
     box.innerHTML = "";
-    SLOTS.forEach(function (slot) {
+    CREATIVE_KEYS.forEach(function (slot) {
       var spec = SPECS[slot];
       var cre = c.creatives[slot] || null;
+      var isSlot = SLOTS.indexOf(slot) >= 0;
       var on = c.slots.indexOf(slot) >= 0;
 
       var el = document.createElement("div");
       el.className = "slot";
 
-      var head = document.createElement("label");
+      var head = document.createElement(isSlot ? "label" : "div");
       head.className = "slot-head";
-      var chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.checked = on;
-      chk.addEventListener("change", function () {
-        var i = c.slots.indexOf(slot);
-        if (chk.checked && i < 0) c.slots.push(slot);
-        if (!chk.checked && i >= 0) c.slots.splice(i, 1);
-        markDirty(); renderAll();
-      });
-      head.appendChild(chk);
-      head.appendChild(document.createTextNode(" " + spec.label));
+      if (isSlot) {
+        var chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.checked = on;
+        chk.addEventListener("change", function () {
+          var i = c.slots.indexOf(slot);
+          if (chk.checked && i < 0) c.slots.push(slot);
+          if (!chk.checked && i >= 0) c.slots.splice(i, 1);
+          markDirty(); renderAll();
+        });
+        head.appendChild(chk);
+        head.appendChild(document.createTextNode(" "));
+      }
+      head.appendChild(document.createTextNode(spec.label));
       el.appendChild(head);
 
       var s = document.createElement("div");
@@ -168,6 +175,12 @@
       s.textContent = spec.w + "×" + spec.h + " · статика ≤ " + kb(spec.bytes) +
         " · анимация ≤ " + kb(spec.animBytes) + " и ≤ " + ANIM_MAX_S + " с со всеми повторами";
       el.appendChild(s);
+      if (spec.note) {
+        var n = document.createElement("div");
+        n.className = "slot-spec";
+        n.textContent = spec.note;
+        el.appendChild(n);
+      }
 
       var prev = document.createElement("div");
       prev.className = "slot-prev";
@@ -331,7 +344,7 @@
           c.creatives[slot].anim = j.anim;
           c.creatives[slot].poster = j.anim ? j.url : "";
         }
-        if (c.slots.indexOf(slot) < 0) c.slots.push(slot);
+        if (SLOTS.indexOf(slot) >= 0 && c.slots.indexOf(slot) < 0) c.slots.push(slot);
         markDirty();
         renderAll();
       })

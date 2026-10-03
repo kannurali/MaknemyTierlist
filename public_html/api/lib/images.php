@@ -213,12 +213,21 @@ function save_image_bytes(string $bytes, string $dir, int $maxBytes = 512000,
 // bottom of the screen on a phone. A 4:15 creative cannot be shown in a 16:5
 // bar, so it is its own slot with its own size rather than the same file
 // reused. 640x200 renders at about 320x100 CSS px, the standard mobile bar.
+// 'dockMini' is not a slot of its own: it is the optional face of 'dock'
+// after the visitor folds the bar down (about 360x45 CSS px). Without it the
+// folded bar shows the dock creative shrunk to 40 px tall next to the
+// campaign text, so a campaign never needs one to be bookable.
 const CREATIVE_SPECS = [
-    'strip' => ['maxW' => 1200, 'maxH' => 400,  'maxBytes' => 400000, 'maxAnimBytes' => 900000],
-    'rail'  => ['maxW' => 320,  'maxH' => 1200, 'maxBytes' => 300000, 'maxAnimBytes' => 700000],
-    'dock'  => ['maxW' => 640,  'maxH' => 200,  'maxBytes' => 200000, 'maxAnimBytes' => 500000],
-    'popup' => ['maxW' => 900,  'maxH' => 900,  'maxBytes' => 400000, 'maxAnimBytes' => 900000],
+    'strip'    => ['maxW' => 1200, 'maxH' => 400,  'maxBytes' => 400000, 'maxAnimBytes' => 900000],
+    'rail'     => ['maxW' => 320,  'maxH' => 1200, 'maxBytes' => 300000, 'maxAnimBytes' => 700000],
+    'dock'     => ['maxW' => 640,  'maxH' => 200,  'maxBytes' => 200000, 'maxAnimBytes' => 500000],
+    'dockMini' => ['maxW' => 640,  'maxH' => 80,   'maxBytes' => 100000, 'maxAnimBytes' => 250000],
+    'popup'    => ['maxW' => 900,  'maxH' => 900,  'maxBytes' => 400000, 'maxAnimBytes' => 900000],
 ];
+
+// Placements a campaign can be booked into. Every one of them has a creative
+// spec above; the reverse is not true ('dockMini').
+const PROMO_SLOTS = ['strip', 'rail', 'dock', 'popup'];
 const CREATIVE_FORMATS = ['png', 'jpg', 'webp', 'gif'];
 
 // An animation has to stop by itself: 15 s in total, every repeat included

@@ -513,6 +513,8 @@
       "promo.rail":             "Реклама сбоку",
       "promo.popLabel":         "Рекламное сообщение",
       "promo.close":            "Закрыть рекламу",
+      "promo.dockCollapse":     "Свернуть рекламу",
+      "promo.dockExpand":       "Развернуть рекламу",
       "promo.cta":              "Перейти",
 
       "promo.houseTgText":      "Свежие цены, розыгрыши и новости Blox Fruits — в нашем телеграм-канале",
@@ -1250,6 +1252,8 @@
       "promo.rail":             "Side advertisement",
       "promo.popLabel":         "Advertisement",
       "promo.close":            "Close the ad",
+      "promo.dockCollapse":     "Collapse the ad",
+      "promo.dockExpand":       "Expand the ad",
       "promo.cta":              "Open",
       "promo.houseTgText":      "Fresh prices, giveaways and Blox Fruits news — in our Telegram channel",
       "promo.houseTgCta":       "Open the channel",

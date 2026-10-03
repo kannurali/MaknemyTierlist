@@ -221,6 +221,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="stylesheet" href="css/news-design.css?v=21" />
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
+<link rel="stylesheet" href="css/promo-dock-mini.css?v=1" />
 
 <link rel="stylesheet" href="css/promo-popup.css?v=3" />
 
@@ -366,15 +367,15 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </div>
   </div>
 
-  <script src="js/i18n.js?v=62" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=63" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=18" fetchpriority="high"></script>
+  <script src="js/promo.js?v=19" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=7" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=8" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
 

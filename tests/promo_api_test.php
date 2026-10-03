@@ -180,6 +180,26 @@ test('unknown slots and empty creatives are dropped', function () {
     assert_eq(['strip'], array_keys($c['creatives']), 'creatives filtered');
 });
 
+// Макет свёрнутой полосы хранится вместе с остальными, но местом не
+// считается: в slots его не пропускаем, иначе кампания «купит» то, чего на
+// странице нет.
+test('the folded-dock creative is stored but is not a slot', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign([
+        'slots' => ['dock', 'dockMini'],
+        'creatives' => [
+            'dock'     => ['src' => '/images/d.webp', 'w' => 640, 'h' => 200],
+            'dockMini' => ['src' => '/images/m.webp', 'w' => 640, 'h' => 80],
+        ],
+    ]), tmp_dir_p(), 1000);
+
+    $c = promo_load($pdo)['campaigns'][0];
+    assert_eq(['dock'], $c['slots'], 'dockMini is not bookable');
+    assert_eq(['dock', 'dockMini'], array_keys($c['creatives']), 'both creatives kept');
+    assert_eq('/images/m.webp', $c['creatives']['dockMini']['src'], 'mini creative src');
+    assert_eq(['strip', 'rail', 'dock', 'popup'], PROMO_SLOTS, 'slot list matches js/promo.js SLOTS');
+});
+
 test('an animated creative always ends up with a poster', function () {
     $pdo = test_db();
     handle_promo_save($pdo, one_campaign([
