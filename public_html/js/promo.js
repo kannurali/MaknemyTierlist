@@ -90,6 +90,16 @@
     return (still && creative.anim && creative.poster) ? creative.poster : creative.src;
   }
 
+  var DOCK_TEXT_KEYS = {
+    "c_muryn4isxftf": "promo.channelDockText",
+    "house-tg-bloxfruits": "promo.channelDockText"
+  };
+
+  function dockTextKey(campaign) {
+    var id = campaign && campaign.id;
+    return id && Object.prototype.hasOwnProperty.call(DOCK_TEXT_KEYS, id) ? DOCK_TEXT_KEYS[id] : "";
+  }
+
   function stampFor(campaign, nowMs) {
     var s = campaign && campaign.stamp;
     if (!s || typeof s !== "object" || !s.topKey || !s.mainKey) { return null; }
@@ -546,6 +556,7 @@
     inWindow: inWindow,
     creativeFor: creativeFor,
     srcFor: srcFor,
+    dockTextKey: dockTextKey,
     stampFor: stampFor,
     stampOn: stampOn,
     onPage: onPage,
