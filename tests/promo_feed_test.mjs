@@ -112,7 +112,7 @@ function doc(...list) {
 }
 
 test('with nothing sold the feed shows the house banner of that page', () => {
-    for (const page of ['news', 'calc']) {
+    for (const page of ['news', 'trading']) {
         const list = campaigns(null, page, NOW);
         assert.equal(list.length, 1, page);
         assert.equal(list[0].id, PROMO.houseFor('strip', NOW, page).id, page);
@@ -124,10 +124,10 @@ test('from 3 October Playerok owns the trading feed, the news feed stays without
     const run = Date.UTC(2026, 9, 5, 12);
     assert.notEqual(campaigns(null, 'news', run)[0].id, PROMO.PLAYEROK.id, 'news');
     assert.notEqual(campaigns(doc({}), 'news', run)[0].id, PROMO.PLAYEROK.id, 'news, with a sold banner');
-    assert.deepEqual(campaigns(null, 'calc', run).map(c => c.id), [PROMO.PLAYEROK.id], 'trading');
-    assert.deepEqual(campaigns(doc({}), 'calc', run).map(c => c.id), [PROMO.PLAYEROK.id],
+    assert.deepEqual(campaigns(null, 'trading', run).map(c => c.id), [PROMO.PLAYEROK.id], 'trading');
+    assert.deepEqual(campaigns(doc({}), 'trading', run).map(c => c.id), [PROMO.PLAYEROK.id],
         'trading: Playerok outranks a banner sold through the admin panel');
-    assert.notEqual(campaigns(null, 'calc', NOW)[0].id, PROMO.PLAYEROK.id, 'trading before 3 October');
+    assert.notEqual(campaigns(null, 'trading', NOW)[0].id, PROMO.PLAYEROK.id, 'trading before 3 October');
 });
 
 test('a sold strip banner takes every feed slot away from the house banner', () => {
@@ -148,7 +148,10 @@ test('page targeting, slots and dates still decide who gets the feed', () => {
     assert.equal(campaigns(doc({ pages: ['tierlist'] }), 'news', NOW)[0].id,
         PROMO.houseFor('strip', NOW, 'news').id, 'bought for the tier list only');
     assert.deepEqual(campaigns(doc({ pages: ['news'] }), 'news', NOW).map(c => c.id), ['c0']);
-    assert.notEqual(campaigns(doc({ pages: ['news'] }), 'calc', NOW)[0].id, 'c0', 'news-only stays off trading');
+    assert.notEqual(campaigns(doc({ pages: ['news'] }), 'trading', NOW)[0].id, 'c0', 'news-only stays off trading');
+    assert.deepEqual(campaigns(doc({ pages: ['trading'] }), 'trading', NOW).map(c => c.id), ['c0']);
+    assert.notEqual(campaigns(doc({ pages: ['trading'] }), 'calc', NOW)[0].id, 'c0',
+        'trading-only stays off the calculator');
     assert.notEqual(campaigns(doc({ slots: ['rail'], creatives: { rail: { src: '/r.webp' } } }), 'news', NOW)[0].id,
         'c0', 'a rail-only campaign has no banner for the feed');
     assert.notEqual(campaigns(doc({ end: '2026-09-01' }), 'news', NOW)[0].id, 'c0', 'expired');

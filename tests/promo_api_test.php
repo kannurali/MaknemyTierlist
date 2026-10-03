@@ -180,6 +180,33 @@ test('unknown slots and empty creatives are dropped', function () {
     assert_eq(['strip'], array_keys($c['creatives']), 'creatives filtered');
 });
 
+// Раньше поле pages терялось здесь, и любая кампания из панели вставала на
+// всех страницах сайта сразу.
+test('the page list survives a save, cleaned like the slot list', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign([
+        'pages' => ['news', 'moon', 'news', '', 42, 'trading', 'calc'],
+    ]), tmp_dir_p(), 1000);
+    assert_eq(['news', 'trading', 'calc'], promo_load($pdo)['campaigns'][0]['pages'],
+        'unknown pages dropped, order kept, no duplicates');
+    assert_eq(['news', 'trading', 'calc'], promo_route($pdo, '1000', false)[1]['campaigns'][0]['pages'],
+        'visitors get the list too: the page filter runs in their browser');
+});
+
+test('no page list means every page', function () {
+    $pdo = test_db();
+    handle_promo_save($pdo, one_campaign(), tmp_dir_p(), 1000);
+    assert_eq([], promo_load($pdo)['campaigns'][0]['pages'], 'missing field');
+    handle_promo_save($pdo, one_campaign(['pages' => 'news']), tmp_dir_p(), 1001);
+    assert_eq(['news'], promo_load($pdo)['campaigns'][0]['pages'], 'a lone string is one page');
+});
+
+test('the server knows the same pages as js/promo.js', function () {
+    $js = file_get_contents(__DIR__ . '/../public_html/js/promo.js');
+    assert_true(preg_match('~var PAGES = \[([^\]]*)\]~', $js, $m) === 1, 'PAGES found in promo.js');
+    assert_eq(PROMO_PAGES, json_decode('[' . $m[1] . ']', true), 'same ids, same order');
+});
+
 // Макет свёрнутой полосы хранится вместе с остальными, но местом не
 // считается: в slots его не пропускаем, иначе кампания «купит» то, чего на
 // странице нет.

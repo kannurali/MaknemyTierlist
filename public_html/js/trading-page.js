@@ -3,7 +3,7 @@
 
   const $ = sel => document.querySelector(sel);
 
-  const PROMO_PAGE = "calc";
+  const PROMO_PAGE = "trading";
   const LANG_KEY = "nexus-lang-v1";
   const INVITE_KEY = "nexus-signin-v1";
 

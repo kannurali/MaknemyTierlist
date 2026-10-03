@@ -6,7 +6,7 @@
 
   var CREATIVE_KEYS = SLOTS.concat(["dockMini"]);
 
-  var PAGES = ["tierlist", "news", "calc", "stock"];
+  var PAGES = ["tierlist", "news", "calc", "trading", "stock"];
 
   var MAX_STRIP_SLIDES = 8;
 
@@ -498,7 +498,7 @@
     textKey: "promo.playerokText",
     ctaKey: "promo.playerokCta",
     erid: "",
-    pages: ["calc"],
+    pages: ["calc", "trading"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip: { src: "/assets/promo/playerok-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },

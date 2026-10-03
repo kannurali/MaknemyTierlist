@@ -21,6 +21,11 @@ const PROMO_MAX_BYTES = 65536;
 
 const PROMO_EMPTY = ['v' => 1, 'rev' => 0, 'campaigns' => []];
 
+// Mirror of PAGES in js/promo.js: the ids each page passes as PROMO_PAGE.
+// `pages` used to be dropped here, so every campaign saved from the panel ran
+// on every page. An empty list still means "everywhere".
+const PROMO_PAGES = ['tierlist', 'news', 'calc', 'trading', 'stock'];
+
 // Mirror of PROMO.safeHref() in js/promo.js. The admin page is not a trust
 // boundary: whatever it sends, the stored href is validated here.
 function promo_safe_href(string $href): string {
@@ -75,6 +80,12 @@ function promo_normalize(array $doc): array {
             if (in_array($s, $slots, true) && !in_array($s, $campSlots, true)) { $campSlots[] = $s; }
         }
 
+        $campPages = [];
+        foreach ((array)($c['pages'] ?? []) as $p) {
+            $p = promo_str($p);
+            if (in_array($p, PROMO_PAGES, true) && !in_array($p, $campPages, true)) { $campPages[] = $p; }
+        }
+
         $creatives = [];
         $rawCre = is_array($c['creatives'] ?? null) ? $c['creatives'] : [];
         foreach ($creativeKeys as $slot) {
@@ -117,6 +128,7 @@ function promo_normalize(array $doc): array {
             // rather than stored, because this string is printed on the page.
             'erid'       => preg_match('~^[A-Za-z0-9_-]{1,64}$~', promo_str($c['erid'] ?? ''))
                 ? promo_str($c['erid']) : '',
+            'pages'      => $campPages,
             'slots'      => $campSlots,
             'creatives'  => $creatives,
             'popup'      => [
