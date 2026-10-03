@@ -717,6 +717,13 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true(is_file($PUB . '/assets/promo/giveaway-' . $slot . '.webp'),
             "макет розыгрыша для слота $slot должен лежать в репозитории");
     }
+    // После розыгрыша свободные места занимает телеграм-канал, и его макеты
+    // лежат там же и по той же причине.
+    assert_true(strpos($promo, 'var HOUSE_CHANNEL') !== false, 'канал объявлен в js/promo.js');
+    foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/channel-' . $slot . '.webp'),
+            "макет канала для слота $slot должен лежать в репозитории");
+    }
     // Каждый путь из promo.js, включая анимации и их постеры, — файл на диске.
     preg_match_all('#/assets/promo/[a-z0-9-]+\.webp#', $promo, $m);
     assert_true(count($m[0]) > 0, 'promo.js ссылается на макеты в assets/promo');

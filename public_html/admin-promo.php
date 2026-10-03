@@ -120,7 +120,7 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/promo.js?v=21"></script>
+<script src="/js/promo.js?v=22"></script>
 <script src="/js/promo-admin.js?v=8"></script>
 </body>
 </html>

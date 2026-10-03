@@ -173,7 +173,7 @@ test('no promo module means no feed ads at all', () => {
 const tx = lang => key => I18N.t(key, lang);
 
 test('the trading header reads the house copy from the dictionary', () => {
-    const house = PROMO.HOUSE_GIVEAWAY;
+    const house = PROMO.HOUSE_CHANNEL;
     assert.deepEqual(copy(house, tx('ru')), {
         text: I18N.t(house.textKey, 'ru'), cta: I18N.t(house.ctaKey, 'ru')
     });
@@ -181,7 +181,7 @@ test('the trading header reads the house copy from the dictionary', () => {
 });
 
 test('every house banner of the feed has its header copy in both languages', () => {
-    for (const house of [PROMO.HOUSE_SLOT, PROMO.HOUSE_GIVEAWAY]) {
+    for (const house of [PROMO.HOUSE_SLOT, PROMO.HOUSE_GIVEAWAY, PROMO.HOUSE_CHANNEL]) {
         for (const lang of ['ru', 'en']) {
             const c = copy(house, tx(lang));
             assert.ok(c.text && c.text !== house.textKey, `${house.id} ${lang}: text`);
