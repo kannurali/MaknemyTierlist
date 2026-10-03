@@ -51,7 +51,7 @@ page_lscache();
 <base href="/" />
 
 <title>Maknemy — тирлист, цены и новости Blox Fruits | Макнеми</title>
-<meta name="description" content="Maknemy — актуальный тир-лист Blox Fruits от создателя Maknemy: трейд-ценности фруктов, свежие новости меты и постоянные розыгрыши. Работаем с 2024 года." />
+<meta name="description" content="Maknemy — Blox Fruits Market &amp; Database: актуальные трейд-ценности, тир-листы, калькулятор обменов, сток, новости и инструменты для игроков." />
 <link rel="canonical" href="https://maknemy.com/" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 
