@@ -24,7 +24,7 @@ echo <<<HTML
      страница живёт на /admin/promo, от относительных они уехали бы в
      /admin/css/. -->
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
-<link rel="stylesheet" href="/css/promo-admin.css?v=3" />
+<link rel="stylesheet" href="/css/promo-admin.css?v=4" />
 </head>
 <body>
 {$nav}
@@ -99,6 +99,11 @@ echo <<<HTML
         <textarea id="fNotes" rows="2" placeholder="оплачено до 20.09, контакт @…"></textarea>
       </label>
 
+      <div class="f">Страницы <span class="muted">(отмечены все — кампания идёт по всему сайту)</span>
+        <div class="pages" id="pages"></div>
+        <div class="pages-note" id="pagesNote"></div>
+      </div>
+
       <div class="slots" id="slots"></div>
 
       <div class="row popup-cfg">
@@ -115,8 +120,8 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/promo.js?v=19"></script>
-<script src="/js/promo-admin.js?v=7"></script>
+<script src="/js/promo.js?v=21"></script>
+<script src="/js/promo-admin.js?v=8"></script>
 </body>
 </html>
 HTML;
