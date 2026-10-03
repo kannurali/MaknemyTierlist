@@ -6,7 +6,7 @@
   var LINK = "/api/tg_link.php";
   var SESSION = "/api/session.php";
   var PROMO_API = "/api/promo.php";
-  var PROMO_PAGE = "calc";
+  var PROMO_PAGE = "stock";
   var TG_URL = "https://t.me/";
   var LANG_KEY = "nexus-lang-v1";
   var INVITE_KEY = "nexus-signin-v1";
