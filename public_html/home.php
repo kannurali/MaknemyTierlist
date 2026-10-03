@@ -60,7 +60,7 @@ page_lscache();
 <meta property="og:locale" content="ru_RU" />
 <meta property="og:url" content="https://maknemy.com/" />
 <meta property="og:title" content="Maknemy — тирлист, цены и новости Blox Fruits" />
-<meta property="og:description" content="Актуальный тир-лист Blox Fruits от создателя Maknemy. Следите за изменениями меты, ловите розыгрыши и всегда будьте в центре игровых новостей." />
+<meta property="og:description" content="Blox Fruits Market &amp; Database: актуальные трейд-ценности, тир-листы, калькулятор обменов, сток, новости и инструменты для игроков." />
 <meta property="og:image" content="<?= htmlspecialchars($ogImage['image'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:image:width" content="<?= (int)$ogImage['imageWidth'] ?>" />
 <meta property="og:image:height" content="<?= (int)$ogImage['imageHeight'] ?>" />
@@ -75,7 +75,7 @@ page_lscache();
   "alternateName": ["Макнеми тирлист", "Maknemy Tierlist", "Maknemy tier list Blox Fruits"],
   "url": "https://maknemy.com/",
   "inLanguage": "ru",
-  "description": "Тирлист трейд-ценностей Blox Fruits от Maknemy: фрукты, перманенты, геймпассы, скины и мутации.",
+  "description": "Blox Fruits Market & Database: актуальные трейд-ценности, тир-листы, калькулятор обменов, сток, новости и инструменты для игроков.",
   "author": {
     "@type": "Person",
     "name": "Maknemy",
