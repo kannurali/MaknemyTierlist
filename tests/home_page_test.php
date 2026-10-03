@@ -733,10 +733,10 @@ test('нижняя полоса рекламы подключена на лен�
 
     // Playerok — платное размещение, и живёт оно там же, где свои кампании:
     // в коде с макетами в репозитории. Отличие одно — список страниц: с
-    // октября это калькулятор, лента трейдов и создание объявления (у всех
-    // трёх PROMO_PAGE = "calc").
+    // октября это калькулятор ("calc"), лента трейдов и создание объявления
+    // ("trading").
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
-    assert_true(strpos($promo, 'pages: ["calc"]') !== false,
+    assert_true(strpos($promo, 'pages: ["calc", "trading"]') !== false,
         'Playerok привязан к калькулятору и трейдингу, иначе он разольётся по всему сайту');
     foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/playerok-' . $slot . '.webp'),
@@ -747,12 +747,24 @@ test('нижняя полоса рекламы подключена на лен�
     // отдают таргетированную кампанию вообще, и тирлист молча остался бы
     // на розыгрыше.
     $pageIds = ['js/app.js' => 'tierlist', 'js/news-page.js' => 'news',
-                'js/calculator-page.js' => 'calc'];
+                'js/trading-page.js' => 'trading'];
     foreach ($pageIds as $f => $id) {
         assert_true(strpos(read_file_or_fail($PUB . '/' . $f),
             'const PROMO_PAGE = "' . $id . '"') !== false,
             "$f: должна объявлять свою страницу как $id");
     }
+    // Калькулятор и создание объявления — один calculator-page.js. Страница
+    // по умолчанию — калькулятор, /trading/new называет себя через <meta>:
+    // в панели это разные галочки.
+    $calcJs = read_file_or_fail($PUB . '/js/calculator-page.js');
+    assert_true(strpos($calcJs, 'const PROMO_PAGE = (document.querySelector(') !== false
+        && strpos($calcJs, 'meta[name="nx-promo-page"]') !== false
+        && strpos($calcJs, '|| {}).content || "calc";') !== false,
+        'js/calculator-page.js: страница из <meta name="nx-promo-page">, иначе calc');
+    assert_true(strpos(read_file_or_fail($PUB . '/trade-new.php'), '<meta name="nx-promo-page" content="trading" />') !== false,
+        'trade-new.php: создание объявления — страница trading');
+    assert_true(strpos(read_file_or_fail($PUB . '/calculator.php'), 'nx-promo-page') === false,
+        'calculator.php: калькулятор остаётся calc');
     // Сток делил страницу с калькулятором, пока на ней не было Playerok. Своя
     // страница держит его снаружи: Playerok купил калькулятор и трейдинг.
     assert_true(strpos(read_file_or_fail($PUB . '/js/stock-page.js'), 'var PROMO_PAGE = "stock"') !== false,

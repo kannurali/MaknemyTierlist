@@ -100,6 +100,18 @@ input[type="checkbox"] { width: auto; }
 .withbtn input { flex: 1; }
 .popup-cfg .f { min-width: 130px; }
 
+.pages { display: flex; gap: 6px 8px; flex-wrap: wrap; }
+.page-chk {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--edge); border-radius: 999px;
+  padding: 5px 11px; background: var(--panel-2);
+  color: var(--text); font-size: 13px; cursor: pointer;
+}
+.page-chk:has(input:checked) { border-color: var(--cyan); }
+.pages-note { color: var(--muted); font-size: 12px; }
+.pages-note:empty { display: none; }
+.pages-note.bad { color: var(--bad); }
+
 .slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 .slot { border: 1px solid var(--edge); border-radius: 10px; padding: 10px; background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
 .slot-head { display: flex; align-items: center; gap: 8px; font-weight: 600; }

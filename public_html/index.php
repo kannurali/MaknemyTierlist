@@ -150,7 +150,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
 <link rel="stylesheet" href="css/design-page.css?v=34" />
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
-<link rel="stylesheet" href="css/promo-dock-mini.css?v=1" />
+<link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -563,7 +563,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=20" fetchpriority="high"></script>
+  <script src="js/promo.js?v=22" fetchpriority="high"></script>
   <script src="js/promo-dock.js?v=8" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>

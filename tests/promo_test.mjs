@@ -751,8 +751,8 @@ test('migrateLegacyAd handles a text-only banner with no image', () => {
 //  Привязка кампании к странице
 // ============================================================================
 
-test('PAGES перечисляет четыре страницы с рекламными местами', () => {
-    assert.deepEqual(PAGES, ['tierlist', 'news', 'calc', 'stock']);
+test('PAGES перечисляет пять страниц с рекламными местами', () => {
+    assert.deepEqual(PAGES, ['tierlist', 'news', 'calc', 'trading', 'stock']);
 });
 
 test('onPage: кампания без списка страниц идёт везде', () => {
@@ -802,17 +802,41 @@ test('eligible отсекает купленную кампанию на чуж�
     assert.deepEqual(eligible(doc, 'rail', now), []);
 });
 
+// Ради этого в панели и появились галочки страниц: у каждой страницы своя
+// реклама, а кампания без списка закрывает только те, где своей нет.
+test('у каждой страницы своя кампания из админки', () => {
+    const now = Date.parse('2026-09-15T12:00:00Z');
+    const rail = { rail: { src: '/images/r.webp', w: 320, h: 1200 } };
+    const doc = {
+        campaigns: [
+            { id: 'tl', enabled: true, href: 'https://a.example/', pages: ['tierlist'], slots: ['rail'], creatives: rail },
+            { id: 'nw', enabled: true, href: 'https://b.example/', pages: ['news', 'stock'], slots: ['rail'], creatives: rail },
+            { id: 'tr', enabled: true, href: 'https://c.example/', pages: ['trading'], slots: ['rail'], creatives: rail },
+            { id: 'all', enabled: true, href: 'https://d.example/', slots: ['rail'], creatives: rail }
+        ]
+    };
+    const ids = page => eligible(doc, 'rail', now, page).map(c => c.id);
+    assert.deepEqual(ids('tierlist'), ['tl', 'all']);
+    assert.deepEqual(ids('news'), ['nw', 'all']);
+    assert.deepEqual(ids('stock'), ['nw', 'all']);
+    assert.deepEqual(ids('trading'), ['tr', 'all']);
+    assert.deepEqual(ids('calc'), ['all']);
+    // С 3 октября калькулятор и трейдинг у Playerok, остальные страницы как были.
+    const run = Date.parse('2026-10-05T12:00:00Z');
+    assert.deepEqual(eligible(doc, 'rail', run, 'trading'), [PLAYEROK]);
+    assert.deepEqual(eligible(doc, 'rail', run, 'news').map(c => c.id), ['nw', 'all']);
+});
+
 // ============================================================================
 //  Playerok
 // ============================================================================
 
 // Второе размещение Playerok идёт с 3 октября 2026 года, без даты конца. Оно
-// занимает калькулятор, ленту трейдов и создание объявления: у всех трёх
-// страниц PROMO_PAGE = "calc". Сток объявляет свою страницу и сюда не входит.
+// занимает калькулятор ("calc"), ленту трейдов и создание объявления
+// ("trading"). Сток объявляет свою страницу и сюда не входит.
 const PLAYEROK_RUN = Date.parse('2026-10-05T12:00:00Z');
 
-// Кампания из админки идёт на всех страницах во всех местах: api/promo.php
-// теряет поле pages при сохранении.
+// Кампания из админки без списка страниц идёт на всех страницах во всех местах.
 const PAID_EVERYWHERE = {
     campaigns: [{
         id: 'paid', enabled: true, weight: 1, href: 'https://t.me/example',
@@ -828,7 +852,7 @@ const PAID_EVERYWHERE = {
 
 test('PLAYEROK занимает все четыре места калькулятора и трейдинга', () => {
     assert.deepEqual(PLAYEROK.slots, ['strip', 'rail', 'dock', 'popup']);
-    assert.deepEqual(PLAYEROK.pages, ['calc']);
+    assert.deepEqual(PLAYEROK.pages, ['calc', 'trading']);
     assert.equal(PLAYEROK.enabled, true);
     assert.equal(PLAYEROK.start, '2026-10-03');
     assert.equal(PLAYEROK.end, '');
@@ -853,10 +877,12 @@ test('PLAYEROK занимает все четыре места калькуля�
 });
 
 test('houseFor отдаёт Playerok все места калькулятора и трейдинга', () => {
-    for (const slot of SLOTS) {
-        assert.equal(houseFor(slot, PLAYEROK_RUN, 'calc').id, PLAYEROK.id, `слот ${slot}`);
+    for (const page of ['calc', 'trading']) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, PLAYEROK.id, `${page} / ${slot}`);
+        }
+        assert.equal(popupPick({}, {}, PLAYEROK_RUN, 0, page).id, PLAYEROK.id, page);
     }
-    assert.equal(popupPick({}, {}, PLAYEROK_RUN, 0, 'calc').id, PLAYEROK.id);
 });
 
 test('тирлист, новости и сток остаются без Playerok', () => {
@@ -879,8 +905,10 @@ test('Playerok начинается 3 октября по Москве', () => {
 });
 
 test('на своих страницах Playerok перебивает кампанию из админки', () => {
-    for (const slot of SLOTS) {
-        assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, 'calc'), [PLAYEROK], slot);
+    for (const page of ['calc', 'trading']) {
+        for (const slot of SLOTS) {
+            assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page), [PLAYEROK], `${page} / ${slot}`);
+        }
     }
     assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'calc').id, PLAYEROK.id);
     assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'tierlist').id, 'paid');
