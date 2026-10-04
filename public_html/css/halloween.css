@@ -48,13 +48,13 @@ body {
 }
 
 .hw-decor--home img {
-  left: calc(var(--x) * var(--u));
+  left: calc(var(--x) * var(--u) + (100% - 1443 * var(--u)) * var(--ax, 0));
   top: calc(var(--y) * var(--u));
   width: calc(var(--w) * var(--u));
 }
 
 .hm-sakura-r {
-  left: calc(1217 * var(--u));
+  left: calc(100% - 226 * var(--u));
   top: calc(993 * var(--u));
   width: calc(995 * var(--u));
   height: calc(936 * var(--u));
@@ -83,7 +83,8 @@ body {
 }
 
 @media (max-width: 900px) {
-  .hw-decor--home {
+  .hw-decor--home,
+  .hw-decor--column .hw-bat {
     display: none;
   }
 
