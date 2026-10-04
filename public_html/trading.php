@@ -191,8 +191,8 @@ page_lscache();
     </symbol>
   </svg>
 
-  <?= halloween_decor('trading') ?>
   <main class="tr-page">
+    <?= halloween_decor('trading', 'hw-decor hw-decor--fill') ?>
     <div class="tr-frame">
 
       <div class="tr-rail-slot" aria-hidden="true">
