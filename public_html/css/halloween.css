@@ -1,0 +1,81 @@
+body {
+  isolation: isolate;
+}
+
+.hw-decor {
+  --hw-u: min(1px, calc(100vw / 1443));
+
+  position: relative;
+  z-index: -1;
+  height: calc(1300 * var(--hw-u));
+  margin-bottom: calc(-1300 * var(--hw-u));
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hw-decor img {
+  position: absolute;
+  left: calc(50% + (var(--x) - 721.5) * var(--hw-u));
+  top: calc(var(--y) * var(--hw-u));
+  width: calc(var(--w) * var(--hw-u));
+  height: auto;
+  transform-origin: 0 0;
+  rotate: var(--r);
+}
+
+.hm {
+  --hm-figure: rgba(125, 60, 211, 0.2);
+}
+
+.hm-faq {
+  position: relative;
+}
+
+.hw-decor--home {
+  position: absolute;
+  inset: 0;
+  z-index: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+}
+
+.hw-decor--home img {
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  width: calc(var(--w) * var(--u));
+}
+
+.hm-sakura-r {
+  left: calc(1217 * var(--u));
+  top: calc(993 * var(--u));
+  width: calc(995 * var(--u));
+  height: calc(936 * var(--u));
+  rotate: -110deg;
+}
+
+#tcArrowGrad stop:first-child,
+#trGrad stop:first-child,
+#spGrad stop:first-child {
+  stop-color: #8400ff;
+}
+
+#tcArrowGrad stop:last-child,
+#trGrad stop:last-child,
+#spGrad stop:last-child {
+  stop-color: #bb00ff;
+}
+
+@media (max-width: 900px) {
+  .hw-decor--home {
+    display: none;
+  }
+
+  .hm-sakura-r {
+    left: calc(100% - 190px);
+    right: auto;
+    top: 290px;
+    width: 263px;
+    height: 247px;
+  }
+}

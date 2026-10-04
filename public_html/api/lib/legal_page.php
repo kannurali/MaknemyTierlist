@@ -38,6 +38,19 @@ function legal_page_open(string $slug, string $title, string $description): void
     // посетителя к старому коду.
     header('Cache-Control: no-cache, must-revalidate');
     page_lscache();
+    // В Хэллоуин — фиолетовые копии стилей из css/hw/ (api/lib/halloween.php).
+    $css = implode(PHP_EOL, HALLOWEEN ? [
+        '<link rel="stylesheet" href="css/hw/base.css?v=13" />',
+        '<link rel="stylesheet" href="css/hw/topbar.css?v=15" />',
+        '<link rel="stylesheet" href="css/hw/design-page.css?v=34" />',
+        '<link rel="stylesheet" href="css/hw/legal.css?v=2" />',
+        '<link rel="stylesheet" href="css/halloween.css?v=1" />',
+    ] : [
+        '<link rel="stylesheet" href="css/base.css?v=13" />',
+        '<link rel="stylesheet" href="css/topbar.css?v=15" />',
+        '<link rel="stylesheet" href="css/design-page.css?v=34" />',
+        '<link rel="stylesheet" href="css/legal.css?v=2" />',
+    ]);
     echo <<<HTML
 <!DOCTYPE html>
 <html lang="ru">
@@ -63,10 +76,7 @@ function legal_page_open(string $slug, string $title, string $description): void
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=13" />
-<link rel="stylesheet" href="css/topbar.css?v=15" />
-<link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/legal.css?v=2" />
+{$css}
 HTML;
     echo metrika_counter_html();
     echo <<<HTML

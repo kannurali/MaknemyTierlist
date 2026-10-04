@@ -363,7 +363,9 @@ test('в чужом профиле — живые объявления игро�
     foreach (['<link rel="stylesheet" href="css/trading.css', '<svg class="tr-sprite"', '<script src="js/profile-trades.js'] as $needle) {
         $at = strpos($s, $needle);
         assert_true($at !== false, "есть: $needle");
-        $cond = strrpos(substr($s, 0, $at), '<?php if (');
+        // Переключатель Хэллоуин-темы (api/lib/halloween.php) — не условие профиля.
+        preg_match_all('~<\?php if \((?!HALLOWEEN\))~', substr($s, 0, $at), $ifs, PREG_OFFSET_CAPTURE);
+        $cond = end($ifs[0])[1];
         assert_eq("<?php if (\$pfState === 'card'): ?>", substr($s, $cond, strlen("<?php if (\$pfState === 'card'): ?>")),
             "$needle — на любом открытом профиле");
     }
