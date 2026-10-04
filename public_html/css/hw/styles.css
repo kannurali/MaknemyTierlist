@@ -605,6 +605,11 @@
     border: 1px solid var(--panel-edge);
     box-shadow: 0 10px 32px rgba(0, 0, 0, .45);
   }
+  .ptn-rail.ptn-fit:not([hidden]) {
+    width: min(160px, 600px * var(--ptn-r));
+    height: auto;
+    aspect-ratio: var(--ptn-r);
+  }
 
   .ptn-rail-l { left:  calc(50% - 520px - 24px - 160px); }
   .ptn-rail-r { right: calc(50% - 520px - 24px - 160px); }

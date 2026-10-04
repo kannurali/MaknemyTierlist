@@ -61,6 +61,7 @@
   top: calc(15 * var(--u));
   width: calc(258 * var(--u));
   height: calc(880 * var(--u));
+  container-type: size;
 }
 .tc-rail-slot-l { left: calc(26 * var(--u)); }
 .tc-rail-slot-r { left: calc(1159 * var(--u)); }
@@ -118,6 +119,12 @@
 .tc-rail.has-ad::after,
 .tc-strip.has-ad::before,
 .tc-strip.has-ad::after { display: none; }
+.tc-rail.ptn-fit {
+  width: min(100%, 100cqh * var(--ptn-r));
+  height: auto;
+  aspect-ratio: var(--ptn-r);
+  margin-inline: auto;
+}
 .tc-rail.has-link,
 .tc-strip.has-link { cursor: pointer; }
 .tc-rail:focus-visible,

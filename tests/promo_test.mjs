@@ -963,6 +963,39 @@ test('stampOn без DOM ничего не делает и не падает', (
     assert.equal(PROMO.stampOn(null, HOUSE_GIVEAWAY, 'popup', k => k, Date.now()), null);
 });
 
+// Борт принимает пропорции креатива: макет 320×750 в боксе 248×670 иначе
+// стоит с тёмными полосами сверху и снизу (жалоба 2026-10-05).
+function fakeBox() {
+    const props = {}, classes = new Set();
+    return {
+        props, classes,
+        style: {
+            setProperty: (k, v) => { props[k] = v; },
+            removeProperty: k => { delete props[k]; },
+        },
+        classList: { toggle: (c, on) => { if (on) classes.add(c); else classes.delete(c); return on; } },
+    };
+}
+
+test('fitBox ставит борту пропорции креатива', () => {
+    const box = fakeBox();
+    assert.equal(PROMO.fitBox(box, { src: '/images/a.jpg', w: 320, h: 750 }), true);
+    assert.equal(Number(box.props['--ptn-r']), 320 / 750);
+    assert.ok(box.classes.has('ptn-fit'));
+});
+
+test('fitBox без размеров креатива возвращает борт к размеру макета', () => {
+    const box = fakeBox();
+    PROMO.fitBox(box, PLAYEROK.creatives.rail);
+    assert.equal(Number(box.props['--ptn-r']), 320 / 1200);
+    for (const cre of [{ src: '/images/a.jpg', w: 0, h: 0 }, { src: '/images/a.jpg' }, null]) {
+        assert.equal(PROMO.fitBox(box, cre), false);
+        assert.equal(box.props['--ptn-r'], undefined);
+        assert.ok(!box.classes.has('ptn-fit'));
+    }
+    assert.equal(PROMO.fitBox(null, PLAYEROK.creatives.rail), false);
+});
+
 test('текст штампа переведён на оба языка', () => {
     const I18N = require('../public_html/js/i18n.js');
     for (const lang of ['ru', 'en']) {

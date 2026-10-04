@@ -502,6 +502,7 @@
 
     el.textContent = "";
     el.classList.add("has-ad");
+    if (slot === "rail") promo.fitBox(el, cre);
 
     const img = document.createElement("img");
     img.src = promo.srcFor(cre);

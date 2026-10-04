@@ -447,6 +447,7 @@
 
     el.innerHTML = "";
     el.classList.add("has-ad");
+    promo.fitBox(el, cre);
 
     if (el.parentElement) el.parentElement.hidden = false;
 

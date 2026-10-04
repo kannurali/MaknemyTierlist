@@ -62,6 +62,7 @@
   left: calc(26 * var(--u));
   width: calc(248 * var(--u));
   height: min(calc(670 * var(--u)), calc(100% - 39 * var(--u)));
+  container-type: size;
 }
 .tr-rail-slot.is-right {
   left: auto;
@@ -103,6 +104,12 @@
 }
 .tr-rail.has-ad::before,
 .tr-rail.has-ad::after { display: none; }
+.tr-rail.ptn-fit {
+  width: min(100%, 100cqh * var(--ptn-r));
+  height: auto;
+  aspect-ratio: var(--ptn-r);
+  margin-inline: auto;
+}
 .tr-rail.has-link { cursor: pointer; }
 .tr-rail:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .tr-rail img {

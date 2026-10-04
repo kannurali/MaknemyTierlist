@@ -254,7 +254,8 @@ a.nw-ptn-in:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-off
   top: calc(var(--mk-top-h, 0px) + 16px);
   width: 100%;
 
-  height: min(calc(670 * var(--u)), calc(100vh - var(--mk-top-h, 0px) - 32px));
+  --nw-rail-h: min(calc(670 * var(--u)), calc(100vh - var(--mk-top-h, 0px) - 32px));
+  height: var(--nw-rail-h);
   border-radius: calc(24 * var(--u));
   background: #fff;
   overflow: hidden;
@@ -267,6 +268,13 @@ a.nw-ptn-in:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-off
 }
 
 .nw-rail.has-ad::before { display: none; }
+
+.nw-rail.ptn-fit {
+  width: min(100%, var(--nw-rail-h) * var(--ptn-r));
+  height: auto;
+  aspect-ratio: var(--ptn-r);
+  margin-inline: auto;
+}
 
 .nw-rail.has-link { cursor: pointer; }
 .nw-rail:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-offset: 2px; }
