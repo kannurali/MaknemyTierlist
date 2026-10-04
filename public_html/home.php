@@ -88,15 +88,16 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=13" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=13" /><?php endif; ?>
 
-<link rel="stylesheet" href="css/topbar.css?v=15" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=34" />
-<link rel="stylesheet" href="css/home.css?v=20" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=20" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=20" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -217,7 +218,7 @@ page_lscache();
         <li>
           <div class="hm-card" aria-disabled="true" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
             <div class="hm-card-body"></div>
-            <img class="hm-card-art" src="assets/design/home/card-fruits.webp" alt="" aria-hidden="true" />
+            <img class="hm-card-art" src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-ak" data-i18n="home.cardFruits">Фрукты</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note" data-i18n="home.cardFruitsNote">а какой фрукт предложат тебе?</p>
@@ -227,7 +228,7 @@ page_lscache();
         <li>
           <a class="hm-card" href="/tierlist">
             <div class="hm-card-body"></div>
-            <img class="hm-card-art" src="assets/design/home/card-tier.webp" alt="" aria-hidden="true" />
+            <img class="hm-card-art" src="<?= hw_img('assets/design/home/card-tier.webp') ?>" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-ak" data-i18n="home.cardTier">Тир</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note" data-i18n="home.cardTierNote">ваш гид в мире трейдов уже готов!</p>
@@ -237,7 +238,7 @@ page_lscache();
         <li>
           <a class="hm-card" href="/calculator">
             <div class="hm-card-body"></div>
-            <img class="hm-card-art" src="assets/design/home/card-prices.webp" alt="" aria-hidden="true" />
+            <img class="hm-card-art" src="<?= hw_img('assets/design/home/card-prices.webp') ?>" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-ak" data-i18n="home.cardPrices">Цены</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note" data-i18n="home.cardPricesNote">сравнить цены в реальном времени уже не проблема!</p>
@@ -247,7 +248,7 @@ page_lscache();
         <li>
           <a class="hm-card" href="https://t.me/theMaknemy" target="_blank" rel="noopener">
             <div class="hm-card-body"></div>
-            <img class="hm-card-art" src="assets/design/home/card-giveaways.webp" alt="" aria-hidden="true" />
+            <img class="hm-card-art" src="<?= hw_img('assets/design/home/card-giveaways.webp') ?>" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-card-name--tight hm-ak" data-i18n="home.cardGiveaways">Розыгрыши</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note" data-i18n="home.cardGiveawaysNote">любимые призы только на нашем канале!</p>
@@ -257,7 +258,7 @@ page_lscache();
         <li>
           <a class="hm-card" href="/news">
             <div class="hm-card-body"></div>
-            <img class="hm-card-art" src="assets/design/home/card-news.webp" alt="" aria-hidden="true" />
+            <img class="hm-card-art" src="<?= hw_img('assets/design/home/card-news.webp') ?>" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-card-name--tight hm-ak" data-i18n="home.cardNews">Новости</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note" data-i18n="home.cardNewsNote">узнай самые свежие новинки в твоей любимой игре!</p>
@@ -271,11 +272,12 @@ page_lscache();
     <div class="hm-ghost hm-ghost-b hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-phone hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-square-lg hm-deco hm-anim" aria-hidden="true"></div>
-    <img class="hm-sakura hm-sakura-l hm-deco hm-anim" src="assets/design/home/sakura.webp" alt="" aria-hidden="true" />
-    <img class="hm-sakura hm-sakura-r hm-deco hm-anim" src="assets/design/home/sakura.webp" alt="" aria-hidden="true" />
+    <img class="hm-sakura hm-sakura-l hm-deco hm-anim" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
+    <img class="hm-sakura hm-sakura-r hm-deco hm-anim" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
     <div class="hm-fig hm-fig-circle hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-square-sm hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-fig hm-fig-tri hm-deco hm-anim" aria-hidden="true"></div>
+    <?= halloween_decor('home-lead', 'hw-decor hw-decor--home hm-deco') ?>
   </section>
 
   <section class="hm-faq">
@@ -356,6 +358,7 @@ page_lscache();
         </li>
       </ul>
     </div>
+    <?= halloween_decor('home-faq', 'hw-decor hw-decor--home') ?>
   </section>
 </main>
 

@@ -2237,11 +2237,13 @@
         imageTimeout: 20000,
 
         onclone: (doc) => {
-          const url = new URL("assets/poster/bg-tile-export.jpg", location.href).href;
+          const hw = !!document.querySelector('meta[name="nx-theme"][content="halloween"]');
+          const dir = hw ? "assets/halloween/" : "assets/poster/";
+          const url = new URL(dir + "bg-tile-export.jpg", location.href).href;
           const s = doc.getElementById("stage");
           if (s) {
             s.style.backgroundImage = 'url("' + url + '")';
-            s.style.backgroundColor = "#05091f";
+            s.style.backgroundColor = hw ? "#18051f" : "#05091f";
             s.style.backgroundBlendMode = "normal";
 
             s.style.backgroundRepeat = "repeat-y";
@@ -2249,7 +2251,7 @@
           }
           const p = doc.querySelector(".petals");
           if (p) {
-            const pu = new URL("assets/poster/petals-tile-export.png", location.href).href;
+            const pu = new URL(dir + "petals-tile-export.png", location.href).href;
             p.style.backgroundImage = 'url("' + pu + '")';
             p.style.backgroundRepeat = "repeat-y";
             p.style.backgroundSize = "100% auto";

@@ -95,21 +95,22 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=13" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=13" /><?php endif; ?>
 
-<link rel="stylesheet" href="css/topbar.css?v=15" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=34" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
-<link rel="stylesheet" href="css/calculator.css?v=27" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=27" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=27" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
-<link rel="stylesheet" href="css/promo-popup.css?v=3" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -186,6 +187,7 @@ page_lscache();
     </button>
   </header>
 
+  <?= halloween_decor('calculator') ?>
   <main class="tc-page">
     <div class="tc-frame">
 

@@ -1,0 +1,102 @@
+
+.ptn-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 3, 20, .72);
+  touch-action: none;
+}
+
+.ptn-pop-card {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 18px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-edge);
+  background: linear-gradient(180deg, #3d164f, #250a30);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+  animation: ptnPopIn .16s ease-out;
+}
+@keyframes ptnPopIn { from { transform: translateY(8px); } to { transform: none; } }
+
+.ptn-pop-card .ptn-chip {
+  position: absolute; top: 7px; left: 7px; right: auto;
+  z-index: 1;
+  font-family: var(--display);
+  font-size: 9px;
+  line-height: 1.6;
+  letter-spacing: .8px;
+  padding: 2px 7px 1px;
+  border-radius: 6px;
+  color: #1e0a26;
+  background: linear-gradient(180deg, #bd6fff, #8f2ae0);
+}
+.ptn-pop-card .ptn-erid {
+  align-self: flex-end;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 1.8;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: rgba(244, 226, 255, .82);
+  background: rgba(20, 5, 26, .6);
+
+  pointer-events: none;
+}
+
+.ptn-pop-close {
+  position: absolute; top: 6px; right: 6px;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-edge);
+  background: rgba(39, 10, 52, .8);
+  color: #eccfff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.ptn-pop-media { width: 100%; line-height: 0; }
+.ptn-pop-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 52vh;
+  object-fit: contain;
+  border-radius: 10px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ptn-pop-title {
+  font-family: var(--display);
+  font-size: 19px;
+  line-height: 1.25;
+  color: #fff;
+  text-align: center;
+}
+.ptn-pop-cta { width: 100%; text-align: center; }
+
+.ptn-pop-close:focus-visible,
+.ptn-pop-cta:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+body.ptn-locked { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ptn-pop-card { animation: none; }
+}

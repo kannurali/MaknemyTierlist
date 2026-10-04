@@ -9,6 +9,7 @@ if (!defined('CONFIG_PATH')) {
 }
 
 require_once __DIR__ . '/lib/remember.php';
+require_once __DIR__ . '/lib/halloween.php';
 
 function app_config(): array {
     static $cfg = null;

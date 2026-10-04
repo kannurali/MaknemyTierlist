@@ -207,23 +207,24 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<link rel="stylesheet" href="css/base.css?v=13" />
-<link rel="stylesheet" href="css/news.css?v=13" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=13" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/news.css?v=13" /><?php endif; ?>
 
-<link rel="stylesheet" href="css/topbar.css?v=15" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
-<link rel="stylesheet" href="css/design-page.css?v=34" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 
-<link rel="stylesheet" href="css/news-design.css?v=21" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news-design.css?v=21" /><?php else: ?><link rel="stylesheet" href="css/news-design.css?v=21" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
-<link rel="stylesheet" href="css/promo-popup.css?v=3" />
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -299,6 +300,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </button>
   </header>
 
+  <?= halloween_decor('news') ?>
   <main class="nw-page">
     <div class="nw-lead">
 
@@ -313,8 +315,8 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
       <div class="nw-deco nw-ghost nw-ghost-a" aria-hidden="true"></div>
       <div class="nw-deco nw-ghost nw-ghost-b" aria-hidden="true"></div>
-      <img class="nw-deco nw-sakura nw-sakura-l" src="assets/design/home/sakura.webp" alt="" aria-hidden="true" />
-      <img class="nw-deco nw-sakura nw-sakura-r" src="assets/design/home/sakura.webp" alt="" aria-hidden="true" />
+      <img class="nw-deco nw-sakura nw-sakura-l" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
+      <img class="nw-deco nw-sakura nw-sakura-r" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
       <div class="nw-deco nw-fig nw-fig-circle" aria-hidden="true"></div>
       <div class="nw-deco nw-fig nw-fig-square-lg" aria-hidden="true"></div>
       <div class="nw-deco nw-fig nw-fig-square-sm" aria-hidden="true"></div>
