@@ -44,7 +44,7 @@ function legal_page_open(string $slug, string $title, string $description): void
         '<link rel="stylesheet" href="css/hw/topbar.css?v=15" />',
         '<link rel="stylesheet" href="css/hw/design-page.css?v=34" />',
         '<link rel="stylesheet" href="css/hw/legal.css?v=2" />',
-        '<link rel="stylesheet" href="css/halloween.css?v=2" />',
+        '<link rel="stylesheet" href="css/halloween.css?v=4" />',
     ] : [
         '<link rel="stylesheet" href="css/base.css?v=14" />',
         '<link rel="stylesheet" href="css/topbar.css?v=15" />',
