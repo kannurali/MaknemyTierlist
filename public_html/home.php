@@ -96,7 +96,7 @@ page_lscache();
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=21" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=21" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=20" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=20" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -216,14 +216,14 @@ page_lscache();
     <div class="hm-cards hm-anim">
       <ul class="hm-cards-row">
         <li>
-          <div class="hm-card" aria-disabled="true" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+          <a class="hm-card" href="/trading">
             <div class="hm-card-body"></div>
             <img class="hm-card-art" src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" alt="" aria-hidden="true" />
             <h2 class="hm-card-name hm-ak" data-i18n="home.cardFruits">Фрукты</h2>
             <div class="hm-card-rule"></div>
             <p class="hm-card-note" data-i18n="home.cardFruitsNote">а какой фрукт предложат тебе?</p>
             <span class="hm-card-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          </div>
+          </a>
         </li>
         <li>
           <a class="hm-card" href="/tierlist">

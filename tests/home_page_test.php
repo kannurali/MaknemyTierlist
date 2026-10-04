@@ -211,15 +211,12 @@ test('анимация отключается при prefers-reduced-motion', fu
 
 test('карточки и кнопка без страницы — не ссылки', function () use ($PUB) {
     $home = read_file_or_fail($PUB . '/home.php');
-    // «Фрукты» ещё не существуют: если кто-то сделает карточку <a>, она
-    // уедет в никуда, а не «пока никуда».
-    foreach (['Фрукты'] as $name) {
-        assert_eq(0, preg_match('/<a[^>]*class="hm-card"[^>]*>(?:(?!<\/a>).)*?' . $name . '/su', $home),
-            "карточка «{$name}» пока не должна быть ссылкой");
-    }
+    assert_eq(0, preg_match('/class="hm-card"[^>]*data-soon/', $home), 'карточек-заглушек на главной нет');
     assert_true(strpos($home, '<a class="hm-btn hm-btn-accent" href="/tierlist">') !== false,
         'кнопка «фрукты» ведёт на тирлист');
-    // А те, у кого адрес есть, обязаны на него вести.
+    // А те, у кого адрес есть, обязаны на него вести. «Фрукты» по макету —
+    // трейдинг: раздел /trading есть с PR #88.
+    assert_true(strpos($home, '<a class="hm-card" href="/trading">') !== false, 'карточка «Фрукты»');
     assert_true(strpos($home, '<a class="hm-card" href="/tierlist">') !== false, 'карточка «Тир»');
     assert_true(strpos($home, '<a class="hm-card" href="/news">') !== false, 'карточка «Новости»');
     // «Цены» — это калькулятор, и раздел уже есть. Ссылка, а не <div>: только
