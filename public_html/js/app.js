@@ -2238,20 +2238,21 @@
 
         onclone: (doc) => {
           const hw = !!document.querySelector('meta[name="nx-theme"][content="halloween"]');
-          const dir = hw ? "assets/halloween/" : "assets/poster/";
-          const url = new URL(dir + "bg-tile-export.jpg", location.href).href;
+          const url = new URL(hw ? "assets/halloween/stage-export.jpg" : "assets/poster/bg-tile-export.jpg", location.href).href;
           const s = doc.getElementById("stage");
           if (s) {
             s.style.backgroundImage = 'url("' + url + '")';
-            s.style.backgroundColor = hw ? "#18051f" : "#05091f";
+            s.style.backgroundColor = hw ? "#04030a" : "#05091f";
             s.style.backgroundBlendMode = "normal";
 
-            s.style.backgroundRepeat = "repeat-y";
+            s.style.backgroundRepeat = hw ? "no-repeat" : "repeat-y";
             s.style.backgroundSize = "100% auto";
           }
           const p = doc.querySelector(".petals");
-          if (p) {
-            const pu = new URL(dir + "petals-tile-export.png", location.href).href;
+          if (p && hw) {
+            p.remove();
+          } else if (p) {
+            const pu = new URL("assets/poster/petals-tile-export.png", location.href).href;
             p.style.backgroundImage = 'url("' + pu + '")';
             p.style.backgroundRepeat = "repeat-y";
             p.style.backgroundSize = "100% auto";

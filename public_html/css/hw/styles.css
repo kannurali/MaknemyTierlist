@@ -1139,14 +1139,14 @@ body.ptn-locked { overflow: hidden; }
   .donate-fab { right: 12px; bottom: 62px; padding: 9px 14px; font-size: 14px; }
 
   .stage {
-    background-image: url("../../assets/halloween/bg-tile-export.jpg");
-    background-image: -webkit-image-set(url("../../assets/halloween/bg-tile-m.webp") 1x);
-    background-image: image-set(url("../../assets/halloween/bg-tile-m.webp") type("image/webp"));
+    background-image: url("../../assets/poster/bg-tile-export.jpg");
+    background-image: -webkit-image-set(url("../../assets/poster/bg-tile-m.webp") 1x);
+    background-image: image-set(url("../../assets/poster/bg-tile-m.webp") type("image/webp"));
   }
   .petals {
-    background-image: url("../../assets/halloween/petals-tile-export.png");
-    background-image: -webkit-image-set(url("../../assets/halloween/petals-tile-m.webp") 1x);
-    background-image: image-set(url("../../assets/halloween/petals-tile-m.webp") type("image/webp"));
+    background-image: url("../../assets/poster/petals-tile-export.png");
+    background-image: -webkit-image-set(url("../../assets/poster/petals-tile-m.webp") 1x);
+    background-image: image-set(url("../../assets/poster/petals-tile-m.webp") type("image/webp"));
   }
 
   .cell-icon img { filter: none; }

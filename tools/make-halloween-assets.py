@@ -17,7 +17,11 @@
    по высоте видна середина исходника 1080×1762. Ветки — по imageTransform
    своих нод (CROP), сакура новостей — FILL.
 
-2. Синие картинки сайта (постер тирлиста, свечение подвала) перекрашиваются
+   Из того же фона собран stage-export.jpg — подложка сцены тирлиста при
+   сохранении в PNG: на экране сцена прозрачная и стоит на фоне страницы,
+   а в картинке фона страницы нет.
+
+2. Синие картинки сайта (полосы тирлиста, свечение подвала) перекрашиваются
    тем же поворотом оттенка, что и цвета в tools/halloween_css.php: синий
    185–250° уходит в 268–292°, насыщенность и светлота не меняются. Края
    диапазона и малонасыщенные пиксели сдвигаются плавно, иначе на градиентах
@@ -110,6 +114,7 @@ def from_figma(fig):
     bg = castle.crop((0, round(y0), 1080, round(y0 + vis)))
     save(bg, 'page-bg.webp', quality=80)
     save(bg.resize((760, round(760 * bg.height / bg.width)), Image.LANCZOS), 'page-bg-m.webp', quality=78)
+    save(bg, 'stage-export.jpg', quality=86)
 
     branch = Image.open(fig / 'branch.png').convert('RGBA')
     save(crop_transform(branch, (868, 890), ((0.5465945601463318, 0, 0.37209352850914), (0, 1, 0.04540513455867767))),
@@ -127,12 +132,6 @@ def from_figma(fig):
 def recolored():
     for src, dst, q in [
         ('design/foot/foot-bg.webp', 'foot-bg.webp', 85),
-        ('poster/bg-tile.webp', 'bg-tile.webp', 82),
-        ('poster/bg-tile-m.webp', 'bg-tile-m.webp', 82),
-        ('poster/bg-tile-export.jpg', 'bg-tile-export.jpg', 88),
-        ('poster/petals-tile.webp', 'petals-tile.webp', 82),
-        ('poster/petals-tile-m.webp', 'petals-tile-m.webp', 82),
-        ('poster/petals-tile-export.png', 'petals-tile-export.png', 0),
         ('poster/band.webp', 'band.webp', 90),
         ('poster/band.png', 'band.png', 0),
     ]:
