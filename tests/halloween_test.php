@@ -119,7 +119,7 @@ test('всё, на что ссылается тема, лежит на диск�
             assert_true(is_file("$PUB/assets/halloween/{$d[0]}.webp"), "assets/halloween/{$d[0]}.webp");
         }
     }
-    foreach (hw_pages($PUB) as $page => $html) {
+    foreach (hw_pages($PUB) + ['js/app.js' => file_get_contents("$PUB/js/app.js")] as $page => $html) {
         preg_match_all('~assets/halloween/[a-z0-9.-]+~', $html, $m);
         foreach ($m[0] as $path) {
             assert_true(is_file("$PUB/$path"), "$page: $path");

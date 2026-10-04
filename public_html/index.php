@@ -141,8 +141,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=13" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/styles.css?v=60" /><?php else: ?><link rel="stylesheet" href="css/styles.css?v=60" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/styles.css?v=61" /><?php else: ?><link rel="stylesheet" href="css/styles.css?v=61" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
 
@@ -569,6 +569,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/promo-dock.js?v=10" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=83" fetchpriority="high"></script>
+  <script src="js/app.js?v=84" fetchpriority="high"></script>
 </body>
 </html>

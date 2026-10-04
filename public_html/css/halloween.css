@@ -54,6 +54,15 @@ body {
   rotate: -110deg;
 }
 
+.stage {
+  background-color: transparent;
+  background-image: none;
+}
+
+.petals {
+  display: none;
+}
+
 #tcArrowGrad stop:first-child,
 #trGrad stop:first-child,
 #spGrad stop:first-child {

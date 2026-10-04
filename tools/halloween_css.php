@@ -10,8 +10,9 @@
 //      градиента и свечение подвала — точно как в макете, остальные синие —
 //      поворотом оттенка в фиолетовый диапазон с той же насыщенностью и
 //      светлотой, чтобы светлый синий остался светлым, а тёмно-синий — тёмным;
-//   2. синие картинки (фон, подвал, постер тирлиста) заменяются на
-//      assets/halloween/ (HW_ASSETS);
+//   2. синие картинки (фон страницы, подвал, полосы тирлиста) заменяются на
+//      assets/halloween/ (HW_ASSETS); сакура на фоне сцены тирлиста не
+//      перекрашивается, а убирается совсем — это делает css/halloween.css;
 //   3. остальные url(../…) получают лишний ../, потому что копия лежит на
 //      уровень глубже.
 // Цвета меняются только внутри блоков объявлений: в селекторах решётка — это
@@ -27,12 +28,6 @@ const HW_ASSETS = [
     'design/page-bg.webp'          => 'halloween/page-bg.webp',
     'design/page-bg-m.webp'        => 'halloween/page-bg-m.webp',
     'design/foot/foot-bg.webp'     => 'halloween/foot-bg.webp',
-    'poster/bg-tile.webp'          => 'halloween/bg-tile.webp',
-    'poster/bg-tile-m.webp'        => 'halloween/bg-tile-m.webp',
-    'poster/bg-tile-export.jpg'    => 'halloween/bg-tile-export.jpg',
-    'poster/petals-tile.webp'      => 'halloween/petals-tile.webp',
-    'poster/petals-tile-m.webp'    => 'halloween/petals-tile-m.webp',
-    'poster/petals-tile-export.png' => 'halloween/petals-tile-export.png',
     'poster/band.webp'             => 'halloween/band.webp',
     'poster/band.png'              => 'halloween/band.png',
 ];
