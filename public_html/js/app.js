@@ -1219,6 +1219,7 @@
     if (!cre) { el.hidden = true; el.innerHTML = ""; return; }
     el.innerHTML = "";
     el.hidden = false;
+    promo.fitBox(el, cre);
 
     const img = document.createElement("img");
     img.src = promo.srcFor(cre);

@@ -153,6 +153,16 @@
     return layer;
   }
 
+  function fitBox(el, creative) {
+    if (!el || !el.style || !el.classList) { return false; }
+    var w = Number(creative && creative.w), h = Number(creative && creative.h);
+    var ok = w > 0 && h > 0;
+    if (ok) { el.style.setProperty("--ptn-r", String(w / h)); }
+    else { el.style.removeProperty("--ptn-r"); }
+    el.classList.toggle("ptn-fit", ok);
+    return ok;
+  }
+
   function onPage(campaign, page) {
     if (!campaign) { return false; }
     var list = campaign.pages;
@@ -585,6 +595,7 @@
     dockTextKey: dockTextKey,
     stampFor: stampFor,
     stampOn: stampOn,
+    fitBox: fitBox,
     onPage: onPage,
     eligible: eligible,
     pickWeighted: pickWeighted,

@@ -87,7 +87,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/stock.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/stock.css?v=1" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/stock.css?v=2" /><?php else: ?><link rel="stylesheet" href="css/stock.css?v=2" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=3" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
@@ -279,10 +279,10 @@ page_lscache();
 
 
   <script src="js/i18n.js?v=65" fetchpriority="high"></script>
-  <script src="js/promo.js?v=23" fetchpriority="high"></script>
+  <script src="js/promo.js?v=24" fetchpriority="high"></script>
   <script src="js/promo-feed.js?v=2" fetchpriority="high"></script>
   <script src="js/promo-dock.js?v=10" fetchpriority="high"></script>
   <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
-  <script src="js/stock-page.js?v=2" fetchpriority="high"></script>
+  <script src="js/stock-page.js?v=3" fetchpriority="high"></script>
 </body>
 </html>
