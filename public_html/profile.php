@@ -162,7 +162,7 @@ $pfTitle = $pfNick !== ''
 <?php if ($pfState === 'card'): ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=5" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=5" /><?php endif; ?>
 <?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=2" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
