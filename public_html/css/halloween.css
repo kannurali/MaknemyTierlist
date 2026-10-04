@@ -71,11 +71,20 @@ body {
     display: none;
   }
 
+  .hm-sakura-l {
+    left: 66px;
+    -webkit-mask: linear-gradient(to left, transparent, #000 18%);
+    mask: linear-gradient(to left, transparent, #000 18%);
+  }
+
   .hm-sakura-r {
-    left: calc(100% - 190px);
+    left: calc(100% + 4px);
     right: auto;
-    top: 290px;
-    width: 263px;
-    height: 247px;
+    top: 64px;
+    width: 300px;
+    height: 282px;
+    transform-origin: 0 58.6%;
+    rotate: 25deg;
+    scale: -1 1;
   }
 }
