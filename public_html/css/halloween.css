@@ -13,6 +13,13 @@ body {
   pointer-events: none;
 }
 
+.hw-decor--fill {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  margin: 0;
+}
+
 .hw-decor img {
   position: absolute;
   left: calc(50% + (var(--x) - 721.5) * var(--hw-u));
