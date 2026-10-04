@@ -87,7 +87,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=13" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
 
@@ -96,7 +96,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=11" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=2" /><?php endif; ?>
 
 
 

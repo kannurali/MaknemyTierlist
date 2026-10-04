@@ -228,9 +228,9 @@ body.protected img {
   overflow: hidden;
 
   background-color: #18051f;
-  background-image: url("../../assets/halloween/bg-tile-export.jpg");
-  background-image: -webkit-image-set(url("../../assets/halloween/bg-tile.webp") 1x);
-  background-image: image-set(url("../../assets/halloween/bg-tile.webp") type("image/webp"));
+  background-image: url("../../assets/poster/bg-tile-export.jpg");
+  background-image: -webkit-image-set(url("../../assets/poster/bg-tile.webp") 1x);
+  background-image: image-set(url("../../assets/poster/bg-tile.webp") type("image/webp"));
   background-size: 100% auto;
   background-repeat: repeat-y;
   background-position: center top;
@@ -250,9 +250,9 @@ body.protected img {
 }
 .petals {
   position: absolute; inset: 0;
-  background-image: url("../../assets/halloween/petals-tile-export.png");
-  background-image: -webkit-image-set(url("../../assets/halloween/petals-tile.webp") 1x);
-  background-image: image-set(url("../../assets/halloween/petals-tile.webp") type("image/webp"));
+  background-image: url("../../assets/poster/petals-tile-export.png");
+  background-image: -webkit-image-set(url("../../assets/poster/petals-tile.webp") 1x);
+  background-image: image-set(url("../../assets/poster/petals-tile.webp") type("image/webp"));
 
   background-size: 100% auto;
   background-repeat: repeat-y;

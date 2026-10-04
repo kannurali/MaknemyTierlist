@@ -153,7 +153,7 @@ $pfTitle = $pfNick !== ''
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=13" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
@@ -162,7 +162,7 @@ $pfTitle = $pfNick !== ''
 <?php if ($pfState === 'card'): ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=5" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=5" /><?php endif; ?>
 <?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=1" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=2" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
