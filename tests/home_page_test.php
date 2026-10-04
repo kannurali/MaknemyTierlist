@@ -784,6 +784,12 @@ test('полосу внизу можно свернуть в мини-строк
     assert_true(strpos($mod, 'mini(el, camp,') !== false, 'полоса на ленте и в калькуляторе сворачивается');
     assert_true(strpos($mod, '"dockMini"') !== false, 'свой макет свёрнутой полосы');
     assert_true(strpos($mod, '"nx-dock-mini-v1"') !== false, 'выбор посетителя запоминается');
+    // Свёрнутой полоса остаётся только час: потом она разворачивается сама,
+    // и на открытой странице (таймер, проверка при возврате на вкладку), и
+    // после перезагрузки.
+    assert_true(strpos($mod, 'var MINI_TTL_MS = 60 * 60 * 1000;') !== false, 'свёрнута не дольше часа');
+    assert_true(strpos($mod, 'setTimeout(schedule,') !== false, 'на открытой странице разворачивается по таймеру');
+    assert_true(strpos($mod, '"visibilitychange"') !== false, 'и при возврате на уснувшую вкладку');
     assert_true(strpos($mod, 'localStorage') !== false && strpos($mod, 'catch (_)') !== false,
         'без localStorage (приватный режим) полоса всё равно рисуется');
     // Свёрнутая строка — тоже реклама: маркировка остаётся и в ней.
