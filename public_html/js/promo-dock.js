@@ -28,18 +28,39 @@
     document.body.classList.remove("has-promo-dock");
     document.body.style.removeProperty("--ptn-dock-h");
     if (ro) { ro.disconnect(); ro = null; }
+    clearTimeout(backT);
+    backT = 0;
   }
 
   var MINI_KEY = "nx-dock-mini-v1";
-  var MINI_TTL_MS = 24 * 60 * 60 * 1000;
+  var MINI_TTL_MS = 60 * 60 * 1000;
+  var miniUntil = 0;
+  var backT = 0;
+  var backCheck = null;
+  var backBound = false;
 
-  function miniSaved() {
-    var at = 0;
-    try { at = Number(localStorage.getItem(MINI_KEY)) || 0; } catch (_) {}
-    return at > 0 && Date.now() - at < MINI_TTL_MS;
+  function miniLeft() {
+    var until = miniUntil;
+    try {
+      var at = Number(localStorage.getItem(MINI_KEY)) || 0;
+      if (at > 0) { until = at + MINI_TTL_MS; }
+    } catch (_) {}
+    var left = until - Date.now();
+    return left > 0 && left <= MINI_TTL_MS ? left : 0;
+  }
+
+  function bindBack() {
+    if (backBound) { return; }
+    backBound = true;
+    var check = function () {
+      if (backCheck && document.visibilityState !== "hidden") { backCheck(); }
+    };
+    document.addEventListener("visibilitychange", check);
+    root.addEventListener("pageshow", check);
   }
 
   function miniSave(on) {
+    miniUntil = on ? Date.now() + MINI_TTL_MS : 0;
     try {
       if (on) { localStorage.setItem(MINI_KEY, String(Date.now())); }
       else { localStorage.removeItem(MINI_KEY); }
@@ -113,7 +134,18 @@
     tab.className = "ptn-dock-tab";
     el.appendChild(tab);
 
-    var set = function (on, byUser) {
+    var set, schedule;
+
+    schedule = function () {
+      clearTimeout(backT);
+      backT = 0;
+      if (!el.classList.contains("is-mini")) { return; }
+      var left = miniLeft();
+      if (!left) { set(false, "auto"); return; }
+      backT = setTimeout(schedule, left + 50);
+    };
+
+    set = function (on, how) {
       if (on && !box) { box = buildMini(el, camp, tr); }
       el.classList.toggle("is-mini", on);
       var key = on ? "promo.dockExpand" : "promo.dockCollapse";
@@ -122,22 +154,24 @@
       tab.setAttribute("aria-label", tr(key));
       tab.title = tr(key);
       tab.setAttribute("aria-expanded", on ? "false" : "true");
-      if (!byUser) { return; }
-      miniSave(on);
-      miniGoal(camp, on);
-      el.classList.remove("is-flip");
-      void el.offsetWidth;
-      el.classList.add("is-flip");
-      clearTimeout(flipT);
-      flipT = setTimeout(function () { el.classList.remove("is-flip"); }, 400);
+      if (how) {
+        miniSave(on);
+        if (how === "user") { miniGoal(camp, on); }
+        el.classList.remove("is-flip");
+        void el.offsetWidth;
+        el.classList.add("is-flip");
+        clearTimeout(flipT);
+        flipT = setTimeout(function () { el.classList.remove("is-flip"); }, 400);
+      }
+      schedule();
     };
 
     tab.onclick = function (e) {
       e.stopPropagation();
-      set(!el.classList.contains("is-mini"), true);
+      set(!el.classList.contains("is-mini"), "user");
     };
     el.onclick = function () {
-      if (el.classList.contains("is-mini")) { set(false, true); }
+      if (el.classList.contains("is-mini")) { set(false, "user"); }
       else if (open) { open(); }
     };
     el.onkeydown = function (e) {
@@ -146,7 +180,9 @@
       el.onclick();
     };
 
-    set(miniSaved(), false);
+    backCheck = schedule;
+    bindBack();
+    set(miniLeft() > 0);
   }
 
   function render(el, doc, page) {
