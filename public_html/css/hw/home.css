@@ -244,7 +244,8 @@
   }
 
   a.hm-card:hover .hm-card-art,
-  a.hm-card:focus-visible .hm-card-art {
+  a.hm-card:focus-visible .hm-card-art,
+  .hm-card[data-soon]:hover .hm-card-art {
     transform:
       translate(calc(57.51 * var(--u)), calc(-71 * var(--u)))
       rotate(23.743deg)
