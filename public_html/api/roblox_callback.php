@@ -72,6 +72,13 @@ if (!defined('TESTING')) {
         roblox_finish(roblox_with_flag($return, 'error'));
     }
 
+    // Забаненный (banned_ids в config.php) внутрь не попадает и строку в
+    // users не обновляет. Шапка по флагу говорит, что аккаунт заблокирован,
+    // а не «попробуйте ещё раз».
+    if (site_banned((string)$profile['roblox_id'], $cfg)) {
+        roblox_finish(roblox_with_flag($return, 'banned'));
+    }
+
     try {
         roblox_touch_user(db(), $profile, time());
     } catch (PDOException $e) {

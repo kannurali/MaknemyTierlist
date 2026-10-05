@@ -99,6 +99,11 @@ function remember_check(PDO $pdo, $raw, int $now): ?array {
     return ['user_id' => (string)$row['user_id'], 'expires' => $expires, 'renew' => $renew];
 }
 
+/** Погасить все ключи человека — на всех устройствах. Нужно бану (ban_kick). */
+function remember_forget_user(PDO $pdo, string $userId): void {
+    $pdo->prepare('DELETE FROM login_tokens WHERE user_id = :u')->execute([':u' => $userId]);
+}
+
 /** Погасить ключ из куки. Чужой или битый ключ — ничего не делать. */
 function remember_revoke(PDO $pdo, $raw): void {
     $parts = remember_parse($raw);

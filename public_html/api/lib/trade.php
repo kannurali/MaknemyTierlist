@@ -411,8 +411,12 @@ function trade_clean_query($raw): string {
  * Свои объявления на первой странице без поиска едут отдельным списком
  * `mine`: иначе через пару дней они утонули бы в чужих, и снять их было бы
  * не найти где. Из общей ленты они при этом не пропадают.
+ *
+ * $hidden — авторы, чьих объявлений в ленте нет (забаненные). Отсекаются в
+ * самом запросе, а не после него: иначе страница выходила бы короче
+ * TRADE_PAGE_SIZE, а флаг more врал бы.
  */
-function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now): array {
+function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now, array $hidden = []): array {
     $empty = ['ok' => true, 'ready' => false, 'offers' => [], 'mine' => [], 'more' => false];
     if (!trade_ready($pdo)) { return $empty; }
     $empty['ready'] = true;
@@ -420,6 +424,10 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now): arr
     [$live, $params] = trade_live_sql('o', $now);
     $where = [$live];
     if ($before > 0) { $where[] = 'o.id < ?'; $params[] = $before; }
+    if ($hidden !== []) {
+        $where[] = 'o.user_id NOT IN (' . implode(', ', array_fill(0, count($hidden), '?')) . ')';
+        foreach ($hidden as $id) { $params[] = $id; }
+    }
 
     if ($q !== '') {
         $or = [];

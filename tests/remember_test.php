@@ -153,7 +153,8 @@ test('выход гасит только свой ключ', function () {
 
 // Прогоняет $body в дочернем php с настоящими сессиями и базой-файлом.
 // $cookies — что прислал браузер. Возвращает то, что напечатал $body (JSON).
-function remember_run(string $dbFile, array $cookies, string $body): ?array {
+// $cfg — ключи config.php сверх базы (banned_ids для бана).
+function remember_run(string $dbFile, array $cookies, string $body, array $cfg = []): ?array {
     if (!function_exists('shell_exec')) { return null; }
     $dir = str_replace('\\', '/', sys_get_temp_dir()) . '/nx_remember_' . getmypid();
     if (!is_dir("$dir/sess")) {
@@ -166,7 +167,7 @@ function remember_run(string $dbFile, array $cookies, string $body): ?array {
             @rmdir($dir);
         });
     }
-    file_put_contents("$dir/config.php", '<?php return ' . var_export([
+    file_put_contents("$dir/config.php", '<?php return ' . var_export($cfg + [
         'dsn' => 'sqlite:' . $dbFile, 'db_user' => '', 'db_pass' => '',
     ], true) . ';');
     $script = "$dir/run.php";
@@ -252,6 +253,48 @@ test('выход гасит ключ, и следующий запрос уже 
     assert_eq(0, remember_rows($pdo), 'ключ стёрт на сервере');
     $r = remember_run($file, [REMEMBER_COOKIE => $raw], REMEMBER_PROBE);
     assert_eq(false, $r['ok'] ?? null, 'старая кука больше не пускает');
+});
+
+// --------------------------------------------------------------------------
+//  Бан (banned_ids в config.php)
+// --------------------------------------------------------------------------
+
+test('бан гасит все ключи человека, чужие остаются', function () {
+    $pdo = remember_db();
+    remember_issue($pdo, '123', T0);
+    remember_issue($pdo, '123', T0);
+    $other = remember_issue($pdo, '999', T0);
+    remember_forget_user($pdo, '123');
+    assert_eq(1, remember_rows($pdo), 'остался только чужой');
+    assert_eq('999', remember_check($pdo, $other, T0)['user_id'] ?? null, 'и он работает');
+});
+
+test('забаненный с кукой входа не входит, а ключи со всех устройств гаснут', function () {
+    [$file, $pdo] = remember_db_file(true);
+    $raw = remember_issue($pdo, '777', time());
+    remember_issue($pdo, '777', time());
+    remember_issue($pdo, '888', time());
+    $r = remember_run($file, [REMEMBER_COOKIE => $raw], REMEMBER_PROBE, ['banned_ids' => ['777']]);
+    assert_true($r !== null, 'дочерний php отработал');
+    if ($r === null) { return; }
+    assert_eq(null, $r['uid'], 'в сессии никого');
+    assert_eq(null, $r['cookie'], 'кука стёрта');
+    assert_eq(1, remember_rows($pdo), 'оба его ключа стёрты, чужой цел');
+});
+
+test('уже вошедший забаненный теряет сессию на следующем запросе', function () {
+    [$file, $pdo] = remember_db_file(true);
+    $raw = remember_issue($pdo, '777', time());
+    $in = remember_run($file, [REMEMBER_COOKIE => $raw],
+        'start_site_session(); echo json_encode(["uid" => $_SESSION["user_id"] ?? null, "sid" => session_id()]);');
+    assert_true($in !== null && $in['uid'] === '777', 'до бана вошёл');
+    if ($in === null) { return; }
+
+    $probe = 'start_site_session(); echo json_encode(["uid" => $_SESSION["user_id"] ?? null]);';
+    $r = remember_run($file, [session_name() => $in['sid']], $probe, ['banned_ids' => ['777']]);
+    assert_eq(['uid' => null], $r, 'бан выкинул из сессии');
+    $r = remember_run($file, [session_name() => $in['sid']], $probe);
+    assert_eq(['uid' => null], $r, 'и снятый бан сам не впускает — входить заново');
 });
 
 // --------------------------------------------------------------------------
