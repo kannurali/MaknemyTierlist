@@ -489,6 +489,40 @@ test('объявления игрока для его профиля: тольк
     assert_eq([false, []], [$nt['ready'], $nt['offers']], 'без таблиц — ready:false');
 });
 
+// Бан (banned_ids в config.php): объявлений забаненного нет ни в ленте, ни в
+// его профиле, а в базе они остаются — снятый бан их возвращает.
+test('объявления забаненного скрыты в ленте, поиске и профиле, но не удалены', function () {
+    $pdo = trade_db();
+    $a = offer($pdo, '101', ['idDragon']);
+    $b = offer($pdo, '202', ['idDark']);
+    $cfg = ['banned_ids' => ['202']];
+
+    [, $feed] = handle_trades($pdo, [], [], NOW, $cfg);
+    assert_eq([$a], array_column($feed['offers'], 'id'), 'лента без забаненного');
+    [, $found] = handle_trades($pdo, [], ['q' => 'bob'], NOW, $cfg);
+    assert_eq([], $found['offers'], 'поиск по его нику пуст');
+    [, $prof] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW, $cfg);
+    assert_eq([], $prof['offers'], 'профиль пуст');
+    [, $zero] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '000202'], NOW, $cfg);
+    assert_eq([], $zero['offers'], 'и с нулями впереди');
+
+    [, $back] = handle_trades($pdo, [], [], NOW);
+    assert_eq([$b, $a], array_column($back['offers'], 'id'), 'бан снят — всё на месте');
+});
+
+test('лента со скрытыми авторами: страница полная, more не врёт', function () {
+    $pdo = trade_db();
+    $ins = $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at) VALUES (?, ?, '[]', 'open', ?)");
+    $give = json_encode(['idDark']);
+    for ($i = 0; $i < TRADE_PAGE_SIZE; $i++) { $ins->execute([101, $give, NOW - 100 - $i]); }
+    for ($i = 0; $i < 5; $i++) { $ins->execute([202, $give, NOW - $i]); }
+    $p = trade_feed($pdo, '', '', 0, NOW, ['202']);
+    assert_eq(TRADE_PAGE_SIZE, count($p['offers']), 'страница полная');
+    $authors = array_values(array_unique(array_map(function ($o) { return $o['author']['id']; }, $p['offers'])));
+    assert_eq(['101'], $authors, 'только незабаненный');
+    assert_eq(false, $p['more'], 'дальше пусто');
+});
+
 // Карточка объявления рисует знак у ника автора из поля logo.
 test('автор объявления несёт знак у ника', function () {
     $pdo = test_db();

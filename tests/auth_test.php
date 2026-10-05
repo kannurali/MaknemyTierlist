@@ -35,6 +35,34 @@ test('флаг старого входа по паролю прав не даё�
     assert_eq('', site_role(['admin' => true, 'user_id' => '4'], $CFG), 'и вместе с игроком');
 });
 
+// --- бан ----------------------------------------------------------------------
+
+test('бан — из banned_ids, с той же чисткой списка', function () {
+    $cfg = ['banned_ids' => ['555', ' 0777 '], 'admin_ids' => ['555']];
+    assert_eq(true, site_banned('555', $cfg), 'в списке');
+    assert_eq(true, site_banned('777', $cfg), 'пробелы и нули в конфиге не мешают');
+    assert_eq(false, site_banned('556', $cfg), 'не в списке');
+    assert_eq(false, site_banned('', $cfg), 'аноним');
+    assert_eq(false, site_banned('555', []), 'списка нет — бана нет');
+    assert_eq(false, site_banned('555', ['banned_ids' => '555']), 'не массив — бана нет');
+});
+
+test('callback не пускает забаненного: проверка до записи в users и в сессию', function () {
+    $cb = file_get_contents(__DIR__ . '/../public_html/api/roblox_callback.php');
+    $ban   = strpos($cb, "site_banned((string)\$profile['roblox_id'], \$cfg)");
+    $touch = strpos($cb, 'roblox_touch_user(');
+    $set   = strpos($cb, "\$_SESSION['user_id'] = ");
+    assert_true($ban !== false, 'проверка есть');
+    assert_true($ban < $touch && $ban < $set, 'и стоит раньше входа');
+    assert_true(strpos($cb, "roblox_with_flag(\$return, 'banned')") !== false, 'шапке уходит флаг banned');
+});
+
+test('шапка показывает отказ забаненному на обоих языках', function () {
+    $pub = __DIR__ . '/../public_html/js';
+    assert_true(strpos(file_get_contents("$pub/topbar.js"), 'flag === "banned"') !== false, 'topbar.js ловит флаг');
+    assert_eq(2, substr_count(file_get_contents("$pub/i18n.js"), '"user.banned":'), 'ru и en');
+});
+
 test('без списков в конфиге ни у кого прав нет', function () {
     assert_eq('', site_role(['user_id' => '1'], []));
 });

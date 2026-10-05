@@ -152,6 +152,7 @@
     if (flag === "cancelled") showToast(tx("user.cancelled"));
     else if (flag === "expired") showToast(tx("user.expired"));
     else if (flag === "error") showToast(tx("user.error"));
+    else if (flag === "banned") showToast(tx("user.banned"));
   }
 
   var INVITE_KEY = "nexus-signin-v1";

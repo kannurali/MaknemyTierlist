@@ -18,10 +18,15 @@ require_once __DIR__ . '/lib/trade.php';
 //
 // Ответ зависит от сессии (флаг mine и отдельный список своих), поэтому
 // никакого кеша — ни браузерного, ни LiteSpeed.
+//
+// Объявлений забаненных (banned_ids в config.php) нет ни в ленте, ни в профиле.
+// В базе они не трогаются: бан снимается правкой конфига, и всё, что ещё не
+// истекло, возвращается на место.
 
 function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cfg = []): array {
-    $me   = trade_me($session);
-    $view = isset($get['view']) && is_string($get['view']) ? $get['view'] : '';
+    $me     = trade_me($session);
+    $view   = isset($get['view']) && is_string($get['view']) ? $get['view'] : '';
+    $banned = config_id_list($cfg, 'banned_ids');
 
     if ($view === 'mine' || $view === 'quota') {
         $out = [
@@ -42,7 +47,7 @@ function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cf
         $raw = isset($get['id']) && is_string($get['id']) ? $get['id'] : '';
         $who = preg_match('/^\d{1,20}\z/', $raw) === 1 ? ltrim($raw, '0') : '';
         $out = ['ok' => true, 'ready' => trade_ready($pdo), 'authed' => $me !== '', 'offers' => []];
-        if ($me !== '' && $out['ready'] && $who !== '') {
+        if ($me !== '' && $out['ready'] && $who !== '' && !in_array($who, $banned, true)) {
             $out['offers'] = trade_user_live($pdo, $who, $me, $now);
         }
         return [200, $out];
@@ -51,7 +56,7 @@ function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cf
     $q      = trade_clean_query($get['q'] ?? '');
     $before = (isset($get['before']) && is_string($get['before']) && ctype_digit($get['before']))
         ? (int)$get['before'] : 0;
-    $feed = trade_feed($pdo, $me, $q, $before, $now);
+    $feed = trade_feed($pdo, $me, $q, $before, $now, $banned);
     $feed['authed'] = $me !== '';
     $feed['admin']  = site_role($session, $cfg) === 'admin';
     return [200, $feed];

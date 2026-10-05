@@ -84,6 +84,25 @@ function start_site_session(): void {
             $_SESSION['user_id'] = $uid;
         }
     }
+    // Бан проверяется здесь, а не в каждом эндпоинте: все, кто пишет от имени
+    // вошедшего (чат, объявления, обращения, «о себе», Telegram), берут его
+    // из этой сессии. Забаненный выходит из неё на первом же запросе, и
+    // дальше для всех них это аноним.
+    $uid = (string)($_SESSION['user_id'] ?? '');
+    if ($uid !== '' && site_banned($uid, app_config())) { ban_kick($uid); }
+}
+
+// Выкинуть забаненного: из этой сессии и со всех устройств, где помнится
+// вход. Без второго мог бы вернуться через «запомнить вход» на другом
+// компьютере — там его выкинет тот же код, но ключ жил бы ещё полгода.
+function ban_kick(string $uid): void {
+    unset($_SESSION['user_id']);
+    try {
+        remember_forget_user(db(), $uid);
+    } catch (PDOException $e) {
+        // Нет таблицы ключей — помнить вход и так негде.
+    }
+    if (remember_cookie_present($_COOKIE)) { remember_cookie_clear(); }
 }
 
 // Прежнее имя той же сессии. Оставлено как есть: его зовут все админские
@@ -168,6 +187,16 @@ function is_admin(): bool { return current_role() === 'admin'; }
 
 // Обращения разбирают и модераторы, и админы.
 function is_moderator(): bool { return current_role() !== ''; }
+
+// Бан — третий список Roblox id в config.php, banned_ids, по той же причине,
+// что и роли: выдать и снять его может только тот, у кого есть доступ к
+// серверу. Действует со следующего запроса забаненного (start_site_session),
+// войти заново он не может (api/roblox_callback.php), его объявления пропадают
+// из ленты и профиля (handle_trades). Бан сильнее роли: id в banned_ids
+// выкидывается из сессии, даже если стоит и в admin_ids.
+function site_banned(string $uid, array $cfg): bool {
+    return $uid !== '' && in_array($uid, config_id_list($cfg, 'banned_ids'), true);
+}
 
 // Без куки прав быть не может — отказ сразу, без пустой сессии под каждый
 // анонимный запрос.
