@@ -74,9 +74,12 @@ if (!defined('TESTING')) {
 
     // Забаненный (banned_ids в config.php) внутрь не попадает и строку в
     // users не обновляет. Шапка по флагу говорит, что аккаунт заблокирован,
-    // а не «попробуйте ещё раз».
-    if (site_banned((string)$profile['roblox_id'], $cfg)) {
-        roblox_finish(roblox_with_flag($return, 'banned'));
+    // а не «попробуйте ещё раз». У бана со сроком конец едет в том же
+    // параметре (login=banned-<unix-время>), чтобы шапка назвала дату, и
+    // уходит из адреса вместе с ним (MKAuth.here()).
+    $until = site_ban_until((string)$profile['roblox_id'], $cfg);
+    if ($until !== null) {
+        roblox_finish(roblox_with_flag($return, $until > 0 ? 'banned-' . $until : 'banned'));
     }
 
     try {
