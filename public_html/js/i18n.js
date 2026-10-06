@@ -189,6 +189,7 @@
       "user.expired":           "Вход занял слишком много времени — попробуйте ещё раз",
       "user.error":             "Не удалось войти — попробуйте ещё раз",
       "user.banned":            "Этот аккаунт заблокирован на сайте",
+      "user.bannedUntil":       "Этот аккаунт заблокирован на сайте до {date}",
 
       "profile.login":          "Войдите через Roblox — кнопка входа в шапке справа",
       "profile.missing":        "Такого профиля нет — возможно, ссылка устарела",
@@ -935,6 +936,7 @@
       "user.expired":           "Login took too long — please try again",
       "user.error":             "Could not log in — please try again",
       "user.banned":            "This account is banned from the site",
+      "user.bannedUntil":       "This account is banned from the site until {date}",
 
       "profile.login":          "Log in with Roblox — the button is in the header",
       "profile.missing":        "No such profile — the link may be out of date",

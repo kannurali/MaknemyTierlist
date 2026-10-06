@@ -23,15 +23,23 @@
     "user.support": "Обращения",
     "user.cancelled": "Вход отменён",
     "user.expired": "Вход занял слишком много времени — попробуйте ещё раз",
-    "user.error": "Не удалось войти — попробуйте ещё раз"
+    "user.error": "Не удалось войти — попробуйте ещё раз",
+    "user.banned": "Этот аккаунт заблокирован на сайте",
+    "user.bannedUntil": "Этот аккаунт заблокирован на сайте до {date}"
   };
+
+  function uiLang() {
+    var i18n = window.I18N;
+    if (!i18n) return "ru";
+    var stored = null;
+    try { stored = localStorage.getItem(LANG_KEY); } catch (_) {}
+    return i18n.pickLang(stored, navigator.language);
+  }
 
   function tx(key) {
     var i18n = window.I18N;
     if (!i18n) return FALLBACK[key];
-    var stored = null;
-    try { stored = localStorage.getItem(LANG_KEY); } catch (_) {}
-    return i18n.t(key, i18n.pickLang(stored, navigator.language));
+    return i18n.t(key, uiLang());
   }
 
   var STICK_AT = 4;
@@ -107,7 +115,7 @@
   var toast = null;
   var hideTimer = 0;
 
-  function showToast(text) {
+  function showToast(text, ms) {
     if (!toast) {
       toast = document.createElement("div");
       toast.className = "mk-soon";
@@ -121,7 +129,7 @@
     clearTimeout(hideTimer);
 
     window.requestAnimationFrame(function () { toast.classList.add("is-on"); });
-    hideTimer = setTimeout(function () { toast.classList.remove("is-on"); }, 2200);
+    hideTimer = setTimeout(function () { toast.classList.remove("is-on"); }, ms || 2200);
   }
 
   function showSoon() { showToast(tx("topbar.soon")); }
@@ -140,7 +148,7 @@
   var auth = window.MKAuth;
 
   function takeLoginFlag() {
-    var m = /[?&]login=([a-z]+)/.exec(location.search);
+    var m = /[?&]login=([a-z]+(?:-[0-9]+)?)/.exec(location.search);
     if (!m) return "";
     if (window.history && history.replaceState) {
       try { history.replaceState(null, "", auth.here()); } catch (_) {}
@@ -148,11 +156,21 @@
     return m[1];
   }
 
+  function banDate(sec) {
+    var d = new Date(sec * 1000);
+    var opts = { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    try { return d.toLocaleString(uiLang() === "en" ? "en-GB" : "ru-RU", opts); }
+    catch (_) { return d.toLocaleString(); }
+  }
+
   function reportLogin(flag) {
+    var ban = /^banned(?:-([0-9]+))?$/.exec(flag);
     if (flag === "cancelled") showToast(tx("user.cancelled"));
     else if (flag === "expired") showToast(tx("user.expired"));
     else if (flag === "error") showToast(tx("user.error"));
-    else if (flag === "banned") showToast(tx("user.banned"));
+    else if (ban && ban[1]) showToast(tx("user.bannedUntil").replace("{date}", banDate(+ban[1])), 6000);
+    else if (ban) showToast(tx("user.banned"), 6000);
   }
 
   var INVITE_KEY = "nexus-signin-v1";

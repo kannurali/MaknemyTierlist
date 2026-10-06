@@ -510,6 +510,22 @@ test('объявления забаненного скрыты в ленте, п
     assert_eq([$b, $a], array_column($back['offers'], 'id'), 'бан снят — всё на месте');
 });
 
+test('бан со сроком прячет объявления до срока, потом они возвращаются сами', function () {
+    $pdo = trade_db();
+    $a = offer($pdo, '101', ['idDragon']);
+    $b = offer($pdo, '202', ['idDark']);
+    $end = (new DateTimeImmutable('@' . (NOW + 3600)))->setTimezone(new DateTimeZone('Europe/Moscow'))->format('Y-m-d H:i');
+    $cfg = ['banned_ids' => ['202' => $end]];
+
+    [, $during] = handle_trades($pdo, [], [], NOW, $cfg);
+    assert_eq([$a], array_column($during['offers'], 'id'), 'пока бан — нет');
+    [, $prof] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW, $cfg);
+    assert_eq([], $prof['offers'], 'и в профиле нет');
+
+    [, $after] = handle_trades($pdo, [], [], NOW + 7200, $cfg);
+    assert_eq([$b, $a], array_column($after['offers'], 'id'), 'срок вышел — вернулись, конфиг тот же');
+});
+
 test('лента со скрытыми авторами: страница полная, more не врёт', function () {
     $pdo = trade_db();
     $ins = $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at) VALUES (?, ?, '[]', 'open', ?)");

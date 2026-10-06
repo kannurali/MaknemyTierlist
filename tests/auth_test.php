@@ -47,20 +47,76 @@ test('бан — из banned_ids, с той же чисткой списка', f
     assert_eq(false, site_banned('555', ['banned_ids' => '555']), 'не массив — бана нет');
 });
 
+// --- временный бан ------------------------------------------------------------
+
+// Полночь 20.10.2026 по Москве (UTC+3) — 21:00 UTC накануне.
+const BAN_MIDNIGHT = 1792443600;
+
+test('срок бана — дата или дата со временем, по Москве', function () {
+    assert_eq(gmmktime(21, 0, 0, 10, 19, 2026), BAN_MIDNIGHT, 'константа теста верна');
+    assert_eq(BAN_MIDNIGHT, ban_parse_until('2026-10-20'), 'дата — до полуночи');
+    assert_eq(BAN_MIDNIGHT + 18 * 3600 + 30 * 60, ban_parse_until('2026-10-20 18:30'), 'с временем');
+    assert_eq(BAN_MIDNIGHT + 9 * 3600, ban_parse_until(' 2026-10-20  9:00 '), 'час одной цифрой, пробелы');
+    assert_eq(0, ban_parse_until('2026-02-30'), 'похоже на дату, но такой нет — без срока');
+    assert_eq(0, ban_parse_until('2026-10-20 25:00'), 'и такого часа нет');
+    foreach (['1234567890', '20.10.2026', '2026-10-20T18:30', '', 'завтра'] as $bad) {
+        assert_eq(null, ban_parse_until($bad), "не дата: '$bad'");
+    }
+    assert_eq(null, ban_parse_until(1234567890), 'число — не дата');
+    assert_eq(null, ban_parse_until(null), 'null — не дата');
+});
+
+test('бан со сроком действует до срока и снимается сам', function () {
+    $cfg = ['banned_ids' => ['555', '777' => '2026-10-20', 888 => '2026-10-20 18:30']];
+    $before = BAN_MIDNIGHT - 1;
+    assert_eq(0, site_ban_until('555', $cfg, $before), 'обычный — навсегда');
+    assert_eq(BAN_MIDNIGHT, site_ban_until('777', $cfg, $before), 'до срока — забанен, конец известен');
+    assert_eq(null, site_ban_until('777', $cfg, BAN_MIDNIGHT), 'в срок — уже нет');
+    assert_eq(true, site_banned('888', $cfg, BAN_MIDNIGHT), 'у второго срок дальше');
+    assert_eq(false, site_banned('888', $cfg, BAN_MIDNIGHT + 19 * 3600), 'и он кончился');
+    assert_eq(0, site_ban_until('555', $cfg, BAN_MIDNIGHT + 999999999), 'бессрочный не кончается');
+    assert_eq(['555', '888'], site_banned_ids($cfg, BAN_MIDNIGHT), 'список действующих — строками');
+});
+
+test('бан со сроком: кривые записи и повторы', function () {
+    $cfg = ['banned_ids' => [
+        '2026-10-20',                 // дата без id в списке — пропуск
+        '111' => '2026-02-30',        // несуществующая дата — навсегда
+        '222' => '2026-10-20', '0222' => '2026-10-25',  // два срока — дальний
+        '333' => '2026-10-20', 'x' => '333',            // срок и «навсегда» — навсегда
+        'abc' => '2026-10-20',        // id не число — пропуск
+    ]];
+    $bans = site_bans($cfg, BAN_MIDNIGHT - 1);
+    assert_eq(0, $bans['111'] ?? 'нет', 'кривая дата — без срока');
+    assert_eq(BAN_MIDNIGHT + 5 * 86400, $bans['222'] ?? 'нет', 'дальний из двух сроков');
+    assert_eq(0, $bans['333'] ?? 'нет', 'навсегда сильнее срока');
+    assert_eq(['111', '222', '333'], site_banned_ids($cfg, BAN_MIDNIGHT - 1), 'больше никого');
+});
+
 test('callback не пускает забаненного: проверка до записи в users и в сессию', function () {
     $cb = file_get_contents(__DIR__ . '/../public_html/api/roblox_callback.php');
-    $ban   = strpos($cb, "site_banned((string)\$profile['roblox_id'], \$cfg)");
+    $ban   = strpos($cb, "site_ban_until((string)\$profile['roblox_id'], \$cfg)");
     $touch = strpos($cb, 'roblox_touch_user(');
     $set   = strpos($cb, "\$_SESSION['user_id'] = ");
     assert_true($ban !== false, 'проверка есть');
     assert_true($ban < $touch && $ban < $set, 'и стоит раньше входа');
-    assert_true(strpos($cb, "roblox_with_flag(\$return, 'banned')") !== false, 'шапке уходит флаг banned');
+    assert_true(strpos($cb, "'banned-' . \$until : 'banned'") !== false, 'шапке уходит флаг banned, со сроком — с концом');
 });
 
-test('шапка показывает отказ забаненному на обоих языках', function () {
+test('шапка показывает отказ забаненному на обоих языках, срок — датой', function () {
     $pub = __DIR__ . '/../public_html/js';
-    assert_true(strpos(file_get_contents("$pub/topbar.js"), 'flag === "banned"') !== false, 'topbar.js ловит флаг');
-    assert_eq(2, substr_count(file_get_contents("$pub/i18n.js"), '"user.banned":'), 'ru и en');
+    $top = file_get_contents("$pub/topbar.js");
+    assert_true(strpos($top, '/[?&]login=([a-z]+(?:-[0-9]+)?)/') !== false, 'флаг читается вместе со сроком');
+    assert_true(strpos($top, '/^banned(?:-([0-9]+))?$/') !== false, 'topbar.js ловит оба вида');
+    $i18n = file_get_contents("$pub/i18n.js");
+    foreach (['user.banned', 'user.bannedUntil'] as $k) {
+        assert_eq(2, substr_count($i18n, "\"$k\":"), "$k: ru и en");
+        assert_eq(1, substr_count($top, "\"$k\":"), "$k: запасной текст в topbar.js");
+    }
+    assert_eq(3, substr_count($i18n . $top, 'заблокирован на сайте до {date}') + substr_count($i18n, 'banned from the site until {date}'), 'место для даты во всех трёх текстах');
+    assert_true(strpos($top, '.replace("{date}", banDate(') !== false, 'и дата туда подставляется');
+    $auth = file_get_contents("$pub/auth.js");
+    assert_true(strpos($auth, 'login=[^&]*') !== false, 'MKAuth.here() уносит флаг из адреса целиком, со сроком');
 });
 
 test('без списков в конфиге ни у кого прав нет', function () {

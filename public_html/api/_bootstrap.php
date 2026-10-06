@@ -194,8 +194,68 @@ function is_moderator(): bool { return current_role() !== ''; }
 // войти заново он не может (api/roblox_callback.php), его объявления пропадают
 // из ленты и профиля (handle_trades). Бан сильнее роли: id в banned_ids
 // выкидывается из сессии, даже если стоит и в admin_ids.
-function site_banned(string $uid, array $cfg): bool {
-    return $uid !== '' && in_array($uid, config_id_list($cfg, 'banned_ids'), true);
+//
+// Бан бывает навсегда и до срока, оба вида в одном списке:
+//   '1234567890',                       — навсегда;
+//   '1234567890' => '2026-10-20',       — до 20.10.2026 00:00 по Москве;
+//   '1234567890' => '2026-10-20 18:30', — до 18:30 по Москве того дня.
+// Срок вышел — бан снимается сам, конфиг править не нужно. Срок, похожий на
+// дату, но несуществующий ('2026-02-30'), — бан без срока: тот, кто его
+// вписал, явно хотел забанить, и молча не банить было бы хуже.
+const BAN_TZ = 'Europe/Moscow';
+
+/**
+ * Конец срока из значения конфига: unix-время; 0 — дата кривая, бан без
+ * срока; null — это вообще не дата (значит, в значении id).
+ */
+function ban_parse_until($raw): ?int {
+    if (!is_string($raw) || !preg_match('/^ *([0-9]{4}-[0-9]{2}-[0-9]{2})(?: +([0-9]{1,2}:[0-9]{2}))? *$/D', $raw, $m)) {
+        return null;
+    }
+    $text = $m[1] . ' ' . (isset($m[2]) && $m[2] !== '' ? str_pad($m[2], 5, '0', STR_PAD_LEFT) : '00:00');
+    $at = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $text, new DateTimeZone(BAN_TZ));
+    // createFromFormat молча переносит 30 февраля на 2 марта, а 25:00 — на
+    // следующий день; обратное форматирование это ловит.
+    if ($at === false || $at->format('Y-m-d H:i') !== $text) { return 0; }
+    return $at->getTimestamp();
+}
+
+/**
+ * Действующие баны: [roblox id (строкой) => конец срока, 0 — навсегда].
+ * Истёкших нет. Один id дважды: «навсегда» сильнее срока, из двух сроков
+ * берётся дальний.
+ */
+function site_bans(array $cfg, int $now): array {
+    $raw  = isset($cfg['banned_ids']) && is_array($cfg['banned_ids']) ? $cfg['banned_ids'] : [];
+    $bans = [];
+    foreach ($raw as $key => $val) {
+        $until = ban_parse_until($val);
+        $ids   = config_id_list(['x' => [$until === null ? $val : $key]], 'x');
+        if ($ids === []) { continue; }
+        $until = $until ?? 0;
+        if ($until !== 0 && $until <= $now) { continue; }
+        $id = $ids[0];
+        $was = $bans[$id] ?? null;
+        $bans[$id] = ($was === 0 || $until === 0) ? 0 : max($was ?? 0, $until);
+    }
+    return $bans;
+}
+
+// Id забаненных списком строк. Ключи-числа массива PHP хранит как int, а id
+// сайта везде строки, и in_array(..., true) с int не совпал бы.
+function site_banned_ids(array $cfg, int $now): array {
+    return array_map('strval', array_keys(site_bans($cfg, $now)));
+}
+
+/** Конец бана: unix-время, 0 — навсегда, null — не забанен. */
+function site_ban_until(string $uid, array $cfg, ?int $now = null): ?int {
+    if ($uid === '') { return null; }
+    $bans = site_bans($cfg, $now ?? time());
+    return array_key_exists($uid, $bans) ? $bans[$uid] : null;
+}
+
+function site_banned(string $uid, array $cfg, ?int $now = null): bool {
+    return site_ban_until($uid, $cfg, $now) !== null;
 }
 
 // Без куки прав быть не может — отказ сразу, без пустой сессии под каждый

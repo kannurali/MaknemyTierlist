@@ -297,6 +297,22 @@ test('уже вошедший забаненный теряет сессию н�
     assert_eq(['uid' => null], $r, 'и снятый бан сам не впускает — входить заново');
 });
 
+test('бан со сроком выкидывает до срока, а истёкший никого не трогает', function () {
+    [$file, $pdo] = remember_db_file(true);
+    $raw = remember_issue($pdo, '777', time());
+    $r = remember_run($file, [REMEMBER_COOKIE => $raw], REMEMBER_PROBE, ['banned_ids' => ['777' => '2020-01-01']]);
+    assert_true($r !== null, 'дочерний php отработал');
+    if ($r === null) { return; }
+    assert_eq('777', $r['uid'], 'срок вышел — вошёл как обычно');
+    assert_eq(1, remember_rows($pdo), 'ключ цел');
+
+    $r = remember_run($file, [REMEMBER_COOKIE => $raw], REMEMBER_PROBE, ['banned_ids' => ['777' => '2099-01-01 12:00']]);
+    assert_true($r !== null, 'дочерний php отработал');
+    if ($r === null) { return; }
+    assert_eq([null, null], [$r['uid'], $r['cookie']], 'срок идёт — выкинут, кука стёрта');
+    assert_eq(0, remember_rows($pdo), 'ключ стёрт');
+});
+
 // --------------------------------------------------------------------------
 //  Проводка
 // --------------------------------------------------------------------------
