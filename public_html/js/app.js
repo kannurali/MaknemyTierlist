@@ -2337,8 +2337,6 @@
     likeBtn.classList.toggle("liked", hasLiked);
     likeBtn.setAttribute("aria-pressed", hasLiked ? "true" : "false");
     likeBtn.title = hasLiked ? tx("like.remove") : tx("like.title");
-    const heart = likeBtn.querySelector(".like-heart");
-    if (heart) heart.textContent = hasLiked ? "💙" : "🤍";
     if (likeCountEl) likeCountEl.textContent = likeCount.toLocaleString("ru-RU");
   }
 

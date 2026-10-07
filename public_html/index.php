@@ -142,14 +142,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/styles.css?v=62" /><?php else: ?><link rel="stylesheet" href="css/styles.css?v=62" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/styles.css?v=70" /><?php else: ?><link rel="stylesheet" href="css/styles.css?v=70" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=20" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=20" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=17" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=22" defer fetchpriority="high"></script>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=40" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=40" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
@@ -159,12 +159,12 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <body>
 
   <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="Поставить лайк" aria-pressed="false">
-    <span class="like-heart" aria-hidden="true">🤍</span>
+    <svg class="like-heart" viewBox="0 0 26 25" aria-hidden="true"><path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/></svg>
     <span class="like-count" id="likeCount">0</span>
   </button>
 
   <button class="donate-fab" id="donateBtn" type="button" data-i18n-title="donate.title" title="Поддержать проект" hidden>
-    <span class="donate-heart" aria-hidden="true">💜</span>
+    <svg class="donate-heart" viewBox="0 0 26 25" aria-hidden="true"><path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/></svg>
     <span class="donate-label" data-i18n="donate.button">Поддержать</span>
   </button>
 
@@ -569,6 +569,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/promo-dock.js?v=10" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=85" fetchpriority="high"></script>
+  <script src="js/app.js?v=95" fetchpriority="high"></script>
 </body>
 </html>

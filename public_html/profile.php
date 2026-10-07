@@ -154,10 +154,10 @@ $pfTitle = $pfNick !== ''
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=20" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=20" /><?php endif; ?>
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=17" defer fetchpriority="high"></script>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
+<script src="js/topbar.js?v=22" defer fetchpriority="high"></script>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=40" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=40" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=11" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=6" /><?php endif; ?>
@@ -243,12 +243,14 @@ $pfTitle = $pfNick !== ''
         <stop offset="0" stop-color="#61B5E9"/><stop offset="1" stop-color="#2D4AED"/>
       </linearGradient>
     </defs>
-    <symbol id="trIconUp" viewBox="0 0 26 24">
-      <path d="M13 23.2C7.4 19.4 1.2 14.6 1.2 8.3 1.2 4.6 4 1.6 7.6 1.6c2.2 0 4 1 5.4 2.9 1.4-1.9 3.2-2.9 5.4-2.9 3.6 0 6.4 3 6.4 6.7 0 6.3-6.2 11.1-11.8 14.9Z" fill="currentColor"/>
+    <symbol id="trIconUp" viewBox="0 0 26 25">
+      <path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/>
     </symbol>
-    <symbol id="trIconDown" viewBox="0 0 26 24">
-      <path d="M12.2 4.2C10.9 2.6 9.3 1.6 7.4 1.6 3.9 1.6 1.2 4.6 1.2 8.3c0 6 5.7 10.7 11.1 14.4l-1.5-4.9 2.4-3.7-2.9-3.8 2.5-3.5-.6-2.6Z" fill="currentColor"/>
-      <path d="M14.4 4.3c1.3-1.7 2.9-2.7 4.8-2.7 3.5 0 6.2 3 6.2 6.7 0 6-5.7 10.7-11.1 14.4l-.9-4.4 2.5-4.2-3-3.8 2.4-3.4-.9-2.6Z" fill="currentColor"/>
+    <symbol id="trIconDown" viewBox="0 0 26 25">
+      <g transform="translate(1 2)" fill="currentColor">
+        <path d="M7.17399 0C8.71856 0 9.89661 0.636125 10.841 1.29688L8.56071 5.40527C8.35441 5.77662 8.40446 6.23816 8.68669 6.55566L12.0177 10.3027C12.3498 10.6765 12.3548 11.2376 12.0295 11.6172L9.65641 14.3867C9.44084 14.6383 9.36427 14.9801 9.45134 15.2998L10.8849 20.5576C10.9214 20.6912 10.9859 20.8147 11.0724 20.9219L10.9435 21L10.3761 20.6514C7.96273 19.1656 5.73336 17.4529 3.68571 15.4893L3.6779 15.4814L3.66911 15.4736C2.23285 14.0362 1.12882 12.288 0.443524 10.3623L0.437665 10.3467L0.432782 10.3301C-0.810903 6.45664 0.60368 1.75727 5.00407 0.320312C5.73394 0.0715513 6.49829 1.28319e-05 7.17399 0Z"/>
+        <path d="M16.2886 1.26402e-10C17.0101 2.60137e-05 17.7482 0.100987 18.4634 0.338867C22.8337 1.75452 24.2422 6.4601 23.022 10.3252L23.0161 10.3418L23.0113 10.3574C22.336 12.2849 21.2313 14.0452 19.7827 15.4854L19.7769 15.4922L19.77 15.498C17.747 17.4457 15.4748 19.2049 13.0562 20.6572L12.4859 21L11.9185 20.6514C11.625 20.4707 11.3344 20.286 11.0464 20.0986C11.3346 20.2862 11.6258 20.4706 11.9195 20.6514L12.4859 21L12.6157 20.9219C12.5293 20.8147 12.4647 20.6912 12.4282 20.5576L10.9947 15.2998C10.9076 14.9801 10.9842 14.6383 11.1997 14.3867L13.5728 11.6172C13.8979 11.2376 13.8929 10.6764 13.5611 10.3027L10.231 6.55566C9.94876 6.23816 9.89773 5.77662 10.104 5.40527L12.3843 1.29785C12.4206 1.32326 12.4581 1.3476 12.4937 1.37305C13.4636 0.680251 14.6652 -1.07073e-05 16.2886 1.26402e-10Z"/>
+      </g>
     </symbol>
     <symbol id="trIconSwap" viewBox="0 0 36 44">
       <path d="M6.6 2.2 33 10.6a1.5 1.5 0 0 1 0 2.8L6.6 21.8A1.5 1.5 0 0 1 4.6 20.4V3.6a1.5 1.5 0 0 1 2-1.4Z" fill="url(#trGrad)"/>
@@ -323,12 +325,12 @@ $pfTitle = $pfNick !== ''
 
         <p class="pf-react">
           <span class="pf-react-item">
-            <svg viewBox="0 0 32 25" fill="none" aria-hidden="true"><path d="M16 24.5C16 24.5 1.5 16.2 1.5 8.2 1.5 4 4.8 1 8.7 1c2.9 0 5.6 1.7 7.3 4.3C17.7 2.7 20.4 1 23.3 1 27.2 1 30.5 4 30.5 8.2c0 8-14.5 16.3-14.5 16.3Z" fill="currentColor"/></svg>
+            <svg viewBox="0 0 26 25" aria-hidden="true"><use href="#trIconUp"/></svg>
             <b id="pfLikes"><?= (int)$pfCard['likes'] ?></b>
             <span class="pf-sr-only" data-i18n="profile.likes">Положительных отзывов</span>
           </span>
           <span class="pf-react-item">
-            <svg viewBox="0 0 28 37" fill="none" aria-hidden="true"><path d="M14.6 12.2 11 8.4 15.4 1 12.2 0C8.9.4 6 2.4 4.4 5.3 2.4 8.9 3.3 13.2 5.6 16.4c2.4 3.4 6 6.2 8.4 8.1l-2.6 5.3 3.9-3.6 2.7 4.9-1.4-6.2c2.5-2.1 5.7-4.8 7.8-8 2-3.1 2.7-7.1.9-10.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 26 25" aria-hidden="true"><use href="#trIconDown"/></svg>
             <b id="pfDislikes"><?= (int)$pfCard['dislikes'] ?></b>
             <span class="pf-sr-only" data-i18n="profile.dislikes">Отрицательных отзывов</span>
           </span>
