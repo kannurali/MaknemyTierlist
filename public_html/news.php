@@ -215,7 +215,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=22" defer fetchpriority="high"></script>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=41" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=41" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=42" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=42" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news-design.css?v=22" /><?php else: ?><link rel="stylesheet" href="css/news-design.css?v=22" /><?php endif; ?>

@@ -157,7 +157,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=20" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=20" /><?php endif; ?>
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=22" defer fetchpriority="high"></script>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=41" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=41" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=42" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=42" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=11" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=6" /><?php endif; ?>

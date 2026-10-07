@@ -102,7 +102,7 @@ page_lscache();
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
 <script src="js/topbar.js?v=22" defer fetchpriority="high"></script>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=41" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=41" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=42" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=42" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=28" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=28" /><?php endif; ?>
 
