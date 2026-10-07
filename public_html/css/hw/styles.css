@@ -42,7 +42,8 @@
   background: linear-gradient(180deg, rgba(171, 79, 255, 0.30), rgba(87, 40, 110, 0.62));
   box-shadow: 0 0 0 1px rgba(171, 79, 255, 0.55), 0 8px 28px rgba(171, 79, 255, 0.45);
 }
-.like-heart { font-size: 18px; line-height: 1; display: inline-block; }
+.like-heart { width: 20px; height: 19px; flex: none; display: inline-block; transition: color .2s; }
+.like-fab.liked .like-heart { color: #b23fff; }
 .like-count { min-width: 14px; text-align: left; font-variant-numeric: tabular-nums; letter-spacing: .3px; }
 
 @keyframes likePop {
@@ -81,7 +82,7 @@
   box-shadow: 0 10px 32px rgba(196, 140, 255, 0.30);
 }
 .donate-fab:active { transform: scale(0.94); }
-.donate-heart { font-size: 18px; line-height: 1; display: inline-block; }
+.donate-heart { width: 20px; height: 19px; flex: none; display: inline-block; color: #b86bff; }
 
 .uid-banner {
   position: fixed;

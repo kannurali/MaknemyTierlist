@@ -205,18 +205,30 @@
   box-shadow:
     0 calc(4.5 * var(--u)) calc(13.6 * var(--u)) rgba(37, 44, 97, 0.15),
     0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.2);
-  transition: filter .15s, transform .08s, box-shadow .15s;
+  -webkit-text-stroke: 0 currentColor;
+  transition: filter .15s, transform .08s, box-shadow .25s,
+              border-radius .25s cubic-bezier(.2, .8, .2, 1),
+              -webkit-text-stroke-width .25s;
 }
 .mk-pill svg {
   width: calc(16.3 * var(--u));
   height: calc(16.3 * var(--u));
   flex: 0 0 auto;
 }
-.mk-pill:hover {
+.mk-pill svg path { transition: stroke-width .25s; }
+.mk-pill:hover,
+.mk-pill:focus-visible {
+  border-radius: calc(10 * var(--u));
+  -webkit-text-stroke-width: calc(.55 * var(--u));
   filter: brightness(1.12);
   box-shadow:
-    0 calc(6 * var(--u)) calc(18 * var(--u)) rgba(37, 44, 97, 0.28),
-    0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.28);
+    0 calc(7 * var(--u)) calc(21 * var(--u)) rgba(37, 44, 97, 0.2),
+    0 calc(3 * var(--u)) calc(8 * var(--u)) rgba(136, 144, 194, 0.25);
+}
+.mk-pill:hover svg path,
+.mk-pill:focus-visible svg path { stroke-width: 2.7px; }
+@media (prefers-reduced-motion: reduce) {
+  .mk-pill, .mk-pill svg path { transition: none; }
 }
 .mk-pill:active { transform: translateY(1px); }
 .mk-pill:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
