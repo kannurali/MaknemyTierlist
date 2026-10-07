@@ -251,8 +251,18 @@ body > :is(.ct-page, .sp-page, .pf-page) { flex: 1 0 auto; }
   }
 }
 
-@media (max-width: 1000px) {
-  .mk-foot-roles { max-width: 700px; margin-left: auto; margin-right: auto; }
+@media (min-width: 761px) {
+  .mk-foot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 311px;
+    padding: 24px 20px;
+  }
+  .mk-foot-roles,
+  .mk-foot-tagline { display: none; }
+  .mk-foot-legal { margin-top: 24px; }
 }
 
 @media (max-width: 760px) {
