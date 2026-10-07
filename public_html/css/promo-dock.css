@@ -57,4 +57,5 @@
   body.has-promo-dock {
     padding-bottom: calc(var(--ptn-dock-h, 90px) + 12px);
   }
+  body.has-promo-dock:not(.tr-body):has(> .mk-foot) { padding-bottom: 0; }
 }

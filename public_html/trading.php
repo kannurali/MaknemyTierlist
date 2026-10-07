@@ -92,7 +92,7 @@ page_lscache();
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=6" /><?php endif; ?>
 
-<link rel="stylesheet" href="css/promo-dock.css?v=3" />
+<link rel="stylesheet" href="css/promo-dock.css?v=4" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
