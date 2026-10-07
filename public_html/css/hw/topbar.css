@@ -19,6 +19,8 @@
   --mk-top-h-stuck: calc(84 * min(1px, calc(100vw / 1443)));
 }
 
+html { -webkit-tap-highlight-color: transparent; }
+
 .mk-top {
   --u: min(1px, calc(100vw / 1443));
 
@@ -217,6 +219,8 @@
 }
 .mk-pill svg path { transition: stroke-width .25s; }
 .mk-pill:hover,
+.mk-pill:active,
+.mk-pill.is-pressed,
 .mk-pill:focus-visible {
   border-radius: calc(10 * var(--u));
   -webkit-text-stroke-width: calc(.55 * var(--u));
@@ -226,6 +230,8 @@
     0 calc(3 * var(--u)) calc(8 * var(--u)) rgba(180, 136, 194, 0.25);
 }
 .mk-pill:hover svg path,
+.mk-pill:active svg path,
+.mk-pill.is-pressed svg path,
 .mk-pill:focus-visible svg path { stroke-width: 2.7px; }
 @media (prefers-reduced-motion: reduce) {
   .mk-pill, .mk-pill svg path { transition: none; }
@@ -323,7 +329,9 @@
   box-shadow: 0 0 0 2px #05070d;
 }
 .mk-chat:hover,
-.mk-avatar:hover { filter: brightness(1.12); }
+.mk-avatar:hover,
+.mk-chat.is-pressed,
+.mk-avatar.is-pressed { filter: brightness(1.12); }
 .mk-chat:active,
 .mk-avatar:active { transform: translateY(1px); }
 .mk-chat:focus-visible,

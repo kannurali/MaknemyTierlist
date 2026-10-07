@@ -284,6 +284,55 @@
 
 @media not all and (hover: hover) {
   .hm-card-go { display: none; }
+
+  .hm-btn:not([aria-disabled="true"]):active {
+    box-shadow:
+      0 calc(15.4 * var(--u)) calc(46.1 * var(--u)) rgba(83, 37, 97, 0.2),
+      0 calc(6.6 * var(--u)) calc(17.6 * var(--u)) rgba(180, 136, 194, 0.25);
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):active {
+    width: calc(298 * var(--u));
+    height: calc(90 * var(--u));
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):active .hm-btn-dash rect {
+    rx: 17px;
+    stroke-width: calc(4.39 * var(--u));
+    stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):active .hm-btn-word-rest { opacity: 0; }
+  .hm-btn-ghost:not([aria-disabled="true"]):active .hm-btn-word-hover { opacity: 1; }
+
+  .hm-btn-accent:not([aria-disabled="true"]):active {
+    width: calc(274 * var(--u));
+    height: calc(90 * var(--u));
+  }
+
+  .hm-btn-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(109deg, var(--hm-accent-a), var(--hm-accent-b));
+    opacity: 0;
+    transition: opacity var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):active::before { opacity: 1; }
+
+  .hm-card-art {
+    transform-origin: 0 0;
+    transition: transform var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  a.hm-card:active .hm-card-art {
+    transform:
+      translate(calc(57.51 * var(--u)), calc(-71 * var(--u)))
+      rotate(23.743deg)
+      scale(1.0548);
+  }
 }
 
 .hm-ticker {

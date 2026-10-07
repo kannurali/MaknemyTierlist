@@ -142,6 +142,18 @@
     showSoon();
   });
 
+  document.addEventListener("click", function (e) {
+    if (e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    var el = e.target.closest ? e.target.closest("a.mk-pill, a.mk-chat, a.mk-avatar") : null;
+    if (el) el.classList.add("is-pressed");
+  });
+
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    var on = document.querySelectorAll(".is-pressed");
+    for (var i = 0; i < on.length; i++) on[i].classList.remove("is-pressed");
+  });
+
   var PROFILE_PATH = "/profile";
 
   var AUTH_STATE = "/api/session.php";
