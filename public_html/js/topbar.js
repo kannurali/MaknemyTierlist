@@ -42,7 +42,8 @@
     return i18n.t(key, uiLang());
   }
 
-  var STICK_AT = 4;
+  var STICK_AT = 48;
+  var UNSTICK_AT = 4;
 
   var WIDE = window.matchMedia("(min-width: 761px)");
 
@@ -82,7 +83,7 @@
       pending = false;
       var y = scrollY();
 
-      var next = WIDE.matches && y > STICK_AT;
+      var next = WIDE.matches && y > (stuck ? UNSTICK_AT : STICK_AT);
 
       if (next !== stuck) {
         stuck = next;
