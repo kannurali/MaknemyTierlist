@@ -247,7 +247,7 @@ body > :is(.ct-page, .sp-page, .pf-page) { flex: 1 0 auto; }
 @media (max-width: 640px) {
   body.has-promo-dock .stage-wrap { padding-bottom: 0; }
   body.has-promo-dock .mk-foot {
-    padding-bottom: calc(var(--ptn-dock-h, 90px) + 34px);
+    padding-bottom: calc(var(--ptn-dock-h, 90px) + 32px);
   }
 }
 
