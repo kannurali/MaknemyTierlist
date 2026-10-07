@@ -89,10 +89,10 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=20" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=20" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=21" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=21" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=22" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=23" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=41" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=41" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=11" /><?php endif; ?>
