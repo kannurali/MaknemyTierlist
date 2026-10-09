@@ -290,6 +290,7 @@ RewriteRule ^admin$         /admin.php          [L]
 RewriteRule ^admin/news/?$  /admin-news.php     [L]
 RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
 RewriteRule ^admin/support/?$ /admin-support.php [L]
+RewriteRule ^admin/bans/?$  /admin-bans.php     [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 
 # Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому

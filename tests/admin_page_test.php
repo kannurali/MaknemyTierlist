@@ -198,6 +198,7 @@ test('/admin/news (admin-news.php) реально отдаёт разметку 
 
 $ADMIN_PHP   = __DIR__ . '/../public_html/admin.php';
 $SUPPORT_PHP = __DIR__ . '/../public_html/admin-support.php';
+$BANS_PHP    = __DIR__ . '/../public_html/admin-bans.php';
 
 // Чужому панель отвечает тем же, что LiteSpeed на maknemy.com отдаёт на
 // несуществующий адрес: 1251 байт, два из них — CR. Ни кнопки входа, ни
@@ -214,16 +215,16 @@ function assert_host_404(array $r, string $who): void {
     }
 }
 
-test('анониму /admin и /admin/support отвечают 404 хостера', function () use ($ADMIN_PHP, $SUPPORT_PHP) {
-    foreach ([$ADMIN_PHP, $SUPPORT_PHP] as $page) {
+test('анониму /admin, /admin/support и /admin/bans отвечают 404 хостера', function () use ($ADMIN_PHP, $SUPPORT_PHP, $BANS_PHP) {
+    foreach ([$ADMIN_PHP, $SUPPORT_PHP, $BANS_PHP] as $page) {
         $r = admin_run_as($page, '', '/admin?login=error');
         if ($r === null) { return; }
         assert_host_404($r, basename($page));
     }
 });
 
-test('вошедшему игроку без роли — тот же 404', function () use ($ADMIN_PHP, $SUPPORT_PHP) {
-    foreach ([$ADMIN_PHP, $SUPPORT_PHP] as $page) {
+test('вошедшему игроку без роли — тот же 404', function () use ($ADMIN_PHP, $SUPPORT_PHP, $BANS_PHP) {
+    foreach ([$ADMIN_PHP, $SUPPORT_PHP, $BANS_PHP] as $page) {
         $r = admin_run_as($page, '555');
         if ($r === null) { return; }
         assert_host_404($r, basename($page));
@@ -237,12 +238,13 @@ test('модератора редактор тирлиста не пускает
     assert_eq('', trim($r['html']), 'ни экрана, ни редактора');
 });
 
-test('модератор видит обращения и одну вкладку', function () use ($SUPPORT_PHP) {
+test('модератор видит обращения и баны, других вкладок нет', function () use ($SUPPORT_PHP) {
     $r = admin_run_as($SUPPORT_PHP, '2');
     if ($r === null) { return; }
     assert_true($r['done'], 'страница отдана целиком');
     assert_true(strpos($r['html'], 'Центр обращений') !== false, 'обращения');
     assert_true(strpos($r['html'], 'href="/admin/support"') !== false, 'вкладка обращений');
+    assert_true(strpos($r['html'], 'href="/admin/bans"') !== false, 'вкладка банов');
     foreach (['/admin"', '/admin/news"', '/admin/promo"'] as $tab) {
         assert_eq(false, strpos($r['html'], 'href="' . $tab), "вкладки $tab нет");
     }
@@ -257,6 +259,31 @@ test('админ видит обращения со всеми вкладкам�
         assert_true(strpos($r['html'], 'href="' . $tab) !== false, "вкладка $tab");
     }
     assert_true(strpos($r['html'], 'Уведомления в Telegram') !== false, 'блок бота');
+});
+
+test('/admin/bans: модератор ищет игрока, без таблицы — честная подсказка', function () use ($BANS_PHP) {
+    $r = admin_run_as($BANS_PHP, '2', '/admin/bans?q=bob<&done=banned');
+    if ($r === null) { return; }
+    assert_true($r['done'], 'страница отдана целиком');
+    $html = $r['html'];
+    assert_true(strpos($html, '<h1 class="bn-title">Баны') !== false, 'заголовок');
+    assert_true(strpos($html, 'class="adm-nav-tab is-active" href="/admin/bans"') !== false, 'своя вкладка подсвечена');
+    assert_true(strpos($html, 'value="bob&lt;"') !== false, 'запрос возвращается в поле, экранированным');
+    assert_eq(false, strpos($html, 'bob<'), 'и нигде не сырой');
+    assert_true(strpos($html, 'docs/migrations/2026-10-10-user-bans.sql') !== false, 'без таблицы — какую миграцию запустить');
+    assert_true(strpos($html, 'Игрок забанен.') !== false, 'итог из ?done=');
+    assert_eq(false, strpos($html, '<script'), 'страница без скриптов');
+    assert_eq(false, strpos($html, 'href="/admin/news"'), 'модератору вкладок админа нет');
+});
+
+test('/admin/bans: админ видит все вкладки', function () use ($BANS_PHP) {
+    $r = admin_run_as($BANS_PHP, '1');
+    if ($r === null) { return; }
+    assert_true($r['done'], 'страница отдана целиком');
+    foreach (['/admin"', '/admin/news"', '/admin/promo"', '/admin/support"', '/admin/bans"'] as $tab) {
+        assert_true(strpos($r['html'], 'href="' . $tab) !== false, "вкладка $tab");
+    }
+    assert_true(strpos($r['html'], 'Сейчас никто не забанен.') !== false, 'пустой список');
 });
 
 run_tests();

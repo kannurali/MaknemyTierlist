@@ -95,7 +95,7 @@ test('бан со сроком: кривые записи и повторы', fu
 
 test('callback не пускает забаненного: проверка до записи в users и в сессию', function () {
     $cb = file_get_contents(__DIR__ . '/../public_html/api/roblox_callback.php');
-    $ban   = strpos($cb, "site_ban_until((string)\$profile['roblox_id'], \$cfg)");
+    $ban   = strpos($cb, "site_ban_until((string)\$profile['roblox_id'], \$cfg, null, ban_db())");
     $touch = strpos($cb, 'roblox_touch_user(');
     $set   = strpos($cb, "\$_SESSION['user_id'] = ");
     assert_true($ban !== false, 'проверка есть');

@@ -95,7 +95,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=23" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=42" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=42" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=11" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 
@@ -200,6 +200,35 @@ header('Cache-Control: no-cache, must-revalidate');
                   data-i18n-title="chat.delete" title="Удалить чат у себя">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.8c0-.7.6-1.3 1.3-1.3h2.4c.7 0 1.3.6 1.3 1.3v1.7M6.2 6.5l.9 12.1c.1 1.1 1 1.9 2 1.9h5.8c1.1 0 1.9-.8 2-1.9l.9-12.1M10.2 10.5v6M13.8 10.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
+
+          <div class="ct-ban" id="ctBan" hidden>
+            <button class="ct-ban-btn" type="button" id="ctBanBtn"
+                    aria-expanded="false" aria-controls="ctBanPanel"
+                    data-i18n-label="chat.ban" aria-label="Забанить игрока"
+                    data-i18n-title="chat.ban" title="Забанить игрока">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width="2"/><path d="M5.9 5.9 18.1 18.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+
+            <form class="ct-notify-panel ct-ban-panel" id="ctBanPanel" hidden>
+              <p class="ct-notify-text" id="ctBanText" role="status" aria-live="polite"></p>
+              <div class="ct-ban-fields" id="ctBanFields" hidden>
+                <label class="ct-sr-only" for="ctBanTerm" data-i18n="chat.banTerm">Срок бана</label>
+                <select class="ct-ban-term" id="ctBanTerm">
+                  <option value="1d" data-i18n="chat.banTerm1d">1 день</option>
+                  <option value="3d" data-i18n="chat.banTerm3d">3 дня</option>
+                  <option value="7d" data-i18n="chat.banTerm7d" selected>7 дней</option>
+                  <option value="30d" data-i18n="chat.banTerm30d">30 дней</option>
+                  <option value="forever" data-i18n="chat.banTermForever">Навсегда</option>
+                </select>
+                <label class="ct-sr-only" for="ctBanReason" data-i18n="chat.banReasonLabel">Причина бана</label>
+                <input class="ct-ban-reason" id="ctBanReason" type="text" autocomplete="off"
+                       maxlength="200" data-i18n-placeholder="chat.banReason"
+                       placeholder="Причина (необязательно)" />
+                <button class="ct-notify-go ct-ban-go" type="submit" data-i18n="chat.banGo">Забанить</button>
+              </div>
+              <button class="ct-notify-off" id="ctBanLift" type="button" hidden data-i18n="chat.unban">Снять бан</button>
+            </form>
+          </div>
 
           <div class="ct-notify" id="ctNotify" hidden>
             <button class="ct-bell" type="button" id="ctBell"
@@ -346,9 +375,9 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=67" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=68" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=17" defer></script>
+  <script src="js/chat-page.js?v=18" defer></script>
 
 
 </body>

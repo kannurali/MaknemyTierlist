@@ -19,7 +19,7 @@ function admin_page_headers(): void {
 }
 
 // Пускает того, чья роль подходит ($need: 'admin' — вся панель, 'moderator' —
-// обращения, туда же пускают и админов). Модератора, открывшего страницу
+// обращения и баны, туда же пускают и админов). Модератора, открывшего страницу
 // админа, уводит к обращениям — другой панели у него нет.
 //
 // Всем остальным — и анониму, и вошедшему игроку без роли — панели просто нет:
@@ -124,8 +124,9 @@ function admin_render_public_page(string $file): ?string {
     return metrika_strip($html);
 }
 
-// Top bar shared by every panel. $active is 'tier', 'news', 'promo' or 'support'.
-// Модератор видит одну вкладку — обращения: других страниц ему не открыть.
+// Top bar shared by every panel. $active is 'tier', 'news', 'promo', 'support'
+// or 'bans'. Модератор видит две вкладки — обращения и баны: других страниц
+// ему не открыть.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
 function admin_nav(string $active): string {
@@ -135,8 +136,12 @@ function admin_nav(string $active): string {
             'news'    => ['/admin/news', 'Новости'],
             'promo'   => ['/admin/promo', 'Реклама'],
             'support' => ['/admin/support', 'Обращения'],
+            'bans'    => ['/admin/bans', 'Баны'],
         ]
-        : ['support' => ['/admin/support', 'Обращения']];
+        : [
+            'support' => ['/admin/support', 'Обращения'],
+            'bans'    => ['/admin/bans', 'Баны'],
+        ];
     $links = '';
     foreach ($tabs as $key => [$href, $label]) {
         $on = $key === $active ? ' is-active' : '';
