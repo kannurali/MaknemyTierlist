@@ -566,7 +566,8 @@
 @media (hover: hover) and (pointer: fine) {
   .hm-faq-q:hover::before { opacity: 1; }
 }
-.hm-faq-q:focus-visible::before { opacity: 1; }
+.hm-faq-q:focus-visible::before,
+.hm-faq-q[aria-expanded="true"]::before { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .hm-faq-q::before { transition: none; }
