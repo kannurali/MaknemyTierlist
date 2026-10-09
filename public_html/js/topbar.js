@@ -51,10 +51,12 @@
 
   if (head) {
     var toggle = head.querySelector(".mk-top-toggle");
+    var nav = head.querySelector(".mk-nav");
     var stuck = false;
     var open = false;
     var openedAt = 0;
     var pending = false;
+    var wide = WIDE.matches;
 
     function scrollY() {
       return window.scrollY || window.pageYOffset || 0;
@@ -94,12 +96,41 @@
       }
 
       if (stuck && open && y - openedAt > RECLOSE_AFTER) setOpen(false);
+
+      if (wide !== WIDE.matches) {
+        wide = WIDE.matches;
+        if (open) setOpen(false);
+      }
+      if (!wide && open && Math.abs(y - openedAt) > RECLOSE_AFTER) setOpen(false);
     };
 
     if (toggle) {
       syncToggle();
-      toggle.addEventListener("click", function () { setOpen(!open); });
+      toggle.addEventListener("click", function (e) {
+        setOpen(!open);
+        if (open && !wide && !e.detail && nav) {
+          var first = nav.querySelector("a");
+          if (first) first.focus();
+        }
+      });
     }
+
+    document.addEventListener("click", function (e) {
+      if (!open || wide) return;
+      if (nav && nav.contains(e.target)) return;
+      if (toggle && toggle.contains(e.target)) return;
+      setOpen(false);
+    }, true);
+
+    document.addEventListener("keydown", function (e) {
+      if (!open || wide || e.key !== "Escape") return;
+      setOpen(false);
+      if (toggle) toggle.focus();
+    });
+
+    window.addEventListener("pageshow", function (e) {
+      if (e.persisted && open) setOpen(false);
+    });
 
     window.addEventListener("scroll", function () {
       if (pending) return;

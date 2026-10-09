@@ -251,12 +251,41 @@ test('на узких экранах шапка не сворачивается'
     $js = top_read($PUB . '/js/topbar.js');
     assert_true(strpos($js, 'matchMedia("(min-width: 761px)")') !== false,
         'режим сворачивания включается по ширине экрана');
-    assert_true((bool)preg_match('/var next = WIDE\.matches && y > STICK_AT;/', $js),
+    // Порог с тех пор раздвоился (STICK_AT / UNSTICK_AT против дрожания),
+    // проверяется только то, что без WIDE класс не ставится.
+    assert_true((bool)preg_match('/var next = WIDE\.matches && y > /', $js),
         'класс is-stuck не должен вешаться на узком экране');
     // Окно можно растянуть мышью — поведение обязано переключиться без
     // перезагрузки страницы.
     assert_true(strpos($js, 'WIDE.addEventListener("change", sync)') !== false,
         'смена режима должна пересчитываться на лету');
+});
+
+// На телефоне разделы — лист под шапкой, который открывает тот же язычок
+// (решение владельца, 2026-10-10: шесть иконок по 28 px без подписей были
+// мелкими и непонятными). Закрытый лист обязан пропадать и из таб-порядка,
+// а открытый — закрываться тапом мимо и Escape, иначе он перекрывает страницу.
+test('на телефоне разделы открываются листом по язычку', function () use ($PUB) {
+    $css = top_read($PUB . '/css/topbar.css');
+    $at = strpos($css, '@media (max-width: 760px) {');
+    assert_true($at !== false, 'есть телефонный блок');
+    $phone = substr($css, $at);
+    assert_true((bool)preg_match('/\n  \.mk-nav \{[^}]*position: fixed;[^}]*visibility: hidden;/s', $phone),
+        'закрытый лист не виден и не в таб-порядке');
+    assert_true((bool)preg_match('/\.mk-top\.is-nav-open \.mk-nav \{[^}]*visibility: visible;/s', $phone),
+        'открытый лист виден');
+    assert_true((bool)preg_match('/\.mk-top-toggle \{[^}]*opacity: 1;[^}]*visibility: visible;/s', $phone),
+        'язычок на телефоне виден всегда');
+    assert_true((bool)preg_match('/\.mk-pill \.mk-pill-text \{[^}]*display: block;/s', $phone),
+        'в листе у разделов есть подписи');
+    // Красная точка на язычке занимает его ::after, а на телефоне оба
+    // псевдоэлемента рисуют «бургер»; непрочитанное там видно на самом чате.
+    assert_true((bool)preg_match('/@media \(min-width: 761px\) \{\s*\.mk-top\.has-unread/', $css),
+        'точка непрочитанного на язычке — только на широком экране');
+
+    $js = top_read($PUB . '/js/topbar.js');
+    assert_true(strpos($js, 'nav.contains(e.target)') !== false, 'лист закрывается тапом мимо');
+    assert_true(strpos($js, 'e.key !== "Escape"') !== false, 'лист закрывается по Escape');
 });
 
 // Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же круг
