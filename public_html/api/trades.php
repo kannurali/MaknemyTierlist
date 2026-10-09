@@ -19,14 +19,14 @@ require_once __DIR__ . '/lib/trade.php';
 // Ответ зависит от сессии (флаг mine и отдельный список своих), поэтому
 // никакого кеша — ни браузерного, ни LiteSpeed.
 //
-// Объявлений забаненных (banned_ids в config.php) нет ни в ленте, ни в профиле.
-// В базе они не трогаются: бан снимается правкой конфига или кончается сам по
-// сроку, и всё, что ещё не истекло, возвращается на место.
+// Объявлений забаненных (banned_ids в config.php или бан из панели) нет ни в
+// ленте, ни в профиле. В базе они не трогаются: бан снимается или кончается
+// сам по сроку, и всё, что ещё не истекло, возвращается на место.
 
 function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cfg = []): array {
     $me     = trade_me($session);
     $view   = isset($get['view']) && is_string($get['view']) ? $get['view'] : '';
-    $banned = site_banned_ids($cfg, $now);
+    $banned = site_banned_ids($cfg, $now, $pdo);
 
     if ($view === 'mine' || $view === 'quota') {
         $out = [

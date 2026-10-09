@@ -10,6 +10,7 @@ if (!defined('CONFIG_PATH')) {
 
 require_once __DIR__ . '/lib/remember.php';
 require_once __DIR__ . '/lib/halloween.php';
+require_once __DIR__ . '/lib/ban.php';
 
 function app_config(): array {
     static $cfg = null;
@@ -89,7 +90,18 @@ function start_site_session(): void {
     // из этой сессии. Забаненный выходит из неё на первом же запросе, и
     // дальше для всех них это аноним.
     $uid = (string)($_SESSION['user_id'] ?? '');
-    if ($uid !== '' && site_banned($uid, app_config())) { ban_kick($uid); }
+    if ($uid !== '' && site_banned($uid, app_config(), null, ban_db())) { ban_kick($uid); }
+}
+
+// База для проверки бана. Не открылась — бан проверяется по одному
+// config.php: из-за упавшей базы вошедший не должен получать 500 на каждом
+// запросе.
+function ban_db(): ?PDO {
+    try {
+        return db();
+    } catch (Throwable $e) {
+        return null;
+    }
 }
 
 // Выкинуть забаненного: из этой сессии и со всех устройств, где помнится
@@ -190,7 +202,9 @@ function is_moderator(): bool { return current_role() !== ''; }
 
 // Бан — третий список Roblox id в config.php, banned_ids, по той же причине,
 // что и роли: выдать и снять его может только тот, у кого есть доступ к
-// серверу. Действует со следующего запроса забаненного (start_site_session),
+// серверу. Второй источник — таблица user_bans, куда банят модераторы и
+// админы из панели (api/lib/ban.php); site_bans() складывает оба, если ей
+// дали базу. Действует со следующего запроса забаненного (start_site_session),
 // войти заново он не может (api/roblox_callback.php), его объявления пропадают
 // из ленты и профиля (handle_trades). Бан сильнее роли: id в banned_ids
 // выкидывается из сессии, даже если стоит и в admin_ids.
@@ -223,18 +237,23 @@ function ban_parse_until($raw): ?int {
 /**
  * Действующие баны: [roblox id (строкой) => конец срока, 0 — навсегда].
  * Истёкших нет. Один id дважды: «навсегда» сильнее срока, из двух сроков
- * берётся дальний.
+ * берётся дальний. С $pdo к config.php добавляются баны из панели
+ * (user_bans) по тому же правилу.
  */
-function site_bans(array $cfg, int $now): array {
+function site_bans(array $cfg, int $now, ?PDO $pdo = null): array {
     $raw  = isset($cfg['banned_ids']) && is_array($cfg['banned_ids']) ? $cfg['banned_ids'] : [];
-    $bans = [];
+    $found = [];
     foreach ($raw as $key => $val) {
         $until = ban_parse_until($val);
         $ids   = config_id_list(['x' => [$until === null ? $val : $key]], 'x');
-        if ($ids === []) { continue; }
-        $until = $until ?? 0;
+        if ($ids !== []) { $found[] = [$ids[0], $until ?? 0]; }
+    }
+    if ($pdo !== null) {
+        foreach (ban_store_list($pdo, $now) as $id => $until) { $found[] = [(string)$id, $until]; }
+    }
+    $bans = [];
+    foreach ($found as [$id, $until]) {
         if ($until !== 0 && $until <= $now) { continue; }
-        $id = $ids[0];
         $was = $bans[$id] ?? null;
         $bans[$id] = ($was === 0 || $until === 0) ? 0 : max($was ?? 0, $until);
     }
@@ -243,19 +262,19 @@ function site_bans(array $cfg, int $now): array {
 
 // Id забаненных списком строк. Ключи-числа массива PHP хранит как int, а id
 // сайта везде строки, и in_array(..., true) с int не совпал бы.
-function site_banned_ids(array $cfg, int $now): array {
-    return array_map('strval', array_keys(site_bans($cfg, $now)));
+function site_banned_ids(array $cfg, int $now, ?PDO $pdo = null): array {
+    return array_map('strval', array_keys(site_bans($cfg, $now, $pdo)));
 }
 
 /** Конец бана: unix-время, 0 — навсегда, null — не забанен. */
-function site_ban_until(string $uid, array $cfg, ?int $now = null): ?int {
+function site_ban_until(string $uid, array $cfg, ?int $now = null, ?PDO $pdo = null): ?int {
     if ($uid === '') { return null; }
-    $bans = site_bans($cfg, $now ?? time());
+    $bans = site_bans($cfg, $now ?? time(), $pdo);
     return array_key_exists($uid, $bans) ? $bans[$uid] : null;
 }
 
-function site_banned(string $uid, array $cfg, ?int $now = null): bool {
-    return site_ban_until($uid, $cfg, $now) !== null;
+function site_banned(string $uid, array $cfg, ?int $now = null, ?PDO $pdo = null): bool {
+    return site_ban_until($uid, $cfg, $now, $pdo) !== null;
 }
 
 // Без куки прав быть не может — отказ сразу, без пустой сессии под каждый

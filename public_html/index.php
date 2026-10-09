@@ -561,7 +561,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <script src="js/i18n.js?v=67" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=68" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 

@@ -211,3 +211,16 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   created_at BIGINT UNSIGNED NOT NULL,
   KEY idx_status (status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Бан из панели (/admin/bans и кнопка в чате). Для уже созданной боевой базы
+-- ту же таблицу заводит миграция docs/migrations/2026-10-10-user-bans.sql.
+-- Пока таблицы нет, банят только списком banned_ids в config.php.
+-- until_at — конец бана, unix-время; 0 — навсегда. by_id — кто забанил.
+CREATE TABLE IF NOT EXISTS user_bans (
+  user_id    BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  until_at   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  by_id      BIGINT UNSIGNED NOT NULL,
+  reason     VARCHAR(200)    NOT NULL DEFAULT '',
+  created_at BIGINT UNSIGNED NOT NULL,
+  KEY idx_until (until_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
