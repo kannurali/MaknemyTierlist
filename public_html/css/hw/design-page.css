@@ -90,9 +90,23 @@ html::-webkit-scrollbar-corner { background: #d9d9d9; }
   border: 0;
   border-radius: 10px;
   padding: 10px 16px;
-  transition: background .15s, box-shadow .15s, color .15s;
+  -webkit-text-stroke: 0 currentColor;
+  transition: box-shadow 170ms var(--ease-out), color 170ms var(--ease-out),
+              scale 170ms var(--ease-out), -webkit-text-stroke-width 170ms var(--ease-out);
 }
-.toolbar .chip:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+@media (hover: hover) {
+  .toolbar .chip:not(.active):not([aria-pressed="true"]):not(:active):hover {
+    color: #fff;
+    background: linear-gradient(255deg, #8400ff 0%, #bb00ff 100%);
+    box-shadow: 0 0 0 5px rgba(217, 136, 255, 0.32);
+  }
+}
+.toolbar .chip:active {
+  background: linear-gradient(255deg, #d7a1ff 0%, #c79ee5 100%);
+  box-shadow: 0 0 0 5px rgba(217, 136, 255, 0.32);
+  scale: 1.1;
+  -webkit-text-stroke-width: .6px;
+}
 .toolbar .chip.all { border-style: none; }
 
 .toolbar .chip.active,

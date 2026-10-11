@@ -183,6 +183,72 @@
 .nw-card .nw-copy-ok   { background: rgba(76, 200, 120, 0.9); }
 .nw-card .nw-copy-fail { background: rgba(220, 80, 80, 0.9); }
 
+.nw-card {
+  --nw-hover: 1.24s;
+  transition: padding-bottom var(--nw-hover) var(--ease-quick),
+              margin-bottom var(--nw-hover) var(--ease-quick);
+}
+.nw-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: calc(2 * var(--u));
+  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--nw-hover) var(--ease-quick);
+}
+.nw-card > h2 {
+  transition: padding var(--nw-hover) var(--ease-quick);
+}
+.nw-card .nw-date {
+  color: #bbb;
+  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: color var(--nw-hover) var(--ease-quick);
+}
+.nw-card > .nw-image,
+.nw-card .nw-body > .nw-figure:first-child > .nw-image {
+  clip-path: inset(0 round calc(6 * var(--u)));
+  transition: transform var(--nw-hover) var(--ease-quick),
+              clip-path var(--nw-hover) var(--ease-quick);
+}
+.nw-card .nw-like-heart { transition: scale var(--dur-quick) var(--ease-quick); }
+.nw-card .nw-like.liked .nw-like-heart { scale: 1.22; }
+
+@media (hover: hover) and (min-width: 901px) {
+  .nw-card:hover {
+    padding-bottom: calc(59 * var(--u));
+    margin-bottom: calc(-36 * var(--u));
+  }
+  .nw-card:hover::before { opacity: 1; }
+  .nw-card > h2:hover {
+    padding-left: calc(100.9 * var(--u));
+    padding-right: calc(76 * var(--u));
+  }
+  .nw-card .nw-meta:hover .nw-date { color: transparent; }
+  .nw-card:hover > .nw-image,
+  .nw-card:hover .nw-body > .nw-figure:first-child > .nw-image {
+    transform: scale(1.14);
+    clip-path: inset(6.14% round calc(5.26 * var(--u)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-card,
+  .nw-card::before,
+  .nw-card > h2,
+  .nw-card .nw-date,
+  .nw-card > .nw-image,
+  .nw-card .nw-body > .nw-figure:first-child > .nw-image,
+  .nw-card .nw-like-heart { transition: none; }
+}
+
 .nw-ptn {
   box-sizing: border-box;
   width: 100%;

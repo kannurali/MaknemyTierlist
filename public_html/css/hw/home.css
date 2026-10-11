@@ -11,7 +11,7 @@
   --hm-figure: rgba(217, 217, 217, 0.2);
 
   --hm-hover: 0.744s;
-  --hm-hover-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --hm-hover-ease: var(--ease-quick);
 
   position: relative;
   overflow: hidden;

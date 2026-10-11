@@ -154,7 +154,20 @@
 }
 
 .pf-react-item b { font-weight: inherit; font-variant-numeric: tabular-nums; }
-.pf-react svg { height: calc(30 * var(--u)); width: auto; }
+.pf-react svg {
+  height: calc(30 * var(--u));
+  width: auto;
+  transition: scale var(--dur-gentle) var(--ease-gentle);
+}
+.pf-react-item { transition: --rep-split var(--dur-gentle) var(--ease-gentle); }
+@media (hover: hover) {
+  .pf-react-item:first-child:hover svg { scale: 1.27; }
+  .pf-react-item + .pf-react-item:hover { --rep-split: 1; }
+  .pf-react-item + .pf-react-item:hover svg { scale: 1.14; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-react svg, .pf-react-item { transition: none; }
+}
 
 .pf-bell {
   position: absolute;
@@ -411,7 +424,7 @@
   color: rgba(255, 255, 255, .82);
   text-decoration: none;
   cursor: pointer;
-  transition: color .16s ease;
+  transition: color .639s var(--ease-gentle);
 }
 
 .pf-menu-item:hover,
