@@ -234,7 +234,7 @@ page_lscache();
         <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
 
           <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">ДАЮ</span>
+          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">Я</span>
 
           <ul class="tc-slots" data-side="left"></ul>
 
@@ -268,7 +268,7 @@ page_lscache();
 
         <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
           <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ХОЧУ</span>
+          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ВЫ</span>
 
           <ul class="tc-slots" data-side="right"></ul>
 

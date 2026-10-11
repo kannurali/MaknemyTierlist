@@ -196,7 +196,7 @@ html { -webkit-tap-highlight-color: transparent; }
   gap: calc(9 * var(--u));
   padding: calc(9 * var(--u)) calc(20 * var(--u));
   border: 0;
-  border-radius: 999px;
+  border-radius: calc(18 * var(--u));
   background: var(--mk-grad);
   color: #fff;
   text-decoration: none;
@@ -511,7 +511,7 @@ a.mk-avatar { text-decoration: none; }
   }
   .mk-nav::-webkit-scrollbar { display: none; }
 
-  .mk-pill { padding: 8px 10px; font-size: 15px; gap: 6px; }
+  .mk-pill { padding: 8px 10px; font-size: 15px; gap: 6px; border-radius: 16px; }
   .mk-pill svg { width: 14px; height: 14px; }
 
   .mk-chat,
@@ -539,7 +539,7 @@ a.mk-avatar { text-decoration: none; }
 @media (max-width: 820px) {
   .mk-pill .mk-pill-text { display: none; }
 
-  .mk-pill { width: 34px; height: 34px; padding: 0; }
+  .mk-pill { width: 34px; height: 34px; padding: 0; border-radius: 17px; }
   .mk-pill svg { width: 16px; height: 16px; }
 
   .mk-pill::after { content: ""; position: absolute; inset: -5px 0; }

@@ -152,7 +152,7 @@
   height: calc(40 * var(--u));
   padding: 0 calc(32 * var(--u));
   border: 0;
-  border-radius: 999px;
+  border-radius: calc(20 * var(--u));
   background: var(--tr-grad);
   color: #fff;
   font-family: var(--tr-bebas);
