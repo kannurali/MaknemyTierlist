@@ -165,6 +165,9 @@
   .pf-react-item + .pf-react-item:hover { --rep-split: 1; }
   .pf-react-item + .pf-react-item:hover svg { scale: 1.14; }
 }
+.pf-react-item:first-child.is-tap svg { scale: 1.27; }
+.pf-react-item + .pf-react-item.is-tap { --rep-split: 1; }
+.pf-react-item + .pf-react-item.is-tap svg { scale: 1.14; }
 @media (prefers-reduced-motion: reduce) {
   .pf-react svg, .pf-react-item { transition: none; }
 }

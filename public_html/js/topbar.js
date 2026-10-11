@@ -185,6 +185,55 @@
     for (var i = 0; i < on.length; i++) on[i].classList.remove("is-pressed");
   });
 
+  var TAP_SEL = ".mk-top-brand, .mk-chat, .mk-avatar, .tc-slots, .tc-slot.is-empty, .tc-pill-l, .tc-pill-r, " +
+    ".tc-cat-card, .nw-card > h2, .nw-meta, .nw-like, .nw-copy, .tr-tool, .tr-rep-up, .tr-rep-down, .pf-react-item, " +
+    ".hm-btn, a.hm-card";
+  var TAP_DELAY = 60;
+  var TAP_HOLD = 600;
+
+  document.addEventListener("touchstart", function () {}, { passive: true });
+
+  document.addEventListener("pointerdown", function (e) {
+    if (e.pointerType === "mouse" || !e.target.closest) return;
+    var hit = [];
+    for (var el = e.target.closest(TAP_SEL); el; el = el.parentElement ? el.parentElement.closest(TAP_SEL) : null) {
+      hit.push(el);
+    }
+    if (!hit.length) return;
+    var t0 = Date.now();
+    var shown = false;
+    var show = function () {
+      shown = true;
+      for (var i = 0; i < hit.length; i++) hit[i].classList.add("is-tap");
+    };
+    var hide = function () {
+      for (var i = 0; i < hit.length; i++) hit[i].classList.remove("is-tap");
+    };
+    var timer = setTimeout(show, TAP_DELAY);
+    var stop = function () {
+      document.removeEventListener("pointerup", finish);
+      document.removeEventListener("pointercancel", finish);
+      document.removeEventListener("pointermove", move);
+      clearTimeout(timer);
+    };
+    var move = function (ev) {
+      if (ev.pointerId !== e.pointerId) return;
+      if (Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) < 10) return;
+      stop();
+      hide();
+    };
+    var finish = function (ev) {
+      if (ev.pointerId !== e.pointerId) return;
+      stop();
+      if (ev.type === "pointercancel") { hide(); return; }
+      if (!shown) show();
+      setTimeout(hide, Math.max(0, TAP_HOLD - (Date.now() - t0)));
+    };
+    document.addEventListener("pointerup", finish);
+    document.addEventListener("pointercancel", finish);
+    document.addEventListener("pointermove", move, { passive: true });
+  }, { passive: true });
+
   var PROFILE_PATH = "/profile";
 
   var AUTH_STATE = "/api/session.php";

@@ -198,6 +198,15 @@
   .tr-tool:hover svg path,
   .tr-tool:focus-visible svg path { stroke-width: 1px; }
 }
+.tr-tool.is-tap {
+  gap: calc(16 * var(--u));
+  border-radius: calc(10 * var(--u));
+  -webkit-text-stroke-width: calc(.6 * var(--u));
+  box-shadow:
+    0 calc(7 * var(--u)) calc(21 * var(--u)) rgba(37, 44, 97, .2),
+    0 calc(3 * var(--u)) calc(8 * var(--u)) rgba(136, 144, 194, .25);
+}
+.tr-tool.is-tap svg path { stroke-width: 1px; }
 .tr-tool:active { transform: translateY(1px); }
 .tr-tool:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
 .tr-tool[disabled] { filter: grayscale(.6) brightness(.8); cursor: default; }
@@ -432,6 +441,13 @@ a.tr-nick:focus-visible { text-decoration: underline; text-underline-offset: .15
   .tr-rep-down:hover svg { scale: 1.14; }
   .tr-rep-down:hover::after { scale: 1.14 1; }
 }
+.tr-rep-up.is-tap::after,
+.tr-rep-down.is-tap::after { opacity: 1; }
+.tr-rep-up.is-tap svg { scale: 1.27; }
+.tr-rep-up.is-tap::after { scale: 1.27 1; }
+.tr-rep-down.is-tap { --rep-split: 1; }
+.tr-rep-down.is-tap svg { scale: 1.14; }
+.tr-rep-down.is-tap::after { scale: 1.14 1; }
 @media (prefers-reduced-motion: reduce) {
   .tr-tool, .tr-tool svg path,
   .tr-rep-up, .tr-rep-down, .tr-rep svg,

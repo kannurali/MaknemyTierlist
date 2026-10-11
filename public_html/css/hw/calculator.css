@@ -281,7 +281,20 @@
   font-family: var(--display);
   font-size: calc(17 * var(--u));
   letter-spacing: 0.03em;
+  isolation: isolate;
+  background: linear-gradient(180deg, #8400ff, #bb00ff);
   transition: scale var(--dur-gentle) var(--ease-gentle);
+}
+.tc-pill-l::before,
+.tc-pill-r::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--tc-grad);
+  opacity: 0;
+  transition: opacity var(--dur-gentle) var(--ease-gentle);
 }
 .tc-pill-l { left: 0; }
 .tc-pill-r { right: 0; }
@@ -939,14 +952,16 @@
   border-radius: 19px;
 }
 .tc-cat-grid::-webkit-scrollbar-thumb {
-  background: var(--tc-grad);
+  background: linear-gradient(180deg, #8400ff, #bb00ff);
   border-radius: 7px;
 }
+.tc-cat-grid::-webkit-scrollbar-thumb:hover,
+.tc-cat-grid::-webkit-scrollbar-thumb:active { background: var(--tc-grad); }
 
 @supports not selector(::-webkit-scrollbar) {
   .tc-cat-grid {
     scrollbar-width: thin;
-    scrollbar-color: #b04ae0 #d9d9d9;
+    scrollbar-color: #a000ff #d9d9d9;
   }
 }
 
@@ -1106,8 +1121,21 @@
   .tc-rail.has-link:hover,
   .tc-strip.has-link:hover { filter: brightness(1.05); }
 }
+@media (hover: hover) {
+  .tc-pill-l:hover::before,
+  .tc-pill-r:hover::before { opacity: 1; }
+}
 .tc-slot.is-empty:focus-visible::before,
-.tc-slot.is-empty:focus-visible::after { opacity: 1; }
+.tc-slot.is-empty:focus-visible::after,
+.tc-slots.is-tap::before,
+.tc-slot.is-empty.is-tap::before,
+.tc-slot.is-empty.is-tap::after,
+.tc-pill-l.is-tap::before,
+.tc-pill-r.is-tap::before,
+.tc-cat-card:not(.is-full).is-tap .tc-cat-inner::after { opacity: 1; }
+.tc-pill-l.is-tap,
+.tc-pill-r.is-tap { scale: 1.21; }
+.tc-cat-card:not(.is-full).is-tap .tc-cat-icon { transform: translate(2.5px, -8px) rotate(8deg) scale(1.08); }
 .tc-cat-card:not(.is-full):active .tc-cat-inner { background-color: #272727; }
 
 .tc-cat-backdrop.is-closing {
@@ -1216,7 +1244,10 @@
 
   .tc-pill-l,
   .tc-pill-r {
-    position: static;
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
     order: 0;
     flex: 0 0 auto;
   }

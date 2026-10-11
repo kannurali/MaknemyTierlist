@@ -152,6 +152,7 @@ html { -webkit-tap-highlight-color: transparent; }
 @media (hover: hover) {
   .mk-top-brand:hover .mk-top-mark { scale: 1.286; }
 }
+.mk-top-brand.is-tap .mk-top-mark { scale: 1.286; }
 
 .mk-top-word {
   width: calc(255 * var(--u));
@@ -289,6 +290,8 @@ html { -webkit-tap-highlight-color: transparent; }
   .mk-chat:hover,
   .mk-avatar:hover { scale: 1.174; }
 }
+.mk-chat.is-tap,
+.mk-avatar.is-tap { scale: 1.174; }
 @media (prefers-reduced-motion: reduce) {
   .mk-chat, .mk-avatar { transition: none; }
 }
