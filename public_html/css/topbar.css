@@ -147,7 +147,12 @@ html { -webkit-tap-highlight-color: transparent; }
   width: calc(56 * var(--u));
   height: calc(56 * var(--u));
   display: block;
+  transition: scale var(--dur-quick) var(--ease-quick);
 }
+@media (hover: hover) {
+  .mk-top-brand:hover .mk-top-mark { scale: 1.286; }
+}
+.mk-top-brand.is-tap .mk-top-mark { scale: 1.286; }
 
 .mk-top-word {
   width: calc(255 * var(--u));
@@ -191,7 +196,7 @@ html { -webkit-tap-highlight-color: transparent; }
   gap: calc(9 * var(--u));
   padding: calc(9 * var(--u)) calc(20 * var(--u));
   border: 0;
-  border-radius: 999px;
+  border-radius: calc(18 * var(--u));
   background: var(--mk-grad);
   color: #fff;
   text-decoration: none;
@@ -208,16 +213,20 @@ html { -webkit-tap-highlight-color: transparent; }
     0 calc(4.5 * var(--u)) calc(13.6 * var(--u)) rgba(37, 44, 97, 0.15),
     0 calc(1.8 * var(--u)) calc(3.6 * var(--u)) rgba(136, 144, 194, 0.2);
   -webkit-text-stroke: 0 currentColor;
-  transition: filter .15s, transform .08s, box-shadow .25s,
-              border-radius .25s cubic-bezier(.2, .8, .2, 1),
-              -webkit-text-stroke-width .25s;
+  transition: filter .15s, transform .08s,
+              box-shadow var(--dur-quick) var(--ease-quick),
+              border-radius var(--dur-quick) var(--ease-quick),
+              gap var(--dur-quick) var(--ease-quick),
+              padding var(--dur-quick) var(--ease-quick),
+              margin var(--dur-quick) var(--ease-quick),
+              -webkit-text-stroke-width var(--dur-quick) var(--ease-quick);
 }
 .mk-pill svg {
   width: calc(16.3 * var(--u));
   height: calc(16.3 * var(--u));
   flex: 0 0 auto;
 }
-.mk-pill svg path { transition: stroke-width .25s; }
+.mk-pill svg path { transition: stroke-width var(--dur-quick) var(--ease-quick); }
 .mk-pill:hover,
 .mk-pill:active,
 .mk-pill.is-pressed,
@@ -233,8 +242,17 @@ html { -webkit-tap-highlight-color: transparent; }
 .mk-pill:active svg path,
 .mk-pill.is-pressed svg path,
 .mk-pill:focus-visible svg path { stroke-width: 2.7px; }
+@media (hover: hover) and (min-width: 821px) {
+  .mk-pill:hover,
+  .mk-pill.is-pressed,
+  .mk-pill:focus-visible {
+    gap: calc(19 * var(--u));
+    padding-right: calc(21 * var(--u));
+    margin-right: calc(-11 * var(--u));
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .mk-pill, .mk-pill svg path { transition: none; }
+  .mk-pill, .mk-pill svg path, .mk-top-mark { transition: none; }
 }
 .mk-pill:active { transform: translateY(1px); }
 .mk-pill:focus-visible { outline: 2px solid #bfe6ff; outline-offset: 3px; }
@@ -266,20 +284,20 @@ html { -webkit-tap-highlight-color: transparent; }
   background: var(--mk-grad);
   color: #fff;
   cursor: pointer;
-  transition: filter .15s, transform .08s;
+  transition: filter .15s, transform .08s, scale var(--dur-quick) var(--ease-quick);
+}
+@media (hover: hover) {
+  .mk-chat:hover,
+  .mk-avatar:hover { scale: 1.174; }
+}
+.mk-chat.is-tap,
+.mk-avatar.is-tap { scale: 1.174; }
+@media (prefers-reduced-motion: reduce) {
+  .mk-chat, .mk-avatar { transition: none; }
 }
 
 .mk-chat   { margin-left: calc(15 * var(--u)); }
 .mk-avatar { margin-left: calc(16 * var(--u)); }
-
-.mk-chat::before {
-  content: "";
-  position: absolute;
-  left: calc(-8 * var(--u));
-  top: calc(-6 * var(--u));
-  height: calc(53 * var(--u));
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
-}
 
 .mk-chat svg {
   width: calc(21 * var(--u));
@@ -484,7 +502,7 @@ a.mk-avatar { text-decoration: none; }
   }
   .mk-nav::-webkit-scrollbar { display: none; }
 
-  .mk-pill { padding: 8px 10px; font-size: 15px; gap: 6px; }
+  .mk-pill { padding: 8px 10px; font-size: 15px; gap: 6px; border-radius: 16px; }
   .mk-pill svg { width: 14px; height: 14px; }
 
   .mk-chat,
@@ -493,7 +511,6 @@ a.mk-avatar { text-decoration: none; }
   .mk-avatar { margin-left: 12px; }
   .mk-chat svg { width: 18px; height: 18px; }
   .mk-avatar svg { width: 24px; height: 24px; }
-  .mk-chat::before { left: -7px; top: -6px; height: 44px; }
 
   .mk-top.is-stuck .mk-top-bar {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
@@ -512,7 +529,7 @@ a.mk-avatar { text-decoration: none; }
 @media (max-width: 820px) {
   .mk-pill .mk-pill-text { display: none; }
 
-  .mk-pill { width: 34px; height: 34px; padding: 0; }
+  .mk-pill { width: 34px; height: 34px; padding: 0; border-radius: 17px; }
   .mk-pill svg { width: 16px; height: 16px; }
 
   .mk-pill::after { content: ""; position: absolute; inset: -5px 0; }
@@ -543,7 +560,6 @@ a.mk-avatar { text-decoration: none; }
 
   .mk-chat,
   .mk-avatar { width: 42px; height: 42px; margin-left: 0; }
-  .mk-chat::before { content: none; }
   .mk-chat svg { width: 20px; height: 20px; }
   .mk-avatar svg { width: 27px; height: 27px; }
 

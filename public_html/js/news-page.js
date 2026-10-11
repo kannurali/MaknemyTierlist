@@ -270,6 +270,12 @@
     return card;
   }
 
+  const nearObserver = window.IntersectionObserver && window.matchMedia && window.matchMedia("(hover: none)").matches
+    ? new IntersectionObserver(entries => {
+      for (const e of entries) { e.target.classList.toggle("is-near", e.isIntersecting); }
+    }, { rootMargin: "-42% 0px -42% 0px" })
+    : null;
+
   function render() {
     const visible = activeCat === "all"
       ? posts
@@ -283,7 +289,12 @@
 
     stateEl.hidden = true;
     feedEl.innerHTML = "";
-    for (const post of visible) { feedEl.append(cardFor(post)); }
+    if (nearObserver) { nearObserver.disconnect(); }
+    for (const post of visible) {
+      const card = cardFor(post);
+      feedEl.append(card);
+      if (nearObserver) { nearObserver.observe(card); }
+    }
     if (feedAds) { feedAds.place(feedEl, ".nw-card"); }
     focusLinkedPost();
   }

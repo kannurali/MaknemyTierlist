@@ -153,14 +153,14 @@ $pfTitle = $pfNick !== ''
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=22" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=22" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=24" defer fetchpriority="high"></script>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=42" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=42" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=11" /><?php endif; ?>
+<script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=12" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=6" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=7" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
@@ -248,8 +248,8 @@ $pfTitle = $pfNick !== ''
     </symbol>
     <symbol id="trIconDown" viewBox="0 0 26 25">
       <g transform="translate(1 2)" fill="currentColor">
-        <path d="M7.17399 0C8.71856 0 9.89661 0.636125 10.841 1.29688L8.56071 5.40527C8.35441 5.77662 8.40446 6.23816 8.68669 6.55566L12.0177 10.3027C12.3498 10.6765 12.3548 11.2376 12.0295 11.6172L9.65641 14.3867C9.44084 14.6383 9.36427 14.9801 9.45134 15.2998L10.8849 20.5576C10.9214 20.6912 10.9859 20.8147 11.0724 20.9219L10.9435 21L10.3761 20.6514C7.96273 19.1656 5.73336 17.4529 3.68571 15.4893L3.6779 15.4814L3.66911 15.4736C2.23285 14.0362 1.12882 12.288 0.443524 10.3623L0.437665 10.3467L0.432782 10.3301C-0.810903 6.45664 0.60368 1.75727 5.00407 0.320312C5.73394 0.0715513 6.49829 1.28319e-05 7.17399 0Z"/>
-        <path d="M16.2886 1.26402e-10C17.0101 2.60137e-05 17.7482 0.100987 18.4634 0.338867C22.8337 1.75452 24.2422 6.4601 23.022 10.3252L23.0161 10.3418L23.0113 10.3574C22.336 12.2849 21.2313 14.0452 19.7827 15.4854L19.7769 15.4922L19.77 15.498C17.747 17.4457 15.4748 19.2049 13.0562 20.6572L12.4859 21L11.9185 20.6514C11.625 20.4707 11.3344 20.286 11.0464 20.0986C11.3346 20.2862 11.6258 20.4706 11.9195 20.6514L12.4859 21L12.6157 20.9219C12.5293 20.8147 12.4647 20.6912 12.4282 20.5576L10.9947 15.2998C10.9076 14.9801 10.9842 14.6383 11.1997 14.3867L13.5728 11.6172C13.8979 11.2376 13.8929 10.6764 13.5611 10.3027L10.231 6.55566C9.94876 6.23816 9.89773 5.77662 10.104 5.40527L12.3843 1.29785C12.4206 1.32326 12.4581 1.3476 12.4937 1.37305C13.4636 0.680251 14.6652 -1.07073e-05 16.2886 1.26402e-10Z"/>
+        <path class="rep-half-l" d="M7.17399 0C8.71856 0 9.89661 0.636125 10.841 1.29688L8.56071 5.40527C8.35441 5.77662 8.40446 6.23816 8.68669 6.55566L12.0177 10.3027C12.3498 10.6765 12.3548 11.2376 12.0295 11.6172L9.65641 14.3867C9.44084 14.6383 9.36427 14.9801 9.45134 15.2998L10.8849 20.5576C10.9214 20.6912 10.9859 20.8147 11.0724 20.9219L10.9435 21L10.3761 20.6514C7.96273 19.1656 5.73336 17.4529 3.68571 15.4893L3.6779 15.4814L3.66911 15.4736C2.23285 14.0362 1.12882 12.288 0.443524 10.3623L0.437665 10.3467L0.432782 10.3301C-0.810903 6.45664 0.60368 1.75727 5.00407 0.320312C5.73394 0.0715513 6.49829 1.28319e-05 7.17399 0Z"/>
+        <path class="rep-half-r" d="M16.2886 1.26402e-10C17.0101 2.60137e-05 17.7482 0.100987 18.4634 0.338867C22.8337 1.75452 24.2422 6.4601 23.022 10.3252L23.0161 10.3418L23.0113 10.3574C22.336 12.2849 21.2313 14.0452 19.7827 15.4854L19.7769 15.4922L19.77 15.498C17.747 17.4457 15.4748 19.2049 13.0562 20.6572L12.4859 21L11.9185 20.6514C11.625 20.4707 11.3344 20.286 11.0464 20.0986C11.3346 20.2862 11.6258 20.4706 11.9195 20.6514L12.4859 21L12.6157 20.9219C12.5293 20.8147 12.4647 20.6912 12.4282 20.5576L10.9947 15.2998C10.9076 14.9801 10.9842 14.6383 11.1997 14.3867L13.5728 11.6172C13.8979 11.2376 13.8929 10.6764 13.5611 10.3027L10.231 6.55566C9.94876 6.23816 9.89773 5.77662 10.104 5.40527L12.3843 1.29785C12.4206 1.32326 12.4581 1.3476 12.4937 1.37305C13.4636 0.680251 14.6652 -1.07073e-05 16.2886 1.26402e-10Z"/>
       </g>
     </symbol>
     <symbol id="trIconSwap" viewBox="0 0 36 44">
@@ -585,8 +585,8 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=68" fetchpriority="high"></script>
-  <script src="js/profile-page.js?v=4" defer></script>
+  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
+  <script src="js/profile-page.js?v=5" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfTg !== null): ?>
   <script src="js/profile-notify.js?v=1" defer></script>

@@ -95,16 +95,16 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=22" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=22" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=24" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=42" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=42" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=28" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=28" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=29" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
@@ -234,7 +234,7 @@ page_lscache();
         <section class="tc-side" data-side="left" aria-labelledby="tcGiveHeading">
 
           <h2 class="tc-sr-only" id="tcGiveHeading" data-i18n="calc.giveLabel">Вы отдаёте</h2>
-          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">ДАЮ</span>
+          <span class="tc-pill tc-pill-l" data-i18n="calc.givePill" aria-hidden="true">Я</span>
 
           <ul class="tc-slots" data-side="left"></ul>
 
@@ -268,7 +268,7 @@ page_lscache();
 
         <section class="tc-side" data-side="right" aria-labelledby="tcGetHeading">
           <h2 class="tc-sr-only" id="tcGetHeading" data-i18n="calc.getLabel">Вы получаете</h2>
-          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ХОЧУ</span>
+          <span class="tc-pill tc-pill-r" data-i18n="calc.getPill" aria-hidden="true">ВЫ</span>
 
           <ul class="tc-slots" data-side="right"></ul>
 
@@ -438,13 +438,13 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=68" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
   <script src="js/promo.js?v=24" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=10" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=4" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/calculator-page.js?v=25" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=26" fetchpriority="high"></script>
 </body>
 </html>

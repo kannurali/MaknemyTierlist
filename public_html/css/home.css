@@ -11,7 +11,7 @@
   --hm-figure: rgba(217, 217, 217, 0.2);
 
   --hm-hover: 0.744s;
-  --hm-hover-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --hm-hover-ease: var(--ease-quick);
 
   position: relative;
   overflow: hidden;
@@ -285,27 +285,27 @@
 @media not all and (hover: hover) {
   .hm-card-go { display: none; }
 
-  .hm-btn:not([aria-disabled="true"]):active {
+  .hm-btn:not([aria-disabled="true"]):is(:active, .is-tap) {
     box-shadow:
       0 calc(15.4 * var(--u)) calc(46.1 * var(--u)) rgba(37, 44, 97, 0.2),
       0 calc(6.6 * var(--u)) calc(17.6 * var(--u)) rgba(136, 144, 194, 0.25);
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):active {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) {
     width: calc(298 * var(--u));
     height: calc(90 * var(--u));
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):active .hm-btn-dash rect {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-dash rect {
     rx: 17px;
     stroke-width: calc(4.39 * var(--u));
     stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):active .hm-btn-word-rest { opacity: 0; }
-  .hm-btn-ghost:not([aria-disabled="true"]):active .hm-btn-word-hover { opacity: 1; }
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-word-rest { opacity: 0; }
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-word-hover { opacity: 1; }
 
-  .hm-btn-accent:not([aria-disabled="true"]):active {
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
     width: calc(274 * var(--u));
     height: calc(90 * var(--u));
   }
@@ -320,14 +320,14 @@
     transition: opacity var(--hm-hover) var(--hm-hover-ease);
   }
 
-  .hm-btn-accent:not([aria-disabled="true"]):active::before { opacity: 1; }
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap)::before { opacity: 1; }
 
   .hm-card-art {
     transform-origin: 0 0;
     transition: transform var(--hm-hover) var(--hm-hover-ease);
   }
 
-  a.hm-card:active .hm-card-art {
+  a.hm-card:is(:active, .is-tap) .hm-card-art {
     transform:
       translate(calc(57.51 * var(--u)), calc(-71 * var(--u)))
       rotate(23.743deg)
