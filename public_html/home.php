@@ -96,7 +96,7 @@ page_lscache();
 <script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=23" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=24" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -210,7 +210,7 @@ page_lscache();
     <div class="hm-lead-actions">
 
       <a class="hm-btn hm-btn-accent" href="/tierlist"><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnFruits">фрукты</span></span></a>
-      <a class="hm-btn hm-btn-ghost" href="/profile?id=2841062255"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">обо мне</span><span class="hm-btn-word hm-btn-word-hover" data-i18n="home.btnAbout">обо мне</span></span></a>
+      <a class="hm-btn hm-btn-ghost" href="/profile?id=2841062255"><svg class="hm-btn-dash" viewBox="0 0 273 72" preserveAspectRatio="none" aria-hidden="true"><rect x="1.1" y="1.1" width="270.8" height="69.8" fill="none" vector-effect="non-scaling-stroke"/></svg><span class="hm-btn-label"><span class="hm-btn-word hm-btn-word-rest" data-i18n="home.btnAbout">обо мне</span></span></a>
     </div>
 
     <div class="hm-cards hm-anim">
