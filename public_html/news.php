@@ -218,7 +218,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news-design.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/news-design.css?v=23" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news-design.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/news-design.css?v=24" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
@@ -313,14 +313,8 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
                data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
       </div>
 
-      <div class="nw-deco nw-ghost nw-ghost-a" aria-hidden="true"></div>
-      <div class="nw-deco nw-ghost nw-ghost-b" aria-hidden="true"></div>
       <img class="nw-deco nw-sakura nw-sakura-l" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
       <img class="nw-deco nw-sakura nw-sakura-r" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
-      <div class="nw-deco nw-fig nw-fig-circle" aria-hidden="true"></div>
-      <div class="nw-deco nw-fig nw-fig-square-lg" aria-hidden="true"></div>
-      <div class="nw-deco nw-fig nw-fig-square-sm" aria-hidden="true"></div>
-      <div class="nw-deco nw-fig nw-fig-tri" aria-hidden="true"></div>
 
       <!-- ADMIN-BAR -->
 
