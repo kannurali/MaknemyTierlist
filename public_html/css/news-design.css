@@ -468,54 +468,6 @@ a.nw-ptn-in:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-off
   pointer-events: none;
 }
 
-.nw-fig {
-  transform-origin: 0 0;
-  background: rgba(217, 217, 217, 0.2);
-  box-shadow: 0 calc(4 * var(--u)) calc(7 * var(--u)) rgba(0, 0, 0, 0.25);
-}
-
-@media (min-width: 901px) {
-  .nw-fig {
-    backdrop-filter: blur(calc(14 * var(--u)));
-    -webkit-backdrop-filter: blur(calc(14 * var(--u)));
-  }
-}
-
-.nw-fig-circle {
-  left: calc(1461 * var(--u));
-  top: calc(121 * var(--u));
-  width: calc(163 * var(--u));
-  height: calc(163 * var(--u));
-  border-radius: 50%;
-}
-
-.nw-fig-square-lg {
-  left: calc(1450 * var(--u));
-  top: calc(494.26 * var(--u));
-  width: calc(226 * var(--u));
-  height: calc(226 * var(--u));
-  border-radius: calc(18 * var(--u));
-  rotate: -24.65deg;
-}
-
-.nw-fig-square-sm {
-  left: calc(-114 * var(--u));
-  top: calc(23.62 * var(--u));
-  width: calc(94.65 * var(--u));
-  height: calc(94.65 * var(--u));
-  border-radius: calc(18 * var(--u));
-  rotate: -10.43deg;
-}
-
-.nw-fig-tri {
-  left: calc(-194.85 * var(--u));
-  top: calc(536 * var(--u));
-  width: calc(109 * var(--u));
-  height: calc(109 * var(--u));
-  rotate: 29.78deg;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-}
-
 .nw-sakura {
   width: calc(868 * var(--u));
   height: calc(890 * var(--u));
@@ -529,27 +481,8 @@ a.nw-ptn-in:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-off
 }
 
 .nw-sakura-r {
-  left: calc(1316 * var(--u));
+  left: calc(100% - 127 * var(--u));
   top: calc(10 * var(--u));
-}
-
-.nw-ghost {
-  width: calc(675 * var(--u));
-  height: calc(61.6 * var(--u));
-  -webkit-mask: url("../assets/design/wordmark.svg") no-repeat center / contain;
-  mask: url("../assets/design/wordmark.svg") no-repeat center / contain;
-}
-
-.nw-ghost-a {
-  left: calc(-672 * var(--u));
-  top: calc(10 * var(--u));
-  background: linear-gradient(to top, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
-}
-
-.nw-ghost-b {
-  left: calc(1520 * var(--u));
-  top: calc(168 * var(--u));
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
 }
 
 @media (max-width: 900px) {
