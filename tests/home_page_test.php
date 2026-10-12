@@ -727,11 +727,11 @@ test('нижняя полоса рекламы подключена на лен�
 
     // Playerok — платное размещение, и живёт оно там же, где свои кампании:
     // в коде с макетами в репозитории. Отличие одно — список страниц: с
-    // октября это калькулятор ("calc"), лента трейдов и создание объявления
-    // ("trading").
+    // 13 октября это тирлист ("tierlist") и калькулятор ("calc"), трейдинг
+    // отдан каналу и кампаниям из админки.
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
-    assert_true(strpos($promo, 'pages: ["calc", "trading"]') !== false,
-        'Playerok привязан к калькулятору и трейдингу, иначе он разольётся по всему сайту');
+    assert_true(strpos($promo, 'pages: ["tierlist", "calc"]') !== false,
+        'Playerok привязан к тирлисту и калькулятору, иначе он разольётся по всему сайту');
     foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/playerok-' . $slot . '.webp'),
             "макет Playerok для слота $slot должен лежать в репозитории");
