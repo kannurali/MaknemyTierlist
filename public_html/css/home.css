@@ -851,7 +851,7 @@
   .hm-card-name  { left: 27px; top: 152px; font-size: 26px; line-height: 1.1; }
   .hm-card-name--tight { font-size: 21px; }
   .hm-card-rule  { left: 29px; top: 188.5px; width: 170px; }
-  .hm-card-note  { left: 27px; top: 186px; width: 180px; font-size: 14px; line-height: 1.25; }
+  .hm-card-note  { left: 27px; top: 199px; width: 180px; font-size: 14px; line-height: 1.25; }
 
   .hm-deco {
     display: none;
