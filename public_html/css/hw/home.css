@@ -807,11 +807,31 @@
   }
 
   .hm-btn {
-    position: static;
+    position: relative;
+    inset: auto;
     width: auto;
     height: 48px;
     padding: 0 26px;
     font-size: 20px;
+    transition:
+      scale var(--hm-hover) var(--hm-hover-ease),
+      box-shadow var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap),
+  .hm-btn-accent:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap) {
+    width: auto;
+    height: 48px;
+  }
+
+  .hm-btn:not([aria-disabled="true"]):is(:active, .is-tap) {
+    scale: 1.08;
+  }
+
+  @media (hover: hover) {
+    .hm-btn:not([aria-disabled="true"]):is(:hover, :focus-visible) {
+      scale: 1.08;
+    }
   }
 
   .hm-ticker {
