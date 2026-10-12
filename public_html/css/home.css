@@ -449,11 +449,12 @@
 
   width: calc(244 * var(--u));
   margin: 0;
-  font-size: calc(19 * var(--u));
+  font-family: var(--display);
+  font-size: calc(24 * var(--u));
 
   line-height: 1.25;
-  letter-spacing: 0.02em;
-  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-weight: 400;
   text-transform: uppercase;
 }
 
@@ -851,7 +852,7 @@
   .hm-card-name  { left: 27px; top: 152px; font-size: 26px; line-height: 1.1; }
   .hm-card-name--tight { font-size: 21px; }
   .hm-card-rule  { left: 29px; top: 188.5px; width: 170px; }
-  .hm-card-note  { left: 27px; top: 199px; width: 180px; font-size: 14px; line-height: 1.25; }
+  .hm-card-note  { left: 27px; top: 199px; width: 180px; font-size: 17px; line-height: 1.25; }
 
   .hm-deco {
     display: none;
