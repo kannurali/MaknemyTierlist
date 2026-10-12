@@ -157,21 +157,12 @@
 
 .hm-btn-word {
   grid-area: 1 / 1;
-  transition: opacity var(--hm-hover) var(--hm-hover-ease);
 }
 
 .hm-btn-word-rest {
   font-family: var(--display);
   text-transform: uppercase;
 }
-
-.hm-btn-word-hover {
-  font-family: var(--ui);
-  font-weight: 400;
-  text-transform: lowercase;
-}
-
-.hm-btn-ghost .hm-btn-word-hover { opacity: 0; }
 
 .hm-btn-accent {
   left: calc(465 * var(--u));
@@ -205,16 +196,6 @@
     rx: 17px;
     stroke-width: calc(4.39 * var(--u));
     stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
-  }
-
-  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-word-rest,
-  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-word-rest {
-    opacity: 0;
-  }
-
-  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-word-hover,
-  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-word-hover {
-    opacity: 1;
   }
 
   .hm-btn-accent:not([aria-disabled="true"]):hover,
@@ -301,9 +282,6 @@
     stroke-width: calc(4.39 * var(--u));
     stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
   }
-
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-word-rest { opacity: 0; }
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-word-hover { opacity: 1; }
 
   .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
     width: calc(274 * var(--u));
