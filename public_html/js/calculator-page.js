@@ -536,8 +536,7 @@
     el.classList.toggle("has-link", !!url);
     if (url) {
       const open = () => {
-        try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot, page: PROMO_PAGE }); }
-        catch (_e) {}
+        promo.goal("promo_click", { id: camp.id, slot, page: PROMO_PAGE });
         window.open(url, "_blank", "noopener");
       };
       el.onclick = open;

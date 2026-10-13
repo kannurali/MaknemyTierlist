@@ -176,6 +176,14 @@ test('политика заявляет ровно то, что делает api
     // Номер счётчика — тот же, что в METRIKA_ID, и в каждой из двух версий.
     assert_true(strpos($ru, '111127188') !== false, 'RU: номер счётчика');
     assert_true(strpos($en, '111127188') !== false, 'EN: номер счётчика');
+    // GA стоит рядом с Метрикой (api/lib/google_analytics.php) и ставит свои
+    // cookie — про него и про хранение у Google тоже обязаны сказать.
+    foreach (['RU' => $ru, 'EN' => $en] as $lang => $text) {
+        assert_true(strpos($text, 'Google Analytics') !== false, "$lang: Google Analytics раскрыт");
+        assert_true(strpos($text, '_ga and _ga_*') !== false || strpos($text, '_ga и _ga_*') !== false, "$lang: cookie GA раскрыты");
+    }
+    assert_true(mb_strpos($ru, 'за пределами России') !== false, 'RU: хранение за рубежом');
+    assert_true(mb_strpos($en, 'outside Russia') !== false, 'EN: хранение за рубежом');
 });
 
 test('номер счётчика в политике совпадает с METRIKA_ID', function () use ($ROOT) {

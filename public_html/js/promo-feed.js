@@ -51,11 +51,7 @@
   }
 
   function goal(camp, page) {
-    try {
-      if (typeof root.ym === "function") {
-        root.ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: "strip", place: "feed", page: page });
-      }
-    } catch (e) {}
+    if (root.PROMO) { root.PROMO.goal("promo_click", { id: camp.id, slot: "strip", place: "feed", page: page }); }
   }
 
   function el(tag, cls, text) {
