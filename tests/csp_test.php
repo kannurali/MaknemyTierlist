@@ -63,9 +63,9 @@ test('заголовок один, ставится always и одной стр�
     assert_true($block !== false && $line > $block, 'внутри <IfModule mod_headers.c>');
 });
 
-test('скрипты — только свои и Метрика, без unsafe-inline и eval', function () use ($POLICY) {
+test('скрипты — только свои, Метрика и GA, без unsafe-inline и eval', function () use ($POLICY) {
     $s = $POLICY['script-src'] ?? [];
-    assert_eq(["'self'", 'https://mc.yandex.ru', 'https://yastatic.net'], $s, 'script-src');
+    assert_eq(["'self'", 'https://mc.yandex.ru', 'https://yastatic.net', 'https://www.googletagmanager.com'], $s, 'script-src');
     foreach (["'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", '*', 'data:', 'blob:', 'https:', 'http:'] as $bad) {
         assert_eq(false, in_array($bad, $s, true), "script-src без $bad");
     }
@@ -112,6 +112,26 @@ test('адреса Метрики и Вебвизора — по её инстр
     }
 });
 
+// Адреса из инструкции Google для GA4 с CSP. Signals и рекламная
+// персонализация выключены в js/ga.js — значит doubleclick и google.<домен>
+// в политике не нужны, и их там быть не должно.
+test('адреса Google Analytics — по инструкции Google, без рекламных', function () use ($POLICY, $PUB) {
+    foreach (['https://*.google-analytics.com', 'https://*.googletagmanager.com'] as $h) {
+        assert_true(in_array($h, $POLICY['img-src'] ?? [], true), "img-src: $h");
+        assert_true(in_array($h, $POLICY['connect-src'] ?? [], true), "connect-src: $h");
+    }
+    assert_true(in_array('https://*.analytics.google.com', $POLICY['connect-src'] ?? [], true),
+        'connect-src: https://*.analytics.google.com');
+    foreach ($POLICY as $d => $list) {
+        foreach ($list as $src) {
+            assert_true(strpos($src, 'doubleclick') === false, "$d: $src — рекламные адреса не нужны");
+        }
+    }
+    $js = csp_read($PUB . '/js/ga.js');
+    assert_true(strpos($js, 'allow_google_signals: false') !== false, 'ga.js: Signals выключены');
+    assert_true(strpos($js, 'allow_ad_personalization_signals: false') !== false, 'ga.js: персонализация выключена');
+});
+
 // --------------------------------------------------------------------------
 //  Разметка сайта под эту политику
 // --------------------------------------------------------------------------
@@ -153,6 +173,13 @@ test('Метрика подключается внешним файлом, ас�
     $js = csp_read($PUB . '/js/metrika.js');
     assert_true(strpos($js, "'https://mc.yandex.ru/metrika/tag.js?id=" . METRIKA_ID . "'") !== false, 'tag.js с номером счётчика');
     assert_true(strpos($js, 'ym(' . METRIKA_ID . ", 'init'") !== false, 'инициализация');
+});
+
+test('GA подключается внешним файлом, асинхронно, и сам ставит gtag.js', function () use ($PUB) {
+    $html = ga_counter_html('G-TEST123');
+    assert_true((bool)preg_match('~<script src="/js/ga\.js\?v=\d+" data-id="G-TEST123" async></script>~', $html), 'тег js/ga.js');
+    $js = csp_read($PUB . '/js/ga.js');
+    assert_true(strpos($js, '"https://www.googletagmanager.com/gtag/js?id="') !== false, 'gtag.js с адреса из script-src');
 });
 
 test('ревизия тирлиста и id поста — в <meta>, флаг админки — файлом', function () use ($PUB) {

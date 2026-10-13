@@ -1018,6 +1018,32 @@ test('у TG-канала в свёрнутой полосе свой текст,
     assert.equal(PROMO.dockTextKey(null), '');
 });
 
+test('goal() шлёт цель и в Метрику, и в GA (id → promo_id), без счётчиков молчит', () => {
+    const saved = { ym: globalThis.ym, gtag: globalThis.gtag };
+    try {
+        delete globalThis.ym; delete globalThis.gtag;
+        PROMO.goal('promo_click', { id: 'c1' });
+
+        const calls = [];
+        globalThis.ym = (...a) => calls.push(['ym', ...a]);
+        globalThis.gtag = (...a) => calls.push(['gtag', ...a]);
+        PROMO.goal('promo_click', { id: 'c1', slot: 'popup', page: 'calc' });
+        assert.deepEqual(calls, [
+            ['ym', 111127188, 'reachGoal', 'promo_click', { id: 'c1', slot: 'popup', page: 'calc' }],
+            ['gtag', 'event', 'promo_click', { promo_id: 'c1', slot: 'popup', page: 'calc' }]
+        ]);
+
+        globalThis.ym = () => { throw new Error('boom'); };
+        calls.length = 0;
+        PROMO.goal('promo_dock_mini', { id: 'c2' });
+        assert.deepEqual(calls, [['gtag', 'event', 'promo_dock_mini', { promo_id: 'c2' }]], 'сбой Метрики не глушит GA');
+    } finally {
+        globalThis.ym = saved.ym; globalThis.gtag = saved.gtag;
+        if (saved.ym === undefined) delete globalThis.ym;
+        if (saved.gtag === undefined) delete globalThis.gtag;
+    }
+});
+
 test('текст TG-канала для свёрнутой полосы переведён на оба языка', () => {
     const I18N = require('../public_html/js/i18n.js');
     for (const lang of ['ru', 'en']) {

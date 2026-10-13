@@ -68,11 +68,7 @@
   }
 
   function miniGoal(camp, on) {
-    try {
-      if (typeof root.ym === "function") {
-        root.ym(111127188, "reachGoal", on ? "promo_dock_mini" : "promo_dock_full", { id: camp.id });
-      }
-    } catch (_) {}
+    if (root.PROMO) { root.PROMO.goal(on ? "promo_dock_mini" : "promo_dock_full", { id: camp.id }); }
   }
 
   function buildMini(el, camp, tr) {

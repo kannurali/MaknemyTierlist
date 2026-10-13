@@ -580,6 +580,22 @@
     return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
 
+  var METRIKA_ID = 111127188;
+
+  function goal(name, params) {
+    var p = params || {};
+    try {
+      if (typeof root.ym === "function") { root.ym(METRIKA_ID, "reachGoal", name, p); }
+    } catch (_) {}
+    try {
+      if (typeof root.gtag === "function") {
+        var g = {};
+        Object.keys(p).forEach(function (k) { g[k === "id" ? "promo_id" : k] = p[k]; });
+        root.gtag("event", name, g);
+      }
+    } catch (_) {}
+  }
+
   var api = {
     SLOTS: SLOTS,
     CREATIVE_KEYS: CREATIVE_KEYS,
@@ -611,7 +627,8 @@
     recordPopupShown: recordPopupShown,
     recordPopupClicked: recordPopupClicked,
     normalizeDoc: normalizeDoc,
-    migrateLegacyAd: migrateLegacyAd
+    migrateLegacyAd: migrateLegacyAd,
+    goal: goal
   };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }

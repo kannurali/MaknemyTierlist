@@ -875,8 +875,7 @@
     const url = promo ? promo.safeHref(camp.href) : "";
     if (!url || stage.classList.contains("editing")) return;
 
-    try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: slot }); }
-    catch (e) {}
+    promo.goal("promo_click", { id: camp.id, slot: slot });
     window.open(url, "_blank", "noopener");
   }
 
@@ -1385,8 +1384,7 @@
     $("#promoPopCta").addEventListener("click", () => {
       if (!popupCamp || !promo) return;
       writeSeen(promo.recordPopupClicked(readSeen(), popupCamp.id, Date.now()));
-      try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: popupCamp.id, slot: "popup" }); }
-      catch (e) {}
+      promo.goal("promo_click", { id: popupCamp.id, slot: "popup" });
       closePromoPopup();
     });
     document.addEventListener("visibilitychange", () => {

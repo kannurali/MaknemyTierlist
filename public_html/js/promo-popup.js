@@ -163,11 +163,7 @@
       $("#promoPopCta").addEventListener("click", function () {
         if (!camp) { return; }
         writeSeen(root.PROMO.recordPopupClicked(readSeen(), camp.id, Date.now()));
-        try {
-          if (typeof root.ym === "function") {
-            root.ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: "popup" });
-          }
-        } catch (_) {}
+        root.PROMO.goal("promo_click", { id: camp.id, slot: "popup" });
         close();
       });
       document.addEventListener("visibilitychange", function () {

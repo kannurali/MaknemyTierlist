@@ -461,7 +461,8 @@ php tools/downscale-images.php --config=/home/maknemyt/config.php --dry-run
 ## Content-Security-Policy
 
 `.htaccess` отдаёт на все ответы заголовок CSP. Главное в нём — `script-src
-'self' https://mc.yandex.ru https://yastatic.net` **без `'unsafe-inline'`**:
+'self' https://mc.yandex.ru https://yastatic.net https://www.googletagmanager.com`
+**без `'unsafe-inline'`**:
 если в чат, объявление или профиль пролезет разметка со скриптом или
 `onerror=`, браузер её не исполнит, и чужой код не сможет действовать от имени
 вошедшего админа.
@@ -474,6 +475,9 @@ php tools/downscale-images.php --config=/home/maknemyt/config.php --dry-run
   файлом (`js/admin-flag.js`). `<script type="application/ld+json">` —
   данные, их можно.
 - Счётчик Метрики — `js/metrika.js`, подключается `metrika_counter_html()`.
+  Она же печатает блок Google Analytics (`js/ga.js`, номер — `GA_ID` в
+  `api/lib/google_analytics.php`; пустой номер выключает GA). Цели по кликам на
+  рекламу шлёт `PROMO.goal()` из `js/promo.js` — сразу в оба счётчика.
 - Новый внешний домен (картинки, скрипты, запросы) не заработает, пока его
   не впишут в политику.
 
