@@ -26,7 +26,7 @@ echo <<<HTML
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
 <link rel="stylesheet" href="/css/giveaway.css?v=1" />
-<link rel="stylesheet" href="/css/giveaway-admin.css?v=1" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=2" />
 </head>
 <body>
 {$nav}
@@ -168,7 +168,7 @@ echo <<<HTML
 <script src="/js/i18n.js?v=71"></script>
 <script src="/js/news-blocks.js?v=3"></script>
 <script src="/js/giveaway.js?v=1"></script>
-<script src="/js/giveaway-admin.js?v=1"></script>
+<script src="/js/giveaway-admin.js?v=2"></script>
 </body>
 </html>
 HTML;

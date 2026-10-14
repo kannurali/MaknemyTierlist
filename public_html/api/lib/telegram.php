@@ -870,6 +870,59 @@ function tg_after_news(PDO $pdo, array $cfg, int $newsId, int $now, ?callable $s
 }
 
 // --------------------------------------------------------------------------
+//  Права бота в каналах розыгрышей
+// --------------------------------------------------------------------------
+//
+// Без любого из этих прав канал не ставится в условия розыгрыша
+// (api/lib/giveaway.php). Их же бот просит сам: Telegram отмечает их, когда
+// бота добавляют админом (setMyDefaultAdministratorRights), и ссылка
+// tg_add_channel_url() открывает выбор канала с ними. Остальные права боту
+// не нужны и по умолчанию выключены.
+//
+// Поле ChatAdministratorRights => [имя в ссылке, как право зовётся в
+// Telegram по-русски, по-английски].
+const TG_CHANNEL_RIGHTS = [
+    'can_post_messages'          => ['post_messages', 'Отправка публикаций', 'Post Messages'],
+    'can_post_stories'           => ['post_stories', 'Публикация историй', 'Post Stories'],
+    'can_restrict_members'       => ['restrict_members', 'Блокировка пользователей', 'Ban Users'],
+    'can_invite_users'           => ['invite_users', 'Добавление подписчиков', 'Add Subscribers'],
+    'can_manage_direct_messages' => ['manage_direct_messages', 'Доступ к сообщениям канала', 'Manage Direct Messages'],
+];
+// Публикаций и сообщений канала у групп нет, историй у обычной группы — тоже.
+const TG_CHANNEL_ONLY_RIGHTS = ['can_post_messages', 'can_post_stories', 'can_manage_direct_messages'];
+
+// Нужные права: поля ChatAdministratorRights.
+function tg_admin_rights(bool $channel): array {
+    $out = [];
+    foreach (array_keys(TG_CHANNEL_RIGHTS) as $k) {
+        if ($channel || !in_array($k, TG_CHANNEL_ONLY_RIGHTS, true)) { $out[] = $k; }
+    }
+    return $out;
+}
+
+// Права по имени поля — так, как их называет Telegram.
+function tg_right_names(array $keys, string $lang): array {
+    $out = [];
+    foreach ($keys as $k) {
+        if (isset(TG_CHANNEL_RIGHTS[$k])) { $out[] = TG_CHANNEL_RIGHTS[$k][$lang === 'en' ? 2 : 1]; }
+    }
+    return $out;
+}
+
+// Ссылка «Добавить бота в канал»: Telegram предлагает выбрать канал и
+// добавляет туда бота админом с нужными правами.
+function tg_add_channel_url(string $botName): string {
+    if ($botName === '') { return ''; }
+    $names = [];
+    foreach (TG_CHANNEL_RIGHTS as $r) { $names[] = $r[0]; }
+    return 'https://t.me/' . $botName . '?startchannel&admin=' . implode('+', $names);
+}
+
+function tg_default_rights(bool $channel): array {
+    return ['can_manage_chat' => true] + array_fill_keys(tg_admin_rights($channel), true);
+}
+
+// --------------------------------------------------------------------------
 //  Установка вебхука (кнопка на /admin/support)
 // --------------------------------------------------------------------------
 
@@ -896,5 +949,8 @@ function tg_setup_webhook(callable $send, string $token): bool {
         'commands'      => [['command' => 'stop', 'description' => 'Turn notifications off']],
         'language_code' => 'en',
     ]);
+    // Права, которые Telegram сам включит, когда бота добавляют админом.
+    $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(true), 'for_channels' => true]);
+    $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(false)]);
     return is_array($res) && !empty($res['ok']);
 }

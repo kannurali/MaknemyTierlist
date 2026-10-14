@@ -23,8 +23,8 @@
     no_prizes: "нет призов",
     ends_in_past: "время конца уже прошло",
     ends_too_far: "конец дальше чем через 90 дней",
-    channel_not_admin: "бот не администратор в одном из отмеченных каналов",
-    invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Пригласительные ссылки»)"
+    channel_not_admin: "у бота нет нужных прав в одном из отмеченных каналов (см. «Каналы бота» слева)",
+    invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Добавление подписчиков»)"
   };
 
   const ERRORS = {
@@ -45,6 +45,8 @@
     list: [],
     channels: [],
     bot: "",
+    rights: [],
+    addUrl: "",
     tgOn: false,
     cur: null,
     image: null,
@@ -483,7 +485,7 @@
       cb.value = c.id;
       cb.checked = selected.indexOf(c.id) >= 0;
       cb.addEventListener("change", changed);
-      lab.append(cb, document.createTextNode(" " + (c.title || c.id) + (c.admin ? "" : " (бот не админ)")));
+      lab.append(cb, document.createTextNode(" " + (c.title || c.id) + (c.admin ? "" : " (у бота нет прав)")));
       box.appendChild(lab);
     });
   }
@@ -505,11 +507,17 @@
       name.textContent = c.title || c.id;
       const st = document.createElement("span");
       st.className = "pill " + (c.admin ? "live" : "off");
-      st.textContent = c.admin ? "бот админ" : "нет прав";
+      st.textContent = c.admin ? "права есть" : "нет прав";
       top.append(name, st);
       const sub = document.createElement("div");
       sub.className = "li-sub";
       sub.textContent = (c.username ? "@" + c.username : "приватный") + (c.url ? "" : " · нет ссылки");
+      const miss = document.createElement("div");
+      miss.className = "li-sub ga-ch-miss";
+      miss.hidden = c.admin;
+      miss.textContent = c.missing && c.missing.length
+        ? "Не хватает: " + c.missing.join(", ")
+        : "Бот не админ канала или права ещё не проверены — нажмите «Обновить».";
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn small";
@@ -528,13 +536,24 @@
           hint(r && r.ok ? "Канал обновлён" : "Telegram не ответил", r && r.ok ? "ok" : "bad");
         });
       });
-      li.append(top, sub, btn);
+      li.append(top, sub, miss, btn);
       ul.appendChild(li);
     });
     const help = $("gwChHelp");
     const bot = S.bot ? "@" + S.bot : "бота";
     help.textContent = (S.channels.length ? "" : "Каналов пока нет. ")
-      + "Чтобы канал появился здесь, добавьте " + bot + " в канал администратором (право «Приглашать пользователей» нужно для ссылки на приватный канал). Если канал не появился — нажмите «Подключить вебхук» на /admin/support и добавьте бота заново.";
+      + "Чтобы канал появился здесь, добавьте " + bot + " в канал администратором с правами: "
+      + (S.rights.length ? S.rights.join(", ") : "—")
+      + ". Без них канал нельзя поставить в условия. Если канал не появился — нажмите «Подключить вебхук» на /admin/support и добавьте бота заново.";
+    if (S.addUrl) {
+      const add = document.createElement("a");
+      add.className = "btn small primary ga-ch-add";
+      add.href = S.addUrl;
+      add.target = "_blank";
+      add.rel = "noopener";
+      add.textContent = "Добавить бота в канал";
+      help.append(document.createElement("br"), add);
+    }
   }
 
   function renderList() {
@@ -721,7 +740,7 @@
     } else {
       const no = document.createElement("span");
       no.className = "muted small";
-      no.textContent = "Ссылки розыгрыша нет — подписчики не считаются. Дайте боту право «Пригласительные ссылки» и сохраните розыгрыш.";
+      no.textContent = "Ссылки розыгрыша нет — подписчики не считаются. Дайте боту право «Добавление подписчиков» и сохраните розыгрыш.";
       linkRow.appendChild(no);
     }
     const csv = document.createElement("button");
@@ -914,6 +933,8 @@
       S.list = r.giveaways;
       S.channels = r.channels;
       S.bot = r.bot;
+      S.rights = r.rights || [];
+      S.addUrl = r.add_url || "";
       S.tgOn = r.tg;
       renderChannelsList();
       renderList();

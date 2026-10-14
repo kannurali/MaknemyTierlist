@@ -12,6 +12,11 @@
 // my_chat_member (gw_channel_update()). Подписку бот проверяет при участии и
 // ещё раз при розыгрыше: отписавшийся после участия приз не получает.
 //
+// Админ без нужных прав (TG_CHANNEL_RIGHTS в telegram.php) — всё равно что
+// не админ: is_admin = 0, в колонке missing — каких прав не хватает. Бот
+// сразу пишет добавившему, чего ему не дали; перед публикацией права
+// перечитываются у Telegram.
+//
 // Кто выигрывает. Победителей выбирает кнопка «Разыграть» в админке, после
 // конца розыгрыша. Призы разыгрываются по порядку, один человек — максимум
 // один приз. Выбор — random_int по перемешанному списку участников.
@@ -228,7 +233,8 @@ function gw_load(PDO $pdo, int $id): ?array {
 // Каналы по chat_id. Пустой $ids — все каналы.
 function gw_channels(PDO $pdo, ?array $ids = null): array {
     if ($ids !== null && !$ids) { return []; }
-    $sql = 'SELECT chat_id, title, username, kind, invite_url, is_admin, updated_at FROM tg_channels';
+    // *: колонки missing до миграции 2026-10-14-tg-channel-rights.sql нет.
+    $sql = 'SELECT * FROM tg_channels';
     if ($ids !== null) {
         $sql .= ' WHERE chat_id IN (' . implode(',', array_map('intval', $ids)) . ')';
     }
@@ -554,11 +560,13 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
 /**
  * Опубликовать черновик: розыгрыш начинается, и бот пишет всем. [код, тело,
  * строка для рассылки или null]. Повторная публикация ничего не шлёт.
+ * $botId — права бота в каналах перечитываются у Telegram (0 — нет).
  */
-function gw_publish(PDO $pdo, int $id, int $now, ?callable $send = null): array {
+function gw_publish(PDO $pdo, int $id, int $now, ?callable $send = null, int $botId = 0): array {
     $row = gw_load($pdo, $id);
     if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], null]; }
     if ($row['status'] !== 'draft') { return [409, ['ok' => false, 'error' => 'not draft'], null]; }
+    if ($send !== null) { gw_recheck_rights($pdo, $send, $botId, gw_decode_list($row['channels_json']), $now); }
     $problems = gw_publish_problems($row, gw_channels($pdo, gw_decode_list($row['channels_json'])), $now);
     if ($problems) { return [409, ['ok' => false, 'error' => 'incomplete', 'problems' => $problems], null]; }
     if ($send !== null) {
@@ -766,6 +774,7 @@ function gw_admin_channels(PDO $pdo): array {
             'kind'     => (string)$c['kind'],
             'url'      => gw_channel_url($c),
             'admin'    => (int)$c['is_admin'] === 1,
+            'missing'  => tg_right_names(gw_split_rights($c['missing'] ?? ''), 'ru'),
         ];
     }
     return $out;
@@ -774,6 +783,36 @@ function gw_admin_channels(PDO $pdo): array {
 // --------------------------------------------------------------------------
 //  Каналы: что присылает Telegram
 // --------------------------------------------------------------------------
+
+/**
+ * Готов ли бот к розыгрышам по объекту ChatMember бота в канале:
+ * [1 — админ со всеми нужными правами, иначе 0; каких прав не хватает].
+ * Не админ — [0, []]: тут дело не в правах.
+ */
+function gw_bot_state(array $member, string $kind): array {
+    if ((string)($member['status'] ?? '') !== 'administrator') { return [0, []]; }
+    $missing = [];
+    foreach (tg_admin_rights($kind === 'channel') as $k) {
+        if (empty($member[$k])) { $missing[] = $k; }
+    }
+    return [$missing ? 0 : 1, $missing];
+}
+
+function gw_split_rights($v): array {
+    return is_string($v) && $v !== '' ? explode(',', $v) : [];
+}
+
+// Каких прав не хватает. Отдельным запросом: до миграции
+// 2026-10-14-tg-channel-rights.sql колонки нет, и тогда канал просто
+// неготов (is_admin = 0), а какие права не выданы — админка не скажет.
+function gw_store_missing(PDO $pdo, int $chatId, array $missing): void {
+    try {
+        $pdo->prepare('UPDATE tg_channels SET missing = :m WHERE chat_id = :c')
+            ->execute([':m' => implode(',', $missing), ':c' => $chatId]);
+    } catch (PDOException $e) {
+        return;
+    }
+}
 
 /**
  * Обновление my_chat_member: бота добавили в канал или группу, повысили,
@@ -789,8 +828,7 @@ function gw_channel_update(PDO $pdo, array $update, int $now): ?int {
     $id = $chat['id'] ?? null;
     if (!is_int($id) || !in_array($kind, ['channel', 'supergroup', 'group'], true)) { return null; }
 
-    $status = is_array($m['new_chat_member'] ?? null) ? (string)($m['new_chat_member']['status'] ?? '') : '';
-    $admin = $status === 'administrator' ? 1 : 0;
+    [$admin, $missing] = gw_bot_state(is_array($m['new_chat_member'] ?? null) ? $m['new_chat_member'] : [], $kind);
     $title = is_string($chat['title'] ?? null) ? gw_clean($chat['title'], 128) : '';
     $user  = is_string($chat['username'] ?? null) && preg_match('/^[A-Za-z0-9_]{4,32}\z/', $chat['username'])
         ? $chat['username'] : '';
@@ -811,12 +849,55 @@ function gw_channel_update(PDO $pdo, array $update, int $now): ?int {
     } catch (PDOException $e) {
         return null;
     }
+    gw_store_missing($pdo, $id, $missing);
     return ($admin && $user === '' && ($prev === false || (string)$prev === '')) ? $id : null;
 }
 
 /**
- * Перечитать канал у Telegram: название, адрес, админ ли бот, ссылка для
- * приватного. Кнопка «Обновить» в админке и запрос ссылки после вебхука.
+ * Что бот ответит тому, кто дал ему админа в канале или поменял его права:
+ * каких прав не хватает или что канал готов. Уходит телом ответа вебхука.
+ * Человек не начинал диалог с ботом — Telegram сообщение не доставит, и
+ * ничего страшного: то же видно в админке. Права поменяли, а нужные
+ * остались как были — бот молчит.
+ */
+function gw_channel_reply(array $update, string $botName): ?array {
+    $m = $update['my_chat_member'] ?? null;
+    if (!is_array($m)) { return null; }
+    $chat = is_array($m['chat'] ?? null) ? $m['chat'] : [];
+    $kind = (string)($chat['type'] ?? '');
+    $from = is_array($m['from'] ?? null) ? $m['from'] : [];
+    if (!in_array($kind, ['channel', 'supergroup', 'group'], true) || !is_int($from['id'] ?? null) || !empty($from['is_bot'])) {
+        return null;
+    }
+    $new = is_array($m['new_chat_member'] ?? null) ? $m['new_chat_member'] : [];
+    $old = is_array($m['old_chat_member'] ?? null) ? $m['old_chat_member'] : [];
+    if ((string)($new['status'] ?? '') !== 'administrator') { return null; }
+    [, $missing] = gw_bot_state($new, $kind);
+    if ((string)($old['status'] ?? '') === 'administrator' && gw_bot_state($old, $kind)[1] === $missing) { return null; }
+
+    $lang  = tg_lang_from_telegram($from['language_code'] ?? '');
+    $title = is_string($chat['title'] ?? null) ? gw_clean($chat['title'], 128) : '';
+    $text  = gw_rights_text($title, tg_right_names($missing, $lang), $lang);
+    $url   = tg_add_channel_url($botName);
+    if (!$missing || $url === '') { return ['method' => 'sendMessage'] + tg_message($from['id'], $text); }
+    return ['method' => 'sendMessage'] + tg_message($from['id'], $text, $lang === 'en' ? 'Grant the rights' : 'Выдать права', $url);
+}
+
+function gw_rights_text(string $title, array $missing, string $lang): string {
+    if ($lang === 'en') {
+        if (!$missing) { return '✅ The channel «' . $title . '» is ready for maknemy.com giveaways: I have all the rights I need.'; }
+        return '⚠️ In the channel «' . $title . "» I'm missing rights for giveaways:\n• " . implode("\n• ", $missing)
+            . "\n\nWithout them the channel can't be a giveaway condition. Turn them on: channel → Administrators → me.";
+    }
+    if (!$missing) { return '✅ Канал «' . $title . '» готов к розыгрышам maknemy.com: все нужные права у меня есть.'; }
+    return '⚠️ В канале «' . $title . "» мне не хватает прав для розыгрышей:\n• " . implode("\n• ", $missing)
+        . "\n\nБез них канал нельзя поставить в условия розыгрыша. Включите их: канал → Администраторы → я.";
+}
+
+/**
+ * Перечитать канал у Telegram: название, адрес, админ ли бот и с какими
+ * правами, ссылка для приватного. Кнопка «Обновить» в админке и запрос
+ * ссылки после вебхука.
  */
 function gw_channel_refresh(PDO $pdo, array $tg, callable $send, int $chatId, int $now): bool {
     $info = $send('getChat', ['chat_id' => $chatId]);
@@ -832,7 +913,7 @@ function gw_channel_refresh(PDO $pdo, array $tg, callable $send, int $chatId, in
     $user  = is_string($c['username'] ?? null) && preg_match('/^[A-Za-z0-9_]{4,32}\z/', $c['username']) ? $c['username'] : '';
 
     $botId = (int)strtok((string)$tg['token'], ':');
-    $admin = $botId > 0 && gw_member_state_raw($send, $chatId, $botId) === 'administrator' ? 1 : 0;
+    [$admin, $missing] = gw_bot_state($botId > 0 ? (gw_bot_member($send, $chatId, $botId) ?? []) : [], (string)($c['type'] ?? ''));
 
     $invite = '';
     if ($admin && $user === '') {
@@ -847,13 +928,39 @@ function gw_channel_refresh(PDO $pdo, array $tg, callable $send, int $chatId, in
     $params = [':t' => $title, ':u' => $user, ':a' => $admin, ':now' => $now, ':c' => $chatId];
     if ($invite !== '' || $user !== '') { $params[':i'] = $invite; }
     $pdo->prepare($sql)->execute($params);
+    gw_store_missing($pdo, $chatId, $missing);
     return true;
 }
 
-function gw_member_state_raw(callable $send, int $chatId, int $userId): string {
-    $res = $send('getChatMember', ['chat_id' => $chatId, 'user_id' => $userId]);
-    if (!is_array($res) || empty($res['ok']) || !is_array($res['result'] ?? null)) { return ''; }
-    return (string)($res['result']['status'] ?? '');
+/**
+ * Бот в канале глазами Telegram (объект ChatMember). Бота в канале нет —
+ * ['status' => 'left']; Telegram не ответил — null.
+ */
+function gw_bot_member(callable $send, int $chatId, int $botId): ?array {
+    $res = $send('getChatMember', ['chat_id' => $chatId, 'user_id' => $botId]);
+    if (!is_array($res)) { return null; }
+    if (!empty($res['ok'])) { return is_array($res['result'] ?? null) ? $res['result'] : null; }
+    return in_array((int)($res['error_code'] ?? 0), [400, 403], true) ? ['status' => 'left'] : null;
+}
+
+/**
+ * Перед публикацией: права бота в каналах розыгрыша — заново у Telegram.
+ * Вебхук мог не дойти, а каналы, добавленные до проверки прав, её ещё не
+ * проходили. Telegram не ответил — остаётся записанное.
+ */
+function gw_recheck_rights(PDO $pdo, callable $send, int $botId, array $chIds, int $now): void {
+    if ($botId <= 0) { return; }
+    $channels = gw_channels($pdo, $chIds);
+    foreach ($chIds as $cid) {
+        $cid = (int)$cid;
+        if (!isset($channels[$cid])) { continue; }
+        $me = gw_bot_member($send, $cid, $botId);
+        if ($me === null) { continue; }
+        [$admin, $missing] = gw_bot_state($me, (string)$channels[$cid]['kind']);
+        $pdo->prepare('UPDATE tg_channels SET is_admin = :a, updated_at = :now WHERE chat_id = :c')
+            ->execute([':a' => $admin, ':now' => $now, ':c' => $cid]);
+        gw_store_missing($pdo, $cid, $missing);
+    }
 }
 
 // --------------------------------------------------------------------------
