@@ -80,3 +80,48 @@
   .lg-doc h2 { font-size: 19px; margin-top: 24px; }
   .lg-doc p, .lg-doc li { font-size: 15px; }
 }
+
+.lg-top .mk-top-bar { padding: 0 calc(8 * var(--u)); }
+.lg-top .mk-nav {
+  position: static;
+  display: flex;
+  gap: calc(16 * var(--u));
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.lg-top .mk-pill {
+  height: auto;
+  gap: calc(9 * var(--u));
+  padding: calc(9 * var(--u)) calc(20 * var(--u));
+  border-radius: calc(18 * var(--u));
+  background: var(--mk-grad);
+  font-size: calc(18 * var(--u));
+}
+.lg-top .mk-pill svg { width: calc(16.3 * var(--u)); height: calc(16.3 * var(--u)); }
+
+@media (max-width: 1000px) {
+  .lg-top .mk-top-bar { padding: 0 6px; }
+  .lg-top .mk-nav { gap: 8px; }
+  .lg-top .mk-pill { padding: 8px 10px; gap: 6px; border-radius: 16px; font-size: 15px; }
+  .lg-top .mk-pill svg { width: 14px; height: 14px; }
+}
+
+@media (max-width: 760px) {
+  .lg-top .mk-pill {
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .lg-top .mk-pill .mk-pill-text { display: none; }
+  .lg-top .mk-pill svg { width: 20px; height: 20px; }
+}

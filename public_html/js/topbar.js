@@ -52,6 +52,7 @@
   if (head) {
     var toggle = head.querySelector(".mk-top-toggle");
     var nav = head.querySelector(".mk-nav");
+    var bar = head.querySelector(".mk-top-bar");
     var stuck = false;
     var open = false;
     var openedAt = 0;
@@ -60,6 +61,11 @@
 
     function scrollY() {
       return window.scrollY || window.pageYOffset || 0;
+    }
+
+    function place() {
+      var box = WIDE.matches && bar ? bar : head;
+      head.style.setProperty("--mk-sheet-top", Math.round(box.getBoundingClientRect().bottom) + "px");
     }
 
     function syncToggle() {
@@ -77,6 +83,7 @@
     function setOpen(next) {
       open = next;
       openedAt = scrollY();
+      if (open) place();
       head.classList.toggle("is-nav-open", open);
       syncToggle();
     }
@@ -90,25 +97,22 @@
       if (next !== stuck) {
         stuck = next;
         head.classList.toggle("is-stuck", stuck);
-
-        if (!stuck && open) setOpen(false);
-        if (stuck) openedAt = y;
+        if (open) setOpen(false);
       }
-
-      if (stuck && open && y - openedAt > RECLOSE_AFTER) setOpen(false);
 
       if (wide !== WIDE.matches) {
         wide = WIDE.matches;
         if (open) setOpen(false);
       }
-      if (!wide && open && Math.abs(y - openedAt) > RECLOSE_AFTER) setOpen(false);
+      if (open && Math.abs(y - openedAt) > RECLOSE_AFTER) setOpen(false);
+      if (open) place();
     };
 
     if (toggle) {
       syncToggle();
       toggle.addEventListener("click", function (e) {
         setOpen(!open);
-        if (open && !wide && !e.detail && nav) {
+        if (open && !e.detail && nav) {
           var first = nav.querySelector("a");
           if (first) first.focus();
         }
@@ -116,17 +120,19 @@
     }
 
     document.addEventListener("click", function (e) {
-      if (!open || wide) return;
+      if (!open) return;
       if (nav && nav.contains(e.target)) return;
       if (toggle && toggle.contains(e.target)) return;
       setOpen(false);
     }, true);
 
     document.addEventListener("keydown", function (e) {
-      if (!open || wide || e.key !== "Escape") return;
+      if (!open || e.key !== "Escape") return;
       setOpen(false);
       if (toggle) toggle.focus();
     });
+
+    window.addEventListener("resize", function () { if (open) place(); });
 
     window.addEventListener("pageshow", function (e) {
       if (e.persisted && open) setOpen(false);
@@ -185,7 +191,7 @@
     for (var i = 0; i < on.length; i++) on[i].classList.remove("is-pressed");
   });
 
-  var TAP_SEL = ".mk-top-brand, .mk-chat, .mk-avatar, .tc-slots, .tc-slot.is-empty, .tc-pill-l, .tc-pill-r, " +
+  var TAP_SEL = ".mk-top-brand, .mk-tg, .mk-chat, .mk-avatar, .tc-slots, .tc-slot.is-empty, .tc-pill-l, .tc-pill-r, " +
     ".tc-cat-card, .nw-card > h2, .nw-meta, .nw-like, .nw-copy, .tr-tool, .tr-rep-up, .tr-rep-down, .pf-react-item, " +
     ".hm-btn, a.hm-card";
   var TAP_DELAY = 60;
@@ -464,7 +470,6 @@
   function setUnread(n) {
     if (!chatLink) return;
     n = Math.max(0, Math.floor(Number(n) || 0));
-    head.classList.toggle("has-unread", n > 0);
     if (!n) {
       if (unreadBadge && unreadBadge.parentNode) unreadBadge.parentNode.removeChild(unreadBadge);
       return;
