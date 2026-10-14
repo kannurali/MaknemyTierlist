@@ -187,7 +187,6 @@ page_lscache();
     </button>
   </header>
 
-  <?= halloween_decor('calculator') ?>
   <main class="tc-page">
     <div class="tc-frame">
 
