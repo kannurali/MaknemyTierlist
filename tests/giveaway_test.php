@@ -159,6 +159,25 @@ test('проверка полей: призы, картинка, блоки оп
     assert_eq([GW_CH_A, GW_CH_B], $v['row']['channels'], 'каналы без повторов, строкой и числом');
 });
 
+test('иконка приза: картинка сайта, адрес от корня, чужое не проходит', function () {
+    $sha = str_repeat('b', 40);
+    $v = gw_validate(gw_draft(['prizes' => [
+        ['name' => 'Permanent Magnet', 'count' => 5, 'icon' => "https://maknemy.com/images/$sha.png"],
+        ['name' => 'Kitsune', 'count' => 1, 'icon' => "/images/$sha.webp"],
+        ['name' => 'Box', 'count' => 1],
+    ]]));
+    assert_true($v['ok']);
+    assert_eq(["/images/$sha.png", "/images/$sha.webp", ''], array_column($v['row']['prizes'], 'icon'), 'путь от корня, пусто — без иконки');
+    foreach (['https://evil.example/images/' . $sha . '.png', 'javascript:alert(1)', "/images/$sha.svg", ['x']] as $bad) {
+        assert_eq(false, gw_validate(gw_draft(['prizes' => [['name' => 'X', 'count' => 1, 'icon' => $bad]]]))['ok'], 'не пускаем: ' . json_encode($bad));
+    }
+    $p = gw_db();
+    $p->exec("INSERT INTO giveaways (status, title_ru, prizes_json, channels_json, ends_at, created_at, updated_at, published_at)
+              VALUES ('live', 'Старый', '[{\"name\":\"Gas\",\"count\":2}]', '[]', " . (GW_NOW + 100) . ', 1, 1, 1)');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq([['name' => 'Gas', 'count' => 2, 'icon' => '']], $list['live'][0]['prizes'], 'старый приз без иконки — пустая');
+});
+
 test('разыгранный розыгрыш не правится', function () {
     $p = gw_db();
     $id = gw_live($p);

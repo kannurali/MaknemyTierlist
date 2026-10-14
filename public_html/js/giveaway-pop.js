@@ -61,12 +61,17 @@
     var box = document.createElement("div");
     box.className = "gw-pop-box";
     box.tabIndex = -1;
+    var top = document.createElement("div");
+    top.className = "gw-pop-top";
+    var tab = document.createElement("span");
+    tab.className = "gw-pop-tab";
+    top.appendChild(tab);
     var x = document.createElement("button");
     x.type = "button";
     x.className = "gw-pop-close";
-    x.textContent = "✕";
     x.addEventListener("click", close);
-    box.appendChild(x);
+    top.appendChild(x);
+    box.appendChild(top);
     pop.appendChild(box);
     pop.addEventListener("click", function (e) { if (e.target === pop) { close(); } });
     document.body.appendChild(pop);
@@ -79,6 +84,7 @@
     var x = box.querySelector(".gw-pop-close");
     x.setAttribute("aria-label", GW.t("gw.close"));
     x.title = GW.t("gw.close");
+    box.querySelector(".gw-pop-tab").textContent = GW.t("gw.chip");
     var cardEl = GW.card(pick, {
       mode: "pop",
       onJoined: function () { schedule(); }

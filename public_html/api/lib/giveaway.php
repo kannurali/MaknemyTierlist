@@ -119,7 +119,9 @@ function gw_validate(array $in): array {
         $name = gw_clean($p['name'], GW_PRIZE_NAME_MAX + 1);
         if ($name === '' || mb_strlen($name) > GW_PRIZE_NAME_MAX) { return $fail('bad prize name'); }
         if (!nb_is_int_between($p['count'] ?? null, 1, GW_PRIZE_COUNT_MAX)) { return $fail('bad prize count'); }
-        $prizes[] = ['name' => $name, 'count' => (int)$p['count']];
+        $icon = gw_prize_icon($p['icon'] ?? '');
+        if ($icon === null) { return $fail('bad prize icon'); }
+        $prizes[] = ['name' => $name, 'count' => (int)$p['count'], 'icon' => $icon];
     }
 
     $channels = [];
@@ -150,6 +152,17 @@ function gw_validate(array $in): array {
     ]];
 }
 
+// Иконка приза — картинка предмета из тирлиста. В данных тирлиста адреса
+// бывают и абсолютными (https://maknemy.com/images/…), и от корня; хранится
+// всегда путь от корня. Пусто — иконки нет, карточка рисует запасной значок.
+// null — чужой адрес или не картинка сайта.
+function gw_prize_icon($v): ?string {
+    if ($v === null || $v === '') { return ''; }
+    if (!is_string($v)) { return null; }
+    $path = preg_replace('~^https://(?:www\.)?maknemy\.com(?=/images/)~', '', $v);
+    return preg_match(NB_IMAGE_RE, $path) ? $path : null;
+}
+
 function gw_body_encode(array $blocks): ?string {
     $enc = json_encode($blocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($enc === false || strlen($enc) > GW_BODY_JSON_MAX) { return null; }
@@ -161,6 +174,18 @@ function gw_body_encode(array $blocks): ?string {
 function gw_decode_list($json): array {
     $d = is_string($json) && $json !== '' ? json_decode($json, true) : null;
     return is_array($d) && nb_is_list($d) ? $d : [];
+}
+
+// Призы для показа: у каждого name, count и icon. У розыгрышей, сохранённых
+// до появления иконок, icon нет — отдаётся пустой.
+function gw_prizes($json): array {
+    $out = [];
+    foreach (gw_decode_list($json) as $p) {
+        if (!is_array($p)) { continue; }
+        $icon = gw_prize_icon($p['icon'] ?? '');
+        $out[] = ['name' => (string)($p['name'] ?? ''), 'count' => (int)($p['count'] ?? 1), 'icon' => $icon ?? ''];
+    }
+    return $out;
 }
 
 function gw_decode_blocks($json): array {
@@ -277,7 +302,7 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
         'title'        => ['ru' => (string)$row['title_ru'], 'en' => (string)$row['title_en']],
         'image'        => $img,
         'body'         => gw_decode_blocks($row['body_json']),
-        'prizes'       => gw_decode_list($row['prizes_json']),
+        'prizes'       => gw_prizes($row['prizes_json']),
         'channels'     => $chs,
         'ends_at'      => (int)$row['ends_at'],
         'published_at' => (int)$row['published_at'],
@@ -686,7 +711,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
             ? ['url' => (string)$row['image_url'], 'w' => (int)$row['image_w'], 'h' => (int)$row['image_h']]
             : null,
         'body'         => ['v' => NB_DOC_VERSION, 'blocks' => gw_decode_blocks($row['body_json'])],
-        'prizes'       => gw_decode_list($row['prizes_json']),
+        'prizes'       => gw_prizes($row['prizes_json']),
         'channels'     => array_map('strval', gw_decode_list($row['channels_json'])),
         'ends_at'      => (int)$row['ends_at'],
         'published_at' => (int)$row['published_at'],

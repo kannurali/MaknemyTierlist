@@ -105,14 +105,19 @@
 
   function pad(n) { return n < 10 ? "0" + n : String(n); }
 
-  function clock(sec) {
+  function clock(node, sec) {
     sec = Math.max(0, Math.floor(sec));
     var d = Math.floor(sec / 86400);
     var h = Math.floor((sec % 86400) / 3600);
     var m = Math.floor((sec % 3600) / 60);
     var s = sec % 60;
-    var hms = pad(h) + ":" + pad(m) + ":" + pad(s);
-    return d ? t("gw.days", { n: d }) + " " + hms : hms;
+    node.textContent = "";
+    if (d) {
+      node.appendChild(el("span", "gw-clock-n", String(d)));
+      node.appendChild(el("span", "gw-clock-u", t("gw.days", { n: "" }).trim()));
+    }
+    node.appendChild(el("span", null, pad(h) + ":" + pad(m) + ":" + pad(s)));
+    return node;
   }
 
   function date(ts) {
@@ -129,7 +134,7 @@
       var left = +n.getAttribute("data-gw-ends") - now;
       var time = n.querySelector(".gw-clock-time");
       if (left > 0) {
-        if (time) { time.textContent = clock(left); }
+        if (time) { clock(time, left); }
         return;
       }
       n.removeAttribute("data-gw-ends");
@@ -166,51 +171,194 @@
     return box;
   }
 
-  function renderPrizes(g) {
-    var list = el("ul", "gw-prizes");
-    (g.prizes || []).forEach(function (p) {
-      var li = el("li", "gw-prize");
-      li.appendChild(el("span", "gw-prize-name", p.name));
-      if (p.count > 1) { li.appendChild(el("span", "gw-prize-count", "×" + p.count)); }
-      list.appendChild(li);
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
+  function svg(box, parts, cls) {
+    var s = document.createElementNS(SVG_NS, "svg");
+    s.setAttribute("viewBox", box);
+    s.setAttribute("aria-hidden", "true");
+    s.setAttribute("focusable", "false");
+    if (cls) { s.setAttribute("class", cls); }
+    parts.forEach(function (p) {
+      var n = document.createElementNS(SVG_NS, p[0]);
+      Object.keys(p[1]).forEach(function (k) { n.setAttribute(k, p[1][k]); });
+      s.appendChild(n);
     });
-    return list;
+    return s;
   }
 
-  function winnerName(w) {
-    if (w.display && w.name && w.display !== w.name) { return w.display + " (@" + w.name + ")"; }
-    return w.display || (w.name ? "@" + w.name : "#" + w.id);
+  function giftIcon(cls) {
+    return svg("0 0 48 48", [
+      ["path", { "class": "gw-gift-box", d: "M9 24h30v14a4 4 0 0 1-4 4H13a4 4 0 0 1-4-4z" }],
+      ["rect", { x: "6", y: "15.5", width: "36", height: "8.5", rx: "2.5" }],
+      ["path", { d: "M9 24h30v14a4 4 0 0 1-4 4H13a4 4 0 0 1-4-4z" }],
+      ["path", { d: "M24 15.5V42" }],
+      ["path", { d: "M24 15.5c-2.4-5.8-11-8.6-11-3.3 0 3 5.6 3.3 11 3.3z" }],
+      ["path", { d: "M24 15.5c2.4-5.8 11-8.6 11-3.3 0 3-5.6 3.3-11 3.3z" }]
+    ], "gw-gift" + (cls ? " " + cls : ""));
+  }
+
+  function peopleIcon() {
+    return svg("0 0 24 24", [
+      ["circle", { cx: "9", cy: "8", r: "3.6" }],
+      ["path", { d: "M2.6 19.5c.7-3.7 3.2-5.7 6.4-5.7s5.7 2 6.4 5.7" }],
+      ["path", { d: "M15.2 4.6a3.6 3.6 0 0 1 0 6.8" }],
+      ["path", { d: "M17.6 14.2c2 .8 3.4 2.6 3.8 5.3" }]
+    ], "gw-ico");
+  }
+
+  function plural(n) {
+    if (lang() === "en") { return n === 1 ? "one" : "many"; }
+    var a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) { return "one"; }
+    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
+    return "many";
+  }
+
+  function winnersLabel(n) {
+    return t("gw.winnersN." + plural(n), { n: n });
+  }
+
+  function prizeCount(p) {
+    return p && p.count > 0 ? p.count : 1;
+  }
+
+  function prizePic(p, cls) {
+    var box = el("span", cls);
+    var gift = function () {
+      box.textContent = "";
+      box.classList.add("is-gift");
+      box.appendChild(giftIcon());
+    };
+    if (p && p.icon) {
+      var img = el("img");
+      img.src = p.icon;
+      img.alt = "";
+      img.decoding = "async";
+      img.addEventListener("error", gift);
+      box.appendChild(img);
+    } else {
+      gift();
+    }
+    return box;
+  }
+
+  function renderMedia(g) {
+    var media = el("div", "gw-media");
+    if (g.image && g.image.url) {
+      var img = el("img", "gw-img");
+      img.src = g.image.url;
+      img.alt = "";
+      if (g.image.w > 0 && g.image.h > 0) {
+        img.width = g.image.w;
+        img.height = g.image.h;
+      }
+      img.decoding = "async";
+      media.appendChild(img);
+      return media;
+    }
+    var icons = (g.prizes || []).filter(function (p) { return p && p.icon; }).slice(0, 3);
+    media.className = "gw-media is-stage";
+    var stage = el("div", "gw-stage is-n" + icons.length);
+    if (icons.length === 3) { icons = [icons[1], icons[0], icons[2]]; }
+    icons.forEach(function (p, i) {
+      var main = icons.length === 3 ? i === 1 : icons.length === 1;
+      stage.appendChild(prizePic(p, "gw-stage-pic" + (main ? " is-main" : "")));
+    });
+    if (!icons.length) { stage.appendChild(giftIcon("gw-stage-gift")); }
+    media.appendChild(stage);
+    return media;
+  }
+
+  function renderPrizes(g) {
+    var prizes = g.prizes || [];
+    var sec = el("section", "gw-prize-sec");
+    var head = el("div", "gw-h-row");
+    head.appendChild(el("h3", "gw-h", t("gw.prizes")));
+    if (prizes.length > 1) {
+      var total = prizes.reduce(function (s, p) { return s + prizeCount(p); }, 0);
+      head.appendChild(el("span", "gw-h-aside", winnersLabel(total)));
+    }
+    sec.appendChild(head);
+    var kind = prizes.length === 1 ? " is-solo" : prizes.length > 6 ? " is-many" : "";
+    var list = el("ul", "gw-prizes" + kind);
+    prizes.forEach(function (p) {
+      var li = el("li", "gw-prize");
+      var n = prizeCount(p);
+      li.appendChild(prizePic(p, "gw-prize-pic"));
+      if (n > 1) {
+        var badge = el("span", "gw-prize-count", String.fromCharCode(215) + n);
+        badge.setAttribute("aria-hidden", "true");
+        li.appendChild(badge);
+      }
+      var text = el("span", "gw-prize-text");
+      text.appendChild(el("span", "gw-prize-name", p.name));
+      text.appendChild(el("span", "gw-prize-win", winnersLabel(n)));
+      li.appendChild(text);
+      list.appendChild(li);
+    });
+    sec.appendChild(list);
+    return sec;
+  }
+
+  function winnerItem(w) {
+    var li = el("li", "gw-win");
+    var a = el("a", "gw-win-user");
+    a.href = "/profile?id=" + encodeURIComponent(w.id);
+    var label = w.display || (w.name ? "@" + w.name : "#" + w.id);
+    if (w.avatar) {
+      var img = el("img", "gw-win-ava");
+      img.src = w.avatar;
+      img.alt = "";
+      img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
+      a.appendChild(img);
+    } else {
+      a.appendChild(el("span", "gw-win-ava is-empty", label.replace(/^[@#]/, "").charAt(0).toUpperCase()));
+    }
+    var names = el("span", "gw-win-names");
+    names.appendChild(el("span", "gw-win-name", label));
+    if (w.display && w.name && w.display !== w.name) {
+      names.appendChild(el("span", "gw-win-handle", "@" + w.name));
+    }
+    a.appendChild(names);
+    li.appendChild(a);
+    return li;
   }
 
   function renderWinners(g) {
     var sec = el("section", "gw-winners");
     sec.appendChild(el("h3", "gw-h", t("gw.winners")));
-    if (!g.winners || !g.winners.length) {
-      sec.appendChild(el("p", "gw-note", t("gw.noWinners")));
-      return sec;
-    }
-    var list = el("ul", "gw-win-list");
-    g.winners.forEach(function (w) {
-      var li = el("li", "gw-win");
-      var a = el("a", "gw-win-user");
-      a.href = "/profile?id=" + encodeURIComponent(w.id);
-      if (w.avatar) {
-        var img = el("img", "gw-win-ava");
-        img.src = w.avatar;
-        img.alt = "";
-        img.loading = "lazy";
-        img.referrerPolicy = "no-referrer";
-        a.appendChild(img);
-      } else {
-        a.appendChild(el("span", "gw-win-ava"));
-      }
-      a.appendChild(el("span", "gw-win-name", winnerName(w)));
-      li.appendChild(a);
-      var prize = g.prizes && g.prizes[w.prize] ? g.prizes[w.prize].name : "";
-      li.appendChild(el("span", "gw-win-prize", prize));
-      list.appendChild(li);
+    var prizes = g.prizes || [];
+    var groups = prizes.map(function (p) { return { p: p, list: [] }; });
+    var loose = [];
+    (g.winners || []).forEach(function (w) {
+      var gr = groups[w.prize];
+      (gr ? gr.list : loose).push(w);
     });
-    sec.appendChild(list);
+    if (loose.length) { groups.push({ p: null, list: loose }); }
+    var box = el("ul", "gw-win-groups");
+    groups.forEach(function (gr) {
+      var li = el("li", "gw-win-group");
+      if (gr.p) {
+        var head = el("div", "gw-win-prize");
+        head.appendChild(prizePic(gr.p, "gw-win-pic"));
+        head.appendChild(el("span", "gw-win-prize-name", gr.p.name));
+        if (prizeCount(gr.p) > 1) {
+          head.appendChild(el("span", "gw-win-prize-n", String.fromCharCode(215) + prizeCount(gr.p)));
+        }
+        li.appendChild(head);
+      }
+      if (gr.list.length) {
+        var ul = el("ul", "gw-win-list");
+        gr.list.forEach(function (w) { ul.appendChild(winnerItem(w)); });
+        li.appendChild(ul);
+      } else {
+        li.appendChild(el("p", "gw-win-none", t("gw.noWinner")));
+      }
+      box.appendChild(li);
+    });
+    sec.appendChild(box);
     return sec;
   }
 
@@ -256,52 +404,54 @@
   function card(g, opts) {
     opts = opts || {};
     var ui = {};
-    var root_ = el("article", "gw-card " + (opts.mode === "page" ? "is-page" : "is-pop"));
+    var live = g.phase === "live";
+    var root_ = el("article", "gw-card " + (opts.mode === "page" ? "is-page" : "is-pop") + (live ? " has-foot" : ""));
     root_.id = "g" + g.id;
     root_.setAttribute("data-phase", g.phase);
 
-    var media = el("div", "gw-media" + (g.image ? "" : " is-empty"));
-    if (g.image) {
-      var img = el("img", "gw-img");
-      img.src = g.image.url;
-      img.alt = "";
-      img.width = g.image.w;
-      img.height = g.image.h;
-      img.decoding = "async";
-      media.appendChild(img);
-    }
-    media.appendChild(el("span", "gw-chip", t("gw.chip")));
-    root_.appendChild(media);
+    var aside = el("div", "gw-aside");
+    aside.appendChild(renderMedia(g));
+    root_.appendChild(aside);
 
+    var content = el("div", "gw-content");
     var main = el("div", "gw-main");
+    var head = el("div", "gw-head-block");
     var title = el("h2", "gw-title", pick(g.title));
     title.id = "gwTitle" + g.id;
-    main.appendChild(title);
+    head.appendChild(title);
 
-    if (g.phase === "live") {
+    if (live) {
       var clk = el("div", "gw-clock");
       clk.setAttribute("data-gw-ends", String(g.ends_at));
       clk.appendChild(el("span", "gw-clock-label", t("gw.endsIn")));
-      clk.appendChild(el("span", "gw-clock-time", clock(g.ends_at - Date.now() / 1000)));
-      main.appendChild(clk);
+      clk.appendChild(clock(el("span", "gw-clock-time"), g.ends_at - Date.now() / 1000));
+      head.appendChild(clk);
       ui.clock = clk;
     } else {
-      main.appendChild(el("p", "gw-when", t("gw.endedAt", { date: date(g.ends_at) })));
+      head.appendChild(el("p", "gw-when", t("gw.endedAt", { date: date(g.ends_at) })));
     }
+    aside.appendChild(head);
 
-    main.appendChild(el("h3", "gw-h", t("gw.prizes")));
-    main.appendChild(renderPrizes(g));
     main.appendChild(renderBody(g));
 
-    if (g.phase === "live") { main.appendChild(renderConditions(g, ui)); }
-    if (g.phase === "drawn") { main.appendChild(renderWinners(g)); }
-    if (g.phase === "ended") { main.appendChild(el("p", "gw-note", t("gw.waitDraw"))); }
+    var drawn = g.phase === "drawn" && g.winners && g.winners.length;
+    if (drawn) {
+      main.appendChild(renderWinners(g));
+    } else {
+      if (g.prizes && g.prizes.length) { main.appendChild(renderPrizes(g)); }
+      if (live) { main.appendChild(renderConditions(g, ui)); }
+      if (g.phase === "drawn") { main.appendChild(el("p", "gw-note", t("gw.noWinners"))); }
+      if (g.phase === "ended") { main.appendChild(el("p", "gw-note", t("gw.waitDraw"))); }
+    }
 
-    ui.entries = el("p", "gw-entries", t("gw.entries", { n: g.entries || 0 }));
+    ui.entries = el("p", "gw-entries");
+    ui.entries.appendChild(peopleIcon());
+    ui.entries.appendChild(el("span", null, t("gw.entries", { n: g.entries || 0 })));
     main.appendChild(ui.entries);
-    root_.appendChild(main);
+    content.appendChild(main);
+    root_.appendChild(content);
 
-    if (g.phase === "live") {
+    if (live) {
       var foot = el("footer", "gw-foot");
       ui.msg = el("p", "gw-msg");
       ui.msg.setAttribute("role", "status");
@@ -317,7 +467,7 @@
         actions.appendChild(all);
       }
       foot.appendChild(actions);
-      root_.appendChild(foot);
+      content.appendChild(foot);
       if (opts.preview) { ui.cta.disabled = true; }
       else { wire(root_, g, ui, opts); }
     }

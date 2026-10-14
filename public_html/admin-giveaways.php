@@ -68,13 +68,13 @@ echo <<<HTML
         </label>
       </div>
 
-      <div class="f">Картинка
+      <div class="f">Баннер <span class="muted">(свой у каждого розыгрыша: 1280×720, 16:9; важный текст — не ближе ~60 px к углам, они скругляются; показывается целиком, без обрезки)</span>
         <div class="ga-image">
           <img class="ga-image-prev" id="fImgPrev" alt="" hidden />
           <div class="slot-row">
             <label class="btn small file-btn">Загрузить<input type="file" id="fImgFile" accept="image/png,image/jpeg,image/webp" /></label>
             <button class="btn small" id="fImgDel" type="button" hidden>Убрать</button>
-            <span class="muted small" id="fImgNote">PNG, JPG или WebP до 6 МБ</span>
+            <span class="muted small" id="fImgNote">PNG, JPG или WebP до 6 МБ. Без баннера шапку соберут иконки призов.</span>
           </div>
         </div>
       </div>
@@ -96,7 +96,7 @@ echo <<<HTML
         <span class="muted small">Английский переводится сам при сохранении. Вставленный текст приходит без чужого оформления.</span>
       </div>
 
-      <div class="f">Призы <span class="muted">(разыгрываются по порядку: сначала первый)</span>
+      <div class="f">Призы <span class="muted">(разыгрываются по порядку: сначала первый; иконка — из предметов тирлиста)</span>
         <div class="ga-prizes" id="fPrizes"></div>
         <div><button class="btn small" id="fPrizeAdd" type="button">＋ Приз</button></div>
       </div>
@@ -138,6 +138,19 @@ echo <<<HTML
         </div>
       </section>
     </section>
+
+    <div class="ga-picker" id="gwPicker" hidden role="dialog" aria-modal="true" aria-labelledby="gwPickTitle">
+      <div class="ga-picker-box">
+        <div class="ga-picker-head">
+          <span class="list-head" id="gwPickTitle">Иконка приза</span>
+          <input type="search" id="gwPickSearch" placeholder="Поиск: Magnet, Dragon…" aria-label="Поиск предмета" />
+          <button class="btn small" id="gwPickNone" type="button">Без иконки</button>
+          <button class="btn small" id="gwPickClose" type="button" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="ga-picker-grid" id="gwPickGrid"></div>
+        <p class="muted small" id="gwPickEmpty" hidden>Ничего не нашлось.</p>
+      </div>
+    </div>
 
     <section class="ga-preview" id="gwPreview" hidden>
       <div class="list-head">Как увидят на сайте</div>

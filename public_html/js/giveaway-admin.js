@@ -3,6 +3,7 @@
 
   const API = "/api/giveaway_admin.php";
   const UPLOAD = "/api/upload.php";
+  const TIERLIST = "/api/tierlist.php";
   const MSK = 3 * 3600;
   const NBSP = String.fromCharCode(160);
 
@@ -313,9 +314,119 @@
     });
   }
 
+  let catalog = null;
+  let pickFor = null;
+
+  function iconPath(url) {
+    const m = /^(?:https:\/\/(?:www\.)?maknemy\.com)?(\/images\/[0-9a-f]{40}\.(?:png|jpg|webp))$/.exec(url || "");
+    return m ? m[1] : "";
+  }
+
+  function loadCatalog() {
+    if (catalog) return Promise.resolve(catalog);
+    return fetch(TIERLIST, { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(d => {
+        const t = d && d.tierlist ? (typeof d.tierlist === "string" ? JSON.parse(d.tierlist) : d.tierlist) : null;
+        const seen = {};
+        catalog = [];
+        ((t && t.tiers) || []).forEach(tier => (tier.items || []).forEach(it => {
+          const icon = iconPath(it.icon);
+          if (!icon || !it.name || seen[icon]) return;
+          seen[icon] = true;
+          catalog.push({ name: String(it.name), icon: icon });
+        }));
+        return catalog;
+      })
+      .catch(() => { catalog = null; return []; });
+  }
+
+  function renderCatalog() {
+    const grid = $("gwPickGrid");
+    const q = $("gwPickSearch").value.trim().toLowerCase();
+    grid.textContent = "";
+    const list = (catalog || []).filter(it => !q || it.name.toLowerCase().indexOf(q) >= 0);
+    $("gwPickEmpty").hidden = list.length > 0;
+    list.forEach(it => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ga-pick-item";
+      b.title = it.name;
+      const img = document.createElement("img");
+      img.src = it.icon;
+      img.alt = "";
+      img.loading = "lazy";
+      const cap = document.createElement("span");
+      cap.textContent = it.name;
+      b.append(img, cap);
+      b.addEventListener("click", () => { applyIcon(pickFor, it); closePicker(); });
+      grid.appendChild(b);
+    });
+  }
+
+  function openPicker(row) {
+    pickFor = row;
+    $("gwPicker").hidden = false;
+    $("gwPickSearch").value = "";
+    $("gwPickEmpty").hidden = true;
+    $("gwPickGrid").textContent = "Загружаем предметы…";
+    loadCatalog().then(() => {
+      if (!catalog || !catalog.length) { $("gwPickGrid").textContent = "Не удалось загрузить тирлист."; return; }
+      renderCatalog();
+    });
+    setTimeout(() => $("gwPickSearch").focus(), 30);
+  }
+
+  function closePicker() {
+    $("gwPicker").hidden = true;
+    pickFor = null;
+  }
+
+  function setRowIcon(row, icon) {
+    row.dataset.icon = icon || "";
+    const btn = row.querySelector(".ga-prize-icon");
+    btn.textContent = "";
+    if (icon) {
+      const img = document.createElement("img");
+      img.src = icon;
+      img.alt = "";
+      btn.appendChild(img);
+      btn.title = "Сменить иконку";
+    } else {
+      btn.textContent = "＋";
+      btn.title = "Выбрать иконку из тирлиста";
+    }
+  }
+
+  function applyIcon(row, item) {
+    if (!row) return;
+    const name = row.querySelector(".ga-prize-name");
+    if (item && (!name.value.trim() || name.value === row.dataset.itemName)) {
+      name.value = item.name;
+    }
+    row.dataset.itemName = item ? item.name : "";
+    setRowIcon(row, item ? item.icon : "");
+    changed();
+  }
+
+  function wirePicker() {
+    $("gwPickClose").addEventListener("click", closePicker);
+    $("gwPickNone").addEventListener("click", () => { applyIcon(pickFor, null); closePicker(); });
+    $("gwPickSearch").addEventListener("input", renderCatalog);
+    $("gwPicker").addEventListener("click", e => { if (e.target === $("gwPicker")) closePicker(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("gwPicker").hidden) closePicker(); });
+  }
+
   function prizeRow(p) {
     const row = document.createElement("div");
     row.className = "ga-prize";
+    const iconBtn = document.createElement("button");
+    iconBtn.type = "button";
+    iconBtn.className = "ga-prize-icon";
+    iconBtn.addEventListener("click", () => { if (!locked()) openPicker(row); });
+    row.appendChild(iconBtn);
+    setRowIcon(row, p && p.icon ? p.icon : "");
+    row.dataset.itemName = p ? p.name : "";
     const name = document.createElement("input");
     name.type = "text";
     name.maxLength = 60;
@@ -347,7 +458,8 @@
   function readPrizes() {
     return Array.from($("fPrizes").querySelectorAll(".ga-prize")).map(r => ({
       name: r.querySelector(".ga-prize-name").value.trim(),
-      count: Math.max(1, Math.min(1000, parseInt(r.querySelector(".ga-prize-count").value, 10) || 1))
+      count: Math.max(1, Math.min(1000, parseInt(r.querySelector(".ga-prize-count").value, 10) || 1)),
+      icon: r.dataset.icon || ""
     })).filter(p => p.name);
   }
 
@@ -482,7 +594,7 @@
     $("fBody").contentEditable = dis ? "false" : "true";
     $("fTools").querySelectorAll("button").forEach(b => { b.disabled = dis; });
     $("fPrizeAdd").disabled = dis;
-    $("gwEditor").querySelectorAll(".ga-prize .btn, [data-plus]").forEach(b => { b.disabled = dis; });
+    $("gwEditor").querySelectorAll(".ga-prize .btn, .ga-prize-icon, [data-plus]").forEach(b => { b.disabled = dis; });
   }
 
   function renderPeople() {
@@ -715,7 +827,7 @@
       }).then(r => r.json()).then(r => {
         if (!r || !r.url) { $("fImgNote").textContent = "Не загрузилась: " + ((r && r.error) || "ошибка"); return; }
         setImage({ url: r.url, w: r.width || 1200, h: r.height || 675 });
-        $("fImgNote").textContent = "PNG, JPG или WebP до 6 МБ";
+        $("fImgNote").textContent = "PNG, JPG или WebP до 6 МБ. Без баннера шапку соберут иконки призов.";
         changed();
       }).catch(() => { $("fImgNote").textContent = "Не загрузилась"; });
     };
@@ -724,6 +836,7 @@
 
   function init() {
     wireEditor();
+    wirePicker();
     $("gwNew").addEventListener("click", () => { if (confirmLeave()) fill(blank()); });
     $("fPrizeAdd").addEventListener("click", () => { $("fPrizes").appendChild(prizeRow(null)); changed(); });
     $("fImgFile").addEventListener("change", e => { upload(e.target.files[0]); e.target.value = ""; });
