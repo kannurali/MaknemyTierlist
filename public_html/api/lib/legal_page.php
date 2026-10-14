@@ -41,15 +41,15 @@ function legal_page_open(string $slug, string $title, string $description): void
     // В Хэллоуин — фиолетовые копии стилей из css/hw/ (api/lib/halloween.php).
     $css = implode(PHP_EOL, HALLOWEEN ? [
         '<link rel="stylesheet" href="css/hw/base.css?v=15" />',
-        '<link rel="stylesheet" href="css/hw/topbar.css?v=23" />',
+        '<link rel="stylesheet" href="css/hw/topbar.css?v=24" />',
         '<link rel="stylesheet" href="css/hw/design-page.css?v=43" />',
-        '<link rel="stylesheet" href="css/hw/legal.css?v=2" />',
+        '<link rel="stylesheet" href="css/hw/legal.css?v=3" />',
         '<link rel="stylesheet" href="css/halloween.css?v=4" />',
     ] : [
         '<link rel="stylesheet" href="css/base.css?v=15" />',
-        '<link rel="stylesheet" href="css/topbar.css?v=23" />',
+        '<link rel="stylesheet" href="css/topbar.css?v=24" />',
         '<link rel="stylesheet" href="css/design-page.css?v=43" />',
-        '<link rel="stylesheet" href="css/legal.css?v=2" />',
+        '<link rel="stylesheet" href="css/legal.css?v=3" />',
     ]);
     echo <<<HTML
 <!DOCTYPE html>
@@ -92,9 +92,6 @@ HTML;
     </a>
     <nav class="mk-top-bar" aria-label="Разделы сайта">
       <ul class="mk-nav">
-        <!-- Иконки — те же, что в основной шапке сайта, и они обязательны: ниже
-             761px topbar.css прячет .mk-pill-text, и пилюля без значка
-             превращается в пустой синий кружок. -->
         <li><a class="mk-pill" href="/"><svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 16.0302V8.423C18.05 7.48807 17.644 6.60551 16.9498 6.03152L11.833 1.80094C10.4608 0.666372 8.53926 0.666371 7.16704 1.80094L2.05028 6.03152C1.35606 6.60551 0.950013 7.48807 0.950013 8.423V16.0302C0.950013 17.1457 1.80067 18.05 2.85001 18.05H4.75001C5.79936 18.05 6.65001 17.1994 6.65001 16.15V13.0006C6.65001 11.8851 7.50067 10.9808 8.55002 10.9808H10.45C11.4994 10.9808 12.35 11.8851 12.35 13.0006V16.15C12.35 17.1994 13.2007 18.05 14.25 18.05H16.15C17.1994 18.05 18.05 17.1457 18.05 16.0302Z" stroke="currentColor" stroke-width="1.81101"/></svg><span class="mk-pill-text">Главная</span></a></li>
         <li><a class="mk-pill" href="/tierlist"><svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M8.57627 3.7533C8.57627 3.22702 8.14799 2.79425 7.62582 2.85987C6.45486 3.00701 5.32947 3.42467 4.341 4.08515C3.08735 4.9228 2.11026 6.1134 1.53327 7.50637C0.95628 8.89935 0.805314 10.4321 1.09946 11.9109C1.39361 13.3897 2.11965 14.748 3.18579 15.8142C4.25193 16.8803 5.61027 17.6063 7.08904 17.9005C8.56781 18.1946 10.1006 18.0437 11.4936 17.4667C12.8866 16.8897 14.0771 15.9126 14.9148 14.659C15.5753 13.6705 15.9929 12.5451 16.1401 11.3741C16.2057 10.852 15.7729 10.4237 15.2466 10.4237H9.52918C9.0029 10.4237 8.57627 9.99705 8.57627 9.47077V3.7533Z" stroke="currentColor" stroke-width="1.82067"/><path d="M11.435 1.84748C11.435 1.3212 11.8638 0.887589 12.3847 0.962518C12.934 1.04153 13.4726 1.18898 13.9876 1.40232C14.7969 1.73754 15.5323 2.22887 16.1517 2.84828C16.7711 3.46768 17.2624 4.20302 17.5976 5.0123C17.811 5.52735 17.9584 6.06592 18.0374 6.61527C18.1124 7.13618 17.6787 7.56495 17.1525 7.56495L11.5303 7.56495C11.4777 7.56495 11.435 7.52228 11.435 7.46965V1.84748Z" stroke="currentColor" stroke-width="1.82067"/></svg><span class="mk-pill-text">Тирлист</span></a></li>
       </ul>

@@ -1264,6 +1264,7 @@
   }
 
   function otherModalOpen() {
+    if (window.NX_GW_POP && window.NX_GW_POP.isOpen()) return true;
     return ["#modal", "#viewModal", "#donateModal"].some(sel => {
       const el = $(sel);
       return el && !el.hidden;

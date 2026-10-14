@@ -610,7 +610,6 @@ const TG_NEWS_EXCERPT = 70;
 function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callable $build, ?callable $sleep = null): int {
     if (!in_array($topic, TG_TOPICS, true)) { return 0; }
     if (!tg_enabled($tg) || !tg_ready($pdo)) { return 0; }
-    $sleep = $sleep ?? function (int $us): void { usleep($us); };
 
     try {
         $rows = $pdo->query(
@@ -623,6 +622,18 @@ function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callab
         return 0;
     }
 
+    return tg_send_rows($pdo, $send, $rows, $build, $sleep);
+}
+
+/**
+ * Сам цикл рассылки: строки tg_links (chat_id, lang) → по сообщению на чат.
+ * Общий у рассылок цен и новостей и у розыгрышей (api/lib/giveaway.php),
+ * которые идут всем, мимо переключателей.
+ *
+ * $build($lang) → [текст, кнопки] или [текст, кнопки, доп. поля sendMessage].
+ */
+function tg_send_rows(PDO $pdo, callable $send, array $rows, callable $build, ?callable $sleep = null): int {
+    $sleep = $sleep ?? function (int $us): void { usleep($us); };
     $made = [];
     $seen = [];
     $sent = 0;
@@ -634,6 +645,7 @@ function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callab
         $lang = tg_lang($r['lang']);
         if (!isset($made[$lang])) { $made[$lang] = $build($lang); }
         $msg = tg_message_buttons($chatId, $made[$lang][0], $made[$lang][1]);
+        if (isset($made[$lang][2]) && is_array($made[$lang][2])) { $msg += $made[$lang][2]; }
 
         if (count($seen) > 1) { $sleep(TG_BROADCAST_GAP); }
         $res = $send('sendMessage', $msg);
@@ -872,7 +884,10 @@ function tg_setup_webhook(callable $send, string $token): bool {
     $res = $send('setWebhook', [
         'url'                  => TG_SITE . '/api/tg_webhook.php',
         'secret_token'         => tg_webhook_secret($token),
-        'allowed_updates'      => ['message'],
+        // my_chat_member — бота добавили в канал или убрали оттуда: так
+        // админка розыгрышей узнаёт каналы. chat_member — кто вступил в
+        // такой канал по ссылке розыгрыша и кто вышел (api/lib/giveaway.php).
+        'allowed_updates'      => ['message', 'my_chat_member', 'chat_member'],
         'drop_pending_updates' => true,
         'max_connections'      => 5,
     ]);

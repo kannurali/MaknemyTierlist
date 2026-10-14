@@ -522,7 +522,8 @@ test('установка вебхука отдаёт адрес сайта и с
     assert_eq('setWebhook', $log[0][0]);
     assert_eq('https://maknemy.com/api/tg_webhook.php', $log[0][1]['url']);
     assert_eq(tg_webhook_secret(TG_TOKEN), $log[0][1]['secret_token']);
-    assert_eq(['message'], $log[0][1]['allowed_updates']);
+    // my_chat_member — каналы для условий розыгрышей (api/lib/giveaway.php).
+    assert_eq(['message', 'my_chat_member', 'chat_member'], $log[0][1]['allowed_updates']);
 
     $fail = [];
     assert_eq(false, tg_setup_webhook(tg_recorder($fail, ['ok' => false, 'error_code' => 401]), TG_TOKEN), 'чужой токен');
