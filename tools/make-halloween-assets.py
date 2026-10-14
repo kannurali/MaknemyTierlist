@@ -11,7 +11,6 @@
                                      плагин больше 1568 px не отдаёт;
      branch.png                      исходник веток 1249×700 (замена сакуры);
      bat.png                         летучая мышь, компонент «image 5», 2x;
-     web.png                         паутина, компонент «image 6», 3x;
      card-*.png                      пять картинок карточек главной, 482×482.
    Фон режется так же, как в макете: нода 1983×3236 с заливкой FILL, то есть
    по высоте видна середина исходника 1080×1762. Ветки — по imageTransform
@@ -124,7 +123,6 @@ def from_figma(fig):
     save(cover(branch, (868, 890)), 'branch.webp', quality=85)
 
     save(Image.open(fig / 'bat.png').convert('RGBA'), 'bat.webp', quality=90)
-    save(Image.open(fig / 'web.png').convert('RGBA'), 'web.webp', quality=90)
     for name in ['fruits', 'tier', 'prices', 'giveaways', 'news']:
         save(Image.open(fig / f'card-{name}.png').convert('RGBA'), f'card-{name}.webp', quality=85)
 

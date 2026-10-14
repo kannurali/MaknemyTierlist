@@ -952,13 +952,16 @@ a.tr-ptn-in:hover .tr-ptn-cta { background: #f1dcff; }
   justify-content: center;
   min-height: 44px;
   height: calc(58 * var(--u));
-  padding: 0 calc(52 * var(--u));
+  padding: .2em calc(52 * var(--u)) 0;
   box-sizing: border-box;
   border-radius: 999px;
   color: #fff;
-  font-family: var(--ui);
+  font-family: var(--display);
   font-size: max(18px, calc(32 * var(--u)));
+  font-weight: 400;
+  line-height: 1;
   letter-spacing: .04em;
+  text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
 }
@@ -1250,5 +1253,5 @@ a.tr-ptn-in:hover .tr-ptn-cta { background: #f1dcff; }
   .sp-input { min-height: 150px; padding: 14px 16px; border-radius: 14px; font-size: 16px; }
   .sp-actions { margin: 10px 0 14px; justify-content: center; }
   .sp-send,
-  .sp-direct { flex: 1 1 200px; padding: 0 18px; font-size: 18px; }
+  .sp-direct { flex: 1 1 200px; padding: .2em 18px 0; font-size: 22px; }
 }
