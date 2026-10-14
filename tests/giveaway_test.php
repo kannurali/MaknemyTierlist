@@ -61,7 +61,7 @@ function gw_db(): PDO {
     $pdo->exec("CREATE TABLE tg_channels (
         chat_id INTEGER NOT NULL PRIMARY KEY, title TEXT NOT NULL DEFAULT '', username TEXT NOT NULL DEFAULT '',
         kind TEXT NOT NULL DEFAULT '', invite_url TEXT NOT NULL DEFAULT '', is_admin INTEGER NOT NULL DEFAULT 0,
-        updated_at INTEGER NOT NULL)");
+        missing TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL)");
     return $pdo;
 }
 
@@ -83,6 +83,13 @@ function gw_user(PDO $p, string $id, string $name, ?int $chat = null, string $la
 function gw_channel(PDO $p, int $id, string $title, bool $admin = true, string $username = ''): void {
     $p->prepare('INSERT INTO tg_channels (chat_id, title, username, kind, invite_url, is_admin, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       ->execute([$id, $title, $username, 'channel', $username === '' ? 'https://t.me/+secret' : '', $admin ? 1 : 0, GW_NOW]);
+}
+
+// Бот-админ канала со всеми нужными правами, кроме $without.
+function gw_bot_admin(array $without = []): array {
+    $m = ['status' => 'administrator', 'user' => ['id' => (int)strtok(GW_TOKEN, ':'), 'is_bot' => true], 'can_manage_chat' => true];
+    foreach (tg_admin_rights(true) as $k) { $m[$k] = !in_array($k, $without, true); }
+    return $m;
 }
 
 function gw_spans(string $s): array { return [['s' => $s]]; }
@@ -462,7 +469,8 @@ test('бота добавили в канал — канал появился, �
         if ($username !== '') { $chat['username'] = $username; }
         return ['update_id' => 1, 'my_chat_member' => [
             'chat' => $chat, 'from' => ['id' => 501],
-            'old_chat_member' => ['status' => 'left'], 'new_chat_member' => ['status' => $status],
+            'old_chat_member' => ['status' => 'left'],
+            'new_chat_member' => $status === 'administrator' ? gw_bot_admin() : ['status' => $status],
         ]];
     };
     assert_eq(GW_CH_A, gw_channel_update($p, $upd(GW_CH_A, 'administrator'), GW_NOW), 'приватный — просить ссылку');
@@ -489,13 +497,136 @@ test('«Обновить» канал: права бота и ссылка-пр�
     $send = function (string $m, array $a) use (&$log): ?array {
         $log[] = $m;
         if ($m === 'getChat') { return ['ok' => true, 'result' => ['id' => GW_CH_A, 'title' => 'Новое', 'type' => 'channel']]; }
-        if ($m === 'getChatMember') { return ['ok' => true, 'result' => ['status' => 'administrator']]; }
+        if ($m === 'getChatMember') { return ['ok' => true, 'result' => gw_bot_admin()]; }
         if ($m === 'exportChatInviteLink') { return ['ok' => true, 'result' => 'https://t.me/+AbCdEf']; }
         return null;
     };
     assert_true(gw_channel_refresh($p, tg_config(gw_cfg()), $send, GW_CH_A, GW_NOW));
     $c = gw_admin_channels($p)[0];
     assert_eq(['Новое', true, 'https://t.me/+AbCdEf'], [$c['title'], $c['admin'], $c['url']]);
+});
+
+// --------------------------------------------------------------------------
+//  Права бота в канале
+// --------------------------------------------------------------------------
+
+// my_chat_member: бот в канале был $old, стал $new (объекты ChatMember).
+function gw_promo_upd(array $old, array $new, array $from = ['id' => 501, 'language_code' => 'ru']): array {
+    return ['update_id' => 1, 'my_chat_member' => [
+        'chat' => ['id' => GW_CH_A, 'type' => 'channel', 'title' => 'Канал A'], 'from' => $from,
+        'old_chat_member' => $old, 'new_chat_member' => $new,
+    ]];
+}
+
+test('нужные права — те, что на скриншоте владельца', function () {
+    assert_eq(['can_post_messages', 'can_post_stories', 'can_restrict_members', 'can_invite_users', 'can_manage_direct_messages'],
+        tg_admin_rights(true));
+    assert_eq(['can_restrict_members', 'can_invite_users'], tg_admin_rights(false), 'у групп нет публикаций и историй');
+    assert_eq('https://t.me/MaknemyBot?startchannel&admin=post_messages+post_stories+restrict_members+invite_users+manage_direct_messages',
+        tg_add_channel_url('MaknemyBot'));
+    assert_eq('', tg_add_channel_url(''), 'бота нет — ссылки нет');
+});
+
+test('админ без нужных прав — канал не годится и админка говорит, чего нет', function () {
+    $p = gw_db();
+    $upd = gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_post_stories', 'can_manage_direct_messages']));
+    assert_eq(null, gw_channel_update($p, $upd, GW_NOW), 'ссылку без прав не просим');
+    $c = gw_admin_channels($p)[0];
+    assert_eq([false, ['Публикация историй', 'Доступ к сообщениям канала']], [$c['admin'], $c['missing']]);
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW);
+    assert_eq([409, ['channel_not_admin']], [$s, $res['problems']], 'в условия не ставится');
+
+    assert_eq(GW_CH_A, gw_channel_update($p, gw_promo_upd(gw_bot_admin(['can_post_stories']), gw_bot_admin()), GW_NOW + 1),
+        'права выдали — теперь и ссылку');
+    $c = gw_admin_channels($p)[0];
+    assert_eq([true, []], [$c['admin'], $c['missing']]);
+});
+
+test('бот пишет добавившему, каких прав не хватает', function () {
+    $r = gw_channel_reply(gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_invite_users'])), 'MaknemyBot');
+    assert_eq(['sendMessage', 501], [$r['method'], $r['chat_id']]);
+    assert_true(strpos($r['text'], '• Добавление подписчиков') !== false, 'право по-русски, как в Telegram');
+    assert_true(strpos($r['text'], 'Публикация историй') === false, 'выданные не перечисляет');
+    assert_eq(tg_add_channel_url('MaknemyBot'), $r['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка «Выдать права»');
+
+    $en = gw_channel_reply(gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_invite_users']), ['id' => 502, 'language_code' => 'de']), 'MaknemyBot');
+    assert_true(strpos($en['text'], '• Add Subscribers') !== false, 'не русскоязычному — по-английски');
+
+    $ok = gw_channel_reply(gw_promo_upd(gw_bot_admin(['can_invite_users']), gw_bot_admin()), 'MaknemyBot');
+    assert_true(strpos($ok['text'], '✅') === 0, 'все права есть — канал готов');
+    assert_eq(false, isset($ok['reply_markup']), 'без кнопки');
+
+    assert_eq(null, gw_channel_reply(gw_promo_upd(gw_bot_admin(), gw_bot_admin() + ['can_change_info' => true]), 'MaknemyBot'),
+        'поменяли ненужное право — молчит');
+    assert_eq(null, gw_channel_reply(gw_promo_upd(gw_bot_admin(), ['status' => 'left']), 'MaknemyBot'), 'бота убрали — молчит');
+    assert_eq(null, gw_channel_reply(gw_promo_upd(['status' => 'left'], gw_bot_admin(), ['id' => 77, 'is_bot' => true]), 'MaknemyBot'),
+        'добавил другой бот — молчит');
+    assert_eq(null, gw_channel_reply(['message' => ['text' => 'hi']], 'MaknemyBot'));
+});
+
+test('«Обновить» видит, каких прав не хватает', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    $send = function (string $m, array $a): ?array {
+        if ($m === 'getChat') { return ['ok' => true, 'result' => ['id' => GW_CH_A, 'title' => 'Канал A', 'type' => 'channel']]; }
+        if ($m === 'getChatMember') { return ['ok' => true, 'result' => gw_bot_admin(['can_restrict_members'])]; }
+        return null;
+    };
+    assert_true(gw_channel_refresh($p, tg_config(gw_cfg()), $send, GW_CH_A, GW_NOW));
+    $c = gw_admin_channels($p)[0];
+    assert_eq([false, ['Блокировка пользователей']], [$c['admin'], $c['missing']]);
+});
+
+test('перед публикацией права перечитываются у Telegram', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
+    $bot = (int)strtok(GW_TOKEN, ':');
+    $tg = function (array $me) use ($bot): callable {
+        return function (string $m, array $a) use ($me, $bot): ?array {
+            if ($m === 'getChatMember' && $a['user_id'] === $bot) { return $me; }
+            if ($m === 'createChatInviteLink') { return ['ok' => true, 'result' => ['invite_link' => 'https://t.me/+gwA']]; }
+            return ['ok' => true, 'result' => []];
+        };
+    };
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => true, 'result' => gw_bot_admin(['can_post_messages'])]), $bot);
+    assert_eq([409, ['channel_not_admin']], [$s, $res['problems']], 'канал записан как готовый, а прав уже нет');
+    assert_eq(['Отправка публикаций'], gw_admin_channels($p)[0]['missing']);
+
+    [$s] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => false, 'error_code' => 403]), $bot);
+    assert_eq(409, $s, 'бота выгнали из канала');
+    assert_eq(false, gw_admin_channels($p)[0]['admin']);
+
+    [$s] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => true, 'result' => gw_bot_admin()]), $bot);
+    assert_eq(200, $s, 'права вернули — публикуется');
+});
+
+test('Telegram не ответил при публикации — права остаются как записаны', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
+    $send = function (string $m, array $a): ?array {
+        if ($m === 'getChatMember') { return null; }
+        if ($m === 'createChatInviteLink') { return ['ok' => true, 'result' => ['invite_link' => 'https://t.me/+gwA']]; }
+        return ['ok' => true, 'result' => []];
+    };
+    [$s] = gw_publish($p, $out['id'], GW_NOW, $send, (int)strtok(GW_TOKEN, ':'));
+    assert_eq(200, $s);
+});
+
+test('до миграции прав каналы всё равно пишутся, а без прав не годятся', function () {
+    $p = gw_db();
+    $p->exec('DROP TABLE tg_channels');
+    $p->exec("CREATE TABLE tg_channels (
+        chat_id INTEGER NOT NULL PRIMARY KEY, title TEXT NOT NULL DEFAULT '', username TEXT NOT NULL DEFAULT '',
+        kind TEXT NOT NULL DEFAULT '', invite_url TEXT NOT NULL DEFAULT '', is_admin INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL)");
+    gw_channel_update($p, gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_post_stories'])), GW_NOW);
+    $c = gw_admin_channels($p)[0];
+    assert_eq(['Канал A', false, []], [$c['title'], $c['admin'], $c['missing']], 'каких прав нет — не знаем, но канал неготов');
+    assert_eq(GW_CH_A, gw_channel_update($p, gw_promo_upd(gw_bot_admin(['can_post_stories']), gw_bot_admin()), GW_NOW + 1));
+    assert_eq(true, gw_admin_channels($p)[0]['admin']);
 });
 
 // --------------------------------------------------------------------------

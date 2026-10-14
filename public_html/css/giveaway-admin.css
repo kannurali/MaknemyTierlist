@@ -169,6 +169,8 @@
 .ga-ch .btn { align-self: flex-start; }
 .ga-ch-top { display: flex; align-items: center; gap: 8px; }
 .ga-ch-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ga-ch-miss { color: #ffd59a; }
+.ga-ch-add { margin-top: 8px; }
 
 .ga-people { display: flex; flex-direction: column; gap: 8px; }
 .ga-table-wrap { overflow-x: auto; }

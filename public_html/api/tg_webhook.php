@@ -38,8 +38,10 @@ if (!defined('TESTING')) {
         $reply = tg_handle_update(db(), $update, time());
         // Бота добавили в канал или убрали — список каналов для условий
         // розыгрышей (api/lib/giveaway.php). Ссылку-приглашение приватного
-        // канала просим уже после ответа Telegram.
+        // канала просим уже после ответа Telegram. Добавившему бот сразу
+        // пишет, каких прав ему не дали.
         $invite = gw_channel_update(db(), $update, time());
+        $reply = $reply ?? gw_channel_reply($update, $tg['name']);
         // Кто-то вступил в канал по ссылке розыгрыша или вышел из канала —
         // учёт подписчиков и снятие участия у отписавшихся.
         $left = gw_member_update(db(), $update, time());

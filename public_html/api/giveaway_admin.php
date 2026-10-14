@@ -35,6 +35,8 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
             'channels'  => gw_admin_channels($pdo),
             'bot'       => $tg['name'],
             'tg'        => tg_enabled($tg),
+            'rights'    => tg_right_names(tg_admin_rights(true), 'ru'),
+            'add_url'   => tg_add_channel_url($tg['name']),
         ], null];
     }
     if ($action === 'save') {
@@ -66,7 +68,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
         return [200, ['ok' => true, 'report' => gw_report($pdo, $row)], null];
     }
     if ($action === 'publish') {
-        [$s, $p, $row] = gw_publish($pdo, $id, $now, $send);
+        [$s, $p, $row] = gw_publish($pdo, $id, $now, $send, tg_enabled($tg) ? (int)strtok((string)$tg['token'], ':') : 0);
         return [$s, $p, $row ? ['announce', $row] : null];
     }
     if ($action === 'end') {
