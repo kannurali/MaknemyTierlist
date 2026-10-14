@@ -33,10 +33,10 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=24" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=7" /><?php endif; ?>
@@ -110,10 +110,9 @@ page_lscache();
     </nav>
 
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
-            aria-expanded="true" aria-controls="mkTopBar"
+            aria-expanded="false" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
             data-i18n-title="topbar.showNav" title="Показать разделы">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
   <main class="sp-page">
