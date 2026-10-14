@@ -39,12 +39,12 @@ function gw_db(): PDO {
         seen_at INTEGER NOT NULL DEFAULT 0, notified_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (thread_id, user_id))');
     $pdo->exec('CREATE TABLE tg_prefs (
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
-    // Зеркалит docs/migrations/2026-10-14-giveaways.sql.
+    // Зеркалит docs/migrations/2026-10-14-giveaways.sql и 2026-10-15-giveaway-conds.sql.
     $pdo->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft',
         title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
-        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL,
+        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
         ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
         published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
     $pdo->exec("CREATE TABLE giveaway_entries (
@@ -228,6 +228,103 @@ test('автоперевод: пустой EN переводится, неизм
     assert_true(strpos($joined, 'Первый абзац') === false, 'старый взят из прежней версии');
     $blocks = gw_decode_blocks(gw_load($p, $out['id'])['body_json']);
     assert_eq('EN:Первый абзац', $blocks[0]['en'][0]['s'], 'EN старого абзаца на месте');
+});
+
+// --------------------------------------------------------------------------
+//  Свои условия: текст и ссылка
+// --------------------------------------------------------------------------
+
+const GW_YT = 'https://youtube.com/@maknemy?sub_confirmation=1';
+
+function gw_cond(string $ru, string $url = GW_YT, string $en = ''): array {
+    return ['ru' => $ru, 'en' => $en, 'url' => $url];
+}
+
+test('свои условия: текст обязателен, ссылка только http(s)', function () {
+    $bad = [
+        'без текста'          => [gw_cond('  ')],
+        'длинный текст'       => [gw_cond(str_repeat('я', GW_COND_TEXT_MAX + 1))],
+        'без ссылки'          => [gw_cond('YouTube', '')],
+        'javascript:'         => [gw_cond('YouTube', 'javascript:alert(1)')],
+        'без протокола'       => [gw_cond('YouTube', 'youtube.com/@maknemy')],
+        'кавычка в ссылке'    => [gw_cond('YouTube', 'https://a.b/"onmouseover=x')],
+        'пробел в ссылке'     => [gw_cond('YouTube', 'https://a.b/x y')],
+        'без хоста'           => [gw_cond('YouTube', 'https:///x')],
+        'длинная ссылка'      => [gw_cond('YouTube', 'https://a.b/' . str_repeat('x', GW_COND_URL_MAX))],
+        'не список'           => ['ru' => 'YouTube'],
+        'шесть условий'       => array_fill(0, GW_CONDS_MAX + 1, gw_cond('YouTube')),
+    ];
+    foreach ($bad as $why => $conds) {
+        assert_eq(false, gw_validate(gw_draft(['conds' => $conds]))['ok'], $why);
+    }
+    $v = gw_validate(gw_draft(['conds' => [gw_cond(' Подписаться  на YouTube ', ' ' . GW_YT . ' ', 'Subscribe')]]));
+    assert_true($v['ok'], 'хорошее условие проходит');
+    assert_eq([gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe')], $v['row']['conds'], 'пробелы срезаны');
+    assert_eq([], gw_validate(gw_draft())['row']['conds'], 'нет условий — пустой список');
+});
+
+test('свои условия видны в админке и на сайте, участию не мешают', function () {
+    $p = gw_db();
+    gw_user($p, '1', 'ann', 501);
+    $id = gw_live($p, ['conds' => [gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe on YouTube')]]);
+    assert_eq([gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe on YouTube')],
+        gw_admin_item($p, gw_load($p, $id), GW_NOW)['conds'], 'админка');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq([['text' => ['ru' => 'Подписаться на YouTube', 'en' => 'Subscribe on YouTube'], 'url' => GW_YT]],
+        $list['live'][0]['conds'], 'сайт');
+    $log = [];
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'участие без проверки условия');
+    assert_true(strpos(gw_announce_text(gw_load($p, $id), 'ru'), 'Условия — в карточке') !== false, 'рассылка про условия');
+
+    $p->exec("UPDATE giveaways SET conds_json = '[{\"ru\":\"x\",\"url\":\"javascript:alert(1)\"},{\"ru\":\"y\",\"url\":\"https://y.example\"}]'");
+    assert_eq([gw_cond('y', 'https://y.example')], gw_admin_item($p, gw_load($p, $id), GW_NOW)['conds'], 'кривое из базы пропущено');
+});
+
+test('свои условия: EN переводится, неизменённое не гоняется заново', function () {
+    $p = gw_db();
+    $asked = [];
+    $tr = function (string $text) use (&$asked): ?string {
+        $asked[] = $text;
+        return implode(TR_SEP, array_map(function ($t) { return 'EN:' . $t; }, explode(TR_SEP, $text)));
+    };
+    [$s, $out] = gw_save($p, gw_draft(['title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
+        'conds' => [gw_cond('Подписаться на YouTube'), gw_cond('Лайк', GW_YT, 'Like it')]]), GW_NOW, $tr);
+    assert_eq([200, 0], [$s, $out['translate_failed']]);
+    $conds = gw_conds(gw_load($p, $out['id'])['conds_json']);
+    assert_eq(['EN:Подписаться на YouTube', 'Like it'], array_column($conds, 'en'), 'пустой переведён, ручной не тронут');
+
+    // Админка присылает EN, который сама получила; русский второго поменяли.
+    $asked = [];
+    gw_save($p, gw_draft(['id' => $out['id'], 'title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
+        'conds' => [gw_cond('Подписаться на YouTube'), gw_cond('Лайк и коммент', GW_YT, 'Like it')]]), GW_NOW, $tr);
+    assert_eq(['Лайк и коммент'], $asked, 'переведён только изменённый');
+    $conds = gw_conds(gw_load($p, $out['id'])['conds_json']);
+    assert_eq(['EN:Подписаться на YouTube', 'EN:Лайк и коммент'], array_column($conds, 'en'), 'старый EN не остался под новым русским');
+
+    $fail = function (): ?string { return null; };
+    [$s, $out] = gw_save($p, gw_draft(['title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
+        'conds' => [gw_cond('Новое')]]), GW_NOW, $fail);
+    assert_eq([200, 1], [$s, $out['translate_failed']], 'переводчик молчит — сохранено, EN пустой');
+});
+
+test('до миграции conds_json: без своих условий сохраняется, с ними — просит миграцию', function () {
+    $p = gw_db();
+    $p->exec('ALTER TABLE giveaways RENAME TO giveaways_new');
+    $p->exec("CREATE TABLE giveaways (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft',
+        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
+        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL,
+        ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
+    [$s, $out] = gw_save($p, gw_draft(['conds' => [gw_cond('YouTube')]]), GW_NOW);
+    assert_eq([409, 'conds_migrate'], [$s, $out['error']]);
+    $id = gw_live($p);
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'title_ru' => 'Правка']), GW_NOW);
+    assert_eq(200, $s, 'правка без условий');
+    assert_eq([], gw_admin_item($p, gw_load($p, $id), GW_NOW)['conds']);
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq(['Правка', []], [$list['live'][0]['title']['ru'], $list['live'][0]['conds']], 'сайт показывает');
 });
 
 // --------------------------------------------------------------------------

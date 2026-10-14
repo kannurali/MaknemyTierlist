@@ -8,6 +8,7 @@
   var JOINED_KEY = "nx-gw-joined-v1";
   var RESUME_KEY = "nx-gw-resume-v1";
   var FROM_BOT_KEY = "nx-gw-from-bot-v1";
+  var COND_KEY = "nx-gw-cond-v1";
   var SESSION_WAIT = 5000;
   var LINK_POLL_MS = 3000;
   var LINK_POLL_FOR = 10 * 60 * 1000;
@@ -79,6 +80,19 @@
   function isJoined(id, s) {
     if (s && s.user && Array.isArray(s.giveaways) && s.giveaways.indexOf(id) >= 0) { return true; }
     return readJoined().indexOf(id) >= 0;
+  }
+
+  function readConds() {
+    try {
+      var v = JSON.parse(localStorage.getItem(COND_KEY));
+      return Array.isArray(v) ? v : [];
+    } catch (_) { return []; }
+  }
+
+  function markCond(key) {
+    var list = readConds().filter(function (x) { return x !== key; });
+    list.push(key);
+    try { localStorage.setItem(COND_KEY, JSON.stringify(list.slice(-100))); } catch (_) {}
   }
 
   function setResume(id) {
@@ -380,11 +394,28 @@
     return sec;
   }
 
-  function condItem(key, label) {
+  function safeUrl(u) {
+    return typeof u === "string" && /^https?:\/\/\S+$/i.test(u) ? u : "";
+  }
+
+  function condItem(key, label, url, btn) {
     var li = el("li", "gw-cond-item");
     li.setAttribute("data-k", key);
     li.appendChild(el("span", "gw-cond-mark"));
-    li.appendChild(el("span", "gw-cond-text", label));
+    url = safeUrl(url);
+    if (!url) {
+      li.appendChild(el("span", "gw-cond-text", label));
+      return li;
+    }
+    li.classList.add("has-link");
+    var a = el("a", "gw-cond-text", label);
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    li.appendChild(a);
+    var b = el("span", "gw-sub", btn);
+    b.setAttribute("aria-hidden", "true");
+    li.appendChild(b);
     return li;
   }
 
@@ -398,15 +429,24 @@
     list.appendChild(ui.cTg);
     ui.cChannels = {};
     (g.channels || []).forEach(function (c) {
-      var li = condItem("ch", t("gw.condChannel", { title: c.title }));
-      if (c.url) {
-        var a = el("a", "gw-sub", t("gw.subscribe"));
-        a.href = c.url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        li.appendChild(a);
-      }
+      var li = condItem("ch", t("gw.condChannel", { title: c.title }), c.url, t("gw.subscribe"));
       ui.cChannels[c.id] = li;
+      list.appendChild(li);
+    });
+    ui.cOwn = [];
+    var seen = readConds();
+    (g.conds || []).forEach(function (c, i) {
+      var li = condItem("own", pick(c.text), c.url, t("gw.open"));
+      var key = g.id + ":" + i;
+      if (g.id && seen.indexOf(key) >= 0) { mark(li, "ok"); }
+      var a = li.querySelector("a");
+      if (a) {
+        a.addEventListener("click", function () {
+          mark(li, "ok");
+          if (g.id) { markCond(key); }
+        });
+      }
+      ui.cOwn.push(li);
       list.appendChild(li);
     });
     sec.appendChild(list);
@@ -513,6 +553,7 @@
       mark(ui.cLogin, "ok");
       mark(ui.cTg, "ok");
       Object.keys(ui.cChannels || {}).forEach(function (k) { mark(ui.cChannels[k], "ok"); });
+      (ui.cOwn || []).forEach(function (li) { mark(li, "ok"); });
       setCta("gw.joined", true);
       say("gw.joinedNote", { date: date(g.ends_at) });
       if (opts.onJoined) { opts.onJoined(g); }

@@ -146,6 +146,12 @@
 .ga-prize-name { flex: 1 1 auto; }
 .ga-prize-count { width: 90px; flex: none; }
 
+.ga-conds { display: flex; flex-direction: column; gap: 6px; }
+.ga-conds:empty { display: none; }
+.ga-cond { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ga-cond-ru, .ga-cond-en { flex: 1 1 180px; min-width: 0; }
+.ga-cond-url { flex: 2 1 240px; min-width: 0; }
+
 .ga-ch-off { opacity: .6; }
 .ga-quick { justify-content: flex-end; }
 

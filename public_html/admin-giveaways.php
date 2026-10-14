@@ -25,8 +25,8 @@ echo <<<HTML
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
-<link rel="stylesheet" href="/css/giveaway.css?v=1" />
-<link rel="stylesheet" href="/css/giveaway-admin.css?v=2" />
+<link rel="stylesheet" href="/css/giveaway.css?v=2" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=3" />
 </head>
 <body>
 {$nav}
@@ -105,6 +105,11 @@ echo <<<HTML
         <div class="pages" id="fChannels"></div>
       </div>
 
+      <div class="f">Свои условия <span class="muted">(текст и ссылка — YouTube, TikTok, что угодно; нажатие на условие открывает ссылку; бот их не проверяет, участвовать можно и без них)</span>
+        <div class="ga-conds" id="fConds"></div>
+        <div><button class="btn small" id="fCondAdd" type="button">＋ Условие</button></div>
+      </div>
+
       <div class="row">
         <label class="f">Конец (МСК)
           <input type="datetime-local" id="fEnds" />
@@ -165,10 +170,10 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=71"></script>
+<script src="/js/i18n.js?v=72"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=1"></script>
-<script src="/js/giveaway-admin.js?v=2"></script>
+<script src="/js/giveaway.js?v=2"></script>
+<script src="/js/giveaway-admin.js?v=3"></script>
 </body>
 </html>
 HTML;

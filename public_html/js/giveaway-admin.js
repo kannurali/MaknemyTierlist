@@ -38,6 +38,10 @@
     "body too large": "Описание слишком длинное.",
     "bad prize name": "У приза нет названия (или оно длиннее 60 символов).",
     "bad prize count": "Число победителей приза — от 1 до 1000.",
+    "bad conds": "Своих условий — не больше пяти.",
+    "bad cond text": "У условия нет текста (или он длиннее 100 символов).",
+    "bad cond url": "Ссылка условия должна начинаться с https:// и быть без пробелов (до 300 символов).",
+    conds_migrate: "Для своих условий выполните docs/migrations/2026-10-15-giveaway-conds.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -467,6 +471,46 @@
     })).filter(p => p.name);
   }
 
+  function condRow(c) {
+    const row = document.createElement("div");
+    row.className = "ga-cond";
+    const ru = document.createElement("input");
+    ru.type = "text";
+    ru.maxLength = 100;
+    ru.placeholder = "Подписаться на YouTube Maknemy";
+    ru.value = c ? c.ru : "";
+    ru.className = "ga-cond-ru";
+    const en = document.createElement("input");
+    en.type = "text";
+    en.maxLength = 100;
+    en.placeholder = "По-английски (пусто — переведём)";
+    en.value = c ? c.en : "";
+    en.className = "ga-cond-en";
+    const url = document.createElement("input");
+    url.type = "url";
+    url.maxLength = 300;
+    url.placeholder = "https://youtube.com/@maknemy";
+    url.value = c ? c.url : "";
+    url.className = "ga-cond-url";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn small danger";
+    del.textContent = "✕";
+    del.title = "Убрать условие";
+    del.addEventListener("click", () => { row.remove(); changed(); });
+    [ru, en, url].forEach(i => i.addEventListener("input", changed));
+    row.append(ru, en, url, del);
+    return row;
+  }
+
+  function readConds() {
+    return Array.from($("fConds").querySelectorAll(".ga-cond")).map(r => ({
+      ru: r.querySelector(".ga-cond-ru").value.trim(),
+      en: r.querySelector(".ga-cond-en").value.trim(),
+      url: r.querySelector(".ga-cond-url").value.trim()
+    })).filter(c => c.ru || c.url);
+  }
+
   function renderChannelChecks(selected) {
     const box = $("fChannels");
     box.textContent = "";
@@ -615,7 +659,8 @@
     $("fBody").contentEditable = dis ? "false" : "true";
     $("fTools").querySelectorAll("button").forEach(b => { b.disabled = dis; });
     $("fPrizeAdd").disabled = dis;
-    $("gwEditor").querySelectorAll(".ga-prize .btn, .ga-prize-icon, [data-plus]").forEach(b => { b.disabled = dis; });
+    $("fCondAdd").disabled = dis;
+    $("gwEditor").querySelectorAll(".ga-prize .btn, .ga-prize-icon, .ga-cond .btn, [data-plus]").forEach(b => { b.disabled = dis; });
   }
 
   function renderPeople() {
@@ -838,6 +883,7 @@
       body: { v: 1, blocks: editorBlocks() },
       prizes: readPrizes(),
       channels: readChannels(),
+      conds: readConds(),
       ends_at: fromInput($("fEnds").value)
     };
   }
@@ -861,6 +907,7 @@
         body: d.body.blocks,
         prizes: d.prizes,
         channels: chans,
+        conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url })),
         ends_at: d.ends_at || Math.floor(Date.now() / 1000) + 86400,
         entries: S.cur.entries || 0,
         winners: (S.cur.list || []).filter(e => e.prize !== null)
@@ -889,6 +936,9 @@
     pr.textContent = "";
     (g.prizes && g.prizes.length ? g.prizes : [null]).forEach(p => pr.appendChild(prizeRow(p)));
     renderChannelChecks(g.channels || []);
+    const cs = $("fConds");
+    cs.textContent = "";
+    (g.conds || []).forEach(c => cs.appendChild(condRow(c)));
     $("fEnds").value = toInput(g.ends_at);
     msg("");
     hint("");
@@ -902,7 +952,7 @@
   function blank() {
     return {
       id: 0, status: "draft", phase: "draft", title_ru: "", title_en: "", image: null,
-      body: { v: 1, blocks: [] }, prizes: [], channels: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
+      body: { v: 1, blocks: [] }, prizes: [], channels: [], conds: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
       published_at: 0, drawn_at: 0, entries: 0, list: []
     };
   }
@@ -1024,6 +1074,13 @@
     wirePicker();
     $("gwNew").addEventListener("click", () => { if (confirmLeave()) fill(blank()); });
     $("fPrizeAdd").addEventListener("click", () => { $("fPrizes").appendChild(prizeRow(null)); changed(); });
+    $("fCondAdd").addEventListener("click", () => {
+      if ($("fConds").children.length >= 5) { msg(ERRORS["bad conds"], true); return; }
+      const row = condRow(null);
+      $("fConds").appendChild(row);
+      row.querySelector("input").focus();
+      changed();
+    });
     $("fImgFile").addEventListener("change", e => { upload(e.target.files[0]); e.target.value = ""; });
     $("fImgDel").addEventListener("click", () => { setImage(null); changed(); });
     ["fTitleRu", "fTitleEn", "fEnds"].forEach(id => $(id).addEventListener("input", changed));
