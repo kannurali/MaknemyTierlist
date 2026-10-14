@@ -112,6 +112,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -440,13 +441,16 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
   <script src="js/promo.js?v=26" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
 
-  <script src="js/promo-popup.js?v=5" fetchpriority="high"></script>
+  <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
   <script src="js/calculator-page.js?v=27" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=1" fetchpriority="high"></script>
+  <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

@@ -124,8 +124,8 @@ function admin_render_public_page(string $file): ?string {
     return metrika_strip($html);
 }
 
-// Top bar shared by every panel. $active is 'tier', 'news', 'promo', 'support'
-// or 'bans'. Модератор видит две вкладки — обращения и баны: других страниц
+// Top bar shared by every panel. $active is 'tier', 'news', 'promo',
+// 'giveaways', 'support' or 'bans'. Модератор видит две вкладки — обращения и баны: других страниц
 // ему не открыть.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
@@ -135,6 +135,7 @@ function admin_nav(string $active): string {
             'tier'    => ['/admin', 'Тирлист'],
             'news'    => ['/admin/news', 'Новости'],
             'promo'   => ['/admin/promo', 'Реклама'],
+            'giveaways' => ['/admin/giveaways', 'Розыгрыши'],
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
         ]

@@ -38,6 +38,7 @@
   function blocked() {
     if (cfg && cfg.isAdmin) { return true; }
     if (cfg && typeof cfg.busy === "function" && cfg.busy()) { return true; }
+    if (root.NX_GW_POP && root.NX_GW_POP.isOpen()) { return true; }
     return false;
   }
 
