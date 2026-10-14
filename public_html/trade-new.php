@@ -49,7 +49,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=29" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=7" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
