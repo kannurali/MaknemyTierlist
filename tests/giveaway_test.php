@@ -47,10 +47,17 @@ function gw_db(): PDO {
         body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL,
         ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
         published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
-    $pdo->exec('CREATE TABLE giveaway_entries (
+    $pdo->exec("CREATE TABLE giveaway_entries (
         giveaway_id INTEGER NOT NULL, user_id INTEGER NOT NULL, chat_id INTEGER NOT NULL,
-        joined_at INTEGER NOT NULL, prize INTEGER NULL,
-        PRIMARY KEY (giveaway_id, user_id), UNIQUE (giveaway_id, chat_id))');
+        joined_at INTEGER NOT NULL, prize INTEGER NULL, src TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (giveaway_id, user_id), UNIQUE (giveaway_id, chat_id))");
+    $pdo->exec('CREATE TABLE giveaway_links (
+        giveaway_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, invite_url TEXT NOT NULL, created_at INTEGER NOT NULL,
+        PRIMARY KEY (giveaway_id, channel_id), UNIQUE (invite_url))');
+    $pdo->exec("CREATE TABLE giveaway_subs (
+        giveaway_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, tg_user_id INTEGER NOT NULL,
+        tg_name TEXT NOT NULL DEFAULT '', joined_at INTEGER NOT NULL, left_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (giveaway_id, channel_id, tg_user_id))");
     $pdo->exec("CREATE TABLE tg_channels (
         chat_id INTEGER NOT NULL PRIMARY KEY, title TEXT NOT NULL DEFAULT '', username TEXT NOT NULL DEFAULT '',
         kind TEXT NOT NULL DEFAULT '', invite_url TEXT NOT NULL DEFAULT '', is_admin INTEGER NOT NULL DEFAULT 0,
@@ -116,6 +123,9 @@ function gw_tg(array &$log, array $subs = [], array $down = []): callable {
             if (in_array($params['chat_id'], $down, true)) { return null; }
             $in = in_array($params['user_id'], $subs[$params['chat_id']] ?? [], true);
             return ['ok' => true, 'result' => ['status' => $in ? 'member' : 'left']];
+        }
+        if ($method === 'createChatInviteLink') {
+            return ['ok' => true, 'result' => ['invite_link' => 'https://t.me/+gw' . abs($params['chat_id']) . md5($params['name'])]];
         }
         return ['ok' => true, 'result' => []];
     };
@@ -243,7 +253,8 @@ test('о старте бот пишет всем, даже выключивши�
     assert_true(strpos($msgs[0][1]['text'], 'Chromatic Box') !== false && strpos($msgs[0][1]['text'], 'Box ×') === false,
         'приз на одного — без «× 1»');
     assert_true(strpos($msgs[1][1]['text'], 'New giveaway') !== false, 'английский — по языку привязки');
-    assert_eq('https://maknemy.com/giveaways#g' . $id, $msgs[0][1]['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка ведёт на розыгрыш');
+    assert_eq('https://maknemy.com/giveaways#g' . $id . '-tg', $msgs[0][1]['reply_markup']['inline_keyboard'][0][0]['url'],
+        'кнопка ведёт на розыгрыш с пометкой «из бота»');
     assert_eq('https://maknemy.com/images/' . str_repeat('a', 40) . '.png', $msgs[0][1]['link_preview_options']['url'], 'картинка превью');
 });
 
@@ -519,6 +530,162 @@ test('админка без миграции просит её', function () {
     $log = [];
     [$s, $out] = handle_gw_admin(test_db(), gw_cfg(), gw_tg($log), ['action' => 'list'], GW_NOW);
     assert_eq([503, 'not_ready'], [$s, $out['error']]);
+});
+
+// --------------------------------------------------------------------------
+//  Учёт подписчиков для рекламодателя
+// --------------------------------------------------------------------------
+
+// Обновление chat_member: $tgUser вступил в канал (по ссылке $link) или вышел.
+function gw_member(int $channel, int $tgUser, string $status, string $link = '', string $username = 'newbie'): array {
+    $m = [
+        'chat' => ['id' => $channel, 'type' => 'channel', 'title' => 'Канал'],
+        'from' => ['id' => $tgUser],
+        'date' => GW_NOW,
+        'old_chat_member' => ['status' => $status === 'member' ? 'left' : 'member', 'user' => ['id' => $tgUser]],
+        'new_chat_member' => ['status' => $status, 'user' => ['id' => $tgUser, 'is_bot' => false, 'first_name' => 'N', 'username' => $username]],
+    ];
+    if ($link !== '') { $m['invite_link'] = ['invite_link' => $link, 'name' => 'Maknemy']; }
+    return ['update_id' => 1, 'chat_member' => $m];
+}
+
+// Опубликовать через админку (с созданием ссылок). Возвращает [id, ссылка канала A].
+function gw_live_links(PDO $p, array $extra = []): array {
+    $log = [];
+    [$s, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]] + $extra), GW_NOW - 10);
+    [$s] = gw_publish($p, $out['id'], GW_NOW - 5, gw_tg($log));
+    assert_eq(200, $s, 'опубликован со ссылками');
+    return [$out['id'], gw_links($p, [$out['id']])[$out['id']][GW_CH_A]];
+}
+
+test('публикация заводит свою ссылку-приглашение в каждом канале', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_channel($p, GW_CH_B, 'Канал B', true, 'public_b');
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A, GW_CH_B]]), GW_NOW);
+    $log = [];
+    [$s] = gw_publish($p, $out['id'], GW_NOW, gw_tg($log));
+    assert_eq(200, $s);
+    $calls = gw_sent($log, 'createChatInviteLink');
+    assert_eq(2, count($calls), 'по ссылке на канал');
+    assert_eq('Maknemy #' . $out['id'], $calls[0][1]['name'], 'имя ссылки видно в канале');
+    $links = gw_links($p, [$out['id']])[$out['id']];
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq([$links[GW_CH_A], $links[GW_CH_B]], array_column($list['live'][0]['channels'], 'url'),
+        'кнопка «Подписаться» ведёт на ссылку розыгрыша, даже у публичного канала');
+});
+
+test('нет права на ссылки — публикация не проходит и говорит, где', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
+    $deny = function (string $m, array $a): ?array {
+        return $m === 'createChatInviteLink' ? ['ok' => false, 'error_code' => 400, 'description' => 'not enough rights'] : ['ok' => true];
+    };
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW, $deny);
+    assert_eq([409, ['invite_link'], ['Канал A']], [$s, $res['problems'], $res['channels']]);
+    assert_eq('draft', gw_load($p, $out['id'])['status'], 'остался черновиком');
+});
+
+test('участие запоминает, откуда человек пришёл, и бот подтверждает', function () {
+    $p = gw_db();
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502, 'en');
+    $id = gw_live($p);
+    $log = [];
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW, 'tg');
+    assert_eq(501, $r[2]['chat_id'], 'кому подтвердить');
+    $again = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW, 'tg');
+    assert_eq(null, $again[2] ?? null, 'повторно — без второго сообщения');
+    gw_enter($p, gw_cfg(), gw_tg($log), '2', $id, GW_NOW, 'hack');
+    assert_eq(['1' => 'tg', '2' => ''], array_map('strval', $p->query('SELECT user_id, src FROM giveaway_entries ORDER BY user_id')->fetchAll(PDO::FETCH_KEY_PAIR)),
+        'чужое значение источника не пишется');
+
+    $log = [];
+    gw_after_join($p, gw_cfg(), $r[2], gw_tg($log));
+    $msg = gw_sent($log)[0][1];
+    assert_eq(501, $msg['chat_id']);
+    assert_true(strpos($msg['text'], 'Вы участвуете в розыгрыше «Розыгрыш Magnet»') !== false, 'подтверждение');
+    assert_true(strpos($msg['text'], 'отпишетесь') === false, 'без каналов — без предупреждения об отписке');
+    $row = gw_load($p, $id);
+    $row['channels_json'] = '[' . GW_CH_A . ']';
+    assert_true(strpos(gw_joined_text($row, 'ru'), 'участие снимется автоматически') !== false, 'с каналами — предупреждение');
+});
+
+test('вступил по ссылке розыгрыша — в списке; по чужой ссылке — нет', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    [$id, $link] = gw_live_links($p);
+    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 901, 'member', $link), GW_NOW));
+    gw_member_update($p, gw_member(GW_CH_A, 902, 'member', 'https://t.me/+someoneelse'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_A, 903, 'member'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 904, 'member', $link), GW_NOW);
+    $subs = $p->query('SELECT tg_user_id, tg_name FROM giveaway_subs')->fetchAll(PDO::FETCH_KEY_PAIR);
+    assert_eq([901 => '@newbie'], array_map('strval', $subs), 'только пришедший по нашей ссылке в наш канал');
+});
+
+test('отписался — участие снято, бот пишет, в отчёте видно', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_channel($p, GW_CH_B, 'Канал B');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    [$id, $link] = gw_live_links($p);
+    $other = gw_live($p, ['title_ru' => 'Без канала A']);
+    $log = [];
+    $subs = [GW_CH_A => [501, 502]];
+    gw_member_update($p, gw_member(GW_CH_A, 501, 'member', $link, 'ann'), GW_NOW);
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '1', $id, GW_NOW, 'pop');
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '2', $id, GW_NOW, 'tg');
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '1', $other, GW_NOW, 'page');
+
+    gw_member_update($p, gw_member(GW_CH_B, 501, 'left'), GW_NOW + 5);
+    assert_eq(3, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'вышел из чужого канала — ничего не снято');
+
+    $notes = gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 10);
+    assert_eq(1, count($notes), 'одно уведомление');
+    assert_eq([501, 'Канал A', $id], [$notes[0]['chat_id'], $notes[0]['channel'], (int)$notes[0]['row']['id']]);
+    $left = $p->query('SELECT giveaway_id, user_id FROM giveaway_entries ORDER BY giveaway_id, user_id')->fetchAll(PDO::FETCH_NUM);
+    assert_eq([[$id, 2], [$other, 1]], array_map(function ($r) { return array_map('intval', $r); }, $left),
+        'снято только там, где канал A в условиях');
+    assert_eq([$other], gw_joined_ids($p, '1', GW_NOW), 'окно снова позовёт в розыгрыш');
+
+    $log = [];
+    gw_after_member($p, gw_cfg(), $notes, GW_NOW + 10, gw_tg($log));
+    $msg = gw_sent($log)[0][1];
+    assert_true(strpos($msg['text'], 'отписались от канала «Канал A»') !== false && strpos($msg['text'], 'подпишитесь снова') !== false, 'текст отписки');
+
+    $rep = gw_report($p, gw_load($p, $id));
+    assert_eq(['tg' => 1, 'pop' => 0, 'page' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
+    $ch = $rep['channels'][0];
+    assert_eq([1, 0, $link], [$ch['joined'], $ch['stayed'], $ch['link']], 'пришёл 1, остался 0');
+    assert_eq(['501', '@ann', GW_NOW + 10, '1', false], [$ch['list'][0]['tg_id'], $ch['list'][0]['tg_name'], $ch['list'][0]['left_at'],
+        $ch['list'][0]['site_id'], $ch['list'][0]['entered']], 'кто, когда ушёл, аккаунт сайта');
+
+    gw_member_update($p, gw_member(GW_CH_A, 501, 'member', $link, 'ann'), GW_NOW + 20);
+    assert_eq(1, gw_report($p, gw_load($p, $id))['channels'][0]['stayed'], 'вернулся по ссылке — снова подписан');
+});
+
+test('после итогов отписка участие не трогает', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    [$id] = gw_live_links($p);
+    $log = [];
+    gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), '1', $id, GW_NOW);
+    gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), $id, GW_NOW + 86400);
+    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 90000));
+    assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'победитель остался в списке');
+});
+
+test('удаление розыгрыша чистит ссылки и подписчиков', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    [$id, $link] = gw_live_links($p);
+    gw_member_update($p, gw_member(GW_CH_A, 901, 'member', $link), GW_NOW);
+    gw_delete($p, $id);
+    assert_eq([0, 0], [(int)$p->query('SELECT COUNT(*) FROM giveaway_links')->fetchColumn(),
+        (int)$p->query('SELECT COUNT(*) FROM giveaway_subs')->fetchColumn()]);
 });
 
 // --------------------------------------------------------------------------

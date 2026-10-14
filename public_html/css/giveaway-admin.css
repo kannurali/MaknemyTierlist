@@ -192,3 +192,21 @@
   background: var(--panel);
 }
 .ga-preview-box { background: #050a1c; border-radius: 12px; padding: 12px; }
+
+.ga-report { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--edge); }
+.ga-sources { margin: 0; font-size: 13px; color: var(--text); }
+.ga-report-channels { display: flex; flex-direction: column; gap: 12px; }
+.ga-rep-ch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.ga-rep-ch p { margin: 0; }
+.ga-rep-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.ga-rep-nums { color: var(--muted); font-size: 13px; }
+.ga-rep-link { flex: 1 1 260px; font-family: Consolas, monospace; font-size: 12px; }
+.ga-table tr.is-left td { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(255, 90, 82, .6); }

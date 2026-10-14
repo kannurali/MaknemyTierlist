@@ -3,7 +3,7 @@ require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/giveaway.php';
 
 // Кнопка «Участвовать» в окне и на странице розыгрышей —
-// POST /api/giveaway_enter.php {"id": 12}
+// POST /api/giveaway_enter.php {"id": 12, "src": "tg"|"pop"|"page"}
 //   → {"ok":true,"joined":true}
 //   → {"ok":false,"error":"login"|"banned"|"closed"|"tg"|"tg_used"|"channels"|"tg_down", "missing":[…]}
 // Что значит каждая ошибка — см. gw_enter() в api/lib/giveaway.php.
@@ -32,6 +32,9 @@ if (!defined('TESTING')) {
         json_out(['ok' => false, 'error' => 'closed'], 503);
         exit;
     }
-    [$status, $payload] = gw_enter(db(), $cfg, tg_http($tg['token']), $me, read_row_id(read_json_body()), time());
-    json_out($payload, $status);
+    $body = read_json_body();
+    $result = gw_enter(db(), $cfg, tg_http($tg['token']), $me, read_row_id($body), time(), gw_src($body['src'] ?? ''));
+    json_out($result[1], $result[0]);
+    // Только что вступил — бот подтверждает уже после ответа окну.
+    if (!empty($result[2])) { gw_after_join(db(), $cfg, $result[2]); }
 }

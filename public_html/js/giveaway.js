@@ -7,6 +7,7 @@
   var LANG_KEY = "nexus-lang-v1";
   var JOINED_KEY = "nx-gw-joined-v1";
   var RESUME_KEY = "nx-gw-resume-v1";
+  var FROM_BOT_KEY = "nx-gw-from-bot-v1";
   var SESSION_WAIT = 5000;
   var LINK_POLL_MS = 3000;
   var LINK_POLL_FOR = 10 * 60 * 1000;
@@ -89,6 +90,23 @@
     try { v = sessionStorage.getItem(RESUME_KEY); sessionStorage.removeItem(RESUME_KEY); } catch (_) {}
     var n = v ? parseInt(v, 10) : 0;
     return n > 0 ? n : 0;
+  }
+
+  function readFromBot() {
+    try { return JSON.parse(sessionStorage.getItem(FROM_BOT_KEY)) || {}; } catch (_) { return {}; }
+  }
+
+  function noteFromBot() {
+    var m = /^#g(\d+)-tg$/.exec(location.hash);
+    if (!m) { return; }
+    var v = readFromBot();
+    v[m[1]] = 1;
+    try { sessionStorage.setItem(FROM_BOT_KEY, JSON.stringify(v)); } catch (_) {}
+  }
+
+  function source(id, mode) {
+    if (readFromBot()[String(id)]) { return "tg"; }
+    return mode === "page" ? "page" : "pop";
   }
 
   function post(url, body) {
@@ -548,7 +566,7 @@
       cardEl.classList.add("is-busy");
       ui.cta.disabled = true;
       say("");
-      post(ENTER, { id: g.id }).then(function (r) {
+      post(ENTER, { id: g.id, src: source(g.id, opts.mode) }).then(function (r) {
         st.busy = false;
         cardEl.classList.remove("is-busy");
         ui.cta.disabled = false;
@@ -611,6 +629,8 @@
       if (st.user === false) { setCta("gw.joinLogin"); }
     });
   }
+
+  noteFromBot();
 
   root.NX_GW = {
     load: load,

@@ -885,8 +885,9 @@ function tg_setup_webhook(callable $send, string $token): bool {
         'url'                  => TG_SITE . '/api/tg_webhook.php',
         'secret_token'         => tg_webhook_secret($token),
         // my_chat_member — бота добавили в канал или убрали оттуда: так
-        // админка розыгрышей узнаёт каналы (api/lib/giveaway.php).
-        'allowed_updates'      => ['message', 'my_chat_member'],
+        // админка розыгрышей узнаёт каналы. chat_member — кто вступил в
+        // такой канал по ссылке розыгрыша и кто вышел (api/lib/giveaway.php).
+        'allowed_updates'      => ['message', 'my_chat_member', 'chat_member'],
         'drop_pending_updates' => true,
         'max_connections'      => 5,
     ]);

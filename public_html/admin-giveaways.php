@@ -132,10 +132,16 @@ echo <<<HTML
         <div class="list-head">Участники <span class="muted" id="gwCount"></span></div>
         <div class="ga-table-wrap">
           <table class="ga-table">
-            <thead><tr><th>Игрок</th><th>Telegram</th><th>Когда</th><th>Приз</th><th></th></tr></thead>
+            <thead><tr><th>Игрок</th><th>Telegram</th><th>Когда</th><th>Откуда</th><th>Приз</th><th></th></tr></thead>
             <tbody id="gwPeopleBody"></tbody>
           </table>
         </div>
+      </section>
+
+      <section class="ga-report" id="gwReport" hidden>
+        <div class="list-head">Для рекламодателя</div>
+        <p class="ga-sources" id="gwSources"></p>
+        <div class="ga-report-channels" id="gwReportChannels"></div>
       </section>
     </section>
 

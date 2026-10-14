@@ -39,7 +39,7 @@
 
     if (!focused) {
       focused = true;
-      var m = /^#g(\d+)$/.exec(location.hash);
+      var m = /^#g(\d+)(?:-tg)?$/.exec(location.hash);
       var target = m ? $("g" + m[1]) : null;
       if (target) {
         target.classList.add("is-target");

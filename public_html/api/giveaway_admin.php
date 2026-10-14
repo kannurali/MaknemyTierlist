@@ -7,6 +7,8 @@ require_once __DIR__ . '/lib/giveaway.php';
 //
 //   list            → розыгрыши, каналы, имя бота
 //   get {id}        → розыгрыш целиком с участниками
+//   report {id}     → для рекламодателя: источники участников и кто
+//                     подписался на каналы по ссылке розыгрыша
 //   save {id?, …}   → сохранить черновик или правку (пустой EN переводит Google)
 //   publish {id}    → старт; бот пишет всем после ответа
 //   end {id}        → закончить досрочно
@@ -37,6 +39,9 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'save') {
         [$s, $p] = gw_save($pdo, $body, $now, $translate);
+        // Идущему розыгрышу добавили канал — ему тоже нужна своя ссылка.
+        $row = $s === 200 ? gw_load($pdo, (int)$p['id']) : null;
+        if ($row && $row['status'] === 'live') { $p['link_failed'] = gw_ensure_links($pdo, $send, $row, $now); }
         return [$s, $p, null];
     }
     if ($action === 'channel') {
@@ -55,8 +60,13 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
         if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], null]; }
         return [200, ['ok' => true, 'giveaway' => gw_admin_item($pdo, $row, $now)], null];
     }
+    if ($action === 'report') {
+        $row = gw_load($pdo, $id);
+        if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], null]; }
+        return [200, ['ok' => true, 'report' => gw_report($pdo, $row)], null];
+    }
     if ($action === 'publish') {
-        [$s, $p, $row] = gw_publish($pdo, $id, $now);
+        [$s, $p, $row] = gw_publish($pdo, $id, $now, $send);
         return [$s, $p, $row ? ['announce', $row] : null];
     }
     if ($action === 'end') {
@@ -90,7 +100,7 @@ if (!defined('TESTING')) {
     if ($action === 'draw') { tg_long_run(); }
 
     [$status, $payload, $after] = handle_gw_admin(db(), $cfg, $send, $body, time(), 'tr_google_request');
-    if ($status === 200 && !in_array($action, ['list', 'get', 'channel'], true)) {
+    if ($status === 200 && !in_array($action, ['list', 'get', 'channel', 'report'], true)) {
         header('X-LiteSpeed-Purge: tag=giveaways');
     }
     json_out($payload, $status);

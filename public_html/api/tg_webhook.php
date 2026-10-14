@@ -32,6 +32,7 @@ if (!defined('TESTING')) {
 
     $reply = null;
     $invite = null;
+    $left = [];
     try {
         $update = read_json_body();
         $reply = tg_handle_update(db(), $update, time());
@@ -39,9 +40,13 @@ if (!defined('TESTING')) {
         // розыгрышей (api/lib/giveaway.php). Ссылку-приглашение приватного
         // канала просим уже после ответа Telegram.
         $invite = gw_channel_update(db(), $update, time());
+        // Кто-то вступил в канал по ссылке розыгрыша или вышел из канала —
+        // учёт подписчиков и снятие участия у отписавшихся.
+        $left = gw_member_update(db(), $update, time());
     } catch (Throwable $e) {
         error_log('tg webhook: ' . $e->getMessage());
     }
     json_out($reply ?? ['ok' => true]);
     if ($invite !== null) { gw_after_channel(db(), app_config(), $invite, time()); }
+    if ($left) { gw_after_member(db(), app_config(), $left, time()); }
 }

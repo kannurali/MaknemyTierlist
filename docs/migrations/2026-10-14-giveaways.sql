@@ -6,8 +6,10 @@
 -- а админка — «выполните миграцию». Логика — api/lib/giveaway.php.
 --
 -- После миграции: /admin/support → «Подключить вебхук» ещё раз (бот начинает
--- получать my_chat_member — так он узнаёт, в какие каналы его добавили), и
--- добавить бота администратором в каналы, подписку на которые проверять.
+-- получать my_chat_member — так он узнаёт, в какие каналы его добавили, — и
+-- chat_member — кто вступил по ссылке розыгрыша и кто отписался), и
+-- добавить бота администратором в каналы, подписку на которые проверять,
+-- с правом создавать пригласительные ссылки.
 
 -- --------------------------------------------------------------------------
 --  Розыгрыш
@@ -46,15 +48,50 @@ CREATE TABLE IF NOT EXISTS giveaways (
 -- розыгрыша: один Telegram — одно участие, сколько бы аккаунтов сайта к нему
 -- ни было привязано. prize — номер приза в prizes_json, ставится кнопкой
 -- «Разыграть»; NULL — не выиграл (или розыгрыша ещё не было).
+-- src — откуда человек пришёл участвовать: tg — по кнопке из сообщения
+-- бота, pop — из окна на странице сайта, page — со страницы /giveaways.
+-- Отписался от канала из условий — строка удаляется (участие снято).
 CREATE TABLE IF NOT EXISTS giveaway_entries (
   giveaway_id INT UNSIGNED    NOT NULL,
   user_id     BIGINT UNSIGNED NOT NULL,
   chat_id     BIGINT          NOT NULL,
   joined_at   BIGINT UNSIGNED NOT NULL,
   prize       SMALLINT        NULL,
+  src         VARCHAR(8)      NOT NULL DEFAULT '',
   PRIMARY KEY (giveaway_id, user_id),
   UNIQUE KEY uq_chat (giveaway_id, chat_id),
-  KEY idx_user (user_id)
+  KEY idx_user (user_id),
+  KEY idx_chat (chat_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Ссылки-приглашения розыгрыша — учёт подписчиков для рекламодателя
+-- --------------------------------------------------------------------------
+-- При публикации бот создаёт в каждом канале из условий свою ссылку
+-- (createChatInviteLink, имя «Maknemy #<id>»), и кнопка «Подписаться» ведёт
+-- на неё. Кто вступил по этой ссылке, Telegram сообщает вебхуку
+-- (chat_member с invite_link) — так набирается список giveaway_subs.
+-- Рекламодатель видит то же число в статистике этой ссылки у себя в канале.
+CREATE TABLE IF NOT EXISTS giveaway_links (
+  giveaway_id INT UNSIGNED    NOT NULL,
+  channel_id  BIGINT          NOT NULL,
+  invite_url  VARCHAR(128)    NOT NULL,
+  created_at  BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (giveaway_id, channel_id),
+  UNIQUE KEY uq_url (invite_url)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Подписчики, пришедшие по ссылке розыгрыша. left_at — когда отписался
+-- (0 — подписан). tg_name — @логин или имя в Telegram на момент вступления.
+CREATE TABLE IF NOT EXISTS giveaway_subs (
+  giveaway_id INT UNSIGNED    NOT NULL,
+  channel_id  BIGINT          NOT NULL,
+  tg_user_id  BIGINT          NOT NULL,
+  tg_name     VARCHAR(64)     NOT NULL DEFAULT '',
+  joined_at   BIGINT UNSIGNED NOT NULL,
+  left_at     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (giveaway_id, channel_id, tg_user_id),
+  KEY idx_member (channel_id, tg_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------------------------

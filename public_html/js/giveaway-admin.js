@@ -23,7 +23,8 @@
     no_prizes: "нет призов",
     ends_in_past: "время конца уже прошло",
     ends_too_far: "конец дальше чем через 90 дней",
-    channel_not_admin: "бот не администратор в одном из отмеченных каналов"
+    channel_not_admin: "бот не администратор в одном из отмеченных каналов",
+    invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Пригласительные ссылки»)"
   };
 
   const ERRORS = {
@@ -64,7 +65,8 @@
   function errText(r) {
     if (!r) return "Сайт не ответил.";
     if (r.error === "incomplete" && r.problems) {
-      return "Нельзя опубликовать: " + r.problems.map(p => PROBLEMS[p] || p).join(", ") + ".";
+      const where = r.channels && r.channels.length ? " Каналы: " + r.channels.join(", ") + "." : "";
+      return "Нельзя опубликовать: " + r.problems.map(p => PROBLEMS[p] || p).join(", ") + "." + where;
     }
     return ERRORS[r.error] || ("Ошибка: " + (r.error || "неизвестно"));
   }
@@ -608,7 +610,7 @@
     if (!g.list.length) {
       const tr = document.createElement("tr");
       const td = document.createElement("td");
-      td.colSpan = 5;
+      td.colSpan = 6;
       td.className = "muted";
       td.textContent = "Пока никого.";
       tr.appendChild(td);
@@ -637,6 +639,8 @@
       tg.textContent = e.tg || "—";
       const when = document.createElement("td");
       when.textContent = fmtDate(e.joined_at);
+      const from = document.createElement("td");
+      from.textContent = SOURCES[e.src] || "—";
       const prize = document.createElement("td");
       prize.textContent = e.prize !== null && g.prizes[e.prize] ? "🏆 " + g.prizes[e.prize].name : "";
       const act = document.createElement("td");
@@ -647,8 +651,163 @@
       chat.className = "btn small";
       chat.textContent = "Написать";
       act.appendChild(chat);
-      tr.append(who, tg, when, prize, act);
+      tr.append(who, tg, when, from, prize, act);
       body.appendChild(tr);
+    });
+  }
+
+  const SOURCES = { tg: "Бот", pop: "Окно на сайте", page: "Страница /giveaways" };
+
+  function fmtFull(ts) {
+    if (!ts) return "";
+    const d = new Date((ts + MSK) * 1000);
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate())
+      + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+  }
+
+  function csvCell(v) {
+    const s = String(v == null ? "" : v);
+    return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadCsv(ch) {
+    const head = ["Канал", "Telegram ID", "Telegram", "Подписался (МСК)", "Отписался (МСК)", "Сейчас подписан",
+      "Аккаунт сайта (Roblox ID)", "Ник на сайте", "Участвует в розыгрыше", "Откуда пришёл"];
+    const rows = [head].concat(ch.list.map(s => [
+      ch.title, s.tg_id, s.tg_name, fmtFull(s.joined_at), fmtFull(s.left_at), s.left_at ? "нет" : "да",
+      s.site_id, s.site_name, s.entered ? "да" : "нет", SOURCES[s.src] || ""
+    ]));
+    const text = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
+    const blob = new Blob([String.fromCharCode(0xFEFF) + text], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "giveaway-" + S.cur.id + "-" + ch.id.replace(/^-/, "") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  function reportChannel(ch) {
+    const box = document.createElement("div");
+    box.className = "ga-rep-ch";
+    const head = document.createElement("div");
+    head.className = "ga-rep-head";
+    const name = document.createElement("b");
+    name.textContent = ch.title;
+    const nums = document.createElement("span");
+    nums.className = "ga-rep-nums";
+    nums.textContent = "по ссылке розыгрыша: " + ch.joined + " · сейчас подписаны: " + ch.stayed + " · отписались: " + (ch.joined - ch.stayed);
+    head.append(name, nums);
+    box.appendChild(head);
+
+    const linkRow = document.createElement("div");
+    linkRow.className = "slot-row";
+    if (ch.link) {
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.readOnly = true;
+      inp.value = ch.link;
+      inp.className = "ga-rep-link";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "btn small";
+      copy.textContent = "Копировать";
+      copy.addEventListener("click", () => {
+        inp.select();
+        try { navigator.clipboard.writeText(ch.link); } catch (_) { document.execCommand("copy"); }
+        hint("Ссылка скопирована", "ok");
+      });
+      linkRow.append(inp, copy);
+    } else {
+      const no = document.createElement("span");
+      no.className = "muted small";
+      no.textContent = "Ссылки розыгрыша нет — подписчики не считаются. Дайте боту право «Пригласительные ссылки» и сохраните розыгрыш.";
+      linkRow.appendChild(no);
+    }
+    const csv = document.createElement("button");
+    csv.type = "button";
+    csv.className = "btn small primary";
+    csv.textContent = "Скачать CSV";
+    csv.disabled = !ch.list.length;
+    csv.addEventListener("click", () => downloadCsv(ch));
+    linkRow.appendChild(csv);
+    box.appendChild(linkRow);
+
+    const note = document.createElement("p");
+    note.className = "muted small";
+    note.textContent = "То же число рекламодатель видит у себя: канал → «Пригласительные ссылки» → «Maknemy #" + S.cur.id + "».";
+    box.appendChild(note);
+
+    if (ch.list.length) {
+      const wrap = document.createElement("div");
+      wrap.className = "ga-table-wrap";
+      const table = document.createElement("table");
+      table.className = "ga-table";
+      const thead = document.createElement("thead");
+      const hr = document.createElement("tr");
+      ["Telegram", "Аккаунт сайта", "Подписался", "Отписался", "Участвует", "Откуда"].forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        hr.appendChild(th);
+      });
+      thead.appendChild(hr);
+      const tbody = document.createElement("tbody");
+      ch.list.forEach(s => {
+        const tr = document.createElement("tr");
+        if (s.left_at) tr.className = "is-left";
+        const cells = [
+          s.tg_name || "#" + s.tg_id,
+          s.site_id ? (s.site_name || "#" + s.site_id) : "—",
+          fmtDate(s.joined_at),
+          s.left_at ? fmtDate(s.left_at) : "",
+          s.entered ? "да" : "нет",
+          SOURCES[s.src] || "—"
+        ];
+        cells.forEach((c, i) => {
+          const td = document.createElement("td");
+          if (i === 1 && s.site_id) {
+            const a = document.createElement("a");
+            a.href = "/profile?id=" + encodeURIComponent(s.site_id);
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.textContent = c;
+            td.appendChild(a);
+          } else {
+            td.textContent = c;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.append(thead, tbody);
+      wrap.appendChild(table);
+      box.appendChild(wrap);
+    }
+    return box;
+  }
+
+  function loadReport() {
+    const sec = $("gwReport");
+    const g = S.cur;
+    sec.hidden = true;
+    if (!g || !g.id || g.status === "draft") return;
+    const id = g.id;
+    call({ action: "report", id: id }).then(r => {
+      if (!S.cur || S.cur.id !== id || !r || !r.ok) return;
+      const rep = r.report;
+      const s = rep.sources;
+      $("gwSources").textContent = "Откуда пришли участники: из бота " + s.tg + " · окно на сайте " + s.pop
+        + " · страница /giveaways " + s.page + (s[""] ? " · неизвестно " + s[""] : "");
+      const box = $("gwReportChannels");
+      box.textContent = "";
+      if (!rep.channels.length) {
+        const p = document.createElement("p");
+        p.className = "muted small";
+        p.textContent = "В розыгрыше нет каналов в условиях — считать подписчиков не для кого.";
+        box.appendChild(p);
+      }
+      rep.channels.forEach(ch => box.appendChild(reportChannel(ch)));
+      sec.hidden = false;
     });
   }
 
@@ -716,6 +875,7 @@
     hint("");
     renderStatus();
     renderPeople();
+    loadReport();
     renderList();
     preview();
   }
@@ -780,7 +940,11 @@
       busy(false);
       if (!r || !r.ok) { hint("", ""); msg(errText(r), true); return null; }
       return loadList(r.id).then(() => {
-        hint(r.translate_failed ? "Сохранено, но перевод на английский не удался" : "Сохранено", r.translate_failed ? "bad" : "ok");
+        if (r.link_failed && r.link_failed.length) {
+          hint("Сохранено, но в каналах " + r.link_failed.join(", ") + " бот не смог создать ссылку для учёта подписчиков", "bad");
+        } else {
+          hint(r.translate_failed ? "Сохранено, но перевод на английский не удался" : "Сохранено", r.translate_failed ? "bad" : "ok");
+        }
         return r.id;
       });
     });
