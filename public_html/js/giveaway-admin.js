@@ -43,6 +43,7 @@
     "bad cond url": "Ссылка условия должна начинаться с https:// и быть без пробелов (до 300 символов).",
     "bad cond button": "Надпись на кнопке условия — до 24 символов.",
     conds_migrate: "Для своих условий выполните docs/migrations/2026-10-15-giveaway-conds.sql.",
+    test_migrate: "Для тестовых розыгрышей выполните docs/migrations/2026-10-15-giveaway-test.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -627,6 +628,12 @@
       pill.className = "pill " + st[1];
       pill.textContent = st[0];
       top.append(name, pill);
+      if (g.test) {
+        const tp = document.createElement("span");
+        tp.className = "pill";
+        tp.textContent = "Тест";
+        top.appendChild(tp);
+      }
       const sub = document.createElement("div");
       sub.className = "li-sub";
       sub.textContent = "Участников: " + g.entries + (g.ends_at ? " · конец " + fmtDate(g.ends_at) + " МСК" : "");
@@ -652,6 +659,7 @@
     const phase = g && g.id ? g.phase : "draft";
     const st = STATUS[phase] || STATUS.draft;
     let text = g && g.id ? st[0] : "Новый розыгрыш — ещё не сохранён";
+    if (g && g.test) text += " · тестовый";
     if (g && g.published_at) text += " · опубликован " + fmtDate(g.published_at) + " МСК";
     if (g && g.drawn_at) text += " · разыгран " + fmtDate(g.drawn_at) + " МСК";
     box.textContent = text;
@@ -665,6 +673,7 @@
 
     const dis = locked();
     $("gwEditor").querySelectorAll("input, textarea").forEach(i => { i.disabled = dis; });
+    $("fTest").disabled = !!(g && g.id && g.status !== "draft");
     $("fBody").contentEditable = dis ? "false" : "true";
     $("fTools").querySelectorAll("button").forEach(b => { b.disabled = dis; });
     $("fPrizeAdd").disabled = dis;
@@ -893,7 +902,8 @@
       prizes: readPrizes(),
       channels: readChannels(),
       conds: readConds(),
-      ends_at: fromInput($("fEnds").value)
+      ends_at: fromInput($("fEnds").value),
+      test: $("fTest").checked
     };
   }
 
@@ -949,6 +959,7 @@
     cs.textContent = "";
     (g.conds || []).forEach(c => cs.appendChild(condRow(c)));
     $("fEnds").value = toInput(g.ends_at);
+    $("fTest").checked = !!g.test;
     msg("");
     hint("");
     renderStatus();
@@ -962,7 +973,7 @@
     return {
       id: 0, status: "draft", phase: "draft", title_ru: "", title_en: "", image: null,
       body: { v: 1, blocks: [] }, prizes: [], channels: [], conds: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
-      published_at: 0, drawn_at: 0, entries: 0, list: []
+      published_at: 0, drawn_at: 0, test: false, entries: 0, list: []
     };
   }
 
@@ -1093,15 +1104,21 @@
     $("fImgFile").addEventListener("change", e => { upload(e.target.files[0]); e.target.value = ""; });
     $("fImgDel").addEventListener("click", () => { setImage(null); changed(); });
     ["fTitleRu", "fTitleEn", "fEnds"].forEach(id => $(id).addEventListener("input", changed));
+    $("fTest").addEventListener("change", changed);
     document.querySelectorAll("[data-plus]").forEach(b => b.addEventListener("click", () => {
       const base = Math.max(Math.floor(Date.now() / 1000), fromInput($("fEnds").value) || 0);
       $("fEnds").value = toInput(base + (+b.dataset.plus) * 86400);
       changed();
     }));
     $("aSave").addEventListener("click", save);
-    $("aPublish").addEventListener("click", () => act("publish",
-      "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
-      () => "Опубликован. Бот рассылает сообщение о старте."));
+    $("aPublish").addEventListener("click", () => {
+      const test = $("fTest").checked;
+      act("publish",
+        test
+          ? "Опубликовать тестовый? Посетители его не увидят, рассылки не будет — только по ссылке /giveaways?test."
+          : "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
+        () => test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.");
+    });
     $("aEnd").addEventListener("click", () => act("end",
       "Закончить приём заявок прямо сейчас?", () => "Приём заявок закрыт. Теперь можно разыграть."));
     $("aDraw").addEventListener("click", () => act("draw",

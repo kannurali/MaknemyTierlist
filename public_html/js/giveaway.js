@@ -9,6 +9,7 @@
   var RESUME_KEY = "nx-gw-resume-v1";
   var FROM_BOT_KEY = "nx-gw-from-bot-v1";
   var COND_KEY = "nx-gw-cond-v1";
+  var TEST_KEY = "nx-gw-test-v1";
   var SESSION_WAIT = 5000;
   var LINK_POLL_MS = 3000;
   var LINK_POLL_FOR = 10 * 60 * 1000;
@@ -43,9 +44,22 @@
     return (l === "en" ? obj.en || obj.ru : obj.ru || obj.en) || "";
   }
 
+  function testMode() {
+    var m = /[?&]test(?:=([^&#]*))?(?:&|$)/.exec(location.search);
+    var on = !!m && m[1] !== "0";
+    try {
+      if (m) {
+        if (on) { localStorage.setItem(TEST_KEY, "1"); } else { localStorage.removeItem(TEST_KEY); }
+      }
+      return localStorage.getItem(TEST_KEY) === "1";
+    } catch (_) { return on; }
+  }
+
+  var TEST = testMode();
+
   function load(fresh) {
     if (!dataPromise || fresh) {
-      dataPromise = fetch(API, { cache: fresh ? "no-store" : "default" })
+      dataPromise = fetch(TEST ? API + "?test=1" : API, { cache: fresh ? "no-store" : "default" })
         .then(function (r) { return r.ok ? r.json() : { live: [], past: [] }; })
         .catch(function () { return { live: [], past: [] }; });
     }

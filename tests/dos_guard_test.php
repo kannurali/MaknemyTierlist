@@ -34,9 +34,22 @@ test('.htaccess turns on the LiteSpeed cache lookup', function () use ($PUB) {
         'CacheLookup inside <IfModule LiteSpeed>');
 });
 
-test('state.php, stock.php and giveaways.php take no query string at all', function () use ($PUB) {
+test('state.php and stock.php take no query string at all', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
-    assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock|giveaways)\.php$ - [F,L]'), 'any query string is refused');
+    assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]'), 'any query string is refused');
+});
+
+test('giveaways.php takes nothing but ?test=1', function () use ($PUB) {
+    $ht = dg_read("$PUB/.htaccess");
+    $cond = dg_cond_before($ht, 'RewriteRule ^api/giveaways\.php$ - [F,L]');
+    assert_true($cond !== null && $cond[0] === '!', 'negated condition in front of the rule');
+    $re = '~' . substr((string)$cond, 1) . '~';
+    foreach (['', 'test=1'] as $ok) {
+        assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
+    }
+    foreach (['test', 'test=0', 'test=2', 'test=1&x=1', 'x=1&test=1', 'test=11', 'rev=1'] as $bad) {
+        assert_eq(0, preg_match($re, $bad), "refused: '$bad'");
+    }
 });
 
 test('tierlist.php and promo.php take nothing but ?rev=<digits>', function () use ($PUB) {
@@ -62,7 +75,7 @@ test('a path tail after .php is refused', function () use ($PUB) {
 test('the refusal rules sit between the redirects and the page rewrites', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
     $https = strpos($ht, 'RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]');
-    $state = strpos($ht, 'RewriteRule ^api/(state|stock|giveaways)\.php$ - [F,L]');
+    $state = strpos($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]');
     $pages = strpos($ht, 'RewriteRule ^tierlist$ /index.php [L]');
     assert_true($https !== false && $state !== false && $pages !== false, 'all rules found');
     assert_true($https < $state && $state < $pages, 'order');

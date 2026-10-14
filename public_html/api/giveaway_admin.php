@@ -69,7 +69,8 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'publish') {
         [$s, $p, $row] = gw_publish($pdo, $id, $now, $send, tg_enabled($tg) ? (int)strtok((string)$tg['token'], ':') : 0);
-        return [$s, $p, $row ? ['announce', $row] : null];
+        // О тестовом бот не пишет никому.
+        return [$s, $p, $row && !gw_is_test($row) ? ['announce', $row] : null];
     }
     if ($action === 'end') {
         [$s, $p] = gw_end($pdo, $id, $now);
