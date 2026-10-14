@@ -155,7 +155,7 @@ $pfTitle = $pfNick !== ''
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=24" /><?php endif; ?>
-<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=12" /><?php endif; ?>
@@ -589,7 +589,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=71" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=5" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfTg !== null): ?>
@@ -598,7 +598,7 @@ $pfTitle = $pfNick !== ''
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
   <script src="js/trade-cards.js?v=4" defer></script>
-  <script src="js/profile-trades.js?v=2" defer></script>
+  <script src="js/profile-trades.js?v=3" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=1" fetchpriority="high"></script>

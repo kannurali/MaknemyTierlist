@@ -574,7 +574,7 @@ test('кнопки карточки — круги со знаками, а не 
     // Число лайков спрятано от глаз, но обязано остаться доступным.
     assert_true((bool)preg_match('/\.nw-card \.nw-like-count \{[^}]*clip-path: inset\(50%\);/s', $css),
         'счётчик скрыт визуально, а не удалён');
-    assert_true(strpos($js, 'btn.title = tx(liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";') !== false,
+    assert_true(strpos($js, 'v.btn.title = tx(join ? "like.joinTitle" : liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";') !== false,
         'число лайков должно остаться в подсказке');
     // У SVG нет offsetWidth — перезапуск анимации сердца сломался бы молча.
     assert_true(strpos($js, 'heartEl.getBoundingClientRect();') !== false,

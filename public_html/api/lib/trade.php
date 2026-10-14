@@ -22,8 +22,21 @@ const TRADE_ACTIVE_MAX = 5;
 // Сколько объявлений можно опубликовать за скользящее окно. Считаются ВСЕ
 // созданные в окне, включая снятые: иначе «выложил — снял — выложил» обходил
 // бы предел. Лента общая, и без него один человек забил бы её своими копиями.
-const TRADE_RATE_MAX    = 10;
-const TRADE_RATE_WINDOW = 5 * 3600;
+// Два за сутки — решение владельца (2026-10-14), до этого было 10 за 5 часов.
+const TRADE_RATE_MAX    = 2;
+const TRADE_RATE_WINDOW = 86400;
+
+// Пауза после того, как автор сам закрыл объявление: снял его или отметил
+// сделку (владелец, 2026-10-14). Снятое модератором и истёкшее паузы не дают:
+// первое — не решение автора, второе случается без него.
+const TRADE_CLOSE_COOLDOWN = 30 * 60;
+
+// Скам-фильтр (владелец, 2026-10-14): объявление не публикуется, если по ценам
+// тирлиста стороны расходятся больше чем на столько процентов. Процент тот
+// же, что пишет калькулятор на странице публикации (CALC.computeTrade): от
+// суммы «отдаю». Пустое «хочу» и стороны без цены не проверяются — сравнивать
+// там не с чем.
+const TRADE_FAIR_PCT = 40;
 
 // Сколько объявление ждёт первого отклика. Если за это время из чата по нему
 // никто не написал (trade_note_reply), оно уходит из ленты: предложение,
@@ -36,7 +49,7 @@ const TRADE_QUIET_TTL = 4 * 86400;
 const TRADE_TTL = 14 * 86400;
 
 // Сколько своих объявлений отдаёт профиль. Больше на одной странице не
-// прочитать, а при пределе 10 за 5 часов это больше недели активности.
+// прочитать, а при пределе 2 в сутки это полтора месяца активности.
 const TRADE_MINE_MAX = 100;
 
 // Страница ленты. Больше за раз не нужно: карточка высокая, и двадцать штук —
@@ -137,6 +150,19 @@ function trade_side_value(array $ids, array $catalog): float {
     return $sum;
 }
 
+/**
+ * На сколько процентов «хочу» дороже (плюс) или дешевле (минус) «отдаю» — или
+ * null, если сравнивать не с чем: «хочу» пустое либо у одной из сторон нет
+ * цены. Формула калькулятора: (хочу − отдаю) / отдаю × 100.
+ */
+function trade_diff_pct(array $give, array $want, array $catalog): ?float {
+    if (!$want) { return null; }
+    $g = trade_side_value($give, $catalog);
+    $w = trade_side_value($want, $catalog);
+    if ($g <= 0 || $w <= 0) { return null; }
+    return ($w - $g) / $g * 100;
+}
+
 /** JSON стороны из базы → список id. Испорченная строка — пустая сторона. */
 function trade_decode_side($raw): array {
     $list = is_string($raw) ? json_decode($raw, true) : null;
@@ -156,12 +182,21 @@ function trade_decode_side($raw): array {
 function trade_quota(PDO $pdo, string $me, int $now): array {
     $used = [];
     $active = 0;
+    $cooldownAt = 0;
     if ($me !== '') {
         $st = $pdo->prepare('SELECT created_at FROM trade_offers
                               WHERE user_id = :me AND created_at > :cut ORDER BY created_at ASC');
         $st->execute([':me' => $me, ':cut' => $now - TRADE_RATE_WINDOW]);
         $used = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
         $active = trade_active_count($pdo, $me, $now);
+
+        $st = $pdo->prepare("SELECT MAX(closed_at) FROM trade_offers
+                              WHERE user_id = :me AND status IN ('done', 'cancelled')");
+        $st->execute([':me' => $me]);
+        $closed = (int)$st->fetchColumn();
+        if ($closed > 0 && $closed + TRADE_CLOSE_COOLDOWN > $now) {
+            $cooldownAt = $closed + TRADE_CLOSE_COOLDOWN;
+        }
     }
     $n = count($used);
     return [
@@ -175,6 +210,8 @@ function trade_quota(PDO $pdo, string $me, int $now): array {
         'active'     => $active,
         'activeMax'  => TRADE_ACTIVE_MAX,
         'activeLeft' => max(0, TRADE_ACTIVE_MAX - $active),
+        // Когда кончится пауза после своего закрытия. 0 — паузы нет.
+        'cooldownAt' => $cooldownAt,
     ];
 }
 
@@ -235,6 +272,11 @@ function trade_create(PDO $pdo, string $me, $giveRaw, $wantRaw, int $now): array
     if ($give === null || $want === null) { return [400, ['ok' => false, 'error' => 'bad_items']]; }
     if (!$give)                           { return [400, ['ok' => false, 'error' => 'empty_give']]; }
 
+    $pct = trade_diff_pct($give, $want, $catalog);
+    if ($pct !== null && abs($pct) > TRADE_FAIR_PCT) {
+        return [400, ['ok' => false, 'error' => 'unfair', 'pct' => (int)round(abs($pct)), 'max' => TRADE_FAIR_PCT]];
+    }
+
     // Сначала «активные»: это предел, который человек снимает сам (снять,
     // отметить сделку), и о нём ему полезнее узнать первым.
     $quota = trade_quota($pdo, $me, $now);
@@ -243,6 +285,9 @@ function trade_create(PDO $pdo, string $me, $giveRaw, $wantRaw, int $now): array
     }
     if ($quota['left'] === 0) {
         return [429, ['ok' => false, 'error' => 'too_many', 'quota' => $quota]];
+    }
+    if ($quota['cooldownAt'] > 0) {
+        return [429, ['ok' => false, 'error' => 'cooldown', 'quota' => $quota]];
     }
 
     $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at)

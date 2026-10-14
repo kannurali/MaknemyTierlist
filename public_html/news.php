@@ -208,17 +208,17 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/news.css?v=13" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/news.css?v=14" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=24" /><?php endif; ?>
 
-<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news-design.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/news-design.css?v=24" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news-design.css?v=25" /><?php else: ?><link rel="stylesheet" href="css/news-design.css?v=25" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
@@ -367,7 +367,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </div>
   </div>
 
-  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=71" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
@@ -380,7 +380,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=30" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=31" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=1" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>

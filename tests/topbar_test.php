@@ -316,7 +316,7 @@ test('панель разделов встаёт под шапку, а не по
 // проекта, тот же, что «Телеграм проекта» в /privacy и /terms. Открывается в
 // новой вкладке, без opener: чужая вкладка не должна дотягиваться до сайта.
 test('кнопка Telegram ведёт на канал и стоит перед чатом', function () use ($PUB, $PAGES6) {
-    foreach (array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php']) as $f) {
+    foreach (array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php', 'giveaways.php']) as $f) {
         $s = top_header($PUB, $f);
         assert_eq(1, substr_count($s, '<a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener"'),
             "$f: одна кнопка Telegram на канал");

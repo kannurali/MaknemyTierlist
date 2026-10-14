@@ -92,6 +92,13 @@ function test_db(): PDO {
         likes INTEGER NOT NULL DEFAULT 0,
         dislikes INTEGER NOT NULL DEFAULT 0
     )");
+    // Зеркалит schema.sql: кто уже лайкнул тирлист или пост.
+    $pdo->exec("CREATE TABLE like_votes (
+        user_id INTEGER NOT NULL,
+        target TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, target)
+    )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
     return $pdo;

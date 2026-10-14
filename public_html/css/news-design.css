@@ -180,6 +180,18 @@
   white-space: nowrap;
 }
 
+.nw-card .nw-like.is-join {
+  gap: calc(12 * var(--u));
+  width: auto;
+  padding: 0 calc(26 * var(--u)) 0 calc(22 * var(--u));
+  border-radius: 999px;
+  color: #fff;
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
+  font-size: calc(24 * var(--u));
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .nw-card .nw-copy-ok   { background: rgba(76, 200, 120, 0.9); }
 .nw-card .nw-copy-fail { background: rgba(220, 80, 80, 0.9); }
 
@@ -524,6 +536,12 @@ a.nw-ptn-in:focus-visible { outline: 2px solid var(--cyan, #62d0ff); outline-off
   .nw-card .nw-copy {
     width: 44px;
     height: 44px;
+  }
+  .nw-card .nw-like.is-join {
+    gap: 8px;
+    width: auto;
+    padding: 0 18px 0 14px;
+    font-size: 17px;
   }
 
   .nw-card .nw-like-heart,

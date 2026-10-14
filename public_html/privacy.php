@@ -26,7 +26,7 @@ legal_page_open(
 ?>
 <?php legal_section_open('ru'); ?>
       <h1>Политика конфиденциальности</h1>
-      <p class="lg-date">Действует с 13 октября 2026 года</p>
+      <p class="lg-date">Действует с 14 октября 2026 года</p>
 
       <p>Сайт <b>maknemy.com</b> — любительский проект о трейдах в игре Blox Fruits:
       список ценности предметов, калькулятор сделок и новости. Сайт не связан с
@@ -67,9 +67,12 @@ legal_page_open(
         HttpOnly и Secure. На сервере хранится только хеш ключа, привязанный к
         вашему Roblox ID. Выход стирает и cookie, и ключ на сервере.</li>
         <li><b>Данные в браузере</b> (localStorage). Выбранный язык интерфейса,
-        отметка о поставленном лайке, кеш рекламных материалов и отметка о
-        показанном рекламном окне. Всё это остаётся в вашем браузере и на наш
-        сервер не отправляется.</li>
+        кеш рекламных материалов и отметка о показанном рекламном окне. Всё
+        это остаётся в вашем браузере и на наш сервер не отправляется.</li>
+        <li><b>Лайки.</b> Ставить их могут только вошедшие, по одному на
+        аккаунт. Поэтому, когда вы лайкаете тирлист или новость, мы храним
+        отметку об этом рядом с вашим Roblox ID. Другие посетители видят только
+        общее число лайков. Снимете лайк — отметка удалится.</li>
         <li><b>Текст «о себе».</b> Пишете его вы сами на своей странице
         профиля, и он показывается другим вошедшим посетителям, открывшим ваш
         профиль. Стереть можно там же, очистив поле.</li>
@@ -151,7 +154,7 @@ legal_page_open(
 
 <?php legal_section_open('en'); ?>
       <h1>Privacy Policy</h1>
-      <p class="lg-date">Effective 13 October 2026</p>
+      <p class="lg-date">Effective 14 October 2026</p>
 
       <p><b>maknemy.com</b> is a fan-made project about trading in the game Blox
       Fruits: an item value list, a trade calculator and news. The site is not
@@ -193,9 +196,12 @@ legal_page_open(
         HttpOnly and Secure. The server keeps only a hash of the key, tied to your
         Roblox ID. Logging out deletes both the cookie and the key on the server.</li>
         <li><b>Browser storage</b> (localStorage). Your interface language, a
-        marker that you left a like, a cache of advertising material and a marker
-        that the ad popup was shown. All of it stays in your browser and is never
-        sent to our server.</li>
+        cache of advertising material and a marker that the ad popup was shown.
+        All of it stays in your browser and is never sent to our server.</li>
+        <li><b>Likes.</b> Only logged-in visitors can like, one like per account.
+        So when you like the tier list or a news post, we store a marker of it
+        next to your Roblox ID. Other visitors only see the total number of
+        likes. Remove your like and the marker is deleted.</li>
       </ul>
 
       <h3>Visit statistics</h3>
