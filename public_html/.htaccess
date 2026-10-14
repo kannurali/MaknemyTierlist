@@ -65,10 +65,10 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # не шлёт, превращал бы каждый запрос флуда в промах мимо кеша, то есть в PHP
 # и MySQL. Такие запросы LiteSpeed отбивает 403 сам, не запуская PHP.
 #
-# state.php и stock.php клиент зовёт без параметров вовсе, tierlist.php и promo.php — без
-# них или с ?rev=<число>.
+# state.php, stock.php и giveaways.php клиент зовёт без параметров вовсе,
+# tierlist.php и promo.php — без них или с ?rev=<число>.
 RewriteCond %{QUERY_STRING} .
-RewriteRule ^api/(state|stock)\.php$ - [F,L]
+RewriteRule ^api/(state|stock|giveaways)\.php$ - [F,L]
 
 RewriteCond %{QUERY_STRING} !^(rev=[0-9]{1,18})?$
 RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]
@@ -199,6 +199,15 @@ RewriteRule ^support\.php$ /support [L,R=301]
 
 RewriteRule ^support$ /support.php [L]
 
+# ------------------------------- Розыгрыши -------------------------------
+# Тот же приём, что у /stock: пути внутри giveaways.php документ-относительные.
+RewriteRule ^giveaways/$ /giveaways [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^giveaways\.php$ /giveaways [L,R=301]
+
+RewriteRule ^giveaways$ /giveaways.php [L]
+
 # /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
 # именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy
 # URL / Terms of Service URL), а там адрес меняется только через повторное
@@ -291,6 +300,7 @@ RewriteRule ^admin/news/?$  /admin-news.php     [L]
 RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
 RewriteRule ^admin/support/?$ /admin-support.php [L]
 RewriteRule ^admin/bans/?$  /admin-bans.php     [L]
+RewriteRule ^admin/giveaways/?$ /admin-giveaways.php [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 
 # Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому

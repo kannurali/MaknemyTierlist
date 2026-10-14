@@ -1,0 +1,37 @@
+<?php
+require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/lib/giveaway.php';
+
+// Кнопка «Участвовать» в окне и на странице розыгрышей —
+// POST /api/giveaway_enter.php {"id": 12}
+//   → {"ok":true,"joined":true}
+//   → {"ok":false,"error":"login"|"banned"|"closed"|"tg"|"tg_used"|"channels"|"tg_down", "missing":[…]}
+// Что значит каждая ошибка — см. gw_enter() в api/lib/giveaway.php.
+//
+// Каждое нажатие — до пяти запросов к Telegram (по одному на канал), поэтому
+// нажатия считаются: тридцати в час хватает и на «подписался — проверить —
+// забыл ещё канал — проверить».
+
+const GW_ENTER_PER_HOUR = 30;
+
+if (!defined('TESTING')) {
+    header('Cache-Control: no-store');
+    require_post();
+
+    $session = resume_site_session() ? $_SESSION : [];
+    $me = chat_me($session);
+    if ($me !== '' && !rate_limit_allow('gw_enter', $me, GW_ENTER_PER_HOUR, 3600, time())) {
+        json_out(['ok' => false, 'error' => 'rate_limited'], 429);
+        exit;
+    }
+    if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
+
+    $cfg = app_config();
+    $tg  = tg_config($cfg);
+    if (!tg_enabled($tg)) {
+        json_out(['ok' => false, 'error' => 'closed'], 503);
+        exit;
+    }
+    [$status, $payload] = gw_enter(db(), $cfg, tg_http($tg['token']), $me, read_row_id(read_json_body()), time());
+    json_out($payload, $status);
+}

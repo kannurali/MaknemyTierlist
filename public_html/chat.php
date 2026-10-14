@@ -92,7 +92,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
@@ -100,6 +100,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
 
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -375,10 +376,13 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
   <script src="js/chat-page.js?v=18" defer></script>
 
 
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=1" fetchpriority="high"></script>
+  <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

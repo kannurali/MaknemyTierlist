@@ -525,7 +525,10 @@
     reportLogin(takeLoginFlag());
     fetch(AUTH_STATE, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
       .then(function (s) {
+        window.MK_SESSION = s;
+        try { document.dispatchEvent(new CustomEvent("mk:session", { detail: s })); } catch (_) {}
         var invited = takeInvite();
         if (!s || !s.roblox) return;
         if (s.user) {

@@ -1,0 +1,754 @@
+(() => {
+  "use strict";
+
+  const API = "/api/giveaway_admin.php";
+  const UPLOAD = "/api/upload.php";
+  const MSK = 3 * 3600;
+  const NBSP = String.fromCharCode(160);
+
+  const $ = id => document.getElementById(id);
+  const GW = window.NX_GW;
+  const NB = window.NEWSBLOCKS;
+
+  const STATUS = {
+    draft: ["Черновик", ""],
+    live: ["Идёт", "live"],
+    ended: ["Закончился — ждёт розыгрыша", "off"],
+    drawn: ["Разыгран", ""]
+  };
+
+  const PROBLEMS = {
+    no_title: "нет названия",
+    no_prizes: "нет призов",
+    ends_in_past: "время конца уже прошло",
+    ends_too_far: "конец дальше чем через 90 дней",
+    channel_not_admin: "бот не администратор в одном из отмеченных каналов"
+  };
+
+  const ERRORS = {
+    not_ready: "Таблиц нет — выполните docs/migrations/2026-10-14-giveaways.sql.",
+    "not ended": "Розыгрыш ещё идёт — завершите его досрочно или дождитесь конца.",
+    drawn: "Победители уже выбраны.",
+    tg_down: "Telegram не ответил при проверке подписки. Нажмите ещё раз через минуту.",
+    tg_off: "Бот не настроен: нет tg_bot_token в config.php.",
+    "not draft": "Розыгрыш уже опубликован.",
+    "not live": "Розыгрыш уже закончился.",
+    "body too large": "Описание слишком длинное.",
+    "bad prize name": "У приза нет названия (или оно длиннее 60 символов).",
+    "bad prize count": "Число победителей приза — от 1 до 1000.",
+    unauthorized: "Сессия админа закончилась — войдите на сайт заново."
+  };
+
+  const S = {
+    list: [],
+    channels: [],
+    bot: "",
+    tgOn: false,
+    cur: null,
+    image: null,
+    dirty: false,
+    busy: false
+  };
+
+  function call(body) {
+    return fetch(API, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(r => r.json().catch(() => ({ ok: false, error: "HTTP " + r.status })));
+  }
+
+  function errText(r) {
+    if (!r) return "Сайт не ответил.";
+    if (r.error === "incomplete" && r.problems) {
+      return "Нельзя опубликовать: " + r.problems.map(p => PROBLEMS[p] || p).join(", ") + ".";
+    }
+    return ERRORS[r.error] || ("Ошибка: " + (r.error || "неизвестно"));
+  }
+
+  function msg(text, bad) {
+    const m = $("gwMsg");
+    m.textContent = text || "";
+    m.classList.toggle("bad", !!bad);
+  }
+
+  function hint(text, kind) {
+    const h = $("gwHint");
+    h.textContent = text || "";
+    h.className = "hint" + (kind ? " " + kind : "");
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+
+  function toInput(ts) {
+    if (!ts) return "";
+    const d = new Date((ts + MSK) * 1000);
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate())
+      + "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+  }
+
+  function fromInput(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || "");
+    if (!m) return 0;
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 1000 - MSK;
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return "—";
+    const d = new Date((ts + MSK) * 1000);
+    return pad(d.getUTCDate()) + "." + pad(d.getUTCMonth() + 1) + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+  }
+
+  function sameFmt(a, b) {
+    const keys = ["b", "i", "u", "st", "c", "sp", "href"];
+    return keys.every(k => (a[k] || false) === (b[k] || false));
+  }
+
+  function pushSpan(out, s, fmt) {
+    if (!s) return;
+    const last = out[out.length - 1];
+    if (last && sameFmt(last, fmt)) { last.s += s; return; }
+    const sp = { s: s };
+    ["b", "i", "u", "st", "c", "sp"].forEach(k => { if (fmt[k]) sp[k] = true; });
+    if (fmt.href) sp.href = fmt.href;
+    out.push(sp);
+  }
+
+  function inlineSpans(node, fmt, out) {
+    node.childNodes.forEach(ch => {
+      if (ch.nodeType === 3) {
+        pushSpan(out, ch.nodeValue.split(NBSP).join(" ").replace(/[\r\n]+/g, " "), fmt);
+        return;
+      }
+      if (ch.nodeType !== 1) return;
+      const tag = ch.tagName;
+      if (tag === "BR") { pushSpan(out, "\n", fmt); return; }
+      const f = Object.assign({}, fmt);
+      if (tag === "B" || tag === "STRONG") f.b = true;
+      if (tag === "I" || tag === "EM") f.i = true;
+      if (tag === "U") f.u = true;
+      if (tag === "S" || tag === "STRIKE" || tag === "DEL") f.st = true;
+      if (tag === "CODE") f.c = true;
+      if (tag === "A") {
+        const h = ch.getAttribute("href") || "";
+        if (/^https?:\/\//i.test(h)) f.href = h;
+      }
+      if (ch.classList.contains("nw-spoiler")) f.sp = true;
+      const st = ch.style;
+      if (st) {
+        if (st.fontWeight === "bold" || +st.fontWeight >= 600) f.b = true;
+        if (st.fontStyle === "italic") f.i = true;
+        const deco = (st.textDecorationLine || st.textDecoration || "");
+        if (deco.indexOf("underline") >= 0) f.u = true;
+        if (deco.indexOf("line-through") >= 0) f.st = true;
+      }
+      const isBlock = /^(P|DIV|LI|BLOCKQUOTE|H[1-6]|UL|OL)$/.test(tag);
+      if (isBlock && out.length && !/\n$/.test(out[out.length - 1].s)) pushSpan(out, "\n", fmt);
+      inlineSpans(ch, f, out);
+    });
+    return out;
+  }
+
+  function clean(spans) {
+    while (spans.length && !spans[0].s.replace(/^[\s\n]+/, "")) spans.shift();
+    while (spans.length && !spans[spans.length - 1].s.replace(/[\s\n]+$/, "")) spans.pop();
+    if (spans.length) {
+      spans[0].s = spans[0].s.replace(/^[\s\n]+/, "");
+      const l = spans[spans.length - 1];
+      l.s = l.s.replace(/[\s\n]+$/, "");
+    }
+    return spans.filter(sp => sp.s !== "");
+  }
+
+  function editorBlocks() {
+    const blocks = [];
+    const addP = spans => { if (spans.length) blocks.push({ t: "p", ru: spans, en: [] }); };
+    const hasBlocks = n => !!n.querySelector("ul, ol, blockquote, p, div");
+    const walk = container => {
+      let loose = null;
+      const flush = () => {
+        if (!loose) return;
+        const box = document.createElement("div");
+        loose.forEach(n => box.appendChild(n.cloneNode(true)));
+        addP(clean(inlineSpans(box, {}, [])));
+        loose = null;
+      };
+      container.childNodes.forEach(n => {
+        const tag = n.nodeType === 1 ? n.tagName : "";
+        if (tag === "UL" || tag === "OL") {
+          flush();
+          const items = Array.from(n.children)
+            .filter(li => li.tagName === "LI")
+            .map(li => ({ ru: clean(inlineSpans(li, {}, [])), en: [] }))
+            .filter(it => it.ru.length);
+          if (items.length) blocks.push({ t: "list", ordered: tag === "OL", items: items });
+        } else if (tag === "BLOCKQUOTE") {
+          flush();
+          const sp = clean(inlineSpans(n, {}, []));
+          if (sp.length) blocks.push({ t: "quote", ru: sp, en: [], collapsible: false });
+        } else if (tag === "P" || tag === "DIV" || /^H[1-6]$/.test(tag)) {
+          flush();
+          if (hasBlocks(n)) walk(n);
+          else addP(clean(inlineSpans(n, {}, [])));
+        } else {
+          (loose = loose || []).push(n);
+        }
+      });
+      flush();
+    };
+    walk($("fBody"));
+    return blocks;
+  }
+
+  function fillEditor(blocks) {
+    const root = $("fBody");
+    root.textContent = "";
+    if (blocks && blocks.length && NB) {
+      root.appendChild(NB.renderBlocks(document, blocks, "ru"));
+      root.querySelectorAll(".nw-spoiler").forEach(sp => { sp.removeAttribute("role"); sp.removeAttribute("tabindex"); });
+      root.querySelectorAll("a").forEach(a => { a.removeAttribute("target"); a.removeAttribute("rel"); });
+    }
+    if (!root.firstChild) root.innerHTML = "<p><br></p>";
+  }
+
+  function closestIn(node, sel) {
+    const root = $("fBody");
+    let el = node && node.nodeType === 3 ? node.parentNode : node;
+    while (el && el !== root) {
+      if (el.matches && el.matches(sel)) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+
+  function unwrap(el) {
+    const p = el.parentNode;
+    while (el.firstChild) p.insertBefore(el.firstChild, el);
+    p.removeChild(el);
+  }
+
+  function toggleSpoiler() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const inside = closestIn(range.commonAncestorContainer, ".nw-spoiler");
+    if (inside) { unwrap(inside); return; }
+    if (range.collapsed) return;
+    const span = document.createElement("span");
+    span.className = "nw-spoiler is-open";
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    const after = document.createTextNode("");
+    span.parentNode.insertBefore(after, span.nextSibling);
+    sel.removeAllRanges();
+    const r = document.createRange();
+    r.setStart(after, 0);
+    r.collapse(true);
+    sel.addRange(r);
+  }
+
+  function toggleQuote() {
+    const sel = window.getSelection();
+    const inQuote = sel.rangeCount && closestIn(sel.getRangeAt(0).commonAncestorContainer, "blockquote");
+    document.execCommand("formatBlock", false, inQuote ? "p" : "blockquote");
+  }
+
+  function makeLink() {
+    const sel = window.getSelection();
+    const a = sel.rangeCount ? closestIn(sel.getRangeAt(0).commonAncestorContainer, "a") : null;
+    const url = window.prompt("Адрес ссылки (https://…). Пусто — убрать ссылку.", a ? a.getAttribute("href") : "https://");
+    if (url === null) return;
+    const v = url.trim();
+    if (!v) { if (a) unwrap(a); else document.execCommand("unlink"); return; }
+    if (!/^https?:\/\/\S+$/i.test(v)) { msg("Ссылка должна начинаться с http:// или https://", true); return; }
+    if (a) { a.setAttribute("href", v); return; }
+    document.execCommand("createLink", false, v);
+  }
+
+  function wireEditor() {
+    const root = $("fBody");
+    try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (_) {}
+    $("fTools").addEventListener("mousedown", e => { if (e.target.closest("button")) e.preventDefault(); });
+    $("fTools").addEventListener("click", e => {
+      const b = e.target.closest("button[data-cmd]");
+      if (!b || S.cur && S.cur.status === "drawn") return;
+      root.focus();
+      const cmd = b.dataset.cmd;
+      if (cmd === "spoiler") toggleSpoiler();
+      else if (cmd === "quote") toggleQuote();
+      else if (cmd === "link") makeLink();
+      else if (cmd === "removeFormat") {
+        document.execCommand("removeFormat");
+        document.execCommand("unlink");
+        const sel = window.getSelection();
+        const sp = sel.rangeCount ? closestIn(sel.getRangeAt(0).commonAncestorContainer, ".nw-spoiler") : null;
+        if (sp) unwrap(sp);
+      } else document.execCommand(cmd);
+      changed();
+    });
+    root.addEventListener("paste", e => {
+      e.preventDefault();
+      const text = ((e.clipboardData || window.clipboardData).getData("text/plain") || "").replace(/\r\n?/g, "\n");
+      document.execCommand("insertText", false, text);
+    });
+    root.addEventListener("input", e => {
+      if (e.inputType === "insertParagraph" || e.inputType === "insertOrderedList" || e.inputType === "insertUnorderedList") {
+        const sel = window.getSelection();
+        const sp = sel.rangeCount ? closestIn(sel.getRangeAt(0).startContainer, ".nw-spoiler") : null;
+        if (sp && !sp.textContent.trim()) {
+          const p = sp.parentNode;
+          const mark = document.createTextNode("");
+          p.insertBefore(mark, sp);
+          unwrap(sp);
+          const r = document.createRange();
+          r.setStart(mark, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      }
+      changed();
+    });
+  }
+
+  function prizeRow(p) {
+    const row = document.createElement("div");
+    row.className = "ga-prize";
+    const name = document.createElement("input");
+    name.type = "text";
+    name.maxLength = 60;
+    name.placeholder = "Magnet (permanent)";
+    name.value = p ? p.name : "";
+    name.className = "ga-prize-name";
+    const count = document.createElement("input");
+    count.type = "number";
+    count.min = "1";
+    count.max = "1000";
+    count.step = "1";
+    count.value = p ? p.count : 1;
+    count.className = "ga-prize-count";
+    count.title = "Сколько победителей получат этот приз";
+    const lab = document.createElement("span");
+    lab.className = "muted small";
+    lab.textContent = "победителей";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn small danger";
+    del.textContent = "✕";
+    del.title = "Убрать приз";
+    del.addEventListener("click", () => { row.remove(); changed(); });
+    [name, count].forEach(i => i.addEventListener("input", changed));
+    row.append(name, count, lab, del);
+    return row;
+  }
+
+  function readPrizes() {
+    return Array.from($("fPrizes").querySelectorAll(".ga-prize")).map(r => ({
+      name: r.querySelector(".ga-prize-name").value.trim(),
+      count: Math.max(1, Math.min(1000, parseInt(r.querySelector(".ga-prize-count").value, 10) || 1))
+    })).filter(p => p.name);
+  }
+
+  function renderChannelChecks(selected) {
+    const box = $("fChannels");
+    box.textContent = "";
+    if (!S.channels.length) {
+      const p = document.createElement("span");
+      p.className = "muted small";
+      p.textContent = "Каналов пока нет — см. «Каналы бота» слева.";
+      box.appendChild(p);
+      return;
+    }
+    S.channels.forEach(c => {
+      const lab = document.createElement("label");
+      lab.className = "page-chk" + (c.admin ? "" : " ga-ch-off");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = c.id;
+      cb.checked = selected.indexOf(c.id) >= 0;
+      cb.addEventListener("change", changed);
+      lab.append(cb, document.createTextNode(" " + (c.title || c.id) + (c.admin ? "" : " (бот не админ)")));
+      box.appendChild(lab);
+    });
+  }
+
+  function readChannels() {
+    return Array.from($("fChannels").querySelectorAll("input:checked")).map(i => i.value);
+  }
+
+  function renderChannelsList() {
+    const ul = $("gwChannels");
+    ul.textContent = "";
+    S.channels.forEach(c => {
+      const li = document.createElement("li");
+      li.className = "ga-ch";
+      const top = document.createElement("div");
+      top.className = "ga-ch-top";
+      const name = document.createElement("span");
+      name.className = "ga-ch-name";
+      name.textContent = c.title || c.id;
+      const st = document.createElement("span");
+      st.className = "pill " + (c.admin ? "live" : "off");
+      st.textContent = c.admin ? "бот админ" : "нет прав";
+      top.append(name, st);
+      const sub = document.createElement("div");
+      sub.className = "li-sub";
+      sub.textContent = (c.username ? "@" + c.username : "приватный") + (c.url ? "" : " · нет ссылки");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn small";
+      btn.textContent = "Обновить";
+      btn.title = "Перечитать у Telegram название, права бота и ссылку-приглашение";
+      btn.addEventListener("click", () => {
+        btn.disabled = true;
+        call({ action: "channel", id: c.id }).then(r => {
+          btn.disabled = false;
+          if (r && r.channels) {
+            S.channels = r.channels;
+            renderChannelsList();
+            renderChannelChecks(readChannels());
+            preview();
+          }
+          hint(r && r.ok ? "Канал обновлён" : "Telegram не ответил", r && r.ok ? "ok" : "bad");
+        });
+      });
+      li.append(top, sub, btn);
+      ul.appendChild(li);
+    });
+    const help = $("gwChHelp");
+    const bot = S.bot ? "@" + S.bot : "бота";
+    help.textContent = (S.channels.length ? "" : "Каналов пока нет. ")
+      + "Чтобы канал появился здесь, добавьте " + bot + " в канал администратором (право «Приглашать пользователей» нужно для ссылки на приватный канал). Если канал не появился — нажмите «Подключить вебхук» на /admin/support и добавьте бота заново.";
+  }
+
+  function renderList() {
+    const ul = $("gwList");
+    ul.textContent = "";
+    $("gwEmpty").hidden = S.list.length > 0;
+    $("gwListCount").textContent = S.list.length ? "(" + S.list.length + ")" : "";
+    S.list.forEach(g => {
+      const li = document.createElement("li");
+      li.className = S.cur && S.cur.id === g.id ? "on" : "";
+      const top = document.createElement("div");
+      top.className = "li-top";
+      const name = document.createElement("span");
+      name.className = "li-name";
+      name.textContent = g.title || "Без названия";
+      const st = STATUS[g.phase] || STATUS.draft;
+      const pill = document.createElement("span");
+      pill.className = "pill " + st[1];
+      pill.textContent = st[0];
+      top.append(name, pill);
+      const sub = document.createElement("div");
+      sub.className = "li-sub";
+      sub.textContent = "Участников: " + g.entries + (g.ends_at ? " · конец " + fmtDate(g.ends_at) + " МСК" : "");
+      li.append(top, sub);
+      li.addEventListener("click", () => open(g.id));
+      ul.appendChild(li);
+    });
+  }
+
+  function setImage(img) {
+    S.image = img;
+    const prev = $("fImgPrev");
+    prev.hidden = !img;
+    if (img) prev.src = img.url; else prev.removeAttribute("src");
+    $("fImgDel").hidden = !img;
+  }
+
+  function locked() { return !!S.cur && S.cur.status === "drawn"; }
+
+  function renderStatus() {
+    const g = S.cur;
+    const box = $("gwStatus");
+    const phase = g && g.id ? g.phase : "draft";
+    const st = STATUS[phase] || STATUS.draft;
+    let text = g && g.id ? st[0] : "Новый розыгрыш — ещё не сохранён";
+    if (g && g.published_at) text += " · опубликован " + fmtDate(g.published_at) + " МСК";
+    if (g && g.drawn_at) text += " · разыгран " + fmtDate(g.drawn_at) + " МСК";
+    box.textContent = text;
+    box.className = "ga-status is-" + phase;
+
+    $("aPublish").hidden = !(g && (!g.id || g.status === "draft"));
+    $("aEnd").hidden = !(g && g.phase === "live");
+    $("aDraw").hidden = !(g && g.phase === "ended");
+    $("aDelete").hidden = !(g && g.id);
+    $("aSave").hidden = locked();
+
+    const dis = locked();
+    $("gwEditor").querySelectorAll("input, textarea").forEach(i => { i.disabled = dis; });
+    $("fBody").contentEditable = dis ? "false" : "true";
+    $("fTools").querySelectorAll("button").forEach(b => { b.disabled = dis; });
+    $("fPrizeAdd").disabled = dis;
+    $("gwEditor").querySelectorAll(".ga-prize .btn, [data-plus]").forEach(b => { b.disabled = dis; });
+  }
+
+  function renderPeople() {
+    const g = S.cur;
+    const sec = $("gwPeople");
+    sec.hidden = !(g && g.id && g.status !== "draft");
+    if (sec.hidden) return;
+    $("gwCount").textContent = g.entries + (g.list.length < g.entries ? " (показаны " + g.list.length + ")" : "");
+    const body = $("gwPeopleBody");
+    body.textContent = "";
+    if (!g.list.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 5;
+      td.className = "muted";
+      td.textContent = "Пока никого.";
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    g.list.forEach(e => {
+      const tr = document.createElement("tr");
+      if (e.prize !== null) tr.className = "is-win";
+      const who = document.createElement("td");
+      const a = document.createElement("a");
+      a.href = "/profile?id=" + encodeURIComponent(e.id);
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.className = "ga-who";
+      if (e.avatar) {
+        const img = document.createElement("img");
+        img.src = e.avatar;
+        img.alt = "";
+        img.referrerPolicy = "no-referrer";
+        a.appendChild(img);
+      }
+      a.appendChild(document.createTextNode((e.display || e.name || "#" + e.id) + (e.name ? " @" + e.name : "")));
+      who.appendChild(a);
+      const tg = document.createElement("td");
+      tg.textContent = e.tg || "—";
+      const when = document.createElement("td");
+      when.textContent = fmtDate(e.joined_at);
+      const prize = document.createElement("td");
+      prize.textContent = e.prize !== null && g.prizes[e.prize] ? "🏆 " + g.prizes[e.prize].name : "";
+      const act = document.createElement("td");
+      const chat = document.createElement("a");
+      chat.href = "/chat?to=" + encodeURIComponent(e.id);
+      chat.target = "_blank";
+      chat.rel = "noopener";
+      chat.className = "btn small";
+      chat.textContent = "Написать";
+      act.appendChild(chat);
+      tr.append(who, tg, when, prize, act);
+      body.appendChild(tr);
+    });
+  }
+
+  function collect() {
+    return {
+      title_ru: $("fTitleRu").value.trim(),
+      title_en: $("fTitleEn").value.trim(),
+      image: S.image,
+      body: { v: 1, blocks: editorBlocks() },
+      prizes: readPrizes(),
+      channels: readChannels(),
+      ends_at: fromInput($("fEnds").value)
+    };
+  }
+
+  let prevTimer = 0;
+  function preview() {
+    clearTimeout(prevTimer);
+    prevTimer = setTimeout(() => {
+      const box = $("gwPrevBox");
+      box.textContent = "";
+      if (!S.cur || !GW) return;
+      const d = collect();
+      const chans = d.channels.map(id => S.channels.find(c => c.id === id)).filter(Boolean)
+        .map(c => ({ id: c.id, title: c.title, url: c.url }));
+      const phase = S.cur.id ? S.cur.phase : "live";
+      const g = {
+        id: S.cur.id || 0,
+        phase: phase === "draft" ? "live" : phase,
+        title: { ru: d.title_ru || "Без названия", en: d.title_en },
+        image: d.image,
+        body: d.body.blocks,
+        prizes: d.prizes,
+        channels: chans,
+        ends_at: d.ends_at || Math.floor(Date.now() / 1000) + 86400,
+        entries: S.cur.entries || 0,
+        winners: (S.cur.list || []).filter(e => e.prize !== null)
+          .map(e => ({ prize: e.prize, id: e.id, name: e.name, display: e.display, avatar: e.avatar }))
+      };
+      box.appendChild(GW.card(g, { mode: "page", preview: true }));
+    }, 150);
+  }
+
+  function changed() {
+    S.dirty = true;
+    hint("Есть несохранённые правки", "");
+    preview();
+  }
+
+  function fill(g) {
+    S.cur = g;
+    S.dirty = false;
+    $("gwEditor").hidden = false;
+    $("gwPreview").hidden = false;
+    $("fTitleRu").value = g.title_ru || "";
+    $("fTitleEn").value = g.title_en || "";
+    setImage(g.image || null);
+    fillEditor(g.body ? g.body.blocks : []);
+    const pr = $("fPrizes");
+    pr.textContent = "";
+    (g.prizes && g.prizes.length ? g.prizes : [null]).forEach(p => pr.appendChild(prizeRow(p)));
+    renderChannelChecks(g.channels || []);
+    $("fEnds").value = toInput(g.ends_at);
+    msg("");
+    hint("");
+    renderStatus();
+    renderPeople();
+    renderList();
+    preview();
+  }
+
+  function blank() {
+    return {
+      id: 0, status: "draft", phase: "draft", title_ru: "", title_en: "", image: null,
+      body: { v: 1, blocks: [] }, prizes: [], channels: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
+      published_at: 0, drawn_at: 0, entries: 0, list: []
+    };
+  }
+
+  function confirmLeave() {
+    return !S.dirty || window.confirm("Есть несохранённые правки. Уйти без сохранения?");
+  }
+
+  function open(id) {
+    if (S.cur && S.cur.id === id) return;
+    if (!confirmLeave()) return;
+    call({ action: "get", id: id }).then(r => {
+      if (r && r.ok) fill(r.giveaway);
+      else hint(errText(r), "bad");
+    });
+  }
+
+  function loadList(selectId) {
+    return call({ action: "list" }).then(r => {
+      if (!r || !r.ok) {
+        const a = $("gwAlert");
+        a.textContent = errText(r);
+        a.hidden = false;
+        return;
+      }
+      $("gwAlert").hidden = !!r.tg;
+      if (!r.tg) $("gwAlert").textContent = "Бот не настроен (tg_bot_token и tg_bot_name в config.php): участвовать никто не сможет, рассылки не уйдут.";
+      S.list = r.giveaways;
+      S.channels = r.channels;
+      S.bot = r.bot;
+      S.tgOn = r.tg;
+      renderChannelsList();
+      renderList();
+      if (selectId) {
+        S.dirty = false;
+        return call({ action: "get", id: selectId }).then(g => { if (g && g.ok) fill(g.giveaway); });
+      }
+      if (!S.cur && S.list.length) open(S.list[0].id);
+    });
+  }
+
+  function busy(on) {
+    S.busy = on;
+    ["aSave", "aPublish", "aEnd", "aDraw", "aDelete"].forEach(id => { $(id).disabled = on; });
+  }
+
+  function save() {
+    if (S.busy) return Promise.resolve(null);
+    const body = Object.assign({ action: "save" }, collect());
+    if (S.cur && S.cur.id) body.id = S.cur.id;
+    busy(true);
+    hint("Сохраняем…");
+    return call(body).then(r => {
+      busy(false);
+      if (!r || !r.ok) { hint("", ""); msg(errText(r), true); return null; }
+      return loadList(r.id).then(() => {
+        hint(r.translate_failed ? "Сохранено, но перевод на английский не удался" : "Сохранено", r.translate_failed ? "bad" : "ok");
+        return r.id;
+      });
+    });
+  }
+
+  function act(action, ask, done) {
+    if (S.busy || !S.cur) return;
+    if (ask && !window.confirm(ask)) return;
+    const go = id => {
+      busy(true);
+      msg(action === "draw" ? "Выбираем победителей и проверяем подписки…" : "");
+      call({ action: action, id: id }).then(r => {
+        busy(false);
+        if (!r || !r.ok) { msg(errText(r), true); return; }
+        if (action === "delete") {
+          S.cur = null;
+          S.dirty = false;
+          $("gwEditor").hidden = true;
+          $("gwPreview").hidden = true;
+          loadList().then(() => hint(done(r), "ok"));
+          return;
+        }
+        loadList(id).then(() => msg(done(r)));
+      });
+    };
+    if (S.dirty || !S.cur.id) {
+      save().then(id => { if (id) go(id); });
+    } else {
+      go(S.cur.id);
+    }
+  }
+
+  function upload(file) {
+    if (!file) return;
+    if (file.size > 6 * 1024 * 1024) { msg("Картинка больше 6 МБ.", true); return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      $("fImgNote").textContent = "Загружаем…";
+      fetch(UPLOAD, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: rd.result, kind: "news", pct: 100 })
+      }).then(r => r.json()).then(r => {
+        if (!r || !r.url) { $("fImgNote").textContent = "Не загрузилась: " + ((r && r.error) || "ошибка"); return; }
+        setImage({ url: r.url, w: r.width || 1200, h: r.height || 675 });
+        $("fImgNote").textContent = "PNG, JPG или WebP до 6 МБ";
+        changed();
+      }).catch(() => { $("fImgNote").textContent = "Не загрузилась"; });
+    };
+    rd.readAsDataURL(file);
+  }
+
+  function init() {
+    wireEditor();
+    $("gwNew").addEventListener("click", () => { if (confirmLeave()) fill(blank()); });
+    $("fPrizeAdd").addEventListener("click", () => { $("fPrizes").appendChild(prizeRow(null)); changed(); });
+    $("fImgFile").addEventListener("change", e => { upload(e.target.files[0]); e.target.value = ""; });
+    $("fImgDel").addEventListener("click", () => { setImage(null); changed(); });
+    ["fTitleRu", "fTitleEn", "fEnds"].forEach(id => $(id).addEventListener("input", changed));
+    document.querySelectorAll("[data-plus]").forEach(b => b.addEventListener("click", () => {
+      const base = Math.max(Math.floor(Date.now() / 1000), fromInput($("fEnds").value) || 0);
+      $("fEnds").value = toInput(base + (+b.dataset.plus) * 86400);
+      changed();
+    }));
+    $("aSave").addEventListener("click", save);
+    $("aPublish").addEventListener("click", () => act("publish",
+      "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
+      () => "Опубликован. Бот рассылает сообщение о старте."));
+    $("aEnd").addEventListener("click", () => act("end",
+      "Закончить приём заявок прямо сейчас?", () => "Приём заявок закрыт. Теперь можно разыграть."));
+    $("aDraw").addEventListener("click", () => act("draw",
+      "Разыграть призы? Победители выбираются один раз, отменить нельзя. Бот сразу напишет победителям.",
+      r => "Готово: победителей " + r.winners + " из " + r.slots + " мест, участников " + r.entries
+        + (r.skipped ? ", пропущено " + r.skipped + " (отписались, отключили бота или в бане)" : "") + "."));
+    $("aDelete").addEventListener("click", () => act("delete",
+      "Удалить розыгрыш вместе со списком участников? Это нельзя отменить.", () => "Удалён."));
+    window.addEventListener("beforeunload", e => { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });
+    loadList();
+  }
+
+  init();
+})();

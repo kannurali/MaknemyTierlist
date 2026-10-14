@@ -156,13 +156,14 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=12" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=7" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -585,7 +586,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=5" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfTg !== null): ?>
@@ -596,5 +597,8 @@ $pfTitle = $pfNick !== ''
   <script src="js/trade-cards.js?v=4" defer></script>
   <script src="js/profile-trades.js?v=2" defer></script>
 <?php endif; ?>
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=1" fetchpriority="high"></script>
+  <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

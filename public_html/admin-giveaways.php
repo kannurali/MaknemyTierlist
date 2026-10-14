@@ -1,0 +1,155 @@
+<?php
+// Розыгрыши — /admin/giveaways. Только admin_ids.
+//
+// Страница — каркас: список, редактор и предпросмотр наполняет
+// js/giveaway-admin.js по ответам /api/giveaway_admin.php. Предпросмотр
+// рисует та же карточка (js/giveaway.js), что окно и страница /giveaways,
+// поэтому владелец видит ровно то, что увидят посетители.
+//
+// Пути абсолютные: страница живёт на /admin/giveaways, относительные уехали
+// бы в /admin/css/.
+require_once __DIR__ . '/api/lib/admin_page.php';
+admin_page_guard();
+
+header('Content-Type: text/html; charset=utf-8');
+$nav = admin_nav('giveaways');
+echo <<<HTML
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Розыгрыши — панель управления</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="stylesheet" href="/css/admin-shell.css?v=4" />
+<link rel="stylesheet" href="/css/promo-admin.css?v=4" />
+<link rel="stylesheet" href="/css/giveaway.css?v=1" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=1" />
+</head>
+<body>
+{$nav}
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">РОЗЫГРЫШИ<span>панель</span></div>
+    <div class="top-actions">
+      <button class="btn" id="gwNew" type="button">＋ Розыгрыш</button>
+      <a class="btn" href="/giveaways" target="_blank" rel="noopener">Страница на сайте ↗</a>
+      <span class="hint" id="gwHint"></span>
+    </div>
+  </header>
+
+  <p class="ga-alert" id="gwAlert" hidden></p>
+
+  <main class="cols ga-cols">
+    <aside class="list-col">
+      <div class="list-head">Розыгрыши <span class="muted" id="gwListCount"></span></div>
+      <ul class="list" id="gwList"></ul>
+      <p class="muted small" id="gwEmpty" hidden>Пока пусто. Нажмите «＋ Розыгрыш».</p>
+
+      <div class="ga-channels">
+        <div class="list-head">Каналы бота</div>
+        <ul class="ga-ch-list" id="gwChannels"></ul>
+        <p class="muted small" id="gwChHelp"></p>
+      </div>
+    </aside>
+
+    <section class="edit-col" id="gwEditor" hidden>
+      <div class="ga-status" id="gwStatus"></div>
+
+      <div class="row">
+        <label class="f grow">Название
+          <input type="text" id="fTitleRu" maxlength="120" placeholder="Розыгрыш 5 Magnet" />
+        </label>
+        <label class="f grow">Название по-английски <span class="muted">(пусто — переведём сами)</span>
+          <input type="text" id="fTitleEn" maxlength="120" placeholder="Giveaway: 5 Magnet" />
+        </label>
+      </div>
+
+      <div class="f">Картинка
+        <div class="ga-image">
+          <img class="ga-image-prev" id="fImgPrev" alt="" hidden />
+          <div class="slot-row">
+            <label class="btn small file-btn">Загрузить<input type="file" id="fImgFile" accept="image/png,image/jpeg,image/webp" /></label>
+            <button class="btn small" id="fImgDel" type="button" hidden>Убрать</button>
+            <span class="muted small" id="fImgNote">PNG, JPG или WebP до 6 МБ</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="f">Описание
+        <div class="ga-toolbar" id="fTools" role="toolbar" aria-label="Форматирование">
+          <button class="btn small" type="button" data-cmd="bold" title="Жирный (Ctrl+B)"><b>Ж</b></button>
+          <button class="btn small" type="button" data-cmd="italic" title="Курсив (Ctrl+I)"><i>К</i></button>
+          <button class="btn small" type="button" data-cmd="underline" title="Подчёркнутый (Ctrl+U)"><u>Ч</u></button>
+          <button class="btn small" type="button" data-cmd="strikeThrough" title="Зачёркнутый"><s>З</s></button>
+          <button class="btn small" type="button" data-cmd="link" title="Ссылка">🔗 Ссылка</button>
+          <button class="btn small" type="button" data-cmd="spoiler" title="Спойлер — текст скрыт, пока не нажмут">Спойлер</button>
+          <button class="btn small" type="button" data-cmd="insertUnorderedList" title="Список">• Список</button>
+          <button class="btn small" type="button" data-cmd="insertOrderedList" title="Нумерованный список">1. Список</button>
+          <button class="btn small" type="button" data-cmd="quote" title="Цитата">❝ Цитата</button>
+          <button class="btn small" type="button" data-cmd="removeFormat" title="Убрать оформление">Очистить</button>
+        </div>
+        <div class="ga-rte" id="fBody" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Описание розыгрыша"></div>
+        <span class="muted small">Английский переводится сам при сохранении. Вставленный текст приходит без чужого оформления.</span>
+      </div>
+
+      <div class="f">Призы <span class="muted">(разыгрываются по порядку: сначала первый)</span>
+        <div class="ga-prizes" id="fPrizes"></div>
+        <div><button class="btn small" id="fPrizeAdd" type="button">＋ Приз</button></div>
+      </div>
+
+      <div class="f">Условия: подписка на каналы <span class="muted">(ничего не отмечено — условий нет, хватит входа и бота)</span>
+        <div class="pages" id="fChannels"></div>
+      </div>
+
+      <div class="row">
+        <label class="f">Конец (МСК)
+          <input type="datetime-local" id="fEnds" />
+        </label>
+        <div class="f ga-quick">Быстро
+          <div class="slot-row">
+            <button class="btn small" type="button" data-plus="1">+1 день</button>
+            <button class="btn small" type="button" data-plus="3">+3 дня</button>
+            <button class="btn small" type="button" data-plus="7">+7 дней</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row ga-actions">
+        <button class="btn primary" id="aSave" type="button">Сохранить</button>
+        <button class="btn primary" id="aPublish" type="button">Опубликовать</button>
+        <button class="btn" id="aEnd" type="button">Завершить досрочно</button>
+        <button class="btn primary" id="aDraw" type="button">Разыграть</button>
+        <span class="ga-gap"></span>
+        <button class="btn danger" id="aDelete" type="button">Удалить</button>
+      </div>
+      <p class="ga-msg" id="gwMsg" role="status" aria-live="polite"></p>
+
+      <section class="ga-people" id="gwPeople" hidden>
+        <div class="list-head">Участники <span class="muted" id="gwCount"></span></div>
+        <div class="ga-table-wrap">
+          <table class="ga-table">
+            <thead><tr><th>Игрок</th><th>Telegram</th><th>Когда</th><th>Приз</th><th></th></tr></thead>
+            <tbody id="gwPeopleBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="ga-preview" id="gwPreview" hidden>
+      <div class="list-head">Как увидят на сайте</div>
+      <div class="ga-preview-box" id="gwPrevBox"></div>
+    </section>
+  </main>
+</div>
+
+<script src="/js/i18n.js?v=70"></script>
+<script src="/js/news-blocks.js?v=3"></script>
+<script src="/js/giveaway.js?v=1"></script>
+<script src="/js/giveaway-admin.js?v=1"></script>
+</body>
+</html>
+HTML;

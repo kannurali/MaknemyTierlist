@@ -147,13 +147,14 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
 
 <script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -561,7 +562,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
@@ -569,6 +570,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=96" fetchpriority="high"></script>
+  <script src="js/app.js?v=97" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=1" fetchpriority="high"></script>
+  <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
