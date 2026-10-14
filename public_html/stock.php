@@ -282,14 +282,14 @@ page_lscache();
   </div>
 
 
-  <script src="js/i18n.js?v=72" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=73" fetchpriority="high"></script>
   <script src="js/promo.js?v=26" fetchpriority="high"></script>
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/stock-page.js?v=3" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=2" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=3" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
