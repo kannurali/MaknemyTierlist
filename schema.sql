@@ -224,3 +224,13 @@ CREATE TABLE IF NOT EXISTS user_bans (
   created_at BIGINT UNSIGNED NOT NULL,
   KEY idx_until (until_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Лайки только вошедшим, один на аккаунт: кто уже голосовал за тирлист
+-- ('tierlist') или за пост ('news:<id>'). Счётчики остаются в likes.count и
+-- news.likes. Для боевой базы — docs/migrations/2026-10-14-like-votes.sql.
+CREATE TABLE IF NOT EXISTS like_votes (
+  user_id    BIGINT UNSIGNED NOT NULL,
+  target     VARCHAR(32)     NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (user_id, target)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

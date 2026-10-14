@@ -41,6 +41,9 @@
     if (q.activeLeft === 0) {
       quotaEl.textContent = tx("trade.activeOut", { max: q.activeMax });
       quotaEl.classList.add("is-bad");
+    } else if (q.left > 0 && q.cooldownAt > Math.floor(Date.now() / 1000)) {
+      quotaEl.textContent = tx("trade.cooldownOut", { t: cards.duration(q.cooldownAt - Math.floor(Date.now() / 1000)) });
+      quotaEl.classList.add("is-bad");
     } else if (q.left > 0) {
       quotaEl.textContent = tx("trade.quotaLeft", { active: q.active, activeMax: q.activeMax, n: q.left });
       quotaEl.classList.remove("is-bad");

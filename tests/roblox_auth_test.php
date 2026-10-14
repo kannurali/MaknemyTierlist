@@ -279,6 +279,19 @@ test('без таблицы users сайт не падает', function () use (
     assert_true($s['roblox'], 'кнопка входа при этом остаётся');
 });
 
+// Лайки только вошедшим (api/lib/likes.php): по liked кнопки рисуются
+// нажатыми на любом устройстве, а у анонима вместо кнопки — «Зарегистрироваться».
+test('шапка узнаёт, что вошедший уже лайкнул', function () use ($CFG_ON) {
+    $db = test_db();
+    roblox_touch_user($db, ['roblox_id' => '42', 'username' => 'mak', 'display_name' => 'Mak',
+                            'avatar_url' => ''], 1000);
+    $open = function () use ($db) { return $db; };
+    assert_eq(null, handle_session($open, [], $CFG_ON)['liked'], 'аноним — null');
+    assert_eq(['tierlist' => false, 'news' => []], handle_session($open, ['user_id' => '42'], $CFG_ON)['liked'], 'ещё ничего');
+    $db->exec("INSERT INTO like_votes (user_id, target, created_at) VALUES (42, 'tierlist', 1), (42, 'news:5', 1), (43, 'news:6', 1)");
+    assert_eq(['tierlist' => true, 'news' => [5]], handle_session($open, ['user_id' => '42'], $CFG_ON)['liked'], 'свои голоса');
+});
+
 // Значок на кнопке чата: в скольких диалогах мне написали. Без таблиц чата
 // ноль, и шапка не падает.
 test('шапка узнаёт, в скольких диалогах непрочитанное', function () use ($CFG_ON) {

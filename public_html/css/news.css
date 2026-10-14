@@ -57,6 +57,8 @@
 .nw-like:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .nw-like-heart { font-size: 15px; line-height: 1; display: inline-block; }
 .nw-like-count { font-variant-numeric: tabular-nums; }
+.nw-like-count[hidden], .nw-like-join[hidden] { display: none; }
+.nw-like-join { white-space: nowrap; }
 @keyframes nwLikePop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .nw-like-heart.pop { animation: nwLikePop .35s ease; }
 

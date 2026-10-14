@@ -217,7 +217,8 @@
     sides: () => ({
       left: sides.left.map(e => e.item.id),
       right: sides.right.map(e => e.item.id)
-    })
+    }),
+    trade: () => CALC.computeTrade(sides.left, sides.right)
   };
 
   function onSidesChanged() {

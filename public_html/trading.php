@@ -85,7 +85,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=23" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=23" /><?php endif; ?>
 
-<script src="js/auth.js?v=1" fetchpriority="high"></script>
+<script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/topbar.js?v=25" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
@@ -284,7 +284,7 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=69" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=70" fetchpriority="high"></script>
   <script src="js/promo.js?v=26" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>

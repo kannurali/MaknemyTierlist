@@ -37,30 +37,25 @@
     ? NX_PROMO_FEED.create({ page: PROMO_PAGE, tx: tx, build: NX_PROMO_FEED.banner })
     : null;
 
-  const NEWS_LIKED_KEY = "nexus-news-liked-v1";
+  let likeAuth = null;
+  const likedPosts = new Set();
+  const likeViews = new Map();
+  try { localStorage.removeItem("nexus-news-liked-v1"); } catch (_) {}
 
-  function readLikedMap() {
-    try { return JSON.parse(localStorage.getItem(NEWS_LIKED_KEY) || "{}"); }
-    catch (_) { return {}; }
-  }
-  function writeLikedMap(map) {
-    try { localStorage.setItem(NEWS_LIKED_KEY, JSON.stringify(map)); } catch (_) {}
-  }
-  function isPostLiked(id) { return !!readLikedMap()[id]; }
-  function setPostLiked(id, v) {
-    const map = readLikedMap();
-    if (v) { map[id] = true; } else { delete map[id]; }
-    writeLikedMap(map);
+  function likeJoin() {
+    return !!(likeAuth && !likeAuth.user && likeAuth.canLogin);
   }
 
   async function sendNewsLike(id, dir) {
     try {
       const r = await fetch("/api/news_like.php", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, dir }),
       });
-      return r.ok ? true : false;
+      const d = await r.json().catch(() => null);
+      return { status: r.status, data: d };
     } catch (e) {}
     return null;
   }
@@ -72,29 +67,69 @@
     heartEl.classList.add("pop");
   }
 
-  function renderLikeButton(btn, heartEl, countEl, liked, likes) {
-    btn.classList.toggle("liked", liked);
-    btn.setAttribute("aria-pressed", liked ? "true" : "false");
+  function renderLikeButton(v) {
+    const join = likeJoin();
+    const liked = !join && likedPosts.has(v.post.id);
+    const likes = v.post.likes || 0;
+    v.btn.classList.toggle("is-join", join);
+    v.btn.classList.toggle("liked", liked);
+    if (join) v.btn.removeAttribute("aria-pressed");
+    else v.btn.setAttribute("aria-pressed", liked ? "true" : "false");
 
-    btn.title = tx(liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";
-    countEl.textContent = String(likes);
+    v.btn.title = tx(join ? "like.joinTitle" : liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";
+    v.count.textContent = String(likes);
+    v.count.hidden = join;
+    v.join.textContent = tx("like.join");
+    v.join.hidden = !join;
   }
 
-  function toggleNewsLike(post, btn, heartEl, countEl) {
-    const willLike = !isPostLiked(post.id);
+  function renderAllLikes() {
+    likeViews.forEach(v => { if (v.btn.isConnected) renderLikeButton(v); });
+  }
+
+  function toggleNewsLike(v) {
+    if (!likeAuth) return;
+    if (!likeAuth.user) {
+      if (likeAuth.canLogin && window.MKAuth) location.assign(MKAuth.startUrl());
+      return;
+    }
+    if (v.busy) return;
+    const post = v.post;
+    const willLike = !likedPosts.has(post.id);
     const dir = willLike ? 1 : -1;
 
-    setPostLiked(post.id, willLike);
+    if (willLike) likedPosts.add(post.id); else likedPosts.delete(post.id);
     post.likes = Math.max(0, (post.likes || 0) + dir);
-    renderLikeButton(btn, heartEl, countEl, willLike, post.likes);
-    popLikeHeart(heartEl);
+    renderLikeButton(v);
+    popLikeHeart(v.heart);
 
-    sendNewsLike(post.id, dir).then(ok => {
-      if (ok === false) {
-        setPostLiked(post.id, !willLike);
+    v.busy = true;
+    sendNewsLike(post.id, dir).then(res => {
+      v.busy = false;
+      const d = res && res.data;
+      if (res && res.status === 200 && d && d.ok) {
+        if (d.liked) likedPosts.add(post.id); else likedPosts.delete(post.id);
+        if (typeof d.likes === "number") post.likes = Math.max(0, d.likes);
+      } else {
+        if (willLike) likedPosts.delete(post.id); else likedPosts.add(post.id);
         post.likes = Math.max(0, post.likes - dir);
-        renderLikeButton(btn, heartEl, countEl, !willLike, post.likes);
+        if (res && res.status === 401) {
+          likeAuth = { user: null, canLogin: likeAuth.canLogin };
+          renderAllLikes();
+          return;
+        }
       }
+      renderLikeButton(v);
+    });
+  }
+
+  if (window.MKAuth) {
+    MKAuth.session().then(s => {
+      likeAuth = { user: s && s.user ? s.user : null, canLogin: MKAuth.canLogin(s) };
+      likedPosts.clear();
+      const ids = s && s.liked && Array.isArray(s.liked.news) ? s.liked.news : [];
+      ids.forEach(id => likedPosts.add(id));
+      renderAllLikes();
     });
   }
 
@@ -203,14 +238,19 @@
     likeHeart.append(heartPath);
     const likeCount = document.createElement("span");
     likeCount.className = "nw-like-count";
-    renderLikeButton(likeBtn, likeHeart, likeCount, isPostLiked(post.id), post.likes || 0);
+    const likeJoinText = document.createElement("span");
+    likeJoinText.className = "nw-like-join";
+    likeJoinText.hidden = true;
+    const view = { post: post, btn: likeBtn, heart: likeHeart, count: likeCount, join: likeJoinText, busy: false };
+    renderLikeButton(view);
 
     if (post.id > 0) {
-      likeBtn.addEventListener("click", () => toggleNewsLike(post, likeBtn, likeHeart, likeCount));
+      likeViews.set(post.id, view);
+      likeBtn.addEventListener("click", () => toggleNewsLike(view));
     } else {
       likeBtn.disabled = true;
     }
-    likeBtn.append(likeHeart, likeCount);
+    likeBtn.append(likeHeart, likeCount, likeJoinText);
     footer.append(likeBtn);
 
     if (post.id > 0) {
