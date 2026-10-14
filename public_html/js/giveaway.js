@@ -436,7 +436,7 @@
     ui.cOwn = [];
     var seen = readConds();
     (g.conds || []).forEach(function (c, i) {
-      var li = condItem("own", pick(c.text), c.url, t("gw.open"));
+      var li = condItem("own", pick(c.text), c.url, pick(c.btn) || t("gw.subscribe"));
       var key = g.id + ":" + i;
       if (g.id && seen.indexOf(key) >= 0) { mark(li, "ok"); }
       var a = li.querySelector("a");

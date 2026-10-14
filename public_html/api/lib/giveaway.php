@@ -46,6 +46,8 @@ const GW_CHANNELS_MAX    = 5;
 const GW_CONDS_MAX       = 5;
 const GW_COND_TEXT_MAX   = 100;
 const GW_COND_URL_MAX    = 300;
+// Надпись на кнопке условия. Пусто — «Подписаться».
+const GW_COND_BTN_MAX    = 24;
 // Описание короче новости: оно живёт в окне поверх страницы.
 const GW_BODY_JSON_MAX   = 32768;
 const GW_BODY_TYPES      = ['p', 'quote', 'list'];
@@ -159,7 +161,12 @@ function gw_validate(array $in): array {
         }
         $url = gw_cond_url($c['url'] ?? null);
         if ($url === null) { return $fail('bad cond url'); }
-        $conds[] = ['ru' => $ru, 'en' => $en, 'url' => $url];
+        $btnRu = isset($c['btn_ru']) && is_string($c['btn_ru']) ? gw_clean($c['btn_ru'], GW_COND_BTN_MAX + 1) : '';
+        $btnEn = isset($c['btn_en']) && is_string($c['btn_en']) ? gw_clean($c['btn_en'], GW_COND_BTN_MAX + 1) : '';
+        if (mb_strlen($btnRu) > GW_COND_BTN_MAX || mb_strlen($btnEn) > GW_COND_BTN_MAX) { return $fail('bad cond button'); }
+        // Без русской надписи кнопка «Подписаться» на обоих языках.
+        if ($btnRu === '') { $btnEn = ''; }
+        $conds[] = ['ru' => $ru, 'en' => $en, 'url' => $url, 'btn_ru' => $btnRu, 'btn_en' => $btnEn];
     }
 
     $ends = $in['ends_at'] ?? 0;
@@ -192,14 +199,20 @@ function gw_cond_url($v): ?string {
     return $v;
 }
 
-// Свои условия из базы: [{ru, en, url}]. Кривые строки пропускаются.
+// Свои условия из базы: [{ru, en, url, btn_ru, btn_en}]. Кривые строки
+// пропускаются; у сохранённых до надписей на кнопках они пустые.
 function gw_conds($json): array {
+    $str = function (array $c, string $k): string { return isset($c[$k]) && is_string($c[$k]) ? $c[$k] : ''; };
     $out = [];
     foreach (gw_decode_list($json) as $c) {
-        if (!is_array($c) || !isset($c['ru']) || !is_string($c['ru']) || $c['ru'] === '') { continue; }
+        if (!is_array($c) || $str($c, 'ru') === '') { continue; }
         $url = gw_cond_url($c['url'] ?? null);
         if ($url === null) { continue; }
-        $out[] = ['ru' => $c['ru'], 'en' => isset($c['en']) && is_string($c['en']) ? $c['en'] : '', 'url' => $url];
+        $btnRu = $str($c, 'btn_ru');
+        $out[] = [
+            'ru' => $c['ru'], 'en' => $str($c, 'en'), 'url' => $url,
+            'btn_ru' => $btnRu, 'btn_en' => $btnRu === '' ? '' : $str($c, 'btn_en'),
+        ];
     }
     return $out;
 }
@@ -220,33 +233,37 @@ function gw_has_conds(PDO $pdo): bool {
 }
 
 /**
- * Английский у своих условий. Пустой EN берётся из прежней версии с тем же
- * русским, а нет такой — переводится. EN, оставшийся от прежнего русского
- * (русский поменяли, английский нет), считается пустым. [условия, сколько не
- * перевелось].
+ * Английский у своих условий — у текста и у надписи на кнопке. Пустой EN
+ * берётся из прежней версии с тем же русским, а нет такой — переводится. EN,
+ * оставшийся от прежнего русского (русский поменяли, английский нет),
+ * считается пустым. [условия, сколько не перевелось].
  */
 function gw_conds_en(array $conds, array $old, ?callable $translate, float $deadline): array {
-    $byRu = [];
-    $byEn = [];
-    foreach ($old as $o) {
-        if ($o['en'] === '') { continue; }
-        $byRu[$o['ru']] = $o['en'];
-        $byEn[$o['en']] = $o['ru'];
-    }
+    $pairs = ['en' => ['ru', GW_COND_TEXT_MAX], 'btn_en' => ['btn_ru', GW_COND_BTN_MAX]];
     $texts = [];
-    foreach ($conds as $i => $c) {
-        if ($c['en'] !== '' && isset($byEn[$c['en']]) && $byEn[$c['en']] !== $c['ru']) { $c['en'] = ''; }
-        if ($c['en'] === '' && isset($byRu[$c['ru']])) { $c['en'] = $byRu[$c['ru']]; }
-        if ($c['en'] === '') { $texts['c' . $i] = $c['ru']; }
-        $conds[$i] = $c;
+    foreach ($pairs as $enKey => [$ruKey]) {
+        $byRu = [];
+        $byEn = [];
+        foreach ($old as $o) {
+            if ($o[$enKey] === '') { continue; }
+            $byRu[$o[$ruKey]] = $o[$enKey];
+            $byEn[$o[$enKey]] = $o[$ruKey];
+        }
+        foreach ($conds as $i => $c) {
+            if ($c[$enKey] !== '' && isset($byEn[$c[$enKey]]) && $byEn[$c[$enKey]] !== $c[$ruKey]) { $c[$enKey] = ''; }
+            if ($c[$enKey] === '' && isset($byRu[$c[$ruKey]])) { $c[$enKey] = $byRu[$c[$ruKey]]; }
+            if ($c[$enKey] === '' && $c[$ruKey] !== '') { $texts[$enKey . ':' . $i] = $c[$ruKey]; }
+            $conds[$i] = $c;
+        }
     }
     if (!$texts || $translate === null) { return [$conds, 0]; }
     $failed = 0;
     foreach (tr_translate_texts($texts, $translate, $deadline) as $k => $en) {
-        $i = (int)substr($k, 1);
-        $en = $en === null ? '' : gw_clean(tr_fix_dashes($en, $conds[$i]['ru']), GW_COND_TEXT_MAX + 1);
-        if ($en === '' || mb_strlen($en) > GW_COND_TEXT_MAX) { $failed++; continue; }
-        $conds[$i]['en'] = $en;
+        [$enKey, $i] = explode(':', $k);
+        [$ruKey, $max] = $pairs[$enKey];
+        $en = $en === null ? '' : gw_clean(tr_fix_dashes($en, $conds[(int)$i][$ruKey]), $max + 1);
+        if ($en === '' || mb_strlen($en) > $max) { $failed++; continue; }
+        $conds[(int)$i][$enKey] = $en;
     }
     return [$conds, $failed];
 }
@@ -396,7 +413,11 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
     }
     $conds = [];
     foreach (gw_conds($row['conds_json'] ?? null) as $c) {
-        $conds[] = ['text' => ['ru' => $c['ru'], 'en' => $c['en']], 'url' => $c['url']];
+        $conds[] = [
+            'text' => ['ru' => $c['ru'], 'en' => $c['en']],
+            'url'  => $c['url'],
+            'btn'  => ['ru' => $c['btn_ru'], 'en' => $c['btn_en']],
+        ];
     }
     $img = (string)$row['image_url'] !== ''
         ? ['url' => (string)$row['image_url'], 'w' => (int)$row['image_w'], 'h' => (int)$row['image_h']]

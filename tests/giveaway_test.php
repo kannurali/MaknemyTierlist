@@ -236,8 +236,8 @@ test('автоперевод: пустой EN переводится, неизм
 
 const GW_YT = 'https://youtube.com/@maknemy?sub_confirmation=1';
 
-function gw_cond(string $ru, string $url = GW_YT, string $en = ''): array {
-    return ['ru' => $ru, 'en' => $en, 'url' => $url];
+function gw_cond(string $ru, string $url = GW_YT, string $en = '', string $btn = '', string $btnEn = ''): array {
+    return ['ru' => $ru, 'en' => $en, 'url' => $url, 'btn_ru' => $btn, 'btn_en' => $btnEn];
 }
 
 test('свои условия: текст обязателен, ссылка только http(s)', function () {
@@ -251,6 +251,7 @@ test('свои условия: текст обязателен, ссылка т�
         'пробел в ссылке'     => [gw_cond('YouTube', 'https://a.b/x y')],
         'без хоста'           => [gw_cond('YouTube', 'https:///x')],
         'длинная ссылка'      => [gw_cond('YouTube', 'https://a.b/' . str_repeat('x', GW_COND_URL_MAX))],
+        'длинная кнопка'      => [gw_cond('YouTube', GW_YT, '', str_repeat('я', GW_COND_BTN_MAX + 1))],
         'не список'           => ['ru' => 'YouTube'],
         'шесть условий'       => array_fill(0, GW_CONDS_MAX + 1, gw_cond('YouTube')),
     ];
@@ -261,17 +262,20 @@ test('свои условия: текст обязателен, ссылка т�
     assert_true($v['ok'], 'хорошее условие проходит');
     assert_eq([gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe')], $v['row']['conds'], 'пробелы срезаны');
     assert_eq([], gw_validate(gw_draft())['row']['conds'], 'нет условий — пустой список');
+    $v = gw_validate(gw_draft(['conds' => [gw_cond('Лайк', GW_YT, '', ' Лайкнуть ', 'Like'), gw_cond('Канал', GW_YT, '', '', 'Join')]]));
+    assert_eq([['Лайкнуть', 'Like'], ['', '']], array_map(function ($c) { return [$c['btn_ru'], $c['btn_en']]; }, $v['row']['conds']),
+        'надпись кнопки; без русской — и английской нет, будет «Подписаться»');
 });
 
 test('свои условия видны в админке и на сайте, участию не мешают', function () {
     $p = gw_db();
     gw_user($p, '1', 'ann', 501);
-    $id = gw_live($p, ['conds' => [gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe on YouTube')]]);
-    assert_eq([gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe on YouTube')],
+    $id = gw_live($p, ['conds' => [gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe on YouTube', 'Смотреть', 'Watch')]]);
+    assert_eq([gw_cond('Подписаться на YouTube', GW_YT, 'Subscribe on YouTube', 'Смотреть', 'Watch')],
         gw_admin_item($p, gw_load($p, $id), GW_NOW)['conds'], 'админка');
     $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
-    assert_eq([['text' => ['ru' => 'Подписаться на YouTube', 'en' => 'Subscribe on YouTube'], 'url' => GW_YT]],
-        $list['live'][0]['conds'], 'сайт');
+    assert_eq([['text' => ['ru' => 'Подписаться на YouTube', 'en' => 'Subscribe on YouTube'], 'url' => GW_YT,
+        'btn' => ['ru' => 'Смотреть', 'en' => 'Watch']]], $list['live'][0]['conds'], 'сайт');
     $log = [];
     assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'участие без проверки условия');
     assert_true(strpos(gw_announce_text(gw_load($p, $id), 'ru'), 'Условия — в карточке') !== false, 'рассылка про условия');
@@ -301,10 +305,31 @@ test('свои условия: EN переводится, неизменённо
     $conds = gw_conds(gw_load($p, $out['id'])['conds_json']);
     assert_eq(['EN:Подписаться на YouTube', 'EN:Лайк и коммент'], array_column($conds, 'en'), 'старый EN не остался под новым русским');
 
+    // Надпись на кнопке переводится так же: админка шлёт только русскую.
+    $asked = [];
+    gw_save($p, gw_draft(['id' => $out['id'], 'title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
+        'conds' => [gw_cond('Подписаться на YouTube', GW_YT, '', 'Смотреть'), gw_cond('Лайк и коммент')]]), GW_NOW, $tr);
+    assert_eq(['Смотреть'], $asked, 'переведена только надпись');
+    $conds = gw_conds(gw_load($p, $out['id'])['conds_json']);
+    assert_eq([['Смотреть', 'EN:Смотреть'], ['', '']], array_map(function ($c) { return [$c['btn_ru'], $c['btn_en']]; }, $conds));
+    $asked = [];
+    gw_save($p, gw_draft(['id' => $out['id'], 'title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
+        'conds' => [gw_cond('Подписаться на YouTube', GW_YT, '', 'Смотреть')]]), GW_NOW, $tr);
+    assert_eq([], $asked, 'надпись не менялась — переводчика не зовут');
+    assert_eq('EN:Смотреть', gw_conds(gw_load($p, $out['id'])['conds_json'])[0]['btn_en']);
+
     $fail = function (): ?string { return null; };
     [$s, $out] = gw_save($p, gw_draft(['title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
         'conds' => [gw_cond('Новое')]]), GW_NOW, $fail);
     assert_eq([200, 1], [$s, $out['translate_failed']], 'переводчик молчит — сохранено, EN пустой');
+});
+
+test('условие, сохранённое до надписей на кнопке, читается с пустой надписью', function () {
+    $p = gw_db();
+    $id = gw_live($p);
+    $p->exec("UPDATE giveaways SET conds_json = '[{\"ru\":\"Старое\",\"en\":\"Old\",\"url\":\"https://y.example\"}]'");
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq(['ru' => '', 'en' => ''], $list['live'][0]['conds'][0]['btn']);
 });
 
 test('до миграции conds_json: без своих условий сохраняется, с ними — просит миграцию', function () {

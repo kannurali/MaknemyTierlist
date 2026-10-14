@@ -41,6 +41,7 @@
     "bad conds": "Своих условий — не больше пяти.",
     "bad cond text": "У условия нет текста (или он длиннее 100 символов).",
     "bad cond url": "Ссылка условия должна начинаться с https:// и быть без пробелов (до 300 символов).",
+    "bad cond button": "Надпись на кнопке условия — до 24 символов.",
     conds_migrate: "Для своих условий выполните docs/migrations/2026-10-15-giveaway-conds.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
@@ -486,6 +487,13 @@
     en.placeholder = "По-английски (пусто — переведём)";
     en.value = c ? c.en : "";
     en.className = "ga-cond-en";
+    const btn = document.createElement("input");
+    btn.type = "text";
+    btn.maxLength = 24;
+    btn.placeholder = "Кнопка: Подписаться";
+    btn.title = "Надпись на кнопке. Пусто — «Подписаться»; английский переведётся сам.";
+    btn.value = c ? c.btn_ru || "" : "";
+    btn.className = "ga-cond-btn";
     const url = document.createElement("input");
     url.type = "url";
     url.maxLength = 300;
@@ -498,8 +506,8 @@
     del.textContent = "✕";
     del.title = "Убрать условие";
     del.addEventListener("click", () => { row.remove(); changed(); });
-    [ru, en, url].forEach(i => i.addEventListener("input", changed));
-    row.append(ru, en, url, del);
+    [ru, en, btn, url].forEach(i => i.addEventListener("input", changed));
+    row.append(ru, en, btn, url, del);
     return row;
   }
 
@@ -507,6 +515,7 @@
     return Array.from($("fConds").querySelectorAll(".ga-cond")).map(r => ({
       ru: r.querySelector(".ga-cond-ru").value.trim(),
       en: r.querySelector(".ga-cond-en").value.trim(),
+      btn_ru: r.querySelector(".ga-cond-btn").value.trim(),
       url: r.querySelector(".ga-cond-url").value.trim()
     })).filter(c => c.ru || c.url);
   }
@@ -907,7 +916,7 @@
         body: d.body.blocks,
         prizes: d.prizes,
         channels: chans,
-        conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url })),
+        conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url, btn: { ru: c.btn_ru, en: "" } })),
         ends_at: d.ends_at || Math.floor(Date.now() / 1000) + 86400,
         entries: S.cur.entries || 0,
         winners: (S.cur.list || []).filter(e => e.prize !== null)

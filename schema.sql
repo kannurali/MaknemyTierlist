@@ -242,8 +242,9 @@ CREATE TABLE IF NOT EXISTS user_bans (
 -- (api/lib/news_blocks.php), только абзацы, цитаты и списки.
 -- prizes_json — [{"name": "Magnet", "count": 5}, …], порядок = порядок
 -- розыгрыша. channels_json — [chat_id, …] из tg_channels; пусто — условий нет.
--- conds_json — свои условия [{"ru", "en", "url"}, …]: текст и ссылка, бот их
--- не проверяет (docs/migrations/2026-10-15-giveaway-conds.sql).
+-- conds_json — свои условия [{"ru", "en", "url", "btn_ru", "btn_en"}, …]: текст,
+-- ссылка и надпись на кнопке (пусто — «Подписаться»); бот их не проверяет
+-- (docs/migrations/2026-10-15-giveaway-conds.sql).
 CREATE TABLE IF NOT EXISTS giveaways (
   id            INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   status        VARCHAR(8)      NOT NULL DEFAULT 'draft',

@@ -288,7 +288,7 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=72" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=73" fetchpriority="high"></script>
   <script src="js/promo.js?v=26" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
@@ -300,7 +300,7 @@ page_lscache();
   <script src="js/trade-cards.js?v=4" fetchpriority="high"></script>
   <script src="js/trading-page.js?v=8" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=2" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=3" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
