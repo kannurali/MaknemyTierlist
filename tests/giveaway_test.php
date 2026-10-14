@@ -19,7 +19,8 @@ require __DIR__ . '/../public_html/api/session.php';
 //    отписавшийся, забаненный и отключивший бота не выигрывают;
 //  - «Telegram не ответил» никого не лишает приза: розыгрыш просто не пишется;
 //  - о старте бот пишет всем подключившим бота, даже выключившим рассылки;
-//  - черновик снаружи не виден.
+//  - черновик снаружи не виден;
+//  - тестовый виден только по ?test=1, и о его старте бот не пишет никому.
 
 const GW_NOW   = 1790000000;
 const GW_TOKEN = '123456789:AAHfakeTokenForTestsOnly_abcdefghij';
@@ -39,9 +40,10 @@ function gw_db(): PDO {
         seen_at INTEGER NOT NULL DEFAULT 0, notified_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (thread_id, user_id))');
     $pdo->exec('CREATE TABLE tg_prefs (
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
-    // Зеркалит docs/migrations/2026-10-14-giveaways.sql и 2026-10-15-giveaway-conds.sql.
+    // Зеркалит docs/migrations/2026-10-14-giveaways.sql, 2026-10-15-giveaway-conds.sql
+    // и 2026-10-15-giveaway-test.sql.
     $pdo->exec("CREATE TABLE giveaways (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft',
+        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
         title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
         body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
@@ -566,6 +568,99 @@ test('публичный список: черновик скрыт, итоги �
 test('нет таблиц — пустой список, а не ошибка', function () {
     $list = handle_giveaways(function () { return test_db(); }, GW_NOW);
     assert_eq(['live' => [], 'past' => []], $list);
+});
+
+// --------------------------------------------------------------------------
+//  Тестовый розыгрыш
+// --------------------------------------------------------------------------
+
+test('тестовый: посетители не видят, ?test=1 видит, о старте бот молчит', function () {
+    $p = gw_db();
+    $cfg = gw_cfg();
+    $log = [];
+    $real = gw_live($p, ['title_ru' => 'Настоящий']);
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'save', 'test' => true] + gw_draft(['title_ru' => 'Тест']), GW_NOW - 10);
+    assert_eq(200, $s);
+    $test = $out['id'];
+    [$s, , $after] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'publish', 'id' => $test], GW_NOW - 5);
+    assert_eq([200, null], [$s, $after], 'опубликован, рассылки нет');
+
+    $db = function () use ($p) { return $p; };
+    $titles = function (array $list): array { return array_map(function ($g) { return $g['title']['ru']; }, $list); };
+    assert_eq(['Настоящий'], $titles(handle_giveaways($db, GW_NOW)['live']), 'посетителю — только настоящий');
+    $all = handle_giveaways($db, GW_NOW, true)['live'];
+    assert_eq(['Тест', 'Настоящий'], $titles($all), 'по ?test=1 — оба');
+    assert_eq([true, false], array_column($all, 'test'), 'тестовый помечен');
+
+    gw_crowd($p, $test);
+    gw_draw($p, $cfg, gw_tg($log), $test, GW_NOW + 86400);
+    assert_eq(['Настоящий'], $titles(handle_giveaways($db, GW_NOW + 86400)['past']), 'итоги тестового посетителю не видны');
+    assert_eq(['Тест', 'Настоящий'], $titles(handle_giveaways($db, GW_NOW + 86400, true)['past']), 'по ?test=1 — видны');
+
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'list'], GW_NOW);
+    assert_eq([$real => false, $test => true], array_column($out['giveaways'], 'test', 'id'), 'админка видит пометку');
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'get', 'id' => $real], GW_NOW);
+    assert_eq(false, $out['giveaway']['test']);
+});
+
+test('тестовый: кнопки бота ведут на /giveaways?test', function () {
+    $p = gw_db();
+    gw_user($p, '9', 'zed', 509);
+    $id = gw_live($p, ['test' => true]);
+    $log = [];
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '9', $id, GW_NOW, 'page');
+    assert_eq(200, $r[0], 'участвовать в тестовом можно');
+    $log = [];
+    gw_after_join($p, gw_cfg(), $r[2], gw_tg($log));
+    $url = 'https://maknemy.com/giveaways?test#g' . $id;
+    assert_eq($url, gw_sent($log)[0][1]['reply_markup']['inline_keyboard'][0][0]['url'], 'подтверждение');
+    gw_crowd($p, $id);
+    [, , $winners] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
+    $log = [];
+    gw_notify_winners($p, gw_tg($log), gw_load($p, $id), $winners, function () {});
+    assert_eq($url, gw_sent($log)[0][1]['reply_markup']['inline_keyboard'][0][0]['url'], 'поздравление');
+    assert_eq('https://maknemy.com/giveaways#g7', gw_link(7), 'у настоящего — без ?test');
+});
+
+test('пометка «тестовый» меняется только у черновика', function () {
+    $p = gw_db();
+    [, $out] = gw_save($p, gw_draft(['test' => true]), GW_NOW - 20);
+    $id = $out['id'];
+    gw_save($p, gw_draft(['id' => $id, 'test' => false]), GW_NOW - 15);
+    assert_eq(false, gw_is_test(gw_load($p, $id)), 'черновик — снимается');
+    gw_save($p, gw_draft(['id' => $id, 'test' => true]), GW_NOW - 12);
+    gw_publish($p, $id, GW_NOW - 10);
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'test' => false, 'title_ru' => 'Правка']), GW_NOW);
+    assert_eq(200, $s);
+    $row = gw_load($p, $id);
+    assert_eq(['Правка', true], [$row['title_ru'], gw_is_test($row)], 'идущий тестом и остался');
+    $real = gw_live($p);
+    gw_save($p, gw_draft(['id' => $real, 'test' => true]), GW_NOW);
+    assert_eq(false, gw_is_test(gw_load($p, $real)), 'идущий настоящий тестом не стал');
+    [, $out] = gw_save($p, gw_draft(['test' => 1]), GW_NOW);
+    assert_eq(false, gw_is_test(gw_load($p, $out['id'])), 'только настоящее true');
+});
+
+test('до миграции test: настоящий сохраняется и виден, тестовый просит миграцию', function () {
+    $p = gw_db();
+    $p->exec('DROP TABLE giveaways');
+    $p->exec("CREATE TABLE giveaways (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft',
+        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
+        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
+        ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
+    [$s, $out] = gw_save($p, gw_draft(['test' => true]), GW_NOW);
+    assert_eq([409, 'test_migrate'], [$s, $out['error']]);
+    $id = gw_live($p);
+    $db = function () use ($p) { return $p; };
+    assert_eq([$id], array_column(handle_giveaways($db, GW_NOW)['live'], 'id'), 'сайт показывает');
+    assert_eq([false], array_column(handle_giveaways($db, GW_NOW, true)['live'], 'test'));
+    $log = [];
+    [, $out] = gw_save($p, gw_draft(), GW_NOW - 10);
+    [, , $after] = handle_gw_admin($p, gw_cfg(), gw_tg($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
+    assert_eq('announce', $after[0], 'настоящий рассылается как раньше');
 });
 
 test('session.php говорит, где я участвую', function () {

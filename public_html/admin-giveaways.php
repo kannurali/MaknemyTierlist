@@ -37,6 +37,7 @@ echo <<<HTML
     <div class="top-actions">
       <button class="btn" id="gwNew" type="button">＋ Розыгрыш</button>
       <a class="btn" href="/giveaways" target="_blank" rel="noopener">Страница на сайте ↗</a>
+      <a class="btn" href="/giveaways?test" target="_blank" rel="noopener">Тест ↗</a>
       <span class="hint" id="gwHint"></span>
     </div>
   </header>
@@ -123,6 +124,13 @@ echo <<<HTML
         </div>
       </div>
 
+      <div class="f">Проверка
+        <div class="pages">
+          <label class="page-chk"><input type="checkbox" id="fTest" /> Тестовый — посетители его не видят, бот о старте никому не пишет</label>
+        </div>
+        <span class="muted small">Видит только тот, кто открыл maknemy.com/giveaways?test (кнопка «Тест ↗» вверху) — браузер запомнит, и окно на страницах тоже покажет тестовый. Выйти — /giveaways?test=0. Галочка меняется только до публикации.</span>
+      </div>
+
       <div class="row ga-actions">
         <button class="btn primary" id="aSave" type="button">Сохранить</button>
         <button class="btn primary" id="aPublish" type="button">Опубликовать</button>
@@ -172,8 +180,8 @@ echo <<<HTML
 
 <script src="/js/i18n.js?v=73"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=3"></script>
-<script src="/js/giveaway-admin.js?v=4"></script>
+<script src="/js/giveaway.js?v=4"></script>
+<script src="/js/giveaway-admin.js?v=5"></script>
 </body>
 </html>
 HTML;

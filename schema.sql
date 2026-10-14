@@ -245,9 +245,12 @@ CREATE TABLE IF NOT EXISTS user_bans (
 -- conds_json — свои условия [{"ru", "en", "url", "btn_ru", "btn_en"}, …]: текст,
 -- ссылка и надпись на кнопке (пусто — «Подписаться»); бот их не проверяет
 -- (docs/migrations/2026-10-15-giveaway-conds.sql).
+-- test — 1 у тестового: на сайте его видит только открывший /giveaways?test,
+-- бот о старте не пишет (docs/migrations/2026-10-15-giveaway-test.sql).
 CREATE TABLE IF NOT EXISTS giveaways (
   id            INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   status        VARCHAR(8)      NOT NULL DEFAULT 'draft',
+  test          TINYINT(1)      NOT NULL DEFAULT 0,
   title_ru      VARCHAR(120)    NOT NULL DEFAULT '',
   title_en      VARCHAR(120)    NOT NULL DEFAULT '',
   image_url     VARCHAR(80)     NOT NULL DEFAULT '',

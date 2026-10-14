@@ -27,6 +27,15 @@
 // профиле (так решил владелец: о розыгрышах знать должны все). О победе —
 // каждому победителю. Связывается с победителем владелец сам.
 //
+// Тестовый розыгрыш (колонка test) — чтобы проверить всё вживую, не трогая
+// посетителей. В /api/giveaways.php его нет, поэтому ни окна, ни карточки на
+// /giveaways никто не видит; видит только тот, кто открыл /giveaways?test —
+// браузер запоминает это (js/giveaway.js) и дальше берёт
+// /api/giveaways.php?test=1. О старте бот не пишет никому; «вы участвуете» и
+// поздравление победителю приходят как обычно — это сами тестирующие.
+// Пометка ставится только у черновика: идущий розыгрыш тестом не станет и
+// тестом быть не перестанет.
+//
 // Ничего из этого не роняет остальной сайт: нет таблиц — окно молчит,
 // страница пуста, админка просит миграцию.
 //
@@ -186,6 +195,7 @@ function gw_validate(array $in): array {
         'channels_json' => json_encode($channels),
         'conds'         => $conds,
         'ends_at'       => (int)$ends,
+        'test'          => ($in['test'] ?? false) === true,
     ]];
 }
 
@@ -230,6 +240,21 @@ function gw_has_conds(PDO $pdo): bool {
     } catch (PDOException $e) {
         return false;
     }
+}
+
+// Колонку test добавляет миграция 2026-10-15-giveaway-test.sql. До неё все
+// розыгрыши настоящие, а пометить тестовым админка не даёт.
+function gw_has_test(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT test FROM giveaways LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function gw_is_test(array $row): bool {
+    return !empty($row['test']);
 }
 
 /**
@@ -435,22 +460,25 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
         'published_at' => (int)$row['published_at'],
         'entries'      => $counts[$id] ?? 0,
         'winners'      => $row['status'] === 'drawn' ? ($winners[$id] ?? []) : [],
+        'test'         => gw_is_test($row),
     ];
 }
 
 /**
  * Для окна и страницы: идущие (новые первыми) и прошедшие (недавние
  * первыми). Одинаково для всех посетителей — ответ кешируется.
+ * $withTest — вместе с тестовыми (/api/giveaways.php?test=1).
  */
-function gw_public_list(PDO $pdo, int $now): array {
+function gw_public_list(PDO $pdo, int $now, bool $withTest = false): array {
+    $real = !$withTest && gw_has_test($pdo) ? ' AND test = 0' : '';
     $live = $pdo->prepare(
-        "SELECT * FROM giveaways WHERE status = 'live' AND ends_at > :now ORDER BY published_at DESC, id DESC"
+        "SELECT * FROM giveaways WHERE status = 'live' AND ends_at > :now" . $real . " ORDER BY published_at DESC, id DESC"
     );
     $live->execute([':now' => $now]);
     $liveRows = $live->fetchAll(PDO::FETCH_ASSOC);
 
     $past = $pdo->prepare(
-        "SELECT * FROM giveaways WHERE status = 'drawn' OR (status = 'live' AND ends_at <= :now)
+        "SELECT * FROM giveaways WHERE (status = 'drawn' OR (status = 'live' AND ends_at <= :now))" . $real . "
           ORDER BY ends_at DESC, id DESC LIMIT " . GW_PAST_LIMIT
     );
     $past->execute([':now' => $now]);
@@ -626,6 +654,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     $r = $v['row'];
     $hasConds = gw_has_conds($pdo);
     if ($r['conds'] && !$hasConds) { return [409, ['ok' => false, 'error' => 'conds_migrate']]; }
+    $hasTest = gw_has_test($pdo);
+    if ($r['test'] && !$hasTest) { return [409, ['ok' => false, 'error' => 'test_migrate']]; }
 
     $old = null;
     if ($id > 0) {
@@ -633,6 +663,7 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         if (!$old) { return [404, ['ok' => false, 'error' => 'not found']]; }
         if ($old['status'] === 'drawn') { return [409, ['ok' => false, 'error' => 'drawn']]; }
         $r['blocks'] = gw_reuse_en($r['blocks'], gw_decode_blocks($old['body_json']));
+        if ($old['status'] !== 'draft') { $r['test'] = gw_is_test($old); }
     }
 
     $deadline = microtime(true) + TR_BUDGET_SEC;
@@ -660,19 +691,22 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         ':ends' => $r['ends_at'], ':now' => $now,
     ];
     if ($hasConds) { $cols[':conds'] = gw_conds_encode($r['conds']); }
+    if ($hasTest) { $cols[':test'] = $r['test'] ? 1 : 0; }
     if ($id > 0) {
         $pdo->prepare(
             'UPDATE giveaways SET title_ru = :title_ru, title_en = :title_en, image_url = :image_url,
                     image_w = :image_w, image_h = :image_h, body_json = :body, prizes_json = :prizes,
-                    channels_json = :channels, ' . ($hasConds ? 'conds_json = :conds, ' : '') . 'ends_at = :ends, updated_at = :now
+                    channels_json = :channels, ' . ($hasConds ? 'conds_json = :conds, ' : '')
+                    . ($hasTest ? 'test = :test, ' : '') . 'ends_at = :ends, updated_at = :now
               WHERE id = :id'
         )->execute($cols + [':id' => $id]);
     } else {
         $pdo->prepare(
             "INSERT INTO giveaways (status, title_ru, title_en, image_url, image_w, image_h, body_json,
-                    prizes_json, channels_json, " . ($hasConds ? 'conds_json, ' : '') . "ends_at, created_at, updated_at)
+                    prizes_json, channels_json, " . ($hasConds ? 'conds_json, ' : '') . ($hasTest ? 'test, ' : '')
+                    . "ends_at, created_at, updated_at)
              VALUES ('draft', :title_ru, :title_en, :image_url, :image_w, :image_h, :body, :prizes,
-                    :channels, " . ($hasConds ? ':conds, ' : '') . ":ends, :now, :now2)"
+                    :channels, " . ($hasConds ? ':conds, ' : '') . ($hasTest ? ':test, ' : '') . ":ends, :now, :now2)"
         )->execute($cols + [':now2' => $now]);
         $id = (int)$pdo->lastInsertId();
     }
@@ -862,6 +896,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'ends_at'      => (int)$row['ends_at'],
         'published_at' => (int)$row['published_at'],
         'drawn_at'     => (int)$row['drawn_at'],
+        'test'         => gw_is_test($row),
         'entries'      => $count,
         'list'         => $entries,
     ];
@@ -882,6 +917,7 @@ function gw_admin_list(PDO $pdo, int $now): array {
             'title'   => (string)$r['title_ru'],
             'ends_at' => (int)$r['ends_at'],
             'entries' => $counts[(int)$r['id']] ?? 0,
+            'test'    => gw_is_test($r),
         ];
     }
     return $out;
@@ -1107,8 +1143,9 @@ function gw_title(array $row, string $lang): string {
 
 // Ссылка на розыгрыш. Из рассылки о старте — с пометкой -tg: страница
 // запоминает, что человек пришёл из бота (см. src в giveaway_entries).
-function gw_link(int $id, bool $fromBot = false): string {
-    return TG_SITE . '/giveaways#g' . $id . ($fromBot ? '-tg' : '');
+// Тестовый без ?test на странице не виден.
+function gw_link(int $id, bool $fromBot = false, bool $test = false): string {
+    return TG_SITE . '/giveaways' . ($test ? '?test' : '') . '#g' . $id . ($fromBot ? '-tg' : '');
 }
 
 // Картинка розыгрыша — превью над текстом сообщения.
@@ -1167,7 +1204,7 @@ function gw_announce(PDO $pdo, callable $send, array $row, ?callable $sleep = nu
     return tg_send_rows($pdo, $send, $rows, function (string $lang) use ($row, $id): array {
         return [
             gw_announce_text($row, $lang),
-            [[$lang === 'en' ? 'Join' : 'Участвовать', gw_link($id, true)]],
+            [[$lang === 'en' ? 'Join' : 'Участвовать', gw_link($id, true, gw_is_test($row))]],
             gw_preview($row),
         ];
     }, $sleep);
@@ -1182,7 +1219,7 @@ function gw_notify_winners(PDO $pdo, callable $send, array $row, array $winners,
         $lang = tg_lang($w['lang']);
         $prize = (string)($prizes[$w['prize']]['name'] ?? '');
         $msg = tg_message_buttons((int)$w['chat_id'], gw_win_text($row, $prize, $lang),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'])]]);
+            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'], false, gw_is_test($row))]]);
         if ($i > 0) { $sleep(TG_BROADCAST_GAP); }
         if (tg_after_send($pdo, (int)$w['chat_id'], $send('sendMessage', $msg))) { $sent++; }
     }
@@ -1446,7 +1483,7 @@ function gw_after_join(PDO $pdo, array $cfg, array $note, ?callable $send = null
     try {
         $lang = tg_lang($note['lang']);
         $msg = tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'])]]);
+            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]);
         $chat = (int)$note['chat_id'];
         tg_after_send($pdo, $chat, ($send ?? tg_http($tg['token']))('sendMessage', $msg));
     } catch (Throwable $e) {
@@ -1464,7 +1501,7 @@ function gw_after_member(PDO $pdo, array $cfg, array $notes, int $now, ?callable
         try {
             $lang = tg_lang($n['lang']);
             $msg = tg_message_buttons((int)$n['chat_id'], gw_left_text($n['row'], $n['channel'], $lang, $now),
-                [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$n['row']['id'])]]);
+                [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$n['row']['id'], false, gw_is_test($n['row']))]]);
             tg_after_send($pdo, (int)$n['chat_id'], $send('sendMessage', $msg));
         } catch (Throwable $e) {
             error_log('giveaway left: ' . $e->getMessage());

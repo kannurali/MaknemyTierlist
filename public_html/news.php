@@ -381,7 +381,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
   <script src="js/news-page.js?v=31" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
