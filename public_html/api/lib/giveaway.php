@@ -11,6 +11,8 @@
 // наполняет сам Telegram: добавили бота в канал — вебхуку приходит
 // my_chat_member (gw_channel_update()). Подписку бот проверяет при участии и
 // ещё раз при розыгрыше: отписавшийся после участия приз не получает.
+// Кроме каналов бывают свои условия — текст со ссылкой (conds_json). Их бот
+// не проверяет, на участие они не влияют.
 //
 // Админ без нужных прав (TG_CHANNEL_RIGHTS в telegram.php) — всё равно что
 // не админ: is_admin = 0, в колонке missing — каких прав не хватает. Бот
@@ -39,6 +41,11 @@ const GW_PRIZES_MAX      = 20;
 const GW_PRIZE_NAME_MAX  = 60;
 const GW_PRIZE_COUNT_MAX = 1000;
 const GW_CHANNELS_MAX    = 5;
+// Свои условия: текст и ссылка (YouTube, TikTok, канал без бота). Бот их не
+// проверяет — нажатие на условие просто открывает ссылку.
+const GW_CONDS_MAX       = 5;
+const GW_COND_TEXT_MAX   = 100;
+const GW_COND_URL_MAX    = 300;
 // Описание короче новости: оно живёт в окне поверх страницы.
 const GW_BODY_JSON_MAX   = 32768;
 const GW_BODY_TYPES      = ['p', 'quote', 'list'];
@@ -140,6 +147,21 @@ function gw_validate(array $in): array {
         if (!in_array($id, $channels, true)) { $channels[] = $id; }
     }
 
+    $conds = [];
+    $raw = $in['conds'] ?? [];
+    if (!nb_is_list($raw) || count($raw) > GW_CONDS_MAX) { return $fail('bad conds'); }
+    foreach ($raw as $c) {
+        if (!is_array($c)) { return $fail('bad conds'); }
+        $ru = isset($c['ru']) && is_string($c['ru']) ? gw_clean($c['ru'], GW_COND_TEXT_MAX + 1) : '';
+        $en = isset($c['en']) && is_string($c['en']) ? gw_clean($c['en'], GW_COND_TEXT_MAX + 1) : '';
+        if ($ru === '' || mb_strlen($ru) > GW_COND_TEXT_MAX || mb_strlen($en) > GW_COND_TEXT_MAX) {
+            return $fail('bad cond text');
+        }
+        $url = gw_cond_url($c['url'] ?? null);
+        if ($url === null) { return $fail('bad cond url'); }
+        $conds[] = ['ru' => $ru, 'en' => $en, 'url' => $url];
+    }
+
     $ends = $in['ends_at'] ?? 0;
     if (!nb_is_int_between($ends, 0, 4102444800)) { return $fail('bad ends_at'); }
 
@@ -155,8 +177,78 @@ function gw_validate(array $in): array {
         'prizes_json'   => json_encode($prizes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         'channels'      => $channels,
         'channels_json' => json_encode($channels),
+        'conds'         => $conds,
         'ends_at'       => (int)$ends,
     ]];
+}
+
+// Ссылка своего условия: только http(s), без пробелов и кавычек — она уходит
+// в href. null — не годится.
+function gw_cond_url($v): ?string {
+    if (!is_string($v)) { return null; }
+    $v = trim($v);
+    if ($v === '' || strlen($v) > GW_COND_URL_MAX) { return null; }
+    if (!preg_match('~^https?://[^/?#\s<>"\'[:cntrl:]]+[^\s<>"\'[:cntrl:]]*\z~i', $v)) { return null; }
+    return $v;
+}
+
+// Свои условия из базы: [{ru, en, url}]. Кривые строки пропускаются.
+function gw_conds($json): array {
+    $out = [];
+    foreach (gw_decode_list($json) as $c) {
+        if (!is_array($c) || !isset($c['ru']) || !is_string($c['ru']) || $c['ru'] === '') { continue; }
+        $url = gw_cond_url($c['url'] ?? null);
+        if ($url === null) { continue; }
+        $out[] = ['ru' => $c['ru'], 'en' => isset($c['en']) && is_string($c['en']) ? $c['en'] : '', 'url' => $url];
+    }
+    return $out;
+}
+
+function gw_conds_encode(array $conds): string {
+    return json_encode($conds, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+// Колонку conds_json добавляет миграция 2026-10-15-giveaway-conds.sql. До неё
+// розыгрыши сохраняются как раньше, только без своих условий.
+function gw_has_conds(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT conds_json FROM giveaways LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Английский у своих условий. Пустой EN берётся из прежней версии с тем же
+ * русским, а нет такой — переводится. EN, оставшийся от прежнего русского
+ * (русский поменяли, английский нет), считается пустым. [условия, сколько не
+ * перевелось].
+ */
+function gw_conds_en(array $conds, array $old, ?callable $translate, float $deadline): array {
+    $byRu = [];
+    $byEn = [];
+    foreach ($old as $o) {
+        if ($o['en'] === '') { continue; }
+        $byRu[$o['ru']] = $o['en'];
+        $byEn[$o['en']] = $o['ru'];
+    }
+    $texts = [];
+    foreach ($conds as $i => $c) {
+        if ($c['en'] !== '' && isset($byEn[$c['en']]) && $byEn[$c['en']] !== $c['ru']) { $c['en'] = ''; }
+        if ($c['en'] === '' && isset($byRu[$c['ru']])) { $c['en'] = $byRu[$c['ru']]; }
+        if ($c['en'] === '') { $texts['c' . $i] = $c['ru']; }
+        $conds[$i] = $c;
+    }
+    if (!$texts || $translate === null) { return [$conds, 0]; }
+    $failed = 0;
+    foreach (tr_translate_texts($texts, $translate, $deadline) as $k => $en) {
+        $i = (int)substr($k, 1);
+        $en = $en === null ? '' : gw_clean(tr_fix_dashes($en, $conds[$i]['ru']), GW_COND_TEXT_MAX + 1);
+        if ($en === '' || mb_strlen($en) > GW_COND_TEXT_MAX) { $failed++; continue; }
+        $conds[$i]['en'] = $en;
+    }
+    return [$conds, $failed];
 }
 
 // Иконка приза — картинка предмета из тирлиста. В данных тирлиста адреса
@@ -302,6 +394,10 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
         $url = $links[$id][(int)$cid] ?? gw_channel_url($c);
         $chs[] = ['id' => (string)$c['chat_id'], 'title' => (string)$c['title'], 'url' => $url];
     }
+    $conds = [];
+    foreach (gw_conds($row['conds_json'] ?? null) as $c) {
+        $conds[] = ['text' => ['ru' => $c['ru'], 'en' => $c['en']], 'url' => $c['url']];
+    }
     $img = (string)$row['image_url'] !== ''
         ? ['url' => (string)$row['image_url'], 'w' => (int)$row['image_w'], 'h' => (int)$row['image_h']]
         : null;
@@ -313,6 +409,7 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
         'body'         => gw_decode_blocks($row['body_json']),
         'prizes'       => gw_prizes($row['prizes_json']),
         'channels'     => $chs,
+        'conds'        => $conds,
         'ends_at'      => (int)$row['ends_at'],
         'published_at' => (int)$row['published_at'],
         'entries'      => $counts[$id] ?? 0,
@@ -506,6 +603,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     $v = gw_validate($body);
     if (!$v['ok']) { return [400, ['ok' => false, 'error' => $v['error']]]; }
     $r = $v['row'];
+    $hasConds = gw_has_conds($pdo);
+    if ($r['conds'] && !$hasConds) { return [409, ['ok' => false, 'error' => 'conds_migrate']]; }
 
     $old = null;
     if ($id > 0) {
@@ -515,15 +614,16 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         $r['blocks'] = gw_reuse_en($r['blocks'], gw_decode_blocks($old['body_json']));
     }
 
-    $failed = 0;
+    $deadline = microtime(true) + TR_BUDGET_SEC;
+    [$r['conds'], $failed] = gw_conds_en($r['conds'], $old ? gw_conds($old['conds_json'] ?? null) : [], $translate, $deadline);
     if ($translate !== null) {
         $post = ['title_ru' => $r['title_ru'], 'title_en' => $r['title_en'], 'body_ru' => '', 'body_en' => ''];
         $oldPost = $old ? [
             'title_ru' => $old['title_ru'], 'title_en' => $old['title_en'],
             'body_ru' => '', 'body_en' => '', 'body_json' => $old['body_json'],
         ] : null;
-        $tr = news_autotranslate($post, $r['blocks'], $oldPost, $translate);
-        $failed = $tr['failed'];
+        $tr = news_autotranslate($post, $r['blocks'], $oldPost, $translate, $deadline);
+        $failed += $tr['failed'];
         if (mb_strlen($tr['post']['title_en']) <= GW_TITLE_MAX) { $r['title_en'] = $tr['post']['title_en']; }
         $check = news_blocks_validate(['v' => NB_DOC_VERSION, 'blocks' => $tr['blocks']]);
         if ($check['ok'] && gw_body_encode($tr['blocks']) !== null) { $r['blocks'] = $tr['blocks']; }
@@ -538,19 +638,20 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         ':body' => $r['body_json'], ':prizes' => $r['prizes_json'], ':channels' => $r['channels_json'],
         ':ends' => $r['ends_at'], ':now' => $now,
     ];
+    if ($hasConds) { $cols[':conds'] = gw_conds_encode($r['conds']); }
     if ($id > 0) {
         $pdo->prepare(
             'UPDATE giveaways SET title_ru = :title_ru, title_en = :title_en, image_url = :image_url,
                     image_w = :image_w, image_h = :image_h, body_json = :body, prizes_json = :prizes,
-                    channels_json = :channels, ends_at = :ends, updated_at = :now
+                    channels_json = :channels, ' . ($hasConds ? 'conds_json = :conds, ' : '') . 'ends_at = :ends, updated_at = :now
               WHERE id = :id'
         )->execute($cols + [':id' => $id]);
     } else {
         $pdo->prepare(
             "INSERT INTO giveaways (status, title_ru, title_en, image_url, image_w, image_h, body_json,
-                    prizes_json, channels_json, ends_at, created_at, updated_at)
+                    prizes_json, channels_json, " . ($hasConds ? 'conds_json, ' : '') . "ends_at, created_at, updated_at)
              VALUES ('draft', :title_ru, :title_en, :image_url, :image_w, :image_h, :body, :prizes,
-                    :channels, :ends, :now, :now2)"
+                    :channels, " . ($hasConds ? ':conds, ' : '') . ":ends, :now, :now2)"
         )->execute($cols + [':now2' => $now]);
         $id = (int)$pdo->lastInsertId();
     }
@@ -736,6 +837,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'body'         => ['v' => NB_DOC_VERSION, 'blocks' => gw_decode_blocks($row['body_json'])],
         'prizes'       => gw_prizes($row['prizes_json']),
         'channels'     => array_map('strval', gw_decode_list($row['channels_json'])),
+        'conds'        => gw_conds($row['conds_json'] ?? null),
         'ends_at'      => (int)$row['ends_at'],
         'published_at' => (int)$row['published_at'],
         'drawn_at'     => (int)$row['drawn_at'],
@@ -1005,16 +1107,18 @@ function gw_announce_text(array $row, string $lang): string {
     }
     $title = gw_title($row, $lang);
     $date  = gw_date((int)$row['ends_at'], $lang);
-    $cond  = gw_decode_list($row['channels_json']) ? true : false;
+    $cond  = gw_decode_list($row['channels_json']) ? 'ch' : (gw_conds($row['conds_json'] ?? null) ? 'own' : '');
     if ($lang === 'en') {
         return "🎁 New giveaway on maknemy.com\n\n" . $title . "\n\nPrizes:\n" . implode("\n", $lines)
             . "\n\nResults: " . $date . '.'
-            . ($cond ? ' To enter, subscribe to the channels from the conditions.' : '')
+            . ($cond === 'ch' ? ' To enter, subscribe to the channels from the conditions.' : '')
+            . ($cond === 'own' ? ' The conditions are on the giveaway card.' : '')
             . ' Join on the site after signing in with Roblox.';
     }
     return "🎁 Новый розыгрыш на maknemy.com\n\n" . $title . "\n\nПризы:\n" . implode("\n", $lines)
         . "\n\nИтоги: " . $date . '.'
-        . ($cond ? ' Для участия подпишитесь на каналы из условий.' : '')
+        . ($cond === 'ch' ? ' Для участия подпишитесь на каналы из условий.' : '')
+        . ($cond === 'own' ? ' Условия — в карточке розыгрыша.' : '')
         . ' Участвовать — на сайте после входа через Roblox.';
 }
 

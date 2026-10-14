@@ -467,9 +467,20 @@
   text-decoration: none;
   white-space: nowrap;
 }
-.gw-sub:hover { filter: brightness(1.12); }
 .gw-cond-item.is-ok .gw-sub { display: none; }
-.gw-sub:focus-visible { outline: 2px solid #e4bfff; outline-offset: 2px; }
+
+.gw-cond-item.has-link { position: relative; cursor: pointer; }
+.gw-cond-item.has-link > .gw-cond-text { color: inherit; text-decoration: none; outline: none; }
+.gw-cond-item.has-link > .gw-cond-text::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.gw-cond-item.has-link:not(.is-ok):not(.is-bad):hover { border-color: rgba(210, 140, 255, .55); }
+.gw-cond-item.has-link > .gw-sub { pointer-events: none; }
+.gw-cond-item.has-link:hover .gw-sub { filter: brightness(1.12); }
+.gw-cond-item.has-link:has(> .gw-cond-text:focus-visible) { outline: 2px solid #e4bfff; outline-offset: 2px; }
 
 .gw-entries {
   display: flex;
