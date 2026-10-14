@@ -278,6 +278,7 @@ html { -webkit-tap-highlight-color: transparent; }
 .mk-chat[data-soon]:hover,
 .mk-avatar[data-soon]:hover { filter: brightness(1.05); }
 
+.mk-tg,
 .mk-chat,
 .mk-avatar {
   flex: 0 0 auto;
@@ -295,18 +296,22 @@ html { -webkit-tap-highlight-color: transparent; }
   transition: filter .15s, transform .08s, scale var(--dur-quick) var(--ease-quick);
 }
 @media (hover: hover) {
+  .mk-tg:hover,
   .mk-chat:hover,
   .mk-avatar:hover,
   .mk-top-toggle:hover { scale: 1.174; }
 }
+.mk-tg.is-tap,
 .mk-chat.is-tap,
 .mk-avatar.is-tap { scale: 1.174; }
 @media (prefers-reduced-motion: reduce) {
-  .mk-chat, .mk-avatar { transition: none; }
+  .mk-tg, .mk-chat, .mk-avatar { transition: none; }
 }
 
+.mk-chat,
 .mk-avatar { margin-left: calc(16 * var(--u)); }
 
+.mk-tg svg,
 .mk-chat svg {
   width: calc(21 * var(--u));
   height: calc(21 * var(--u));
@@ -343,12 +348,15 @@ html { -webkit-tap-highlight-color: transparent; }
   from { transform: scale(.3); opacity: 0; }
 }
 
+.mk-tg:hover,
 .mk-chat:hover,
 .mk-avatar:hover,
 .mk-chat.is-pressed,
 .mk-avatar.is-pressed { filter: brightness(1.12); }
+.mk-tg:active,
 .mk-chat:active,
 .mk-avatar:active { transform: translateY(1px); }
+.mk-tg:focus-visible,
 .mk-chat:focus-visible,
 .mk-avatar:focus-visible { outline: 2px solid #e4bfff; outline-offset: 3px; }
 
@@ -490,9 +498,12 @@ a.mk-avatar { text-decoration: none; }
     padding: 0 54px 0 6px;
   }
 
+  .mk-tg,
   .mk-chat,
   .mk-avatar { width: 36px; height: 36px; }
+  .mk-chat,
   .mk-avatar { margin-left: 12px; }
+  .mk-tg svg,
   .mk-chat svg { width: 18px; height: 18px; }
   .mk-avatar svg { width: 24px; height: 24px; }
 
@@ -531,8 +542,10 @@ a.mk-avatar { text-decoration: none; }
     background: none;
   }
 
+  .mk-tg,
   .mk-chat,
   .mk-avatar { width: 42px; height: 42px; margin-left: 0; }
+  .mk-tg svg,
   .mk-chat svg { width: 20px; height: 20px; }
   .mk-avatar svg { width: 27px; height: 27px; }
 
@@ -590,12 +603,17 @@ a.mk-avatar { text-decoration: none; }
   .mk-top-bar { gap: 6px; }
   .mk-top-mark { width: 30px; height: 30px; }
 
+  .mk-tg,
   .mk-chat,
   .mk-avatar,
   .mk-top-toggle { width: 40px; height: 40px; }
 
   .mk-nav { gap: 8px; padding: 12px 8px 14px; }
   .mk-pill { gap: 8px; padding: 0 10px; font-size: 16px; }
+}
+
+@media (max-width: 340px) {
+  .mk-top-word { width: 72px; }
 }
 
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) {

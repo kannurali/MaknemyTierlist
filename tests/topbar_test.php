@@ -312,6 +312,25 @@ test('панель разделов встаёт под шапку, а не по
         'при прокрутке открытая панель едет вслед за шапкой');
 });
 
+// Кнопка Telegram рядом с чатом (владелец, 2026-10-14): основной канал
+// проекта, тот же, что «Телеграм проекта» в /privacy и /terms. Открывается в
+// новой вкладке, без opener: чужая вкладка не должна дотягиваться до сайта.
+test('кнопка Telegram ведёт на канал и стоит перед чатом', function () use ($PUB, $PAGES6) {
+    foreach (array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php']) as $f) {
+        $s = top_header($PUB, $f);
+        assert_eq(1, substr_count($s, '<a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener"'),
+            "$f: одна кнопка Telegram на канал");
+        $tg   = strpos($s, '<a class="mk-tg"');
+        $chat = strpos($s, '<a class="mk-chat"');
+        $bar  = strpos($s, '<nav class="mk-top-bar"');
+        assert_true($bar !== false && $tg !== false && $chat !== false && $bar < $tg && $tg < $chat,
+            "$f: Telegram в плашке, перед чатом");
+    }
+    $css = top_read($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-tg,\s*\.mk-chat,\s*\.mk-avatar \{\s*flex: 0 0 auto;/s', $css),
+        'тот же круг, что у чата и профиля');
+});
+
 // Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же круг
 // с градиентом, что и профиль, слева от него. Раздел получил страницу (/chat,
 // см. tests/chat_page_test.php) и вышел из «В активной разработке» тем же
