@@ -21,6 +21,12 @@
 
 html { -webkit-tap-highlight-color: transparent; }
 
+@property --mk-pop {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
 .mk-top {
   --u: min(1px, calc(100vw / 1443));
 
@@ -94,7 +100,8 @@ html { -webkit-tap-highlight-color: transparent; }
   color: #fff;
   cursor: pointer;
   transform: translateY(-50%);
-  transition: filter .15s, background .18s ease, scale var(--dur-quick) var(--ease-quick);
+  scale: var(--mk-pop);
+  transition: filter .15s, background .18s ease, --mk-pop var(--dur-quick) var(--ease-quick);
 }
 .mk-top-toggle::before,
 .mk-top-toggle::after {
@@ -143,12 +150,13 @@ html { -webkit-tap-highlight-color: transparent; }
   width: calc(56 * var(--u));
   height: calc(56 * var(--u));
   display: block;
-  transition: scale var(--dur-quick) var(--ease-quick);
+  scale: var(--mk-pop);
+  transition: --mk-pop var(--dur-quick) var(--ease-quick);
 }
 @media (hover: hover) {
-  .mk-top-brand:hover .mk-top-mark { scale: 1.286; }
+  .mk-top-brand:hover .mk-top-mark { --mk-pop: 1.286; }
 }
-.mk-top-brand.is-tap .mk-top-mark { scale: 1.286; }
+.mk-top-brand.is-tap .mk-top-mark { --mk-pop: 1.286; }
 
 .mk-top-word {
   width: calc(255 * var(--u));
@@ -293,17 +301,18 @@ html { -webkit-tap-highlight-color: transparent; }
   background: var(--mk-grad);
   color: #fff;
   cursor: pointer;
-  transition: filter .15s, transform .08s, scale var(--dur-quick) var(--ease-quick);
+  scale: var(--mk-pop);
+  transition: filter .15s, transform .08s, --mk-pop var(--dur-quick) var(--ease-quick);
 }
 @media (hover: hover) {
   .mk-tg:hover,
   .mk-chat:hover,
   .mk-avatar:hover,
-  .mk-top-toggle:hover { scale: 1.174; }
+  .mk-top-toggle:hover { --mk-pop: 1.174; }
 }
 .mk-tg.is-tap,
 .mk-chat.is-tap,
-.mk-avatar.is-tap { scale: 1.174; }
+.mk-avatar.is-tap { --mk-pop: 1.174; }
 @media (prefers-reduced-motion: reduce) {
   .mk-tg, .mk-chat, .mk-avatar { transition: none; }
 }

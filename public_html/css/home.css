@@ -814,8 +814,22 @@
     padding: 0 26px;
     font-size: 20px;
     transition:
-      scale var(--hm-hover) var(--hm-hover-ease),
+      height var(--hm-hover) var(--hm-hover-ease),
+      margin var(--hm-hover) var(--hm-hover-ease),
+      padding var(--hm-hover) var(--hm-hover-ease),
       box-shadow var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-dash rect {
+    rx: 64px;
+    ry: 36px;
+    stroke-width: 1.5px;
+    stroke-dasharray: 3px 6px;
+    transition:
+      rx var(--hm-hover) var(--hm-hover-ease),
+      ry var(--hm-hover) var(--hm-hover-ease),
+      stroke-width var(--hm-hover) var(--hm-hover-ease),
+      stroke-dasharray var(--hm-hover) var(--hm-hover-ease);
   }
 
   .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap),
@@ -824,13 +838,43 @@
     height: 48px;
   }
 
-  .hm-btn:not([aria-disabled="true"]):is(:active, .is-tap) {
-    scale: 1.08;
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) {
+    height: 60px;
+    margin: 0 -10px -12px 0;
+    padding: 0 31px;
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-dash rect {
+    rx: 27px;
+    ry: 14px;
+    stroke-width: 3px;
+    stroke-dasharray: 6px 15px;
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
+    height: 53px;
+    margin: 0 -9px -5px 0;
+    padding: 0 30.5px;
   }
 
   @media (hover: hover) {
-    .hm-btn:not([aria-disabled="true"]):is(:hover, :focus-visible) {
-      scale: 1.08;
+    .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible) {
+      height: 60px;
+      margin: 0 -10px -12px 0;
+      padding: 0 31px;
+    }
+
+    .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible) .hm-btn-dash rect {
+      rx: 27px;
+      ry: 14px;
+      stroke-width: 3px;
+      stroke-dasharray: 6px 15px;
+    }
+
+    .hm-btn-accent:not([aria-disabled="true"]):is(:hover, :focus-visible) {
+      height: 53px;
+      margin: 0 -9px -5px 0;
+      padding: 0 30.5px;
     }
   }
 
