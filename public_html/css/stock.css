@@ -673,7 +673,12 @@ body > .sk-page { flex: 1 0 auto; }
 }
 
 @media (max-width: 960px) {
-  .sk-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .sk-wrap { display: flex; flex-direction: column; }
+  .sk-grid { display: contents; }
+  .sk-dealer.is-mirage,
+  .sk-meta,
+  .sk-watch { order: 1; }
+  .sk-dealer.is-mirage { margin-top: 30px; }
 }
 
 @media (max-width: 760px) {
@@ -711,6 +716,7 @@ body > .sk-page { flex: 1 0 auto; }
   .sk-picks { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
 
   .sk-mid { margin-top: 22px; border-radius: 16px; }
+  .sk-dealer.is-mirage { margin-top: 22px; }
   .sk-mid .nw-ptn { padding: 8px; border-radius: 16px; }
   .sk-mid .nw-ptn-in { border-radius: 10px; }
   .sk-mid .ptn-chip,
