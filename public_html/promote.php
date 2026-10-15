@@ -117,17 +117,12 @@ page_lscache();
     </button>
   </header>
   <main class="pm-page">
-    <svg class="pm-defs" width="0" height="0" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="pmGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop class="pm-stop-a" offset="0"/>
-          <stop class="pm-stop-b" offset="1"/>
-        </linearGradient>
-      </defs>
-    </svg>
-
     <div class="pm-wrap">
       <section class="pm-hero" aria-labelledby="pmTitle">
+        <img class="pm-hero-bloom" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php if (HALLOWEEN): ?>
+        <img class="pm-hero-bat" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
+<?php endif; ?>
         <div class="pm-hero-copy">
           <h1 class="pm-title" id="pmTitle">Реклама на maknemy.com и в Telegram</h1>
           <p class="pm-lead">Продвигайте конкурс, канал или проект среди игроков Blox Fruits. У Maknemy можно заказать размещение от одних суток, рекламу на неделю или месяц, оплату за переходы и привлечение участников конкурса.</p>
@@ -142,38 +137,40 @@ page_lscache();
           </div>
         </div>
 
-        <div class="pm-map" aria-hidden="true">
-          <div class="pm-map-desk">
-            <span class="pm-map-bar"><i></i><i></i><i></i><i></i></span>
-            <span class="pm-slot is-rail is-l"></span>
-            <span class="pm-slot is-rail is-r"></span>
-            <span class="pm-map-col">
-              <span class="pm-map-head"></span>
-              <span class="pm-slot is-wide"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-slot is-link"></span>
+        <div class="pm-stage" aria-hidden="true">
+          <div class="pm-stage-page">
+            <span class="pm-stage-bar">
+              <img class="pm-stage-mark" src="assets/design/logo-mk-square.png" width="160" height="160" alt="" />
+              <img class="pm-stage-word" src="assets/design/wordmark.svg" width="285" height="26" alt="" />
+              <i></i><i></i><i></i><i></i>
             </span>
-            <span class="pm-tag is-rail">300&nbsp;×&nbsp;1200</span>
-          </div>
-          <div class="pm-map-phone">
-            <span class="pm-map-notch"></span>
-            <span class="pm-map-col">
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
-              <span class="pm-map-tier"></span>
+            <img class="pm-stage-rail is-l" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
+            <img class="pm-stage-rail is-r" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
+            <span class="pm-stage-col">
+              <img class="pm-stage-strip" src="assets/promo/placeholder-strip.webp" width="1200" height="300" alt="" decoding="async" />
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-link"></span>
             </span>
-            <span class="pm-map-dim"></span>
-            <span class="pm-slot is-pop"></span>
-            <span class="pm-slot is-stick"></span>
-            <span class="pm-tag is-pop">800&nbsp;×&nbsp;800</span>
-            <span class="pm-tag is-stick">Mobile Sticky</span>
           </div>
+          <div class="pm-stage-phone">
+            <span class="pm-stage-notch"></span>
+            <span class="pm-stage-col">
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+            </span>
+            <img class="pm-stage-dock" src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" decoding="async" />
+          </div>
+          <img class="pm-stage-pop" src="assets/promo/house-tg-popup.webp" width="800" height="800" alt="" decoding="async" />
+          <span class="pm-tag is-rail">300&nbsp;×&nbsp;1200</span>
+          <span class="pm-tag is-pop">800&nbsp;×&nbsp;800</span>
+          <span class="pm-tag is-dock">Mobile Sticky</span>
         </div>
       </section>
 
@@ -194,21 +191,11 @@ page_lscache();
         </ul>
       </nav>
 
-      <section class="pm-sec is-key" id="pm-results" aria-labelledby="pm-results-h">
-        <h2 class="pm-h2" id="pm-results-h">
-          <svg class="pm-h2-icon" viewBox="0 0 48 48" aria-hidden="true">
-            <path class="pm-ic-cone" d="M4 44 15.5 12.5l20 20L4 44Z"/>
-            <path class="pm-ic-band" d="M8.6 31.4l8 8M12 22l14 14"/>
-            <path class="pm-ic-line" d="M22 13c1.5-3.5 5.5-3.5 5-8M35 26c3.5-1.5 3.5-5.5 8-5M27 20l7-7"/>
-            <circle class="pm-ic-dot" cx="37" cy="6" r="2.5"/>
-            <circle class="pm-ic-dot is-b" cx="44" cy="13" r="2"/>
-            <circle class="pm-ic-dot" cx="42" cy="32" r="2.2"/>
-            <rect class="pm-ic-dot is-b" x="29" y="2" width="4" height="4" rx="1" transform="rotate(20 31 4)"/>
-          </svg>
-          <span>Участники конкурса&nbsp;— $12 за 1&nbsp;000</span>
-        </h2>
+      <section class="pm-sec is-key has-art" id="pm-results" aria-labelledby="pm-results-h">
+        <img class="pm-art" src="<?= hw_img('assets/design/home/card-giveaways.webp') ?>" width="482" height="482" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <h2 class="pm-h2" id="pm-results-h">Участники конкурса&nbsp;— $12 за 1&nbsp;000</h2>
         <div class="pm-split">
-          <p class="pm-main">Хотите привлечь аудиторию в свой конкурс? Продвинем его на maknemy.com. Также можно согласовать включение ваших соцсетей в условия партнёрского розыгрыша.</p>
+          <p class="pm-main pm-intro">Хотите привлечь аудиторию в свой конкурс? Продвинем его на maknemy.com. Также можно согласовать включение ваших соцсетей в условия партнёрского розыгрыша.</p>
           <div class="pm-side">
             <ul class="pm-rate">
               <li><span class="pm-rate-name"><b>1&nbsp;000</b> подтверждённых участников</span><span class="pm-leader"> — </span><b class="pm-rate-cost">$12</b><span class="pm-vh">.</span></li>
@@ -244,11 +231,11 @@ page_lscache();
                   <tr><th scope="col">Страница</th><th scope="col" class="pm-num">24 часа</th></tr>
                 </thead>
                 <tbody>
-                  <tr><th scope="row">Новости</th><td class="pm-cost">$2</td></tr>
-                  <tr><th scope="row">Калькулятор</th><td class="pm-cost">$3</td></tr>
-                  <tr><th scope="row">Трейды</th><td class="pm-cost">$4</td></tr>
-                  <tr><th scope="row">Тирлист</th><td class="pm-cost">$5</td></tr>
-                  <tr class="is-all"><th scope="row">Все четыре страницы</th><td class="pm-cost">$11</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-news.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Новости</span></th><td class="pm-cost">$2</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Калькулятор</span></th><td class="pm-cost">$3</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Трейды</span></th><td class="pm-cost">$4</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Тирлист</span></th><td class="pm-cost">$5</td></tr>
+                  <tr class="is-all"><th scope="row"><span class="pm-row-name">Все четыре страницы</span></th><td class="pm-cost">$11</td></tr>
                 </tbody>
               </table>
             </div>
@@ -277,11 +264,11 @@ page_lscache();
                   <tr><th scope="col">Страница</th><th scope="col" class="pm-num">Основной пакет</th><th scope="col" class="pm-num">Полный пакет со всплывающим окном</th></tr>
                 </thead>
                 <tbody>
-                  <tr><th scope="row">Новости</th><td class="pm-cost">$7</td><td class="pm-cost">$10</td></tr>
-                  <tr><th scope="row">Калькулятор</th><td class="pm-cost">$15</td><td class="pm-cost">$20</td></tr>
-                  <tr><th scope="row">Тирлист</th><td class="pm-cost">$20</td><td class="pm-cost">$25</td></tr>
-                  <tr><th scope="row">Трейды</th><td class="pm-cost">$30</td><td class="pm-cost">$40</td></tr>
-                  <tr class="is-all"><th scope="row">Все четыре страницы</th><td class="pm-cost">$60</td><td class="pm-cost">$75</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-news.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Новости</span></th><td class="pm-cost">$7</td><td class="pm-cost">$10</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Калькулятор</span></th><td class="pm-cost">$15</td><td class="pm-cost">$20</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Тирлист</span></th><td class="pm-cost">$20</td><td class="pm-cost">$25</td></tr>
+                  <tr><th scope="row"><span class="pm-row-name"><span class="pm-thumb" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>Трейды</span></th><td class="pm-cost">$30</td><td class="pm-cost">$40</td></tr>
+                  <tr class="is-all"><th scope="row"><span class="pm-row-name">Все четыре страницы</span></th><td class="pm-cost">$60</td><td class="pm-cost">$75</td></tr>
                 </tbody>
               </table>
             </div>
@@ -289,41 +276,44 @@ page_lscache();
         </div>
 
         <h3 class="pm-h3">Какие рекламные места можно заказать</h3>
-        <ul class="pm-slots">
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="1" y="1" width="62" height="42" rx="5"/><path class="pm-g-sep" d="M1 7h62"/><rect class="pm-g-hot" x="5" y="11" width="8" height="28" rx="1.5"/><rect class="pm-g-hot" x="51" y="11" width="8" height="28" rx="1.5"/><rect class="pm-g-row" x="17" y="11" width="30" height="5" rx="1"/><rect class="pm-g-row" x="17" y="19" width="30" height="5" rx="1"/><rect class="pm-g-row" x="17" y="27" width="30" height="5" rx="1"/><rect class="pm-g-row" x="17" y="35" width="20" height="4" rx="1"/></svg>
-            <span>Боковые баннеры на компьютерах — один или два, формат 300&nbsp;×&nbsp;1200.</span>
+        <ul class="pm-formats">
+          <li class="pm-fmt is-rail">
+            <span class="pm-fmt-media" aria-hidden="true">
+              <img src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" loading="lazy" decoding="async" />
+              <img src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" loading="lazy" decoding="async" />
+            </span>
+            <span class="pm-fmt-text">Боковые баннеры на компьютерах — один или два, формат 300&nbsp;×&nbsp;1200.</span>
           </li>
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="1" y="1" width="62" height="42" rx="5"/><path class="pm-g-sep" d="M1 7h62"/><rect class="pm-g-hot" x="10" y="11" width="44" height="9" rx="1.5"/><rect class="pm-g-row" x="10" y="23" width="44" height="5" rx="1"/><rect class="pm-g-row" x="10" y="31" width="44" height="5" rx="1"/><rect class="pm-g-row" x="10" y="39" width="44" height="1.5" rx=".75"/></svg>
-            <span>Центральный баннер на тирлисте.</span>
+          <li class="pm-fmt is-strip">
+            <span class="pm-fmt-media" aria-hidden="true"><img src="assets/promo/placeholder-strip.webp" width="1200" height="300" alt="" loading="lazy" decoding="async" /></span>
+            <span class="pm-fmt-text">Центральный баннер на тирлисте.</span>
           </li>
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="20" y="1" width="24" height="42" rx="5"/><rect class="pm-g-row" x="24" y="7" width="16" height="5" rx="1"/><rect class="pm-g-row" x="24" y="15" width="16" height="5" rx="1"/><rect class="pm-g-row" x="24" y="23" width="16" height="5" rx="1"/><rect class="pm-g-hot" x="22" y="34" width="20" height="6" rx="1.5"/></svg>
-            <span>Нижний мобильный баннер — Mobile Sticky.</span>
+          <li class="pm-fmt is-dock">
+            <span class="pm-fmt-media" aria-hidden="true"><img src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" /></span>
+            <span class="pm-fmt-text">Нижний мобильный баннер — Mobile Sticky.</span>
           </li>
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="1" y="1" width="62" height="42" rx="5"/><path class="pm-g-sep" d="M1 7h62"/><rect class="pm-g-row" x="8" y="11" width="48" height="5" rx="1"/><rect class="pm-g-row" x="8" y="19" width="48" height="5" rx="1"/><rect class="pm-g-row" x="8" y="27" width="48" height="5" rx="1"/><rect class="pm-g-row" x="8" y="35" width="48" height="4" rx="1"/><rect class="pm-g-dim" x="1" y="1" width="62" height="42" rx="5"/><rect class="pm-g-hot" x="22" y="12" width="20" height="20" rx="2"/></svg>
-            <span>Всплывающее окно — 800&nbsp;×&nbsp;800.</span>
+          <li class="pm-fmt is-pop">
+            <span class="pm-fmt-media" aria-hidden="true"><img src="assets/promo/house-tg-popup.webp" width="800" height="800" alt="" loading="lazy" decoding="async" /></span>
+            <span class="pm-fmt-text">Всплывающее окно — 800&nbsp;×&nbsp;800.</span>
           </li>
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="1" y="1" width="62" height="42" rx="5"/><path class="pm-g-sep" d="M1 7h62"/><rect class="pm-g-row" x="12" y="10" width="40" height="8" rx="1.5"/><rect class="pm-g-hot" x="12" y="21" width="40" height="6" rx="1.5"/><rect class="pm-g-row" x="12" y="30" width="40" height="8" rx="1.5"/></svg>
-            <span>Баннер между публикациями в новостях.</span>
+          <li class="pm-fmt is-page">
+            <span class="pm-thumb is-big" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-news.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+            <span class="pm-fmt-text">Баннер между публикациями в новостях.</span>
           </li>
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="1" y="1" width="62" height="42" rx="5"/><path class="pm-g-sep" d="M1 7h62"/><rect class="pm-g-row" x="9" y="10" width="22" height="9" rx="1.5"/><rect class="pm-g-row" x="33" y="10" width="22" height="9" rx="1.5"/><rect class="pm-g-hot" x="9" y="22" width="46" height="5" rx="1.5"/><rect class="pm-g-row" x="9" y="30" width="22" height="9" rx="1.5"/><rect class="pm-g-row" x="33" y="30" width="22" height="9" rx="1.5"/></svg>
-            <span>Баннер между объявлениями трейдов.</span>
+          <li class="pm-fmt is-page">
+            <span class="pm-thumb is-big" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+            <span class="pm-fmt-text">Баннер между объявлениями трейдов.</span>
           </li>
-          <li>
-            <svg class="pm-glyph" viewBox="0 0 64 44" aria-hidden="true"><rect class="pm-g-page" x="1" y="1" width="62" height="42" rx="5"/><path class="pm-g-sep" d="M1 7h62"/><rect class="pm-g-row" x="10" y="11" width="44" height="5" rx="1"/><rect class="pm-g-row" x="10" y="19" width="44" height="5" rx="1"/><rect class="pm-g-row" x="10" y="27" width="44" height="5" rx="1"/><rect class="pm-g-hot" x="18" y="36" width="28" height="3" rx="1.5"/></svg>
-            <span>Рекламная ссылка внизу тирлиста.</span>
+          <li class="pm-fmt is-page">
+            <span class="pm-thumb is-big" aria-hidden="true"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+            <span class="pm-fmt-text">Рекламная ссылка внизу тирлиста.</span>
           </li>
         </ul>
 
-        <div class="pm-notes is-two">
+        <div class="pm-notes is-three">
           <p>Отдельные места доступны по индивидуальному расчёту. Состав пакета, расположение и условия показа подтверждаем до оплаты. В зависимости от страницы пакет включает доступные места на компьютерах и телефонах.</p>
           <p class="pm-boost">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <img src="assets/design/legend/trend-up.svg" width="28" height="33" alt="" aria-hidden="true" loading="lazy" decoding="async" />
             <span>Поднять баннер в верхнюю часть ленты новостей: <b>+$3</b> за сутки / <b>+$15</b> за 7 дней / <b>+$30</b> за 30 дней.</span>
           </p>
           <p>Блок партнёрских конкурсов оплачивается отдельно. Основной и полный пакеты сами по себе не дают эксклюзивность страницы. Полный выкуп рекламных мест страницы, включая условия размещения конкурентов и партнёрских конкурсов, обсуждается отдельно.</p>
@@ -335,15 +325,27 @@ page_lscache();
         <p class="pm-intro">Выберите страницы и тип пакета на каждой из них:</p>
         <ul class="pm-tiers">
           <li>
-            <span class="pm-pages" aria-hidden="true"><i></i><i></i></span>
+            <span class="pm-deck" aria-hidden="true">
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+            </span>
             <p><strong>Две страницы</strong><span class="pm-vh"> — </span><span class="pm-tier-text"><b>скидка 10%</b> от суммы выбранных баннерных пакетов.</span></p>
           </li>
           <li>
-            <span class="pm-pages" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="pm-deck" aria-hidden="true">
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-news.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+            </span>
             <p><strong>Три страницы</strong><span class="pm-vh"> — </span><span class="pm-tier-text"><b>скидка 15%</b>.</span></p>
           </li>
           <li class="is-all">
-            <span class="pm-pages" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="pm-deck" aria-hidden="true">
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-news.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+              <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
+            </span>
             <p><strong>Все четыре страницы</strong><span class="pm-vh"> — </span><span class="pm-tier-text">готовый пакет: <b>$60</b> за сутки без всплывающих окон или <b>$75</b> со всплывающими окнами.</span></p>
           </li>
         </ul>
@@ -355,8 +357,8 @@ page_lscache();
 
       <section class="pm-sec" id="pm-telegram" aria-labelledby="pm-telegram-h">
         <h2 class="pm-h2" id="pm-telegram-h">Реклама в Telegram&nbsp;— <a class="pm-at" href="https://t.me/theMaknemy" target="_blank" rel="noopener">@theMaknemy</a></h2>
-        <div class="pm-split is-even">
-          <div class="pm-main">
+        <div class="pm-tg">
+          <div class="pm-tg-main">
             <div class="pm-tbl">
               <table class="pm-table">
                 <thead>
@@ -371,8 +373,6 @@ page_lscache();
               </table>
             </div>
             <p class="pm-aside">В рекламный пост и репост конкурса включены закреп и первый час без новых публикаций. Напоминание и вставка — отдельные форматы; их расписание согласуется заранее.</p>
-          </div>
-          <div class="pm-side">
             <div class="pm-deal">
               <p class="pm-deal-title">Контракт на 30 дней&nbsp;— $60:</p>
               <ul class="pm-checks is-one">
@@ -383,6 +383,9 @@ page_lscache();
               <p class="pm-deal-extra">Заменить рекламный пост на репост конкурса — <b>+$5</b> за каждую замену.</p>
             </div>
           </div>
+          <figure class="pm-tg-phone">
+            <img src="assets/design/home/iphone.webp" width="1629" height="1629" alt="Рекламный пост «Ваша реклама» в Telegram-канале Maknemy на экране телефона" loading="lazy" decoding="async" />
+          </figure>
         </div>
       </section>
 
@@ -406,7 +409,8 @@ page_lscache();
         </div>
       </section>
 
-      <section class="pm-sec" id="pm-clicks" aria-labelledby="pm-clicks-h">
+      <section class="pm-sec has-art" id="pm-clicks" aria-labelledby="pm-clicks-h">
+        <img class="pm-art" src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" aria-hidden="true" loading="lazy" decoding="async" />
         <h2 class="pm-h2" id="pm-clicks-h">Оплата за переходы</h2>
         <div class="pm-split">
           <p class="pm-main pm-intro">Если важен объём переходов на канал, конкурс, сайт или другой проект, можно заказать кампанию с оплатой за фактически учтённые клики.</p>
@@ -430,20 +434,31 @@ page_lscache();
         </div>
       </section>
 
-      <div class="pm-pair">
-        <section class="pm-sec" id="pm-make" aria-labelledby="pm-make-h">
-          <h2 class="pm-h2" id="pm-make-h">Создание и адаптация рекламы</h2>
-          <p>Поможем подготовить простые баннеры и адаптировать материалы под рекламные места сайта. Можно использовать готовый макет или заказать оформление по согласованному заданию.</p>
-          <p class="pm-quiet">Карточка конкурса по нашему шаблону включена в стоимость её размещения. Создание других баннеров, адаптация размеров и дополнительные правки рассчитываются до начала работы.</p>
-        </section>
-        <section class="pm-sec is-trial" id="pm-trial" aria-labelledby="pm-trial-h">
-          <h2 class="pm-h2" id="pm-trial-h">Начните с суток</h2>
-          <p>Стоимость тестовых суток засчитывается в недельное или месячное размещение при продлении до окончания теста и наличии свободных дат. Общий срок считается с первоначального запуска.</p>
-          <p class="pm-quiet">Для размещений на срок количество переходов, подписок, участников и продаж не гарантируется. UTM-разметка, согласованное отслеживание переходов и отчёт по кампании входят в стоимость.</p>
-        </section>
-      </div>
+      <section class="pm-sec" id="pm-make" aria-labelledby="pm-make-h">
+        <h2 class="pm-h2" id="pm-make-h">Создание и адаптация рекламы</h2>
+        <div class="pm-make">
+          <div class="pm-make-copy">
+            <p class="pm-intro">Поможем подготовить простые баннеры и адаптировать материалы под рекламные места сайта. Можно использовать готовый макет или заказать оформление по согласованному заданию.</p>
+            <p class="pm-quiet">Карточка конкурса по нашему шаблону включена в стоимость её размещения. Создание других баннеров, адаптация размеров и дополнительные правки рассчитываются до начала работы.</p>
+          </div>
+          <div class="pm-make-pair" aria-hidden="true">
+            <img class="is-from" src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" />
+            <span class="pm-make-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <img class="is-to" src="assets/promo/channel-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" />
+          </div>
+        </div>
+      </section>
 
-      <section class="pm-sec" id="pm-projects" aria-labelledby="pm-projects-h">
+      <section class="pm-sec is-trial" id="pm-trial" aria-labelledby="pm-trial-h">
+        <h2 class="pm-h2" id="pm-trial-h">Начните с суток</h2>
+        <div class="pm-trial-body">
+          <p class="pm-intro">Стоимость тестовых суток засчитывается в недельное или месячное размещение при продлении до окончания теста и наличии свободных дат. Общий срок считается с первоначального запуска.</p>
+          <p class="pm-quiet">Для размещений на срок количество переходов, подписок, участников и продаж не гарантируется. UTM-разметка, согласованное отслеживание переходов и отчёт по кампании входят в стоимость.</p>
+        </div>
+      </section>
+
+      <section class="pm-sec has-logo" id="pm-projects" aria-labelledby="pm-projects-h">
+        <img class="pm-bf" src="assets/poster/logo-bf.png" width="158" height="85" alt="Blox Fruits" loading="lazy" decoding="async" />
         <h2 class="pm-h2" id="pm-projects-h">Какие проекты мы принимаем</h2>
         <p class="pm-intro">В первую очередь рассматриваем:</p>
         <ul class="pm-checks">
@@ -455,7 +470,7 @@ page_lscache();
         <p class="pm-after">При выборе формата учитываем вашу цель, бюджет, сроки и тематику проекта. Для небольших каналов доступны вставки и карточки конкурсов; для регулярного продвижения — недельные и месячные размещения.</p>
       </section>
 
-      <section class="pm-sec" id="pm-rules" aria-labelledby="pm-rules-h">
+      <section class="pm-sec is-rules" id="pm-rules" aria-labelledby="pm-rules-h">
         <h2 class="pm-h2" id="pm-rules-h">Правила размещения</h2>
         <ul class="pm-rules">
           <li><strong>Согласование до оплаты.</strong> Нужны ссылка на проект, описание предложения, материалы и желаемые даты. Фиксируем формат, стоимость, срок, условия учёта и расписание. Бронь подтверждается после согласования и оплаты.</li>
