@@ -96,7 +96,7 @@ page_lscache();
 <script src="js/topbar.js?v=27" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=29" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=30" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -196,6 +196,12 @@ page_lscache();
     <div class="hm-ticker">
       <div class="hm-ticker-track">
         <ul class="hm-ticker-list">
+          <li data-i18n="home.tickerPrices">самые точные цены</li>
+          <li data-i18n="home.tickerGiveaways">постоянные розыгрыши</li>
+          <li data-i18n="home.tickerCalc">калькулятор цен</li>
+          <li data-i18n="home.tickerNews">свежие новости</li>
+        </ul>
+        <ul class="hm-ticker-list" aria-hidden="true">
           <li data-i18n="home.tickerPrices">самые точные цены</li>
           <li data-i18n="home.tickerGiveaways">постоянные розыгрыши</li>
           <li data-i18n="home.tickerCalc">калькулятор цен</li>
