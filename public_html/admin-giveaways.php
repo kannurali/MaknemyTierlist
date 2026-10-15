@@ -180,7 +180,7 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=74"></script>
+<script src="/js/i18n.js?v=75"></script>
 <script src="/js/news-blocks.js?v=3"></script>
 <script src="/js/giveaway.js?v=5"></script>
 <script src="/js/giveaway-admin.js?v=6"></script>
