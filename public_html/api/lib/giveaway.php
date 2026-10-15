@@ -29,9 +29,14 @@
 // замком строки розыгрыша (gw_add_entry()), чтобы два одновременных нажатия
 // не прошли оба.
 //
-// Кто выигрывает. Победителей выбирает кнопка «Разыграть» в админке, после
-// конца розыгрыша. Призы разыгрываются по порядку, один человек — максимум
-// один приз. Выбор — random_int по перемешанному списку участников.
+// Кто выигрывает. Итоги подводятся сами, как только розыгрыш закончился —
+// по времени или по лимиту (gw_after_due()): отдельного cron нет, проход
+// запускает первый же запрос к /api/giveaways.php после конца (окно
+// спрашивает его почти на каждой странице), а при лимите — сразу вступление
+// последнего участника. Кнопка «Разыграть» в админке осталась на случай,
+// когда сам проход не вышел (Telegram не ответил). Призы разыгрываются по
+// порядку, один человек — максимум один приз. Выбор — random_int по
+// перемешанному списку участников.
 //
 // Что пишет бот. О старте — всем подключившим бота, мимо переключателей в
 // профиле (так решил владелец: о розыгрышах знать должны все). О победе —
@@ -1400,6 +1405,82 @@ function gw_after_draw(PDO $pdo, array $cfg, array $row, array $winners, ?callab
     } catch (Throwable $e) {
         error_log('giveaway winners: ' . $e->getMessage());
     }
+}
+
+// --------------------------------------------------------------------------
+//  Автоитоги
+// --------------------------------------------------------------------------
+
+// Не удалось подвести итоги (Telegram не ответил, бот потерял права в
+// канале) — следующая попытка не раньше чем через столько секунд, иначе
+// каждый запрос к /api/giveaways.php снова ходил бы в Telegram.
+const GW_AUTO_RETRY = 60;
+
+// Розыгрыши, которые закончились, а итогов ещё нет.
+function gw_due_ids(PDO $pdo, int $now): array {
+    $st = $pdo->prepare("SELECT id FROM giveaways WHERE status = 'live' AND ends_at <= :now ORDER BY ends_at, id");
+    $st->execute([':now' => $now]);
+    return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+}
+
+// Есть ли что разыграть. Нет таблиц — нечего.
+function gw_has_due(PDO $pdo, int $now): bool {
+    try {
+        return (bool)gw_due_ids($pdo, $now);
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Подвести итоги всех закончившихся розыгрышей и поздравить победителей.
+ * ['drawn' => сколько разыграно, 'failed' => сколько не вышло]. Не вышло —
+ * розыгрыш остаётся ждать итогов, и следующий проход попробует снова.
+ */
+function gw_draw_due(PDO $pdo, array $cfg, callable $send, int $now, ?callable $sleep = null, ?callable $rand = null): array {
+    $out = ['drawn' => 0, 'failed' => 0];
+    foreach (gw_due_ids($pdo, $now) as $id) {
+        [$s, , $winners] = gw_draw($pdo, $cfg, $send, $id, $now, $rand);
+        if ($s !== 200) {
+            // drawn — его только что разыграл кто-то другой (кнопка в админке).
+            if ($s !== 409) { $out['failed']++; }
+            continue;
+        }
+        $out['drawn']++;
+        if ($winners) { gw_notify_winners($pdo, $send, gw_load($pdo, $id), $winners, $sleep); }
+    }
+    return $out;
+}
+
+/**
+ * Автоитоги после ответа посетителю. Проход идёт один за раз — замок-файл,
+ * второй запрос в это время просто выходит. В том же файле — время
+ * последней неудачи: после неё следующий проход ждёт GW_AUTO_RETRY секунд.
+ * $send и $lockPath подставляют тесты.
+ */
+function gw_after_due(PDO $pdo, array $cfg, int $now, ?callable $send = null, ?string $lockPath = null, ?callable $sleep = null): array {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return ['skipped' => 'off']; }
+    tg_finish_response();
+    tg_long_run();
+    $lock = @fopen($lockPath ?? sys_get_temp_dir() . '/maknemy-gw-draw.lock', 'c+');
+    if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) { return ['skipped' => 'busy']; }
+    $res = ['skipped' => 'retry'];
+    try {
+        $failedAt = (int)stream_get_contents($lock);
+        if ($failedAt <= 0 || $now - $failedAt >= GW_AUTO_RETRY) {
+            $res = gw_draw_due($pdo, $cfg, $send ?? tg_http($tg['token']), $now, $sleep);
+            ftruncate($lock, 0);
+            rewind($lock);
+            if ($res['failed']) { fwrite($lock, (string)$now); }
+        }
+    } catch (Throwable $e) {
+        error_log('giveaway auto draw: ' . $e->getMessage());
+        $res = ['skipped' => 'error'];
+    }
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    return $res;
 }
 
 // После вебхука: ссылка-приглашение для приватного канала.

@@ -193,7 +193,7 @@ page_lscache();
   <script src="js/i18n.js?v=76" fetchpriority="high"></script>
   <script src="js/support-page.js?v=1" defer></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=6" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=7" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
