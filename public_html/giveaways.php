@@ -49,7 +49,7 @@ page_lscache();
 <script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=2" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=2" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
