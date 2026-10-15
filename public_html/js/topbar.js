@@ -150,6 +150,17 @@
     sync();
   }
 
+  var root = document.documentElement;
+
+  function holdGutter() {
+    var locked = getComputedStyle(document.body).overflowY === "hidden";
+    root.style.scrollbarGutter = locked && root.scrollHeight > root.clientHeight ? "stable" : "";
+  }
+
+  if (window.MutationObserver && "scrollbarGutter" in root.style) {
+    new MutationObserver(holdGutter).observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
+  }
+
   var toast = null;
   var hideTimer = 0;
 

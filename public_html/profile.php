@@ -154,9 +154,9 @@ $pfTitle = $pfNick !== ''
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=24" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=24" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=25" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=25" /><?php endif; ?>
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=26" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=27" defer fetchpriority="high"></script>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=12" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
