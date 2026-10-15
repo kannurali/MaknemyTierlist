@@ -116,12 +116,14 @@ page_lscache();
             data-i18n-title="topbar.showNav" title="Показать разделы">
     </button>
   </header>
-  <main class="pm-page">
+  <main class="pm-page<?= HALLOWEEN ? ' pm-hw' : '' ?>">
     <div class="pm-wrap">
       <section class="pm-hero" aria-labelledby="pmTitle">
-        <img class="pm-hero-bloom" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <img class="pm-branch is-r is-hero" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" decoding="async" />
+        <img class="pm-branch is-l is-hero-l" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" width="868" height="890" alt="" aria-hidden="true" loading="lazy" decoding="async" />
 <?php if (HALLOWEEN): ?>
-        <img class="pm-hero-bat" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
+        <img class="pm-bat" style="--bat-x: 47%; --bat-y: 0px; --bat-w: 96px; --bat-r: -10deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
+        <img class="pm-bat is-far" style="--bat-x: 92%; --bat-y: 470px; --bat-w: 62px; --bat-r: 14deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
 <?php endif; ?>
         <div class="pm-hero-copy">
           <h1 class="pm-title" id="pmTitle">Реклама на maknemy.com и в Telegram</h1>
@@ -133,44 +135,12 @@ page_lscache();
               <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
               <span>Заказать рекламу</span>
             </a>
-            <p class="pm-talk">Обсудить размещение: telegram <a class="pm-at" href="https://t.me/maknemy" target="_blank" rel="noopener">@maknemy</a>.</p>
+            <p class="pm-talk">Обсудить размещение: telegram <a href="https://t.me/maknemy" target="_blank" rel="noopener">@maknemy</a>.</p>
           </div>
         </div>
-
-        <div class="pm-stage" aria-hidden="true">
-          <div class="pm-stage-page">
-            <span class="pm-stage-bar">
-              <img class="pm-stage-mark" src="assets/design/logo-mk-square.png" width="160" height="160" alt="" />
-              <img class="pm-stage-word" src="assets/design/wordmark.svg" width="285" height="26" alt="" />
-              <i></i><i></i><i></i><i></i>
-            </span>
-            <img class="pm-stage-rail is-l" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
-            <img class="pm-stage-rail is-r" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
-            <span class="pm-stage-col">
-              <img class="pm-stage-strip" src="assets/promo/placeholder-strip.webp" width="1200" height="300" alt="" decoding="async" />
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-link"></span>
-            </span>
-          </div>
-          <div class="pm-stage-phone">
-            <span class="pm-stage-notch"></span>
-            <span class="pm-stage-col">
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-              <span class="pm-stage-tier"></span>
-            </span>
-            <img class="pm-stage-dock" src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" decoding="async" />
-          </div>
-          <img class="pm-stage-pop" src="assets/promo/house-tg-popup.webp" width="800" height="800" alt="" decoding="async" />
-          <span class="pm-tag is-rail">300&nbsp;×&nbsp;1200</span>
-          <span class="pm-tag is-pop">800&nbsp;×&nbsp;800</span>
-          <span class="pm-tag is-dock">Mobile Sticky</span>
+        <div class="pm-hero-art" aria-hidden="true">
+          <img class="pm-hero-rail" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
+          <img class="pm-hero-phone" src="assets/design/home/iphone.webp" width="1629" height="1629" alt="" decoding="async" />
         </div>
       </section>
 
@@ -191,29 +161,28 @@ page_lscache();
         </ul>
       </nav>
 
-      <section class="pm-sec is-key has-art" id="pm-results" aria-labelledby="pm-results-h">
-        <img class="pm-art" src="<?= hw_img('assets/design/home/card-giveaways.webp') ?>" width="482" height="482" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+      <section class="pm-sec" id="pm-results" aria-labelledby="pm-results-h">
         <h2 class="pm-h2" id="pm-results-h">Участники конкурса&nbsp;— $12 за 1&nbsp;000</h2>
         <div class="pm-split">
           <p class="pm-main pm-intro">Хотите привлечь аудиторию в свой конкурс? Продвинем его на maknemy.com. Также можно согласовать включение ваших соцсетей в условия партнёрского розыгрыша.</p>
           <div class="pm-side">
             <ul class="pm-rate">
-              <li><span class="pm-rate-name"><b>1&nbsp;000</b> подтверждённых участников</span><span class="pm-leader"> — </span><b class="pm-rate-cost">$12</b><span class="pm-vh">.</span></li>
-              <li><span class="pm-rate-name"><b>2&nbsp;000</b> подтверждённых участников</span><span class="pm-leader"> — </span><b class="pm-rate-cost">$24</b><span class="pm-vh">.</span></li>
+              <li><span class="pm-rate-name"><b>1&nbsp;000</b> подтверждённых участников</span><span class="pm-vh"> — </span><b class="pm-rate-cost">$12</b><span class="pm-vh">.</span></li>
+              <li><span class="pm-rate-name"><b>2&nbsp;000</b> подтверждённых участников</span><span class="pm-vh"> — </span><b class="pm-rate-cost">$24</b><span class="pm-vh">.</span></li>
             </ul>
           </div>
           <p class="pm-main">Посетитель сайта переходит на конкурс, выполняет согласованные условия и подтверждает участие. Список обязательных соцсетей и способ проверки определяем до оплаты.</p>
         </div>
 
         <h3 class="pm-h3">Что входит в гарантированный объём:</h3>
-        <ul class="pm-checks">
+        <ul class="pm-list is-check is-cols">
           <li>Участник пришёл через ссылку нашей кампании.</li>
           <li>Участвует в этом конкурсе впервые и выполнил проверяемые условия.</li>
           <li>Один аккаунт засчитывается один раз в заказе. Повторные регистрации и выявленные искусственные участия исключаются.</li>
           <li>Выполнение обязательных условий проверяется при подведении итогов.</li>
         </ul>
 
-        <div class="pm-notes">
+        <div class="pm-notes is-flow">
           <p>Это участники конкурса: их количество может отличаться от числа новых подписчиков в каждой соцсети, поскольку часть людей уже может быть на вас подписана. Условия, связанные с другими площадками, включаем в гарантию только при возможности корректной проверки и соответствии правилам этих площадок.</p>
           <p>Срок набора, способ учёта, организатора и ответственного за выдачу призов согласуем заранее. $12 — стоимость продвижения; расходы на призы согласуются отдельно.</p>
           <p>Итоги проходят в объявленную дату. При недоборе к окончанию согласованного срока возвращаем оплату за невыполненный объём пропорционально недостающему количеству участников. По отдельной договорённости остаток можно перенести на следующую кампанию. Сохранение подписки и дальнейшая активность после конкурса в гарантию не входят.</p>
@@ -221,6 +190,7 @@ page_lscache();
       </section>
 
       <section class="pm-sec" id="pm-card" aria-labelledby="pm-card-h">
+        <img class="pm-branch is-l" style="--b-y: -80px; --b-w: 400px; --b-x: 190px; --b-r: 84deg; --b-o: .8" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" width="868" height="890" alt="" aria-hidden="true" loading="lazy" decoding="async" />
         <h2 class="pm-h2" id="pm-card-h">Карточка конкурса на сайте</h2>
         <div class="pm-split">
           <p class="pm-main pm-intro">Карточка с изображением приза, краткими условиями, сроком и кнопкой перехода на конкурс. Отображается на компьютерах и телефонах в блоке партнёрских конкурсов.</p>
@@ -248,10 +218,14 @@ page_lscache();
       </section>
 
       <section class="pm-sec" id="pm-display" aria-labelledby="pm-display-h">
+<?php if (HALLOWEEN): ?>
+        <img class="pm-bat is-r" style="--bat-x: 60px; --bat-y: 520px; --bat-w: 120px; --bat-r: -22deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php endif; ?>
+        <img class="pm-branch is-r is-flip" style="--b-y: 360px; --b-w: 340px; --b-x: 150px; --b-r: -24deg; --b-o: .7" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" loading="lazy" decoding="async" />
         <h2 class="pm-h2" id="pm-display-h">Баннерная реклама на сайте</h2>
         <div class="pm-split">
           <p class="pm-main pm-intro">Размещайте рекламу на тирлисте, в калькуляторе, новостях или на странице трейдов. Можно заказать отдельный баннер, пакет на выбранной странице или охватить все четыре страницы.</p>
-          <ul class="pm-main pm-terms">
+          <ul class="pm-main pm-list pm-terms">
             <li><strong>Основной пакет</strong> — все доступные обычные рекламные места выбранной страницы без всплывающего окна.</li>
             <li><strong>Полный пакет</strong> — основной пакет и всплывающее окно.</li>
           </ul>
@@ -310,7 +284,7 @@ page_lscache();
           </li>
         </ul>
 
-        <div class="pm-notes is-three">
+        <div class="pm-notes">
           <p>Отдельные места доступны по индивидуальному расчёту. Состав пакета, расположение и условия показа подтверждаем до оплаты. В зависимости от страницы пакет включает доступные места на компьютерах и телефонах.</p>
           <p class="pm-boost">
             <img src="assets/design/legend/trend-up.svg" width="28" height="33" alt="" aria-hidden="true" loading="lazy" decoding="async" />
@@ -339,7 +313,7 @@ page_lscache();
             </span>
             <p><strong>Три страницы</strong><span class="pm-vh"> — </span><span class="pm-tier-text"><b>скидка 15%</b>.</span></p>
           </li>
-          <li class="is-all">
+          <li>
             <span class="pm-deck" aria-hidden="true">
               <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-tier.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
               <span class="pm-thumb"><img src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" loading="lazy" decoding="async" /></span>
@@ -356,9 +330,13 @@ page_lscache();
       </section>
 
       <section class="pm-sec" id="pm-telegram" aria-labelledby="pm-telegram-h">
-        <h2 class="pm-h2" id="pm-telegram-h">Реклама в Telegram&nbsp;— <a class="pm-at" href="https://t.me/theMaknemy" target="_blank" rel="noopener">@theMaknemy</a></h2>
-        <div class="pm-tg">
-          <div class="pm-tg-main">
+        <img class="pm-branch is-l is-flip" style="--b-y: 120px; --b-w: 330px; --b-x: 140px; --b-r: 18deg; --b-o: .65" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" width="868" height="890" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php if (HALLOWEEN): ?>
+        <img class="pm-bat is-l" style="--bat-x: 70px; --bat-y: 40px; --bat-w: 88px; --bat-r: 12deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php endif; ?>
+        <h2 class="pm-h2" id="pm-telegram-h">Реклама в Telegram&nbsp;— <a href="https://t.me/theMaknemy" target="_blank" rel="noopener">@theMaknemy</a></h2>
+        <div class="pm-split is-even">
+          <div class="pm-main">
             <div class="pm-tbl">
               <table class="pm-table">
                 <thead>
@@ -373,25 +351,22 @@ page_lscache();
               </table>
             </div>
             <p class="pm-aside">В рекламный пост и репост конкурса включены закреп и первый час без новых публикаций. Напоминание и вставка — отдельные форматы; их расписание согласуется заранее.</p>
-            <div class="pm-deal">
-              <p class="pm-deal-title">Контракт на 30 дней&nbsp;— $60:</p>
-              <ul class="pm-checks is-one">
-                <li>4 рекламных поста.</li>
-                <li>8 рекламных вставок.</li>
-                <li>Заранее согласованное расписание.</li>
-              </ul>
-              <p class="pm-deal-extra">Заменить рекламный пост на репост конкурса — <b>+$5</b> за каждую замену.</p>
-            </div>
           </div>
-          <figure class="pm-tg-phone">
-            <img src="assets/design/home/iphone.webp" width="1629" height="1629" alt="Рекламный пост «Ваша реклама» в Telegram-канале Maknemy на экране телефона" loading="lazy" decoding="async" />
-          </figure>
+          <div class="pm-side pm-deal">
+            <p class="pm-deal-title">Контракт на 30 дней&nbsp;— $60:</p>
+            <ul class="pm-list">
+              <li>4 рекламных поста.</li>
+              <li>8 рекламных вставок.</li>
+              <li>Заранее согласованное расписание.</li>
+            </ul>
+            <p class="pm-deal-extra">Заменить рекламный пост на репост конкурса — <b>+$5</b> за каждую замену.</p>
+          </div>
         </div>
       </section>
 
       <section class="pm-sec" id="pm-combo" aria-labelledby="pm-combo-h">
         <h2 class="pm-h2" id="pm-combo-h">Конкурс: сайт + Telegram</h2>
-        <div class="pm-tbl is-flat">
+        <div class="pm-tbl is-wide">
           <table class="pm-table pm-combo">
             <thead>
               <tr><th scope="col">Пакет</th><th scope="col">Что входит</th><th scope="col" class="pm-num">Цена</th></tr>
@@ -409,8 +384,8 @@ page_lscache();
         </div>
       </section>
 
-      <section class="pm-sec has-art" id="pm-clicks" aria-labelledby="pm-clicks-h">
-        <img class="pm-art" src="<?= hw_img('assets/design/home/card-prices.webp') ?>" width="482" height="482" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+      <section class="pm-sec" id="pm-clicks" aria-labelledby="pm-clicks-h">
+        <img class="pm-branch is-r" style="--b-y: 40px; --b-w: 380px; --b-x: 170px; --b-r: -8deg; --b-o: .75" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" loading="lazy" decoding="async" />
         <h2 class="pm-h2" id="pm-clicks-h">Оплата за переходы</h2>
         <div class="pm-split">
           <p class="pm-main pm-intro">Если важен объём переходов на канал, конкурс, сайт или другой проект, можно заказать кампанию с оплатой за фактически учтённые клики.</p>
@@ -442,9 +417,9 @@ page_lscache();
             <p class="pm-quiet">Карточка конкурса по нашему шаблону включена в стоимость её размещения. Создание других баннеров, адаптация размеров и дополнительные правки рассчитываются до начала работы.</p>
           </div>
           <div class="pm-make-pair" aria-hidden="true">
-            <img class="is-from" src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" />
-            <span class="pm-make-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <img class="is-to" src="assets/promo/channel-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" />
+            <img src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" />
+            <svg class="pm-make-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <img src="assets/promo/channel-dock.webp" width="640" height="200" alt="" loading="lazy" decoding="async" />
           </div>
         </div>
       </section>
@@ -457,20 +432,23 @@ page_lscache();
         </div>
       </section>
 
-      <section class="pm-sec has-logo" id="pm-projects" aria-labelledby="pm-projects-h">
-        <img class="pm-bf" src="assets/poster/logo-bf.png" width="158" height="85" alt="Blox Fruits" loading="lazy" decoding="async" />
+      <section class="pm-sec" id="pm-projects" aria-labelledby="pm-projects-h">
+        <img class="pm-branch is-l" style="--b-y: 40px; --b-w: 340px; --b-x: 250px; --b-r: 96deg; --b-o: .7" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" width="868" height="890" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php if (HALLOWEEN): ?>
+        <img class="pm-bat is-r" style="--bat-x: 90px; --bat-y: 60px; --bat-w: 104px; --bat-r: -16deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php endif; ?>
         <h2 class="pm-h2" id="pm-projects-h">Какие проекты мы принимаем</h2>
         <p class="pm-intro">В первую очередь рассматриваем:</p>
-        <ul class="pm-checks">
+        <ul class="pm-list is-cols">
           <li>Блогеров, Telegram-каналы, YouTube-каналы и сообщества по Blox Fruits и Roblox.</li>
           <li>Честные конкурсы с понятными условиями и подтверждёнными призами.</li>
           <li>Игры, полезные сайты, гайды и сервисы для игроков.</li>
           <li>Дизайнеров, монтажёров, разработчиков и другие подходящие аудитории проекты.</li>
         </ul>
-        <p class="pm-after">При выборе формата учитываем вашу цель, бюджет, сроки и тематику проекта. Для небольших каналов доступны вставки и карточки конкурсов; для регулярного продвижения — недельные и месячные размещения.</p>
+        <p>При выборе формата учитываем вашу цель, бюджет, сроки и тематику проекта. Для небольших каналов доступны вставки и карточки конкурсов; для регулярного продвижения — недельные и месячные размещения.</p>
       </section>
 
-      <section class="pm-sec is-rules" id="pm-rules" aria-labelledby="pm-rules-h">
+      <section class="pm-sec" id="pm-rules" aria-labelledby="pm-rules-h">
         <h2 class="pm-h2" id="pm-rules-h">Правила размещения</h2>
         <ul class="pm-rules">
           <li><strong>Согласование до оплаты.</strong> Нужны ссылка на проект, описание предложения, материалы и желаемые даты. Фиксируем формат, стоимость, срок, условия учёта и расписание. Бронь подтверждается после согласования и оплаты.</li>
@@ -484,13 +462,17 @@ page_lscache();
         </ul>
       </section>
 
-      <section class="pm-order" id="pm-order" aria-labelledby="pm-order-h">
+      <section class="pm-sec pm-order" id="pm-order" aria-labelledby="pm-order-h">
+        <img class="pm-branch is-r is-flip" style="--b-y: -40px; --b-w: 420px; --b-x: 200px; --b-r: 12deg; --b-o: .85" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php if (HALLOWEEN): ?>
+        <img class="pm-bat is-r" style="--bat-x: 110px; --bat-y: -30px; --bat-w: 76px; --bat-r: 8deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+<?php endif; ?>
         <div class="pm-order-copy">
           <h2 class="pm-h2" id="pm-order-h">Заказать рекламу</h2>
-          <p>Напишите <a class="pm-at" href="https://t.me/mksvtn" target="_blank" rel="noopener">@mksvtn</a> и отправьте ссылку на проект, цель рекламы, бюджет и желаемые даты. Подберём формат и подтвердим свободные места.</p>
-          <p class="pm-order-all">Все рекламные предложения: <a class="pm-at" href="https://t.me/mksvtn_ads" target="_blank" rel="noopener">@mksvtn_ads</a>.</p>
+          <p>Напишите <a href="https://t.me/mksvtn" target="_blank" rel="noopener">@mksvtn</a> и отправьте ссылку на проект, цель рекламы, бюджет и желаемые даты. Подберём формат и подтвердим свободные места.</p>
+          <p class="pm-order-all">Все рекламные предложения: <a href="https://t.me/mksvtn_ads" target="_blank" rel="noopener">@mksvtn_ads</a>.</p>
         </div>
-        <a class="pm-btn is-light" href="https://t.me/mksvtn" target="_blank" rel="noopener">
+        <a class="pm-btn" href="https://t.me/mksvtn" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
           <span>@mksvtn</span>
         </a>
