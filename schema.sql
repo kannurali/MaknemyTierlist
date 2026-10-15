@@ -247,6 +247,9 @@ CREATE TABLE IF NOT EXISTS user_bans (
 -- (docs/migrations/2026-10-15-giveaway-conds.sql).
 -- test — 1 у тестового: на сайте его видит только открывший /giveaways?test,
 -- бот о старте не пишет (docs/migrations/2026-10-15-giveaway-test.sql).
+-- max_entries — лимит участников, 0 — без лимита. Последний участник
+-- закрывает приём: ends_at становится «сейчас»
+-- (docs/migrations/2026-10-15-giveaway-max-entries.sql).
 CREATE TABLE IF NOT EXISTS giveaways (
   id            INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   status        VARCHAR(8)      NOT NULL DEFAULT 'draft',
@@ -260,6 +263,7 @@ CREATE TABLE IF NOT EXISTS giveaways (
   prizes_json   TEXT            NULL,
   channels_json TEXT            NULL,
   conds_json    TEXT            NULL,
+  max_entries   INT UNSIGNED    NOT NULL DEFAULT 0,
   ends_at       BIGINT UNSIGNED NOT NULL DEFAULT 0,
   created_at    BIGINT UNSIGNED NOT NULL,
   updated_at    BIGINT UNSIGNED NOT NULL,

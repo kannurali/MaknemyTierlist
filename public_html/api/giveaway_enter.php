@@ -5,7 +5,7 @@ require_once __DIR__ . '/lib/giveaway.php';
 // Кнопка «Участвовать» в окне и на странице розыгрышей —
 // POST /api/giveaway_enter.php {"id": 12, "src": "tg"|"pop"|"page"}
 //   → {"ok":true,"joined":true}
-//   → {"ok":false,"error":"login"|"banned"|"closed"|"tg"|"tg_used"|"channels"|"tg_down", "missing":[…]}
+//   → {"ok":false,"error":"login"|"banned"|"closed"|"full"|"tg"|"tg_used"|"channels"|"tg_down", "missing":[…]}
 // Что значит каждая ошибка — см. gw_enter() в api/lib/giveaway.php.
 //
 // Каждое нажатие — до пяти запросов к Telegram (по одному на канал), поэтому
@@ -34,6 +34,9 @@ if (!defined('TESTING')) {
     }
     $body = read_json_body();
     $result = gw_enter(db(), $cfg, tg_http($tg['token']), $me, read_row_id($body), time(), gw_src($body['src'] ?? ''));
+    // Последнее место занято — приём закрыт, окно и страница должны узнать
+    // сразу, а не через полминуты кеша.
+    if (!empty($result[2]['last'])) { header('X-LiteSpeed-Purge: tag=giveaways'); }
     json_out($result[1], $result[0]);
     // Только что вступил — бот подтверждает уже после ответа окну.
     if (!empty($result[2])) { gw_after_join(db(), $cfg, $result[2]); }

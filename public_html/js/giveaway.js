@@ -265,6 +265,35 @@
     return t("gw.winnersN." + plural(n), { n: n });
   }
 
+  function renderTally(g) {
+    var n = g.entries || 0;
+    var max = g.max_entries || 0;
+    var line = el("p", "gw-entries");
+    line.appendChild(peopleIcon());
+    line.appendChild(el("span", null, max ? t("gw.entriesOf", { n: n, max: max }) : t("gw.entries", { n: n })));
+    if (!max) { return line; }
+
+    var box = el("div", "gw-tally");
+    var left = Math.max(0, max - n);
+    if (g.phase === "live") {
+      line.appendChild(el("span", "gw-left", left ? t("gw.spotsLeft." + plural(left), { n: left }) : t("gw.spotsNone")));
+    }
+    box.appendChild(line);
+
+    var meter = el("div", "gw-meter");
+    meter.setAttribute("role", "progressbar");
+    meter.setAttribute("aria-valuemin", "0");
+    meter.setAttribute("aria-valuemax", String(max));
+    meter.setAttribute("aria-valuenow", String(Math.min(n, max)));
+    meter.setAttribute("aria-label", t("gw.entriesOf", { n: n, max: max }));
+    var fill = el("span", "gw-meter-fill");
+    fill.style.width = Math.min(100, n / max * 100) + "%";
+    meter.appendChild(fill);
+    box.appendChild(meter);
+    if (left === 0) { box.classList.add("is-full"); }
+    return box;
+  }
+
   function prizeCount(p) {
     return p && p.count > 0 ? p.count : 1;
   }
@@ -517,10 +546,7 @@
       if (g.phase === "ended") { main.appendChild(el("p", "gw-note", t("gw.waitDraw"))); }
     }
 
-    ui.entries = el("p", "gw-entries");
-    ui.entries.appendChild(peopleIcon());
-    ui.entries.appendChild(el("span", null, t("gw.entries", { n: g.entries || 0 })));
-    main.appendChild(ui.entries);
+    main.appendChild(renderTally(g));
     content.appendChild(main);
     root_.appendChild(content);
 
@@ -570,7 +596,7 @@
       Object.keys(ui.cChannels || {}).forEach(function (k) { mark(ui.cChannels[k], "ok"); });
       (ui.cOwn || []).forEach(function (li) { mark(li, "ok"); });
       setCta("gw.joined", true);
-      say("gw.joinedNote", { date: date(g.ends_at) });
+      say(g.max_entries ? "gw.joinedNoteMax" : "gw.joinedNote", { date: date(g.ends_at), max: g.max_entries });
       if (opts.onJoined) { opts.onJoined(g); }
     }
 
@@ -629,6 +655,7 @@
         if (r && r.ok) {
           markJoined(g.id);
           showJoined();
+          if (r.last) { say("gw.joinedLast"); }
           return;
         }
         var err = r && r.error ? r.error : "net";
@@ -649,8 +676,8 @@
           say("gw.err.channels");
           return;
         }
-        if (err === "closed") { setCta("gw.ended", true); }
-        var known = ["tg_used", "banned", "closed", "tg_down", "rate_limited"];
+        if (err === "closed" || err === "full") { setCta("gw.ended", true); }
+        var known = ["tg_used", "banned", "closed", "full", "tg_down", "rate_limited"];
         say("gw.err." + (known.indexOf(err) >= 0 ? err : "net"));
       }).catch(function () {
         st.busy = false;

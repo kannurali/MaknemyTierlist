@@ -22,6 +22,13 @@
 // сразу пишет добавившему, чего ему не дали; перед публикацией права
 // перечитываются у Telegram.
 //
+// Лимит участников (колонка max_entries, 0 — без лимита). Кто занял последнее
+// место, тот закрывает приём: ends_at становится «сейчас», и дальше розыгрыш
+// живёт как закончившийся по времени. Время конца остаётся обязательным —
+// приём закрывает то, что наступит раньше. Последнее место разыгрывается под
+// замком строки розыгрыша (gw_add_entry()), чтобы два одновременных нажатия
+// не прошли оба.
+//
 // Кто выигрывает. Победителей выбирает кнопка «Разыграть» в админке, после
 // конца розыгрыша. Призы разыгрываются по порядку, один человек — максимум
 // один приз. Выбор — random_int по перемешанному списку участников.
@@ -53,6 +60,7 @@ const GW_PRIZES_MAX      = 20;
 const GW_PRIZE_NAME_MAX  = 60;
 const GW_PRIZE_COUNT_MAX = 1000;
 const GW_CHANNELS_MAX    = 5;
+const GW_ENTRIES_MAX     = 1000000;
 // Свои условия: текст и ссылка (YouTube, TikTok, канал без бота). Нажатие на
 // условие открывает ссылку; бот проверяет только те, у которых выбран канал.
 const GW_CONDS_MAX       = 5;
@@ -193,6 +201,9 @@ function gw_validate(array $in): array {
     $ends = $in['ends_at'] ?? 0;
     if (!nb_is_int_between($ends, 0, 4102444800)) { return $fail('bad ends_at'); }
 
+    $max = $in['max_entries'] ?? 0;
+    if (!nb_is_int_between($max, 0, GW_ENTRIES_MAX)) { return $fail('bad max_entries'); }
+
     return ['ok' => true, 'error' => '', 'row' => [
         'title_ru'      => $titleRu,
         'title_en'      => $titleEn,
@@ -207,6 +218,7 @@ function gw_validate(array $in): array {
         'channels_json' => json_encode($channels),
         'conds'         => $conds,
         'ends_at'       => (int)$ends,
+        'max_entries'   => (int)$max,
         'test'          => ($in['test'] ?? false) === true,
     ]];
 }
@@ -286,6 +298,47 @@ function gw_has_test(PDO $pdo): bool {
 
 function gw_is_test(array $row): bool {
     return !empty($row['test']);
+}
+
+// Колонку max_entries добавляет миграция 2026-10-15-giveaway-max-entries.sql.
+// До неё лимита нет ни у кого, а поставить его админка не даёт.
+function gw_has_max(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT max_entries FROM giveaways LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// Лимит участников, 0 — без лимита.
+function gw_max(array $row): int {
+    return max(0, (int)($row['max_entries'] ?? 0));
+}
+
+// Сколько всего мест-победителей во всех призах.
+function gw_slots_total(array $row): int {
+    $n = 0;
+    foreach (gw_decode_list($row['prizes_json'] ?? null) as $p) {
+        if (is_array($p)) { $n += max(1, (int)($p['count'] ?? 1)); }
+    }
+    return $n;
+}
+
+// Набран ли лимит.
+function gw_full(PDO $pdo, array $row): bool {
+    $max = gw_max($row);
+    return $max > 0 && (gw_entry_counts($pdo, [(int)$row['id']])[(int)$row['id']] ?? 0) >= $max;
+}
+
+// Лимит набран, а время конца ещё впереди — приём закрывается сейчас. Так
+// бывает после последнего участника и когда лимит в админке опустили ниже
+// числа уже вступивших. true — закрыли.
+function gw_close_full(PDO $pdo, array $row, int $now): bool {
+    if ($row['status'] !== 'live' || (int)$row['ends_at'] <= $now || !gw_full($pdo, $row)) { return false; }
+    $pdo->prepare('UPDATE giveaways SET ends_at = :now, updated_at = :now2 WHERE id = :id AND ends_at > :now3')
+        ->execute([':now' => $now, ':now2' => $now, ':now3' => $now, ':id' => (int)$row['id']]);
+    return true;
 }
 
 /**
@@ -381,6 +434,7 @@ function gw_publish_problems(array $row, array $channels, int $now): array {
         $c = $channels[$id] ?? null;
         if (!$c || (int)$c['is_admin'] !== 1) { $out[] = 'channel_not_admin'; break; }
     }
+    if (gw_max($row) > 0 && gw_max($row) < gw_slots_total($row)) { $out[] = 'max_below_prizes'; }
     return $out;
 }
 
@@ -493,6 +547,7 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
         'ends_at'      => (int)$row['ends_at'],
         'published_at' => (int)$row['published_at'],
         'entries'      => $counts[$id] ?? 0,
+        'max_entries'  => gw_max($row),
         'winners'      => $row['status'] === 'drawn' ? ($winners[$id] ?? []) : [],
         'test'         => gw_is_test($row),
     ];
@@ -601,6 +656,7 @@ function gw_check_channels(callable $send, array $channels, int $tgUser): array 
  *   login     — не вошёл через Roblox;
  *   banned    — забанен;
  *   closed    — розыгрыша нет, он не опубликован или время вышло;
+ *   full      — набран лимит участников;
  *   tg        — бот не подключён (окно предложит подключить);
  *   tg_used   — этот Telegram уже участвует с другого аккаунта;
  *   channels  — не подписан: missing — на какие каналы;
@@ -612,7 +668,9 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
     if (site_banned($me, $cfg, $now, $pdo)) { return [403, ['ok' => false, 'error' => 'banned']]; }
 
     $row = $id > 0 ? gw_load($pdo, $id) : null;
-    if (!$row || gw_phase($row, $now) !== 'live') { return [409, ['ok' => false, 'error' => 'closed']]; }
+    if (!$row || gw_phase($row, $now) !== 'live') {
+        return [409, ['ok' => false, 'error' => $row && $row['status'] === 'live' && gw_full($pdo, $row) ? 'full' : 'closed']];
+    }
 
     $st = $pdo->prepare('SELECT 1 FROM giveaway_entries WHERE giveaway_id = :g AND user_id = :u');
     $st->execute([':g' => $id, ':u' => $me]);
@@ -635,10 +693,9 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
         if (!$chk['ok']) { return [409, ['ok' => false, 'error' => 'channels', 'missing' => $chk['missing']]]; }
     }
 
-    try {
-        $pdo->prepare('INSERT INTO giveaway_entries (giveaway_id, user_id, chat_id, joined_at, src) VALUES (:g, :u, :c, :at, :src)')
-            ->execute([':g' => $id, ':u' => $me, ':c' => $chat, ':at' => $now, ':src' => gw_src($src)]);
-    } catch (PDOException $e) {
+    [$err, $row] = gw_add_entry($pdo, $id, $me, $chat, $now, gw_src($src));
+    if ($err === 'closed' || $err === 'full') { return [409, ['ok' => false, 'error' => $err]]; }
+    if ($err === 'dup') {
         // Гонка двух вкладок или двух аккаунтов с одним Telegram: ключ
         // не пустил вторую запись. Кто именно — решает повторная проверка.
         $st = $pdo->prepare('SELECT user_id FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :c');
@@ -647,7 +704,48 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
         if ($who !== false && (string)$who === $me) { return [200, ['ok' => true, 'joined' => true]]; }
         return [409, ['ok' => false, 'error' => 'tg_used']];
     }
-    return [200, ['ok' => true, 'joined' => true], ['chat_id' => $chat, 'lang' => tg_lang($link['lang']), 'row' => $row]];
+    // Занял последнее место — окно и бот скажут «приём закрыт» вместо даты итогов.
+    $last = (int)$row['ends_at'] <= $now;
+    return [200, ['ok' => true, 'joined' => true] + ($last ? ['last' => true] : []),
+        ['chat_id' => $chat, 'lang' => tg_lang($link['lang']), 'row' => $row, 'last' => $last]];
+}
+
+/**
+ * Записать участника. [ошибка, строка розыгрыша после записи]; ошибка
+ * пустая — записан, иначе closed, full или dup (ключ не пустил: этот человек
+ * или этот Telegram уже участвует).
+ *
+ * Всё под замком строки розыгрыша: UPDATE ставит его до конца транзакции, и
+ * второе одновременное нажатие ждёт, пока первое не запишется. Без этого два
+ * человека на последнее место прошли бы оба. Последний участник закрывает
+ * приём (gw_close_full()), и строка возвращается уже с новым ends_at.
+ */
+function gw_add_entry(PDO $pdo, int $id, string $me, int $chat, int $now, string $src): array {
+    $hasMax = gw_has_max($pdo);
+    $pdo->beginTransaction();
+    try {
+        if ($hasMax) {
+            $pdo->prepare('UPDATE giveaways SET max_entries = max_entries WHERE id = :id')->execute([':id' => $id]);
+        }
+        $row = gw_load($pdo, $id);
+        if (!$row || gw_phase($row, $now) !== 'live') {
+            $full = $row && $row['status'] === 'live' && gw_full($pdo, $row);
+            $pdo->rollBack();
+            return [$full ? 'full' : 'closed', $row];
+        }
+        if (gw_close_full($pdo, $row, $now)) {
+            $pdo->commit();
+            return ['full', gw_load($pdo, $id)];
+        }
+        $pdo->prepare('INSERT INTO giveaway_entries (giveaway_id, user_id, chat_id, joined_at, src) VALUES (:g, :u, :c, :at, :src)')
+            ->execute([':g' => $id, ':u' => $me, ':c' => $chat, ':at' => $now, ':src' => $src]);
+        if (gw_close_full($pdo, $row, $now)) { $row = gw_load($pdo, $id); }
+        $pdo->commit();
+        return ['', $row];
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        return ['dup', null];
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -690,6 +788,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     if ($r['conds'] && !$hasConds) { return [409, ['ok' => false, 'error' => 'conds_migrate']]; }
     $hasTest = gw_has_test($pdo);
     if ($r['test'] && !$hasTest) { return [409, ['ok' => false, 'error' => 'test_migrate']]; }
+    $hasMax = gw_has_max($pdo);
+    if ($r['max_entries'] > 0 && !$hasMax) { return [409, ['ok' => false, 'error' => 'max_migrate']]; }
 
     $old = null;
     if ($id > 0) {
@@ -726,21 +826,27 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     ];
     if ($hasConds) { $cols[':conds'] = gw_conds_encode($r['conds']); }
     if ($hasTest) { $cols[':test'] = $r['test'] ? 1 : 0; }
+    if ($hasMax) { $cols[':max'] = $r['max_entries']; }
     if ($id > 0) {
         $pdo->prepare(
             'UPDATE giveaways SET title_ru = :title_ru, title_en = :title_en, image_url = :image_url,
                     image_w = :image_w, image_h = :image_h, body_json = :body, prizes_json = :prizes,
                     channels_json = :channels, ' . ($hasConds ? 'conds_json = :conds, ' : '')
-                    . ($hasTest ? 'test = :test, ' : '') . 'ends_at = :ends, updated_at = :now
+                    . ($hasTest ? 'test = :test, ' : '') . ($hasMax ? 'max_entries = :max, ' : '')
+                    . 'ends_at = :ends, updated_at = :now
               WHERE id = :id'
         )->execute($cols + [':id' => $id]);
+        // Лимит опустили до числа уже вступивших (или ниже) — приём закрыт.
+        $saved = gw_load($pdo, $id);
+        if ($saved) { gw_close_full($pdo, $saved, $now); }
     } else {
         $pdo->prepare(
             "INSERT INTO giveaways (status, title_ru, title_en, image_url, image_w, image_h, body_json,
                     prizes_json, channels_json, " . ($hasConds ? 'conds_json, ' : '') . ($hasTest ? 'test, ' : '')
-                    . "ends_at, created_at, updated_at)
+                    . ($hasMax ? 'max_entries, ' : '') . "ends_at, created_at, updated_at)
              VALUES ('draft', :title_ru, :title_en, :image_url, :image_w, :image_h, :body, :prizes,
-                    :channels, " . ($hasConds ? ':conds, ' : '') . ($hasTest ? ':test, ' : '') . ":ends, :now, :now2)"
+                    :channels, " . ($hasConds ? ':conds, ' : '') . ($hasTest ? ':test, ' : '') . ($hasMax ? ':max, ' : '')
+                    . ":ends, :now, :now2)"
         )->execute($cols + [':now2' => $now]);
         $id = (int)$pdo->lastInsertId();
     }
@@ -933,6 +1039,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'drawn_at'     => (int)$row['drawn_at'],
         'test'         => gw_is_test($row),
         'entries'      => $count,
+        'max_entries'  => gw_max($row),
         'list'         => $entries,
     ];
 }
@@ -952,6 +1059,7 @@ function gw_admin_list(PDO $pdo, int $now): array {
             'title'   => (string)$r['title_ru'],
             'ends_at' => (int)$r['ends_at'],
             'entries' => $counts[(int)$r['id']] ?? 0,
+            'max'     => gw_max($r),
             'test'    => gw_is_test($r),
         ];
     }
@@ -1171,6 +1279,14 @@ function gw_date(int $ts, string $lang): string {
     return $d->format('j') . ' ' . GW_MONTHS_RU[(int)$d->format('n') - 1] . ', ' . $d->format('H:i') . ' МСК';
 }
 
+// Хвост к дате итогов, когда есть лимит участников.
+function gw_max_note(array $row, string $lang): string {
+    $max = gw_max($row);
+    if ($max <= 0) { return ''; }
+    return $lang === 'en' ? ' or earlier, once the entry count reaches ' . $max
+                          : ' или раньше, когда участников станет ' . $max;
+}
+
 function gw_title(array $row, string $lang): string {
     $en = (string)$row['title_en'];
     return $lang === 'en' && $en !== '' ? $en : (string)$row['title_ru'];
@@ -1199,7 +1315,7 @@ function gw_announce_text(array $row, string $lang): string {
         $lines[] = '• ' . $p['name'] . ((int)$p['count'] > 1 ? ' × ' . (int)$p['count'] : '');
     }
     $title = gw_title($row, $lang);
-    $date  = gw_date((int)$row['ends_at'], $lang);
+    $date  = gw_date((int)$row['ends_at'], $lang) . gw_max_note($row, $lang);
     $cond  = gw_checked_channels($row) ? 'ch' : (gw_conds($row['conds_json'] ?? null) ? 'own' : '');
     if ($lang === 'en') {
         return "🎁 New giveaway on maknemy.com\n\n" . $title . "\n\nPrizes:\n" . implode("\n", $lines)
@@ -1550,16 +1666,19 @@ function gw_report(PDO $pdo, array $row): array {
     return ['sources' => $sources, 'channels' => $out];
 }
 
-function gw_joined_text(array $row, string $lang): string {
+// $last — человек занял последнее место, и приём уже закрыт.
+function gw_joined_text(array $row, string $lang, bool $last = false): string {
     $title = gw_title($row, $lang);
-    $date  = gw_date((int)$row['ends_at'], $lang);
+    $date  = gw_date((int)$row['ends_at'], $lang) . gw_max_note($row, $lang);
     $cond  = gw_checked_channels($row) ? true : false;
     if ($lang === 'en') {
-        return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\nResults: " . $date . '.'
+        return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\n"
+            . ($last ? "You took the last spot: " . gw_max($row) . " entries, so entries are closed. Results soon." : 'Results: ' . $date . '.')
             . ($cond ? "\n\nDon't unsubscribe from the channels in the conditions: if you do, your entry is removed automatically." : '')
             . "\n\nIf you win, I'll message you here.";
     }
-    return "✅ Вы участвуете в розыгрыше «" . $title . "» на maknemy.com.\n\nИтоги — " . $date . '.'
+    return "✅ Вы участвуете в розыгрыше «" . $title . "» на maknemy.com.\n\n"
+        . ($last ? 'Вы заняли последнее место: участников ' . gw_max($row) . ', приём закрыт. Итоги — скоро.' : 'Итоги — ' . $date . '.')
         . ($cond ? "\n\nНе отписывайтесь от каналов из условий: если отпишетесь, участие снимется автоматически." : '')
         . "\n\nО победе я напишу сюда.";
 }
@@ -1583,7 +1702,7 @@ function gw_after_join(PDO $pdo, array $cfg, array $note, ?callable $send = null
     tg_finish_response();
     try {
         $lang = tg_lang($note['lang']);
-        $msg = tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang),
+        $msg = tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang, !empty($note['last'])),
             [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]);
         $chat = (int)$note['chat_id'];
         tg_after_send($pdo, $chat, ($send ?? tg_http($tg['token']))('sendMessage', $msg));

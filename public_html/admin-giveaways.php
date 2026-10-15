@@ -25,8 +25,8 @@ echo <<<HTML
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
-<link rel="stylesheet" href="/css/giveaway.css?v=3" />
-<link rel="stylesheet" href="/css/giveaway-admin.css?v=5" />
+<link rel="stylesheet" href="/css/giveaway.css?v=4" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=6" />
 </head>
 <body>
 {$nav}
@@ -126,6 +126,11 @@ echo <<<HTML
         </div>
       </div>
 
+      <label class="f">Лимит участников
+        <input type="number" id="fMax" class="ga-max" min="0" max="1000000" step="1" inputmode="numeric" placeholder="без лимита" />
+        <span class="muted small">Пусто — без лимита. Когда участников станет столько, приём закроется сам, не дожидаясь конца по времени, — дальше «Разыграть». Лимит не меньше числа призов.</span>
+      </label>
+
       <div class="f">Проверка
         <div class="pages">
           <label class="page-chk"><input type="checkbox" id="fTest" /> Тестовый — посетители его не видят, бот о старте никому не пишет</label>
@@ -180,10 +185,10 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=74"></script>
+<script src="/js/i18n.js?v=75"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=5"></script>
-<script src="/js/giveaway-admin.js?v=6"></script>
+<script src="/js/giveaway.js?v=6"></script>
+<script src="/js/giveaway-admin.js?v=7"></script>
 </body>
 </html>
 HTML;

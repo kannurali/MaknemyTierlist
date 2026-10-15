@@ -226,7 +226,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=4" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=4" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body class="news-bg">
@@ -367,7 +367,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </div>
   </div>
 
-  <script src="js/i18n.js?v=74" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=75" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
@@ -381,7 +381,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
   <script src="js/news-page.js?v=31" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=5" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=6" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
