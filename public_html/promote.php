@@ -119,11 +119,9 @@ page_lscache();
   <main class="pm-page<?= HALLOWEEN ? ' pm-hw' : '' ?>">
     <div class="pm-wrap">
       <section class="pm-hero" aria-labelledby="pmTitle">
-        <img class="pm-branch is-r is-hero" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" decoding="async" />
-        <img class="pm-branch is-l is-hero-l" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" width="868" height="890" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <img class="pm-hero-bloom" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" width="<?= HALLOWEEN ? 995 : 868 ?>" height="<?= HALLOWEEN ? 936 : 890 ?>" alt="" aria-hidden="true" decoding="async" />
 <?php if (HALLOWEEN): ?>
-        <img class="pm-bat" style="--bat-x: 47%; --bat-y: 0px; --bat-w: 96px; --bat-r: -10deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
-        <img class="pm-bat is-far" style="--bat-x: 92%; --bat-y: 470px; --bat-w: 62px; --bat-r: 14deg" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
+        <img class="pm-hero-bat" src="assets/halloween/bat.webp" width="650" height="232" alt="" aria-hidden="true" decoding="async" />
 <?php endif; ?>
         <div class="pm-hero-copy">
           <h1 class="pm-title" id="pmTitle">Реклама на maknemy.com и в Telegram</h1>
@@ -138,9 +136,41 @@ page_lscache();
             <p class="pm-talk">Обсудить размещение: telegram <a href="https://t.me/maknemy" target="_blank" rel="noopener">@maknemy</a>.</p>
           </div>
         </div>
-        <div class="pm-hero-art" aria-hidden="true">
-          <img class="pm-hero-rail" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
-          <img class="pm-hero-phone" src="assets/design/home/iphone.webp" width="1629" height="1629" alt="" decoding="async" />
+
+        <div class="pm-stage" aria-hidden="true">
+          <div class="pm-stage-page">
+            <span class="pm-stage-bar">
+              <img class="pm-stage-mark" src="assets/design/logo-mk-square.png" width="160" height="160" alt="" />
+              <img class="pm-stage-word" src="assets/design/wordmark.svg" width="285" height="26" alt="" />
+              <i></i><i></i><i></i><i></i>
+            </span>
+            <img class="pm-stage-rail is-l" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
+            <img class="pm-stage-rail is-r" src="assets/promo/placeholder-rail.webp" width="320" height="1200" alt="" decoding="async" />
+            <span class="pm-stage-col">
+              <img class="pm-stage-strip" src="assets/promo/placeholder-strip.webp" width="1200" height="300" alt="" decoding="async" />
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-link"></span>
+            </span>
+          </div>
+          <div class="pm-stage-phone">
+            <span class="pm-stage-notch"></span>
+            <span class="pm-stage-col">
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+              <span class="pm-stage-tier"></span>
+            </span>
+            <img class="pm-stage-dock" src="assets/promo/placeholder-dock.webp" width="640" height="200" alt="" decoding="async" />
+          </div>
+          <img class="pm-stage-pop" src="assets/promo/house-tg-popup.webp" width="800" height="800" alt="" decoding="async" />
+          <span class="pm-tag is-rail">300&nbsp;×&nbsp;1200</span>
+          <span class="pm-tag is-pop">800&nbsp;×&nbsp;800</span>
+          <span class="pm-tag is-dock">Mobile Sticky</span>
         </div>
       </section>
 
