@@ -24,6 +24,7 @@
     ends_in_past: "время конца уже прошло",
     ends_too_far: "конец дальше чем через 90 дней",
     channel_not_admin: "у бота нет нужных прав в одном из отмеченных каналов или каналов своих условий (см. «Каналы бота» слева)",
+    max_below_prizes: "лимит участников меньше числа призов",
     invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Добавление подписчиков»)"
   };
 
@@ -46,6 +47,8 @@
     "bad channels": "Каналов, которые проверяет бот (отмеченных и у своих условий), — не больше пяти.",
     conds_migrate: "Для своих условий выполните docs/migrations/2026-10-15-giveaway-conds.sql.",
     test_migrate: "Для тестовых розыгрышей выполните docs/migrations/2026-10-15-giveaway-test.sql.",
+    "bad max_entries": "Лимит участников — целое число от 0 до 1 000 000.",
+    max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -683,7 +686,7 @@
       }
       const sub = document.createElement("div");
       sub.className = "li-sub";
-      sub.textContent = "Участников: " + g.entries + (g.ends_at ? " · конец " + fmtDate(g.ends_at) + " МСК" : "");
+      sub.textContent = "Участников: " + g.entries + (g.max ? " из " + g.max : "") + (g.ends_at ? " · конец " + fmtDate(g.ends_at) + " МСК" : "");
       li.append(top, sub);
       li.addEventListener("click", () => open(g.id));
       ul.appendChild(li);
@@ -707,6 +710,7 @@
     const st = STATUS[phase] || STATUS.draft;
     let text = g && g.id ? st[0] : "Новый розыгрыш — ещё не сохранён";
     if (g && g.test) text += " · тестовый";
+    if (g && g.id && g.status !== "draft" && g.max_entries && g.entries >= g.max_entries) text += " · лимит участников набран";
     if (g && g.published_at) text += " · опубликован " + fmtDate(g.published_at) + " МСК";
     if (g && g.drawn_at) text += " · разыгран " + fmtDate(g.drawn_at) + " МСК";
     box.textContent = text;
@@ -734,7 +738,7 @@
     const sec = $("gwPeople");
     sec.hidden = !(g && g.id && g.status !== "draft");
     if (sec.hidden) return;
-    $("gwCount").textContent = g.entries + (g.list.length < g.entries ? " (показаны " + g.list.length + ")" : "");
+    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + (g.list.length < g.entries ? " (показаны " + g.list.length + ")" : "");
     const body = $("gwPeopleBody");
     body.textContent = "";
     if (!g.list.length) {
@@ -959,8 +963,16 @@
       channels: readChannels(),
       conds: readConds(),
       ends_at: fromInput($("fEnds").value),
+      max_entries: readMax(),
       test: $("fTest").checked
     };
+  }
+
+  function readMax() {
+    const v = $("fMax").value.trim();
+    if (v === "") return 0;
+    const n = Number(v);
+    return Number.isInteger(n) ? n : -1;
   }
 
   let prevTimer = 0;
@@ -985,6 +997,7 @@
         conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url, btn: { ru: c.btn_ru, en: "" }, chat: c.chat })),
         ends_at: d.ends_at || Math.floor(Date.now() / 1000) + 86400,
         entries: S.cur.entries || 0,
+        max_entries: Math.max(0, d.max_entries),
         winners: (S.cur.list || []).filter(e => e.prize !== null)
           .map(e => ({ prize: e.prize, id: e.id, name: e.name, display: e.display, avatar: e.avatar }))
       };
@@ -1015,6 +1028,7 @@
     cs.textContent = "";
     (g.conds || []).forEach(c => cs.appendChild(condRow(c)));
     $("fEnds").value = toInput(g.ends_at);
+    $("fMax").value = g.max_entries ? String(g.max_entries) : "";
     $("fTest").checked = !!g.test;
     msg("");
     hint("");
@@ -1029,7 +1043,7 @@
     return {
       id: 0, status: "draft", phase: "draft", title_ru: "", title_en: "", image: null,
       body: { v: 1, blocks: [] }, prizes: [], channels: [], conds: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
-      published_at: 0, drawn_at: 0, test: false, entries: 0, list: []
+      published_at: 0, drawn_at: 0, test: false, entries: 0, max_entries: 0, list: []
     };
   }
 
@@ -1159,7 +1173,7 @@
     });
     $("fImgFile").addEventListener("change", e => { upload(e.target.files[0]); e.target.value = ""; });
     $("fImgDel").addEventListener("click", () => { setImage(null); changed(); });
-    ["fTitleRu", "fTitleEn", "fEnds"].forEach(id => $(id).addEventListener("input", changed));
+    ["fTitleRu", "fTitleEn", "fEnds", "fMax"].forEach(id => $(id).addEventListener("input", changed));
     $("fTest").addEventListener("change", changed);
     document.querySelectorAll("[data-plus]").forEach(b => b.addEventListener("click", () => {
       const base = Math.max(Math.floor(Date.now() / 1000), fromInput($("fEnds").value) || 0);

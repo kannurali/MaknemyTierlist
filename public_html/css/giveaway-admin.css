@@ -182,6 +182,7 @@
 
 .ga-ch-off { opacity: .6; }
 .ga-quick { justify-content: flex-end; }
+.ga-max { max-width: 180px; }
 
 .ga-actions { align-items: center; }
 .ga-gap { flex: 1 1 auto; }
