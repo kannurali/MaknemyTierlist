@@ -848,6 +848,12 @@
         hint("Ссылка скопирована", "ok");
       });
       linkRow.append(inp, copy);
+      if (ch.counts === false) {
+        const pub = document.createElement("span");
+        pub.className = "muted small";
+        pub.textContent = "Это публичный адрес канала: Telegram не сообщает, кто пришёл по нему. Чтобы считать подписчиков, поставьте в условие ссылку-приглашение (t.me/+…).";
+        linkRow.appendChild(pub);
+      }
     } else {
       const no = document.createElement("span");
       no.className = "muted small";
@@ -865,8 +871,10 @@
 
     const note = document.createElement("p");
     note.className = "muted small";
-    note.textContent = "То же число рекламодатель видит у себя: канал → «Пригласительные ссылки» → «Maknemy #" + S.cur.id + "».";
-    box.appendChild(note);
+    note.textContent = ch.own
+      ? "Ссылка из своего условия: считаются вступления по ней, пока розыгрыш идёт. В канале она в «Пригласительных ссылках» под тем именем, которое ей дали при создании."
+      : "То же число рекламодатель видит у себя: канал → «Пригласительные ссылки» → «Maknemy #" + S.cur.id + "».";
+    if (ch.counts !== false) box.appendChild(note);
 
     if (ch.list.length) {
       const wrap = document.createElement("div");

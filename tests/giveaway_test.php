@@ -1116,6 +1116,50 @@ test('после итогов отписка участие не трогает'
     assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'победитель остался в списке');
 });
 
+test('ссылка своего условия: обрезанную Telegram ссылку узнаём по началу', function () {
+    $cases = [
+        'целиком'              => [GW_STOCK, true],
+        'обрезана'             => ['https://t.me/+dtbxvZn9…', true],
+        'обрезана тремя точками' => ['https://t.me/+dtbxvZn9...', true],
+        'другая ссылка'        => ['https://t.me/+zzzzzzzz…', false],
+        'слишком коротко'      => ['https://t.me/+dtb…', false],
+        'другой хвост целиком' => ['https://t.me/+dtbxvZn9baA1OTVj', false],
+        'регистр хеша важен'   => ['https://t.me/+DTBXVZN9…', false],
+    ];
+    foreach ($cases as $why => [$seen, $want]) {
+        assert_eq($want, gw_invite_match($seen, GW_STOCK), $why);
+    }
+    assert_true(gw_invite_match('https://t.me/+dtbxvZn9…', 'http://telegram.me/joinchat/dtbxvZn9baA1OTVi/'), 'старая запись joinchat — то же приглашение');
+    assert_eq(false, gw_invite_match('https://t.me/maknemy…', 'https://t.me/maknemy'), 'публичный адрес — не приглашение');
+});
+
+test('вступил по ссылке своего условия — в отчёте рекламодателю', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_B, 'Сток');
+    gw_channel($p, GW_CH_A, 'Публичный', true, 'pub_a');
+    $id = gw_live($p, ['conds' => [gw_cond('Сток', GW_STOCK, '', '', '', (string)GW_CH_B),
+        gw_cond('Публичный', 'https://t.me/pub_a', '', '', '', (string)GW_CH_A)]]);
+    $other = gw_live($p, ['title_ru' => 'Без условий']);
+
+    gw_member_update($p, gw_member(GW_CH_B, 901, 'member', 'https://t.me/+dtbxvZn9…', 'ann'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 902, 'member', 'https://t.me/+someoneelse…'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 903, 'member'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_A, 904, 'member', 'https://t.me/+dtbxvZn9…'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 905, 'member', 'https://t.me/+dtbxvZn9…'), GW_NOW + 86400);
+    $subs = $p->query('SELECT giveaway_id, tg_user_id FROM giveaway_subs')->fetchAll(PDO::FETCH_NUM);
+    assert_eq([[$id, 901]], array_map(function ($r) { return array_map('intval', $r); }, $subs),
+        'только по ссылке условия, в канал условия, в этот розыгрыш и пока он идёт');
+
+    gw_member_update($p, gw_member(GW_CH_B, 901, 'left'), GW_NOW + 10);
+    $rep = gw_report($p, gw_load($p, $id));
+    assert_eq(['Сток', 'Публичный'], array_column($rep['channels'], 'title'), 'каналы своих условий в отчёте');
+    $ch = $rep['channels'][0];
+    assert_eq([GW_STOCK, true, true, 1, 0, '@ann'], [$ch['link'], $ch['own'], $ch['counts'], $ch['joined'], $ch['stayed'], $ch['list'][0]['tg_name']],
+        'ссылка условия, пришёл 1, ушёл');
+    assert_eq(['https://t.me/pub_a', false], [$rep['channels'][1]['link'], $rep['channels'][1]['counts']], 'публичный адрес не считается — отчёт об этом говорит');
+    assert_eq([], gw_report($p, gw_load($p, $other))['channels'], 'у розыгрыша без условий каналов нет');
+});
+
 test('удаление розыгрыша чистит ссылки и подписчиков', function () {
     $p = gw_db();
     gw_channel($p, GW_CH_A, 'Канал A');

@@ -1308,6 +1308,11 @@ function gw_after_channel(PDO $pdo, array $cfg, int $chatId, int $now): void {
 // сообщает вебхуку обо всех вступлениях и выходах в каналах, где бот —
 // админ (chat_member). Вступил по нашей ссылке — строка в giveaway_subs.
 // Вышел — left_at и, если розыгрыш ещё не разыгран, участие снимается.
+//
+// У своего условия с каналом ссылка своя — её бот не заводил, а Telegram в
+// обновлении показывает такую ссылку с обрезанным хвостом («…»). Вступление
+// по ней засчитывается розыгрышу, пока он идёт: видимое начало совпало с
+// ссылкой условия (gw_invite_match()).
 
 const GW_SOURCES = ['tg', 'pop', 'page'];
 
@@ -1357,6 +1362,59 @@ function gw_ensure_links(PDO $pdo, callable $send, array $row, int $now): array 
     return $failed;
 }
 
+// Ссылка-приглашение в одном виде: https://t.me/+хеш. t.me/joinchat/хеш —
+// старая запись того же приглашения. Хеш различает регистр — не трогаем.
+function gw_invite_norm(string $url): string {
+    $u = preg_replace('~^(?:https?://)?(?:www\.)?(?:t|telegram)\.me/~i', 'https://t.me/', trim($url));
+    $u = preg_replace('~^https://t\.me/joinchat/~i', 'https://t.me/+', (string)$u);
+    return rtrim((string)$u, '/');
+}
+
+/**
+ * Та ли это ссылка условия. $seen — из обновления chat_member: ссылку,
+ * созданную другим админом, Telegram отдаёт с «…» вместо второй половины,
+ * и тогда хватает совпадения начала. Слишком короткое начало (меньше
+ * четырёх знаков хеша) ничего не доказывает.
+ */
+function gw_invite_match(string $seen, string $cond): bool {
+    $cond = gw_invite_norm($cond);
+    $base = 'https://t.me/+';
+    if (strpos($cond, $base) !== 0 || strlen($cond) <= strlen($base)) { return false; }
+    $seen = gw_invite_norm($seen);
+    $cut = strpos($seen, '…');
+    if ($cut === false) { $cut = strpos($seen, '...'); }
+    if ($cut === false) { return $seen === $cond; }
+    $head = substr($seen, 0, $cut);
+    return strlen($head) >= strlen($base) + 4 && strpos($cond, $head) === 0;
+}
+
+// Ссылки своих условий с каналом: [канал => ссылка], первая на канал.
+function gw_cond_links(array $row): array {
+    $out = [];
+    foreach (gw_conds($row['conds_json'] ?? null) as $c) {
+        $id = gw_chat_id($c['chat']);
+        if ($id !== null && !isset($out[$id])) { $out[$id] = $c['url']; }
+    }
+    return $out;
+}
+
+// Идущие розыгрыши, которым засчитывается вступление в $channel по ссылке
+// $link из своих условий.
+function gw_cond_link_ids(PDO $pdo, int $channel, string $link, int $now): array {
+    $st = $pdo->prepare("SELECT * FROM giveaways WHERE status = 'live' AND ends_at > :now");
+    $st->execute([':now' => $now]);
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        foreach (gw_conds($row['conds_json'] ?? null) as $c) {
+            if (gw_chat_id($c['chat']) === $channel && gw_invite_match($link, $c['url'])) {
+                $out[] = (int)$row['id'];
+                break;
+            }
+        }
+    }
+    return $out;
+}
+
 // Состоит ли человек в канале по объекту ChatMember из обновления.
 function gw_is_member(array $m): bool {
     $status = (string)($m['status'] ?? '');
@@ -1384,8 +1442,10 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
             if ($link === '') { return []; }
             $st = $pdo->prepare('SELECT giveaway_id FROM giveaway_links WHERE channel_id = :c AND invite_url = :u');
             $st->execute([':c' => $channel, ':u' => $link]);
+            $gids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+            $gids = array_values(array_unique(array_merge($gids, gw_cond_link_ids($pdo, $channel, $link, $now))));
             $name = tg_display_name($user);
-            foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gid) {
+            foreach ($gids as $gid) {
                 $up = $pdo->prepare('UPDATE giveaway_subs SET left_at = 0, tg_name = :n
                                       WHERE giveaway_id = :g AND channel_id = :c AND tg_user_id = :u');
                 $up->execute([':n' => $name, ':g' => (int)$gid, ':c' => $channel, ':u' => $uid]);
@@ -1425,7 +1485,9 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
 
 /**
  * Отчёт для рекламодателя: откуда пришли участники и кто подписался на
- * каждый канал по ссылке розыгрыша.
+ * каждый канал по ссылке розыгрыша — заведённой ботом или ссылке своего
+ * условия. counts = false: у условия публичный адрес канала, а вступление
+ * по нему Telegram ни с какой ссылкой не связывает — считать нечего.
  */
 function gw_report(PDO $pdo, array $row): array {
     $id = (int)$row['id'];
@@ -1438,7 +1500,9 @@ function gw_report(PDO $pdo, array $row): array {
     }
 
     $links = gw_links($pdo, [$id])[$id] ?? [];
-    $chIds = array_map('intval', gw_decode_list($row['channels_json']));
+    $own = array_diff_key(gw_cond_links($row), $links);
+    $links += $own;
+    $chIds = gw_checked_channels($row);
     $channels = gw_channels($pdo, $chIds);
     $out = [];
     foreach ($chIds as $cid) {
@@ -1476,6 +1540,8 @@ function gw_report(PDO $pdo, array $row): array {
             'id'     => (string)$cid,
             'title'  => isset($channels[$cid]) ? (string)$channels[$cid]['title'] : (string)$cid,
             'link'   => $links[$cid] ?? '',
+            'own'    => isset($own[$cid]),
+            'counts' => !isset($own[$cid]) || strpos(gw_invite_norm($own[$cid]), 'https://t.me/+') === 0,
             'joined' => count($list),
             'stayed' => $stayed,
             'list'   => $list,
