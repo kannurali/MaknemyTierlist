@@ -42,6 +42,7 @@
     btn.className = "tc-slot is-empty";
     btn.dataset.side = side;
     btn.dataset.index = String(index);
+    btn.dataset.pick = tx("calc.slotPick");
     const label = side === "left" ? tx("calc.giveLabel") : tx("calc.getLabel");
     btn.setAttribute("aria-label", tx("calc.emptySlot", { n: index + 1, side: label }));
     return btn;
@@ -216,7 +217,8 @@
     sides: () => ({
       left: sides.left.map(e => e.item.id),
       right: sides.right.map(e => e.item.id)
-    })
+    }),
+    trade: () => CALC.computeTrade(sides.left, sides.right)
   };
 
   function onSidesChanged() {
@@ -247,6 +249,7 @@
     btn.setAttribute("aria-label", tx("calc.addItem", { name: it.name || "" }));
 
     const code = CALC.badgeCodeFor(it.type);
+    btn.style.setProperty("--tc-plate", "var(--tc-plate-" + code + ")");
 
     const inner = document.createElement("span");
     inner.className = "tc-cat-inner";
@@ -262,8 +265,6 @@
 
     const name = document.createElement("span");
     name.className = "tc-cat-name";
-
-    name.style.setProperty("--tc-plate", "var(--tc-plate-" + code + ")");
     name.textContent = it.name || "";
     inner.appendChild(name);
 
@@ -333,12 +334,18 @@
 
     cancelQueuedRender();
     renderCatalogGrid("");
+    if (catalogCloseTimer) {
+      clearTimeout(catalogCloseTimer);
+      catalogCloseTimer = 0;
+      $("#tcCatalogBackdrop").classList.remove("is-closing");
+    }
     $("#tcCatalogBackdrop").hidden = false;
     document.body.style.overflow = "hidden";
     $("#tcCatalogSearch").focus();
   }
 
-  const CATALOG_CLOSE_MS = 180;
+  const CATALOG_CLOSE_MS = 800;
+  let catalogCloseTimer = 0;
 
   function reducedMotion() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -374,6 +381,7 @@
     cancelQueuedRender();
 
     const finish = () => {
+      catalogCloseTimer = 0;
       backdrop.hidden = true;
       backdrop.classList.remove("is-closing");
 
@@ -391,7 +399,7 @@
 
     if (reducedMotion()) { finish(); return; }
     backdrop.classList.add("is-closing");
-    setTimeout(finish, CATALOG_CLOSE_MS);
+    catalogCloseTimer = setTimeout(finish, CATALOG_CLOSE_MS);
   }
 
   const SEARCH_DEBOUNCE_MS = 120;
@@ -502,6 +510,7 @@
 
     el.textContent = "";
     el.classList.add("has-ad");
+    if (slot === "rail") promo.fitBox(el, cre);
 
     const img = document.createElement("img");
     img.src = promo.srcFor(cre);
@@ -528,8 +537,7 @@
     el.classList.toggle("has-link", !!url);
     if (url) {
       const open = () => {
-        try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot, page: PROMO_PAGE }); }
-        catch (_e) {}
+        promo.goal("promo_click", { id: camp.id, slot, page: PROMO_PAGE });
         window.open(url, "_blank", "noopener");
       };
       el.onclick = open;

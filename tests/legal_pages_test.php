@@ -140,12 +140,23 @@ test('подключены стили правовых страниц и общ�
     }
 });
 
-// Ниже 761px topbar.css прячет .mk-pill-text, и пилюля без значка становится
+// Ниже 761px legal.css прячет .mk-pill-text, и пилюля без значка становится
 // пустым синим кружком — так и было, пока иконки не добавили.
 test('пилюли в шапке несут иконки, а не только подписи', function () use ($DOCS) {
     foreach ($DOCS as $slug => $html) {
         assert_eq(2, substr_count($html, '<svg viewBox="0 0 19 19"'), "$slug: значок у каждой пилюли");
     }
+});
+
+// topbar.css прячет разделы в панель по ☰, а у правовых страниц нет ни ☰,
+// ни topbar.js. legal.css обязан вернуть разделы в шапку, иначе дорога
+// отсюда на главную и к тирлисту остаётся только через логотип.
+test('разделы правовых страниц стоят в шапке без ☰', function () use ($PUB) {
+    $css = legal_read($PUB . '/css/legal.css');
+    assert_true((bool)preg_match('/\.lg-top \.mk-nav \{[^}]*position: static;[^}]*visibility: visible;/s', $css),
+        'разделы в шапке видны всегда');
+    $hw = legal_read($PUB . '/css/hw/legal.css');
+    assert_true(strpos($hw, '.lg-top .mk-nav {') !== false, 'и в хэллоуинской копии');
 });
 
 test('в подвале правовых страниц ссылки друг на друга', function () use ($DOCS) {
@@ -176,6 +187,14 @@ test('политика заявляет ровно то, что делает api
     // Номер счётчика — тот же, что в METRIKA_ID, и в каждой из двух версий.
     assert_true(strpos($ru, '111127188') !== false, 'RU: номер счётчика');
     assert_true(strpos($en, '111127188') !== false, 'EN: номер счётчика');
+    // GA стоит рядом с Метрикой (api/lib/google_analytics.php) и ставит свои
+    // cookie — про него и про хранение у Google тоже обязаны сказать.
+    foreach (['RU' => $ru, 'EN' => $en] as $lang => $text) {
+        assert_true(strpos($text, 'Google Analytics') !== false, "$lang: Google Analytics раскрыт");
+        assert_true(strpos($text, '_ga and _ga_*') !== false || strpos($text, '_ga и _ga_*') !== false, "$lang: cookie GA раскрыты");
+    }
+    assert_true(mb_strpos($ru, 'за пределами России') !== false, 'RU: хранение за рубежом');
+    assert_true(mb_strpos($en, 'outside Russia') !== false, 'EN: хранение за рубежом');
 });
 
 test('номер счётчика в политике совпадает с METRIKA_ID', function () use ($ROOT) {

@@ -8,6 +8,7 @@
   const API_CREATE = "/api/trade_create.php";
   const API_SESSION = "/api/session.php";
   const API_QUOTA = "/api/trades.php?view=quota";
+  const FAIR_PCT = 40;
 
   let lang = I18N.pickLang(
     (() => { try { return localStorage.getItem(LANG_KEY); } catch (_) { return null; } })(),
@@ -44,6 +45,19 @@
     return !!(st.quota && st.quota.activeLeft === 0);
   }
 
+  function cooldownOut() {
+    const q = st.quota;
+    return !!(q && q.cooldownAt > Math.floor(Date.now() / 1000));
+  }
+
+  function unfairPct() {
+    if (!window.NX_CALC || !window.NX_CALC.trade) return 0;
+    const t = window.NX_CALC.trade();
+    if (!(t.leftTotal > 0 && t.rightTotal > 0)) return 0;
+    const pct = Math.abs(t.diffPct);
+    return pct > FAIR_PCT ? Math.round(pct) : 0;
+  }
+
   function sides() {
     return window.NX_CALC ? window.NX_CALC.sides() : { left: [], right: [] };
   }
@@ -77,9 +91,17 @@
       disabled = true;
       bad = true;
       hint = tx("trade.quotaOut", { max: st.quota.max, t: duration(st.quota.retryAt - Math.floor(Date.now() / 1000)) });
+    } else if (cooldownOut()) {
+      disabled = true;
+      bad = true;
+      hint = tx("trade.cooldownOut", { t: duration(st.quota.cooldownAt - Math.floor(Date.now() / 1000)) });
     } else if (!s.left.length) {
       disabled = true;
       hint = tx("trade.hintEmpty");
+    } else if (s.right.length && unfairPct()) {
+      disabled = true;
+      bad = true;
+      hint = tx("trade.unfair", { pct: unfairPct(), max: FAIR_PCT });
     } else if (!s.right.length) {
       hint = tx("trade.hintAny");
     } else if (st.quota) {
@@ -133,8 +155,11 @@
       }
       if (r.status === 401) {
         st.session = Object.assign({}, st.session, { user: null });
-      } else if (d && (d.error === "too_many" || d.error === "too_many_active") && d.quota) {
+      } else if (d && (d.error === "too_many" || d.error === "too_many_active" || d.error === "cooldown") && d.quota) {
         st.quota = d.quota;
+      } else if (d && d.error === "unfair") {
+        st.error = "trade.unfair";
+        st.errorVars = { pct: d.pct, max: d.max };
       } else {
         st.error = errorKey(r.status, d && d.error);
         st.errorVars = null;

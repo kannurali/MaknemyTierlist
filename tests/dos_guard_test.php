@@ -39,6 +39,19 @@ test('state.php and stock.php take no query string at all', function () use ($PU
     assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]'), 'any query string is refused');
 });
 
+test('giveaways.php takes nothing but ?test=1', function () use ($PUB) {
+    $ht = dg_read("$PUB/.htaccess");
+    $cond = dg_cond_before($ht, 'RewriteRule ^api/giveaways\.php$ - [F,L]');
+    assert_true($cond !== null && $cond[0] === '!', 'negated condition in front of the rule');
+    $re = '~' . substr((string)$cond, 1) . '~';
+    foreach (['', 'test=1'] as $ok) {
+        assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
+    }
+    foreach (['test', 'test=0', 'test=2', 'test=1&x=1', 'x=1&test=1', 'test=11', 'rev=1'] as $bad) {
+        assert_eq(0, preg_match($re, $bad), "refused: '$bad'");
+    }
+});
+
 test('tierlist.php and promo.php take nothing but ?rev=<digits>', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
     $cond = dg_cond_before($ht, 'RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]');
@@ -85,7 +98,8 @@ test('session-bound and writing endpoints never ask for the cache', function () 
               'api/session.php', 'api/login.php', 'api/logout.php', 'api/save.php', 'api/upload.php',
               'api/news_save.php', 'api/news_delete.php', 'api/like.php', 'api/news_like.php',
               'api/roblox_start.php', 'api/roblox_callback.php',
-              'api/tg_link.php', 'api/tg_webhook.php', 'api/tg_setup.php'] as $f) {
+              'api/tg_link.php', 'api/tg_webhook.php', 'api/tg_setup.php',
+              'admin-giveaways.php', 'api/giveaway_enter.php', 'api/giveaway_admin.php'] as $f) {
         $src = dg_read("$PUB/$f");
         assert_eq(false, strpos($src, 'page_lscache('), "$f: page_lscache");
         assert_eq(false, strpos($src, 'lscache_public('), "$f: lscache_public");
@@ -106,6 +120,7 @@ test('a successful deploy purges the LiteSpeed cache', function () use ($PUB) {
 
 test('the polled endpoints are cacheable', function () use ($PUB) {
     assert_true(strpos(dg_read("$PUB/api/state.php"), 'lscache_public(5)') !== false, 'state.php for 5 s');
+    assert_true(strpos(dg_read("$PUB/api/giveaways.php"), 'lscache_public(GW_PUBLIC_CACHE)') !== false, 'giveaways.php');
     foreach (['tierlist.php', 'promo.php', 'og-tierlist.php', 'og-news.php'] as $f) {
         assert_true(strpos(dg_read("$PUB/api/$f"), 'lscache_public(86400)') !== false, $f);
     }

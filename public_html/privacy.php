@@ -9,6 +9,7 @@
 //   кука входа             → api/lib/remember.php, таблица login_tokens
 //   лимиты по IP           → rate_limit_allow() там же
 //   Яндекс Метрика         → api/lib/metrika.php (вебвизор включён)
+//   Google Analytics       → api/lib/google_analytics.php, js/ga.js (Signals выкл.)
 //   localStorage           → js/app.js, js/promo.js, js/topbar.js
 //
 // Ссылку на эту страницу требует Roblox при публикации OAuth-приложения
@@ -25,7 +26,7 @@ legal_page_open(
 ?>
 <?php legal_section_open('ru'); ?>
       <h1>Политика конфиденциальности</h1>
-      <p class="lg-date">Действует с 8 сентября 2026 года</p>
+      <p class="lg-date">Действует с 14 октября 2026 года</p>
 
       <p>Сайт <b>maknemy.com</b> — любительский проект о трейдах в игре Blox Fruits:
       список ценности предметов, калькулятор сделок и новости. Сайт не связан с
@@ -66,9 +67,12 @@ legal_page_open(
         HttpOnly и Secure. На сервере хранится только хеш ключа, привязанный к
         вашему Roblox ID. Выход стирает и cookie, и ключ на сервере.</li>
         <li><b>Данные в браузере</b> (localStorage). Выбранный язык интерфейса,
-        отметка о поставленном лайке, кеш рекламных материалов и отметка о
-        показанном рекламном окне. Всё это остаётся в вашем браузере и на наш
-        сервер не отправляется.</li>
+        кеш рекламных материалов и отметка о показанном рекламном окне. Всё
+        это остаётся в вашем браузере и на наш сервер не отправляется.</li>
+        <li><b>Лайки.</b> Ставить их могут только вошедшие, по одному на
+        аккаунт. Поэтому, когда вы лайкаете тирлист или новость, мы храним
+        отметку об этом рядом с вашим Roblox ID. Другие посетители видят только
+        общее число лайков. Снимете лайк — отметка удалится.</li>
         <li><b>Текст «о себе».</b> Пишете его вы сами на своей странице
         профиля, и он показывается другим вошедшим посетителям, открывшим ваш
         профиль. Стереть можно там же, очистив поле.</li>
@@ -86,9 +90,15 @@ legal_page_open(
       тип устройства и браузера, приблизительный регион. У счётчика включены
       <b>Вебвизор</b> (запись действий на странице — движения мыши, клики,
       прокрутка), карта кликов и отслеживание переходов по ссылкам.</p>
-      <p>Эти данные обрабатывает компания «Яндекс» по своим правилам и своей
-      политике конфиденциальности. Отключить сбор можно расширением-блокировщиком
-      или настройками браузера — на работу сайта это не влияет.</p>
+      <p>Кроме того, на сайте стоит <b>Google Analytics</b>. Он собирает такую же
+      обезличенную статистику посещений и ставит для этого собственные cookie
+      (<code>_ga</code> и <code>_ga_*</code>). Запись действий на странице у него
+      не ведётся, а Google Signals и рекламная персонализация выключены.</p>
+      <p>Эти данные обрабатывают компании «Яндекс» и Google по своим правилам и
+      своим политикам конфиденциальности; данные Google Analytics хранятся на
+      серверах Google, в том числе за пределами России. Отключить сбор можно
+      расширением-блокировщиком или настройками браузера — на работу сайта это
+      не влияет.</p>
 
       <h2>2. Зачем нам эти данные</h2>
       <ul>
@@ -103,9 +113,9 @@ legal_page_open(
       используем данные аккаунта для рассылок.</p>
 
       <h2>3. Кому мы передаём данные</h2>
-      <p>Никому. Данные не продаются и не передаются третьим лицам, кроме двух
+      <p>Никому. Данные не продаются и не передаются третьим лицам, кроме
       неизбежных случаев: обмен с <b>Roblox</b> в момент входа и обезличенная
-      статистика в <b>Яндекс Метрику</b>. Рекламодатели получают только сводные
+      статистика в <b>Яндекс Метрику</b> и <b>Google Analytics</b>. Рекламодатели получают только сводные
       цифры показов и переходов — без данных о конкретном посетителе.</p>
       <p>Мы обязаны раскрыть данные, если этого потребует закон.</p>
 
@@ -116,6 +126,7 @@ legal_page_open(
         <li>Хеш IP для ограничения частоты — до одного часа.</li>
         <li>Журналы веб-сервера — по правилам хостинг-провайдера.</li>
         <li>Статистика Метрики — по правилам «Яндекса».</li>
+        <li>Статистика Google Analytics — по правилам Google.</li>
       </ul>
 
       <h2>5. Как отозвать доступ и удалить свои данные</h2>
@@ -143,7 +154,7 @@ legal_page_open(
 
 <?php legal_section_open('en'); ?>
       <h1>Privacy Policy</h1>
-      <p class="lg-date">Effective 8 September 2026</p>
+      <p class="lg-date">Effective 14 October 2026</p>
 
       <p><b>maknemy.com</b> is a fan-made project about trading in the game Blox
       Fruits: an item value list, a trade calculator and news. The site is not
@@ -185,9 +196,12 @@ legal_page_open(
         HttpOnly and Secure. The server keeps only a hash of the key, tied to your
         Roblox ID. Logging out deletes both the cookie and the key on the server.</li>
         <li><b>Browser storage</b> (localStorage). Your interface language, a
-        marker that you left a like, a cache of advertising material and a marker
-        that the ad popup was shown. All of it stays in your browser and is never
-        sent to our server.</li>
+        cache of advertising material and a marker that the ad popup was shown.
+        All of it stays in your browser and is never sent to our server.</li>
+        <li><b>Likes.</b> Only logged-in visitors can like, one like per account.
+        So when you like the tier list or a news post, we store a marker of it
+        next to your Roblox ID. Other visitors only see the total number of
+        likes. Remove your like and the marker is deleted.</li>
       </ul>
 
       <h3>Visit statistics</h3>
@@ -196,9 +210,14 @@ legal_page_open(
       approximate region. <b>Session Replay (Webvisor)</b>, click maps and outbound
       link tracking are enabled, which means mouse movement, clicks and scrolling
       on the page are recorded.</p>
-      <p>This data is processed by Yandex under its own rules and privacy policy.
-      You can block the counter with a content blocker or browser settings; the
-      site works either way.</p>
+      <p>The site also runs <b>Google Analytics</b>. It collects the same kind of
+      anonymous visit statistics and sets its own cookies for that
+      (<code>_ga</code> and <code>_ga_*</code>). It does not record on-page
+      activity, and Google Signals and ad personalisation are turned off.</p>
+      <p>This data is processed by Yandex and Google under their own rules and
+      privacy policies; Google Analytics data is stored on Google's servers,
+      including outside Russia. You can block the counters with a content blocker
+      or browser settings; the site works either way.</p>
 
       <h2>2. Why we need it</h2>
       <ul>
@@ -213,8 +232,9 @@ legal_page_open(
 
       <h2>3. Who we share data with</h2>
       <p>Nobody. We do not sell data and do not pass it to third parties, apart
-      from two unavoidable cases: the exchange with <b>Roblox</b> at login, and
-      anonymous statistics sent to <b>Yandex Metrica</b>. Advertisers receive only
+      from unavoidable cases: the exchange with <b>Roblox</b> at login, and
+      anonymous statistics sent to <b>Yandex Metrica</b> and <b>Google
+      Analytics</b>. Advertisers receive only
       aggregate impression and click numbers — nothing about an individual
       visitor.</p>
       <p>We will disclose data if required to by law.</p>
@@ -226,6 +246,7 @@ legal_page_open(
         <li>The IP hash used for rate limiting — up to one hour.</li>
         <li>Web server logs — per our hosting provider's rules.</li>
         <li>Metrica statistics — per Yandex's rules.</li>
+        <li>Google Analytics statistics — per Google's rules.</li>
       </ul>
 
       <h2>5. Revoking access and deleting your data</h2>

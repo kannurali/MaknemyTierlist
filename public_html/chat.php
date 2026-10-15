@@ -87,19 +87,20 @@ header('Cache-Control: no-cache, must-revalidate');
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=25" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=25" /><?php endif; ?>
 
-<script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
+<script src="js/auth.js?v=2" fetchpriority="high"></script>
+<script src="js/topbar.js?v=27" defer fetchpriority="high"></script>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=11" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=11" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=5" /><?php endif; ?>
 
 
 
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=3" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -158,6 +159,10 @@ header('Cache-Control: no-cache, must-revalidate');
         </li>
       </ul>
 
+      <a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
+      </a>
+
       <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат" aria-current="page">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </a>
@@ -168,10 +173,9 @@ header('Cache-Control: no-cache, must-revalidate');
     </nav>
 
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
-            aria-expanded="true" aria-controls="mkTopBar"
+            aria-expanded="false" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
             data-i18n-title="topbar.showNav" title="Показать разделы">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
 
@@ -200,6 +204,35 @@ header('Cache-Control: no-cache, must-revalidate');
                   data-i18n-title="chat.delete" title="Удалить чат у себя">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M9.5 6.5V4.8c0-.7.6-1.3 1.3-1.3h2.4c.7 0 1.3.6 1.3 1.3v1.7M6.2 6.5l.9 12.1c.1 1.1 1 1.9 2 1.9h5.8c1.1 0 1.9-.8 2-1.9l.9-12.1M10.2 10.5v6M13.8 10.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
+
+          <div class="ct-ban" id="ctBan" hidden>
+            <button class="ct-ban-btn" type="button" id="ctBanBtn"
+                    aria-expanded="false" aria-controls="ctBanPanel"
+                    data-i18n-label="chat.ban" aria-label="Забанить игрока"
+                    data-i18n-title="chat.ban" title="Забанить игрока">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width="2"/><path d="M5.9 5.9 18.1 18.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+
+            <form class="ct-notify-panel ct-ban-panel" id="ctBanPanel" hidden>
+              <p class="ct-notify-text" id="ctBanText" role="status" aria-live="polite"></p>
+              <div class="ct-ban-fields" id="ctBanFields" hidden>
+                <label class="ct-sr-only" for="ctBanTerm" data-i18n="chat.banTerm">Срок бана</label>
+                <select class="ct-ban-term" id="ctBanTerm">
+                  <option value="1d" data-i18n="chat.banTerm1d">1 день</option>
+                  <option value="3d" data-i18n="chat.banTerm3d">3 дня</option>
+                  <option value="7d" data-i18n="chat.banTerm7d" selected>7 дней</option>
+                  <option value="30d" data-i18n="chat.banTerm30d">30 дней</option>
+                  <option value="forever" data-i18n="chat.banTermForever">Навсегда</option>
+                </select>
+                <label class="ct-sr-only" for="ctBanReason" data-i18n="chat.banReasonLabel">Причина бана</label>
+                <input class="ct-ban-reason" id="ctBanReason" type="text" autocomplete="off"
+                       maxlength="200" data-i18n-placeholder="chat.banReason"
+                       placeholder="Причина (необязательно)" />
+                <button class="ct-notify-go ct-ban-go" type="submit" data-i18n="chat.banGo">Забанить</button>
+              </div>
+              <button class="ct-notify-off" id="ctBanLift" type="button" hidden data-i18n="chat.unban">Снять бан</button>
+            </form>
+          </div>
 
           <div class="ct-notify" id="ctNotify" hidden>
             <button class="ct-bell" type="button" id="ctBell"
@@ -346,10 +379,13 @@ header('Cache-Control: no-cache, must-revalidate');
     </div>
   </div>
 
-  <script src="js/i18n.js?v=65" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=73" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=17" defer></script>
+  <script src="js/chat-page.js?v=18" defer></script>
 
 
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=5" fetchpriority="high"></script>
+  <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

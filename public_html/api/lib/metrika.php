@@ -13,11 +13,17 @@
 // calculator.php, news.php), поэтому разметка отдаётся функцией, а не
 // include-ом шаблона: место вставки остаётся за страницей, а сам код счётчика
 // живёт в единственном экземпляре.
+//
+// Рядом с Метрикой с 2026-10 стоит Google Analytics (api/lib/google_analytics.php).
+// Его блок печатает эта же функция, сразу за блоком Метрики, а metrika_strip()
+// вырезает оба — новой странице по-прежнему хватает одного вызова.
+
+require_once __DIR__ . '/google_analytics.php';
 
 // Номер счётчика. Этот же номер зашит в js/metrika.js (загрузка и init) и в
-// js/app.js — там он уходит в ym(..., 'reachGoal', ...) для кликов по
-// рекламе, и общей константы у PHP с браузерным кодом нет. Расхождение ловит
-// tests/metrika_test.php.
+// js/promo.js — там он уходит в ym(..., 'reachGoal', ...) из PROMO.goal() для
+// кликов по рекламе, и общей константы у PHP с браузерным кодом нет.
+// Расхождение ловит tests/metrika_test.php.
 const METRIKA_ID = 111127188;
 
 // Комментарии-маркеры вокруг блока — часть контракта, а не оформление: по ним
@@ -43,10 +49,10 @@ function metrika_counter_html(): string {
 <noscript><div><img src="https://mc.yandex.ru/watch/{$id}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
 HTML;
-    return $block . "\n";
+    return $block . "\n" . ga_counter_html();
 }
 
-// Убирает счётчик из уже отрендеренной публичной страницы.
+// Убирает счётчики (Метрику и GA) из уже отрендеренной публичной страницы.
 //
 // Нужно админке: /admin и /admin/news не хранят копию вёрстки, а исполняют
 // index.php и news.php целиком (см. admin_render_public_page()), поэтому
@@ -60,8 +66,9 @@ HTML;
 // который повторяется при каждой новой админ-странице.
 function metrika_strip(string $html): string {
     $out = preg_replace(
-        '~<!-- Yandex\.Metrika counter -->.*?<!-- /Yandex\.Metrika counter -->~su',
-        '<!-- Метрика вырезана: админку в статистику сайта не считаем. -->',
+        ['~<!-- Yandex\.Metrika counter -->.*?<!-- /Yandex\.Metrika counter -->~su',
+         '~<!-- Google Analytics -->.*?<!-- /Google Analytics -->\n?~su'],
+        ['<!-- Метрика вырезана: админку в статистику сайта не считаем. -->', ''],
         $html,
         1
     );

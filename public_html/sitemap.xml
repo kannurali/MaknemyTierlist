@@ -31,6 +31,13 @@
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
+  <!-- Розыгрыши: разметка статична, сами розыгрыши страница тянет через
+       /api/giveaways.php. -->
+  <url>
+    <loc>https://maknemy.com/giveaways</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
   <!-- Лента наполнилась (29 постов на 2026-08-31), поэтому /news объявлен
        здесь наравне с остальными разделами. До этого блок был закомментирован
        намеренно: sitemap говорит поисковику «страница важная, индексируй», и

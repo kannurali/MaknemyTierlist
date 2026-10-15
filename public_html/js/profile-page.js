@@ -222,10 +222,12 @@
       void menu.offsetWidth;
       menu.classList.add('is-animating', open ? 'is-opening' : 'is-closing');
 
-      running = menu.animate([from, to], {
-        duration: open ? 380 : 280,
-        easing: 'cubic-bezier(.2, .8, .2, 1)'
-      });
+      var ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-slow').trim();
+      try {
+        running = menu.animate([from, to], { duration: 1250, easing: ease || 'ease-out' });
+      } catch (_) {
+        running = menu.animate([from, to], { duration: 1250, easing: 'ease-out' });
+      }
       running.onfinish = function () {
         if (mine !== turn) { return; }
         running = null;

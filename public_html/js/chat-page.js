@@ -62,7 +62,7 @@
     if (!copyAllowed(e.target) || e.target.nodeName === 'IMG') { e.preventDefault(); }
   });
 
-  var state = { me: '', threads: [], thread: 0, ready: false, authed: false, messages: [] };
+  var state = { me: '', threads: [], thread: 0, ready: false, authed: false, messages: [], mod: false };
 
   var drafts = {};
   var offerRef = {};
@@ -685,6 +685,13 @@
       if (roomHead) { roomHead.classList.toggle('has-del', !!peer); }
     }
 
+    if (banBox) {
+      var canBan = !!(state.mod && peer);
+      banBox.hidden = !canBan;
+      if (roomHead) { roomHead.classList.toggle('has-ban', canBan); }
+      if (!canBan || (banPeer && String(banPeer.id) !== String(peer.id))) { banOpen(false); }
+    }
+
     var from = keepScroll && peer ? sameHead(messages) : -1;
     if (from >= 0) {
       for (var k = from; k < messages.length; k++) { place(messages[k]); }
@@ -800,6 +807,7 @@
       state.threads  = d.threads || [];
       state.thread   = d.thread || 0;
       state.messages = d.messages || [];
+      state.mod      = !!d.mod;
 
       setTg(d.tg);
 
@@ -840,6 +848,7 @@
       compose.hidden = true;
       review.hidden = true;
       if (delBtn) { delBtn.hidden = true; }
+      if (banBox) { banBox.hidden = true; banOpen(false); }
       pageEmpty.hidden = false;
       pageEmpty.textContent = tx('chat.error', 'Не удалось загрузить чаты. Попробуйте обновить страницу.');
     } finally {
@@ -992,6 +1001,154 @@
         : tx('chat.deleteFailed', 'Не удалось удалить чат. Попробуйте ещё раз.');
     });
   }
+  var banBox    = $('ctBan');
+  var banBtn    = $('ctBanBtn');
+  var banPanel  = $('ctBanPanel');
+  var banText   = $('ctBanText');
+  var banFields = $('ctBanFields');
+  var banTerm   = $('ctBanTerm');
+  var banWhy    = $('ctBanReason');
+  var banLift   = $('ctBanLift');
+  var banPeer   = null;
+  var banState  = null;
+  var banError  = '';
+  var banSeq    = 0;
+
+  function txv(key, fallback, vars) {
+    if (i18n) { return i18n.t(key, lang(), vars); }
+    return fallback.replace(/\{(\w+)\}/g, function (whole, name) {
+      return Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : whole;
+    });
+  }
+
+  function banDate(sec) {
+    return new Date(sec * 1000).toLocaleString(lang() === 'en' ? 'en-GB' : 'ru-RU', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function renderBan() {
+    if (!banPanel) { return; }
+    var s = banState;
+    var nick = banPeer ? banPeer.nick : '';
+    var ask = false;
+    var lift = false;
+    var text;
+    if (!s) {
+      text = tx('chat.banLoading', 'Проверяем…');
+    } else if (s.config) {
+      text = txv('chat.banConfig', '{nick} забанен в config.php — снять этот бан можно только там.', { nick: nick });
+    } else if (s.banned) {
+      text = s.until
+        ? txv('chat.bannedUntil', '{nick} забанен до {date}.', { nick: nick, date: banDate(s.until) })
+        : txv('chat.bannedForever', '{nick} забанен навсегда.', { nick: nick });
+      lift = !!s.can;
+    } else if (!s.can) {
+      text = tx('chat.banNo', 'Этого игрока из чата не забанить.');
+    } else if (s.ready === false) {
+      text = tx('chat.banNotReady', 'Бан из чата ещё не включён.');
+    } else {
+      text = txv('chat.banAsk', 'Забанить {nick}?', { nick: nick });
+      ask = true;
+    }
+    if (banError === 'forbidden') {
+      text = tx('chat.banNo', 'Этого игрока из чата не забанить.');
+    } else if (banError === 'not_ready') {
+      text = tx('chat.banNotReady', 'Бан из чата ещё не включён.');
+    } else if (banError) {
+      text = tx('chat.banFailed', 'Не получилось. Попробуйте ещё раз.');
+    }
+    banText.textContent = text;
+    banFields.hidden = !ask;
+    banLift.hidden = !lift;
+  }
+
+  async function banLoad() {
+    var mine = ++banSeq;
+    var peer = banPeer;
+    banState = null;
+    banError = '';
+    renderBan();
+    var next = {};
+    var err = '';
+    try {
+      var res = await fetch('/api/ban.php?id=' + encodeURIComponent(peer.id), { cache: 'no-store' });
+      var d = null;
+      try { d = await res.json(); } catch (e) {  }
+      if (res.ok && d && d.ok) { next = d; } else { err = (d && d.error) || 'failed'; }
+    } catch (e) {
+      err = 'failed';
+    }
+    if (mine !== banSeq) { return; }
+    banState = next;
+    banError = err;
+    renderBan();
+  }
+
+  function banOpen(next) {
+    if (!banPanel || !banBtn) { return; }
+    var wasOpen = !banPanel.hidden;
+    if (next && !wasOpen) {
+      var open = state.threads.filter(function (t) { return t.id === state.thread; })[0];
+      banPeer = open ? open.peer : null;
+      if (!banPeer) { return; }
+    }
+    banPanel.hidden = !next;
+    banBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+    if (!next) { banSeq++; return; }
+    if (!wasOpen) {
+      banWhy.value = '';
+      banLoad();
+    }
+  }
+
+  if (banBtn && banPanel) {
+    var banSend = async function (payload) {
+      if (!banPeer || banPanel.classList.contains('is-busy')) { return; }
+      var peer = banPeer;
+      banPanel.classList.add('is-busy');
+      banLift.disabled = true;
+      var r = await post('/api/ban.php', payload);
+      banPanel.classList.remove('is-busy');
+      banLift.disabled = false;
+      if (peer !== banPeer || banPanel.hidden) { return; }
+      if (r.ok && r.data && r.data.ok) {
+        banState = r.data;
+        banError = '';
+      } else {
+        banError = (r.data && r.data.error) || 'failed';
+      }
+      renderBan();
+    };
+
+    banBtn.addEventListener('click', function () {
+      banOpen(banPanel.hidden);
+    });
+
+    banPanel.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!banPeer) { return; }
+      banSend({ id: String(banPeer.id), term: banTerm.value, reason: banWhy.value.trim() });
+    });
+
+    banLift.addEventListener('click', function () {
+      if (!banPeer) { return; }
+      banSend({ id: String(banPeer.id), unban: true });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || banPanel.hidden) { return; }
+      var inside = banPanel.contains(document.activeElement) || document.activeElement === banBtn;
+      banOpen(false);
+      if (inside) { banBtn.focus(); }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (banPanel.hidden) { return; }
+      if (banPanel.contains(e.target) || banBtn.contains(e.target)) { return; }
+      banOpen(false);
+    });
+  }
   function railOpen(next) {
     if (!railToggle) { return; }
     shell.classList.toggle('rail-open', next);
@@ -1056,6 +1213,7 @@
       log.querySelectorAll('.ct-sticker').forEach(fillSticker);
       if (stickerPanel && !stickerPanel.hidden) { renderStickerGrid(); }
       renderBell();
+      if (banPanel && !banPanel.hidden) { renderBan(); }
 
       if (!state.authed) { gate.textContent = tx('chat.login', 'Войдите через Roblox, чтобы переписываться'); }
       if (!state.ready)  { pageEmpty.textContent = tx('chat.notReady', 'Чаты появятся вместе с аккаунтами'); }

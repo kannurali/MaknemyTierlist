@@ -11,7 +11,7 @@
   --hm-figure: rgba(217, 217, 217, 0.2);
 
   --hm-hover: 0.744s;
-  --hm-hover-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --hm-hover-ease: var(--ease-quick);
 
   position: relative;
   overflow: hidden;
@@ -157,21 +157,12 @@
 
 .hm-btn-word {
   grid-area: 1 / 1;
-  transition: opacity var(--hm-hover) var(--hm-hover-ease);
 }
 
 .hm-btn-word-rest {
   font-family: var(--display);
   text-transform: uppercase;
 }
-
-.hm-btn-word-hover {
-  font-family: var(--ui);
-  font-weight: 400;
-  text-transform: lowercase;
-}
-
-.hm-btn-ghost .hm-btn-word-hover { opacity: 0; }
 
 .hm-btn-accent {
   left: calc(465 * var(--u));
@@ -205,16 +196,6 @@
     rx: 17px;
     stroke-width: calc(4.39 * var(--u));
     stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
-  }
-
-  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-word-rest,
-  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-word-rest {
-    opacity: 0;
-  }
-
-  .hm-btn-ghost:not([aria-disabled="true"]):hover .hm-btn-word-hover,
-  .hm-btn-ghost:not([aria-disabled="true"]):focus-visible .hm-btn-word-hover {
-    opacity: 1;
   }
 
   .hm-btn-accent:not([aria-disabled="true"]):hover,
@@ -284,6 +265,52 @@
 
 @media not all and (hover: hover) {
   .hm-card-go { display: none; }
+
+  .hm-btn:not([aria-disabled="true"]):is(:active, .is-tap) {
+    box-shadow:
+      0 calc(15.4 * var(--u)) calc(46.1 * var(--u)) rgba(83, 37, 97, 0.2),
+      0 calc(6.6 * var(--u)) calc(17.6 * var(--u)) rgba(180, 136, 194, 0.25);
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) {
+    width: calc(298 * var(--u));
+    height: calc(90 * var(--u));
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-dash rect {
+    rx: 17px;
+    stroke-width: calc(4.39 * var(--u));
+    stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
+    width: calc(274 * var(--u));
+    height: calc(90 * var(--u));
+  }
+
+  .hm-btn-accent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(109deg, var(--hm-accent-a), var(--hm-accent-b));
+    opacity: 0;
+    transition: opacity var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap)::before { opacity: 1; }
+
+  .hm-card-art {
+    transform-origin: 0 0;
+    transition: transform var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  a.hm-card:is(:active, .is-tap) .hm-card-art {
+    transform:
+      translate(calc(57.51 * var(--u)), calc(-71 * var(--u)))
+      rotate(23.743deg)
+      scale(1.0548);
+  }
 }
 
 .hm-ticker {
@@ -422,11 +449,12 @@
 
   width: calc(244 * var(--u));
   margin: 0;
-  font-size: calc(19 * var(--u));
+  font-family: var(--display);
+  font-size: calc(24 * var(--u));
 
   line-height: 1.25;
-  letter-spacing: 0.02em;
-  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-weight: 400;
   text-transform: uppercase;
 }
 
@@ -517,7 +545,8 @@
 @media (hover: hover) and (pointer: fine) {
   .hm-faq-q:hover::before { opacity: 1; }
 }
-.hm-faq-q:focus-visible::before { opacity: 1; }
+.hm-faq-q:focus-visible::before,
+.hm-faq-q[aria-expanded="true"]::before { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .hm-faq-q::before { transition: none; }
@@ -778,11 +807,75 @@
   }
 
   .hm-btn {
-    position: static;
+    position: relative;
+    inset: auto;
     width: auto;
     height: 48px;
     padding: 0 26px;
     font-size: 20px;
+    transition:
+      height var(--hm-hover) var(--hm-hover-ease),
+      margin var(--hm-hover) var(--hm-hover-ease),
+      padding var(--hm-hover) var(--hm-hover-ease),
+      box-shadow var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-dash rect {
+    rx: 64px;
+    ry: 36px;
+    stroke-width: 1.5px;
+    stroke-dasharray: 3px 6px;
+    transition:
+      rx var(--hm-hover) var(--hm-hover-ease),
+      ry var(--hm-hover) var(--hm-hover-ease),
+      stroke-width var(--hm-hover) var(--hm-hover-ease),
+      stroke-dasharray var(--hm-hover) var(--hm-hover-ease);
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap),
+  .hm-btn-accent:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap) {
+    width: auto;
+    height: 48px;
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) {
+    height: 60px;
+    margin: 0 -10px -12px 0;
+    padding: 0 31px;
+  }
+
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-dash rect {
+    rx: 27px;
+    ry: 14px;
+    stroke-width: 3px;
+    stroke-dasharray: 6px 15px;
+  }
+
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
+    height: 53px;
+    margin: 0 -9px -5px 0;
+    padding: 0 30.5px;
+  }
+
+  @media (hover: hover) {
+    .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible) {
+      height: 60px;
+      margin: 0 -10px -12px 0;
+      padding: 0 31px;
+    }
+
+    .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible) .hm-btn-dash rect {
+      rx: 27px;
+      ry: 14px;
+      stroke-width: 3px;
+      stroke-dasharray: 6px 15px;
+    }
+
+    .hm-btn-accent:not([aria-disabled="true"]):is(:hover, :focus-visible) {
+      height: 53px;
+      margin: 0 -9px -5px 0;
+      padding: 0 30.5px;
+    }
   }
 
   .hm-ticker {
@@ -823,7 +916,7 @@
   .hm-card-name  { left: 27px; top: 152px; font-size: 26px; line-height: 1.1; }
   .hm-card-name--tight { font-size: 21px; }
   .hm-card-rule  { left: 29px; top: 188.5px; width: 170px; }
-  .hm-card-note  { left: 27px; top: 186px; width: 180px; font-size: 14px; line-height: 1.25; }
+  .hm-card-note  { left: 27px; top: 199px; width: 180px; font-size: 17px; line-height: 1.25; }
 
   .hm-deco {
     display: none;

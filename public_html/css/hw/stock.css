@@ -589,8 +589,15 @@ body > .sk-page { flex: 1 0 auto; }
   .sk-rail {
     position: sticky;
     top: calc(var(--mk-top-h-stuck, 84px) + 18px);
-    height: min(825px, calc(100vh - var(--mk-top-h-stuck, 84px) - 40px));
+    --sk-rail-h: min(825px, calc(100vh - var(--mk-top-h-stuck, 84px) - 40px));
+    height: var(--sk-rail-h);
     aspect-ratio: 4 / 15;
+  }
+  .sk-rail.ptn-fit {
+    align-self: flex-start;
+    width: min(100%, var(--sk-rail-h) * var(--ptn-r));
+    height: auto;
+    aspect-ratio: var(--ptn-r);
   }
 }
 

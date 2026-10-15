@@ -21,7 +21,7 @@
 const HW_CSS_FILES = [
     'base.css', 'calculator.css', 'chat.css', 'design-page.css', 'home.css',
     'legal.css', 'news-design.css', 'news.css', 'profile.css', 'promo-popup.css',
-    'stock.css', 'styles.css', 'topbar.css', 'trading.css',
+    'stock.css', 'styles.css', 'topbar.css', 'trading.css', 'giveaway.css',
 ];
 
 const HW_ASSETS = [

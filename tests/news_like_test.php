@@ -21,7 +21,7 @@ function seed_like_post(PDO $pdo, int $publishedAt = 1000): int {
 test('increment adds one to the post likes', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    [$status, $p] = handle_news_like($pdo, ['id' => $id, 'dir' => 1]);
+    [$status, $p] = handle_news_like($pdo, '101', ['id' => $id, 'dir' => 1], 1000);
     assert_eq(200, $status, 'ok status');
     assert_eq(1, $p['likes'], 'count 1');
     assert_true($p['ok'], 'ok flag');
@@ -30,15 +30,15 @@ test('increment adds one to the post likes', function () {
 test('decrement subtracts one', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    handle_news_like($pdo, ['id' => $id, 'dir' => 1]);
-    [, $p] = handle_news_like($pdo, ['id' => $id, 'dir' => -1]);
+    handle_news_like($pdo, '101', ['id' => $id, 'dir' => 1], 1000);
+    [, $p] = handle_news_like($pdo, '101', ['id' => $id, 'dir' => -1], 1000);
     assert_eq(0, $p['likes'], '1 then -1 = 0');
 });
 
 test('unknown dir defaults to +1', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    [, $p] = handle_news_like($pdo, ['id' => $id, 'dir' => 99]);
+    [, $p] = handle_news_like($pdo, '101', ['id' => $id, 'dir' => 99], 1000);
     assert_eq(1, $p['likes'], 'defaults +1');
 });
 
@@ -47,7 +47,7 @@ test('unknown dir defaults to +1', function () {
 test('decrement on a fresh post clamps at zero, not negative', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    [$status, $p] = handle_news_like($pdo, ['id' => $id, 'dir' => -1]);
+    [$status, $p] = handle_news_like($pdo, '101', ['id' => $id, 'dir' => -1], 1000);
     assert_eq(200, $status, 'still ok, just clamped');
     assert_eq(0, $p['likes'], 'stays 0');
 });
@@ -55,9 +55,9 @@ test('decrement on a fresh post clamps at zero, not negative', function () {
 test('repeated decrements never push likes below zero', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    handle_news_like($pdo, ['id' => $id, 'dir' => 1]);
-    handle_news_like($pdo, ['id' => $id, 'dir' => -1]);
-    [, $p] = handle_news_like($pdo, ['id' => $id, 'dir' => -1]);
+    handle_news_like($pdo, '101', ['id' => $id, 'dir' => 1], 1000);
+    handle_news_like($pdo, '101', ['id' => $id, 'dir' => -1], 1000);
+    [, $p] = handle_news_like($pdo, '101', ['id' => $id, 'dir' => -1], 1000);
     assert_eq(0, $p['likes'], 'still 0, not -1');
 });
 
@@ -66,7 +66,7 @@ test('repeated decrements never push likes below zero', function () {
 test('a missing id is a 400 and touches no row', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    [$status, $p] = handle_news_like($pdo, ['dir' => 1]);
+    [$status, $p] = handle_news_like($pdo, '101', ['dir' => 1], 1000);
     assert_eq(400, $status, 'rejected');
     assert_eq('bad id', $p['error'], 'reason');
     [, $feed] = handle_news($pdo);
@@ -87,7 +87,7 @@ test('a junk id is a 400 and does not touch any row — (int) cast bug', functio
         [-5, 'negative int'],
     ];
     foreach ($cases as [$junk, $label]) {
-        [$status, $p] = handle_news_like($pdo, ['id' => $junk, 'dir' => 1]);
+        [$status, $p] = handle_news_like($pdo, '101', ['id' => $junk, 'dir' => 1], 1000);
         assert_eq(400, $status, "status for $label");
         assert_eq('bad id', $p['error'] ?? null, "reason for $label");
     }
@@ -100,7 +100,7 @@ test('a junk id is a 400 and does not touch any row — (int) cast bug', functio
 test('a well-formed but non-existent id is a 404, not a fake success', function () {
     $pdo = test_db();
     seed_like_post($pdo); // одна реальная строка, id заведомо не 999
-    [$status, $p] = handle_news_like($pdo, ['id' => 999, 'dir' => 1]);
+    [$status, $p] = handle_news_like($pdo, '101', ['id' => 999, 'dir' => 1], 1000);
     assert_eq(404, $status, 'not found');
     assert_eq('not found', $p['error'], 'reason');
     assert_true(!isset($p['ok']) || $p['ok'] === false, 'never reports ok:true');
@@ -109,7 +109,7 @@ test('a well-formed but non-existent id is a 404, not a fake success', function 
 test('a non-existent id creates no row', function () {
     $pdo = test_db();
     seed_like_post($pdo);
-    handle_news_like($pdo, ['id' => 999, 'dir' => 1]);
+    handle_news_like($pdo, '101', ['id' => 999, 'dir' => 1], 1000);
     [, $feed] = handle_news($pdo);
     assert_eq(1, count($feed['posts']), 'still exactly one post, none created');
 });
@@ -120,7 +120,7 @@ test('liking one post does not touch another', function () {
     $pdo = test_db();
     $a = seed_like_post($pdo, 1000);
     $b = seed_like_post($pdo, 2000);
-    handle_news_like($pdo, ['id' => $a, 'dir' => 1]);
+    handle_news_like($pdo, '101', ['id' => $a, 'dir' => 1], 1000);
     [, $feed] = handle_news($pdo);
     $rowA = array_values(array_filter($feed['posts'], fn($p) => $p['id'] === $a))[0];
     $rowB = array_values(array_filter($feed['posts'], fn($p) => $p['id'] === $b))[0];
@@ -133,7 +133,7 @@ test('liking one post does not touch another', function () {
 test('the feed returns likes as an int, not a string', function () {
     $pdo = test_db();
     $id = seed_like_post($pdo);
-    handle_news_like($pdo, ['id' => $id, 'dir' => 1]);
+    handle_news_like($pdo, '101', ['id' => $id, 'dir' => 1], 1000);
     [, $feed] = handle_news($pdo);
     assert_true($feed['posts'][0]['likes'] === 1, 'strict int comparison');
 });
@@ -143,6 +143,38 @@ test('a freshly seeded post with no likes yet also comes back as int 0', functio
     seed_like_post($pdo);
     [, $feed] = handle_news($pdo);
     assert_true($feed['posts'][0]['likes'] === 0, 'strict int 0, not "0" or null');
+});
+
+// ---------- только вошедшим, один голос на аккаунт ----------
+
+test('аноним пост не лайкает', function () {
+    $pdo = test_db();
+    $id = seed_like_post($pdo);
+    [$status, $p] = handle_news_like($pdo, '', ['id' => $id, 'dir' => 1], 1000);
+    assert_eq(401, $status, '401');
+    [, $feed] = handle_news($pdo);
+    assert_eq(0, $feed['posts'][0]['likes'], 'счётчик на месте');
+});
+
+test('один аккаунт — один лайк поста, снять — только свой', function () {
+    $pdo = test_db();
+    $id = seed_like_post($pdo);
+    handle_news_like($pdo, '101', ['id' => $id, 'dir' => 1], 1000);
+    [, $p] = handle_news_like($pdo, '101', ['id' => $id, 'dir' => 1], 1001);
+    assert_eq(1, $p['likes'], 'повтор не считается');
+    assert_eq(true, $p['liked'], 'лайк стоит');
+    [, $p] = handle_news_like($pdo, '202', ['id' => $id, 'dir' => -1], 1002);
+    assert_eq(1, $p['likes'], 'чужой «минус» не проходит');
+    [, $p] = handle_news_like($pdo, '202', ['id' => $id, 'dir' => 1], 1003);
+    assert_eq(2, $p['likes'], 'другой аккаунт — ещё один');
+    assert_eq(['tierlist' => false, 'news' => [$id]], like_mine($pdo, '202'), 'голос записан за постом');
+});
+
+test('за несуществующий пост голос не записывается', function () {
+    $pdo = test_db();
+    seed_like_post($pdo);
+    handle_news_like($pdo, '101', ['id' => 999, 'dir' => 1], 1000);
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM like_votes')->fetchColumn(), 'пусто');
 });
 
 // ---------- лимит частоты (тот же механизм, что у /api/like.php) ----------

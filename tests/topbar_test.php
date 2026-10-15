@@ -206,9 +206,9 @@ test('шапка липкая, и её высота живёт одним зна
         'рекламный борт прилипает под шапкой');
 });
 
-// Прокрученная шапка убирает плашку разделов за край — язычок остаётся
-// единственным способом вернуть меню. Без него навигации на прокрученной
-// странице не будет вовсе, поэтому проверяем и кнопку, и связку с плашкой.
+// Разделы на любой ширине спрятаны за ☰ (решение владельца: телефон —
+// 2026-10-10, компьютер — 2026-10-14). Язычок — единственная дорога к
+// разделам, поэтому проверяем и кнопку, и связку с плашкой.
 test('у шапки есть язычок, связанный с плашкой разделов', function () use ($PUB, $PAGES) {
     $i18n = top_read($PUB . '/js/i18n.js');
     foreach (['topbar.showNav', 'topbar.hideNav'] as $key) {
@@ -219,30 +219,32 @@ test('у шапки есть язычок, связанный с плашкой 
         assert_true(strpos($s, '<nav class="mk-top-bar" id="mkTopBar"') !== false,
             "$f: у плашки должен быть id для aria-controls");
         assert_true((bool)preg_match(
-            '/<button class="mk-top-toggle" type="button" id="mkTopToggle"\s+aria-expanded="[^"]+" aria-controls="mkTopBar"/s',
-            $s), "$f: язычок должен управлять плашкой по aria-controls");
+            '/<button class="mk-top-toggle" type="button" id="mkTopToggle"\s+aria-expanded="false" aria-controls="mkTopBar"/s',
+            $s), "$f: язычок управляет плашкой по aria-controls, панель изначально закрыта");
         assert_true(strpos($s, 'data-i18n-label="topbar.showNav"') !== false,
             "$f: подпись язычка должна переводиться");
     }
 });
 
-test('свёрнутая шапка ничего не оставляет ни на экране, ни в таб-порядке', function () use ($PUB) {
+// Прокрученная шапка на компьютере теряет фон и логотип, а плашка с чатом,
+// профилем и ☰ остаётся: разделов в ней больше нет, и спрятать её значило бы
+// отнять дорогу к меню.
+test('свёрнутая шапка прячет только логотип', function () use ($PUB) {
     $css = top_read($PUB . '/css/topbar.css');
-    // Плашка уезжает за правый край, логотип — за левый. Без обрезки они
-    // растягивали документ, и появлялась горизонтальная прокрутка на всю
-    // ширину плашки.
+    // Логотип уезжает за левый край. Без обрезки он растягивал бы документ, и
+    // появлялась бы горизонтальная прокрутка.
     assert_true((bool)preg_match('/\.mk-top \{[^}]*overflow-x: clip;/s', $css),
-        'шапка обязана обрезать уехавшие блоки');
+        'шапка обязана обрезать уехавший логотип');
     // visibility, а не одна opacity: прозрачный блок остался бы кликабельным
     // и в обходе по Tab.
-    foreach (['.mk-top.is-stuck .mk-top-bar', '.mk-top.is-stuck .mk-top-brand'] as $sel) {
-        assert_true((bool)preg_match('/' . preg_quote($sel, '/') . ' \{[^}]*visibility: hidden;/s', $css),
-            "$sel: свёрнутый блок не должен оставаться в таб-порядке");
-    }
+    assert_true((bool)preg_match('/\.mk-top\.is-stuck \.mk-top-brand \{[^}]*visibility: hidden;/s', $css),
+        'свёрнутый логотип не должен оставаться в таб-порядке');
     assert_true((bool)preg_match('/\.mk-top\.is-stuck \.mk-top-brand \{[^}]*translateX\(calc\(-100%/s', $css),
         'логотип уезжает за левый край');
-    assert_true((bool)preg_match('/\.mk-top\.is-stuck \.mk-top-bar \{[^}]*translateX\(calc\(100%/s', $css),
-        'плашка разделов уезжает за правый край');
+    assert_eq(0, preg_match('/\.mk-top\.is-stuck \.mk-top-bar \{[^}]*(visibility: hidden|translateX)/s', $css),
+        'плашка с чатом, профилем и ☰ остаётся на месте');
+    assert_eq(0, preg_match('/\.mk-top-toggle \{[^}]*(opacity: 0|visibility: hidden)/s', $css),
+        'язычок виден всегда, а не только у свёрнутой шапки');
 });
 
 // На телефоне шапка при прокрутке не меняется вовсе: она и так вдвое ниже
@@ -251,12 +253,82 @@ test('на узких экранах шапка не сворачивается'
     $js = top_read($PUB . '/js/topbar.js');
     assert_true(strpos($js, 'matchMedia("(min-width: 761px)")') !== false,
         'режим сворачивания включается по ширине экрана');
-    assert_true((bool)preg_match('/var next = WIDE\.matches && y > STICK_AT;/', $js),
+    // Порог с тех пор раздвоился (STICK_AT / UNSTICK_AT против дрожания),
+    // проверяется только то, что без WIDE класс не ставится.
+    assert_true((bool)preg_match('/var next = WIDE\.matches && y > /', $js),
         'класс is-stuck не должен вешаться на узком экране');
     // Окно можно растянуть мышью — поведение обязано переключиться без
     // перезагрузки страницы.
     assert_true(strpos($js, 'WIDE.addEventListener("change", sync)') !== false,
         'смена режима должна пересчитываться на лету');
+});
+
+// Разделы — панель по ☰ на любой ширине: на телефоне лист во всю ширину под
+// шапкой, на компьютере выпадающая панель под плашкой. Закрытая панель обязана
+// пропадать и из таб-порядка, а открытая — закрываться кликом мимо и Escape,
+// иначе она перекрывает страницу.
+test('разделы открываются панелью по язычку на любой ширине', function () use ($PUB) {
+    $css = top_read($PUB . '/css/topbar.css');
+    // Правило с начала строки — вне @media, то есть для всех ширин.
+    assert_true((bool)preg_match('/\n\.mk-nav \{[^}]*position: fixed;[^}]*visibility: hidden;/s', $css),
+        'закрытая панель не видна и не в таб-порядке');
+    assert_true((bool)preg_match('/\n\.mk-top\.is-nav-open \.mk-nav \{[^}]*visibility: visible;/s', $css),
+        'открытая панель видна');
+    assert_true((bool)preg_match('/\n\.mk-pill \.mk-pill-text \{[^}]*display: block;/s', $css),
+        'в панели у разделов есть подписи');
+    assert_eq(0, preg_match('/\.mk-pill-text \{[^}]*display: none;/s', $css),
+        'подписи разделов не прячутся ни на какой ширине');
+    // Красная точка на язычке была нужна, пока свёрнутая шапка прятала чат.
+    // Теперь чат виден всегда, а оба псевдоэлемента язычка рисуют «бургер».
+    assert_true(strpos($css, 'has-unread') === false, 'точки непрочитанного на язычке нет');
+
+    $js = top_read($PUB . '/js/topbar.js');
+    assert_true(strpos($js, 'nav.contains(e.target)') !== false, 'панель закрывается кликом мимо');
+    assert_true(strpos($js, 'e.key !== "Escape"') !== false, 'панель закрывается по Escape');
+    assert_eq(0, preg_match('/if \(!open \|\| wide/', $js),
+        'клик мимо и Escape работают и на компьютере');
+});
+
+// Над шапкой бывает своя полоса — в админке это .adm-nav (z-index 80 против
+// 60 у шапки). Лист, прибитый к top: var(--mk-top-h) от края окна, уезжал под
+// неё, и полоса закрывала первую строку разделов (2026-10-14). Поэтому верх
+// панели меряет js: низ шапки на телефоне, низ плашки на компьютере.
+test('панель разделов встаёт под шапку, а не под край окна', function () use ($PUB) {
+    $css = top_read($PUB . '/css/topbar.css');
+    assert_true(strpos($css, 'top: calc(var(--mk-sheet-top, var(--mk-top-h)) + 10px);') !== false,
+        'на компьютере панель под плашкой');
+    $phone = substr($css, strpos($css, '@media (max-width: 760px) {'));
+    assert_true(strpos($phone, 'top: var(--mk-sheet-top, var(--mk-top-h));') !== false,
+        'на телефоне лист под шапкой');
+    assert_true(strpos($phone, 'inset: var(--mk-sheet-top, var(--mk-top-h)) 0 0;') !== false,
+        'затемнение начинается там же, где лист');
+
+    $js = top_read($PUB . '/js/topbar.js');
+    assert_true((bool)preg_match('/setProperty\("--mk-sheet-top", Math\.round\(box\.getBoundingClientRect\(\)\.bottom\)/', $js),
+        'js меряет низ шапки');
+    // Пока полоса админки уезжает вверх, шапка ещё не прилипла и едет вместе
+    // со страницей — открытая панель обязана ехать за ней.
+    assert_true((bool)preg_match('/if \(open\) place\(\);\s*\};/', $js),
+        'при прокрутке открытая панель едет вслед за шапкой');
+});
+
+// Кнопка Telegram рядом с чатом (владелец, 2026-10-14): основной канал
+// проекта, тот же, что «Телеграм проекта» в /privacy и /terms. Открывается в
+// новой вкладке, без opener: чужая вкладка не должна дотягиваться до сайта.
+test('кнопка Telegram ведёт на канал и стоит перед чатом', function () use ($PUB, $PAGES6) {
+    foreach (array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php', 'giveaways.php']) as $f) {
+        $s = top_header($PUB, $f);
+        assert_eq(1, substr_count($s, '<a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener"'),
+            "$f: одна кнопка Telegram на канал");
+        $tg   = strpos($s, '<a class="mk-tg"');
+        $chat = strpos($s, '<a class="mk-chat"');
+        $bar  = strpos($s, '<nav class="mk-top-bar"');
+        assert_true($bar !== false && $tg !== false && $chat !== false && $bar < $tg && $tg < $chat,
+            "$f: Telegram в плашке, перед чатом");
+    }
+    $css = top_read($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-tg,\s*\.mk-chat,\s*\.mk-avatar \{\s*flex: 0 0 auto;/s', $css),
+        'тот же круг, что у чата и профиля');
 });
 
 // Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же круг
@@ -281,12 +353,11 @@ test('чат — рабочая ссылка на /chat перед профил�
     }
 
     $css = top_read($PUB . '/css/topbar.css');
-    // Волосяной разделитель отделяет разделы от пары круглых кнопок. С
-    // приходом чата он обязан переехать на него: у профиля он оказался бы
-    // посреди пары.
-    assert_true(strpos($css, '.mk-chat::before') !== false,
-        'разделитель рисует кнопка чата');
-    assert_eq(0, preg_match('/\.mk-avatar::before \{/', $css),
+    // Волосяной разделитель между разделами и круглыми кнопками убран по
+    // просьбе владельца (2026-10-11): ни у чата, ни у профиля его нет.
+    assert_eq(0, preg_match('/\.mk-chat::before\s*\{/', $css),
+        'у кнопки чата разделителя быть не должно');
+    assert_eq(0, preg_match('/\.mk-avatar::before\s*\{/', $css),
         'у профиля своего разделителя быть не должно');
 });
 

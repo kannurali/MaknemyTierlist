@@ -376,19 +376,16 @@ test('обводка «о нас» пунктирная, с отношением
         'пунктир не должен снова стать border: dashed');
 });
 
-// В макете подпись меняет не только регистр, но и шрифт: обычное состояние —
-// узкий Bebas прописными, наведённое — широкий гротеск строчными. Слои
-// перетекают прозрачностью, как Smart Animate между вариантами.
-test('подпись «о нас» перетекает из прописных в строчные', function () use ($PUB) {
+// В макете наведённая «о нас» уходила в строчный системный гротеск, и на
+// сайте это читалось как пропавший шрифт. Заказчик попросил оставить
+// фирменный: подпись одна, Bootshaus прописными в обоих состояниях.
+test('подпись «о нас» не меняет шрифт при наведении', function () use ($PUB) {
     $css  = read_file_or_fail($PUB . '/css/home.css');
     $home = read_file_or_fail($PUB . '/home.php');
-    // Три слоя всего: у «о нас» два (прописной и строчный), у «фрукты» —
-    // только широкий строчный, она в макете такая в обоих состояниях.
-    assert_eq(3, substr_count($home, 'hm-btn-word-'), 'слои подписей');
-    assert_true(strpos($css, '.hm-btn-word-rest') !== false, 'слой прописных');
-    assert_true(strpos($css, '.hm-btn-word-hover') !== false, 'слой строчных');
-    assert_true((bool)preg_match('/\.hm-btn-word\s*\{[^}]*transition:\s*opacity/s', $css),
-        'слои должны перетекать, а не переключаться');
+    assert_eq(2, substr_count($home, 'hm-btn-word-rest'), 'по одной подписи на кнопку');
+    assert_eq(0, substr_count($home . $css, 'hm-btn-word-hover'), 'второго слоя подписи нет');
+    assert_true((bool)preg_match('/\.hm-btn-word-rest\s*\{[^}]*font-family:\s*var\(--display\)/s', $css),
+        'подпись фирменным шрифтом');
 });
 
 // В макете экземпляр «о нас» перекрывает заливку варианта нулевой альфой —
@@ -577,7 +574,7 @@ test('кнопки карточки — круги со знаками, а не 
     // Число лайков спрятано от глаз, но обязано остаться доступным.
     assert_true((bool)preg_match('/\.nw-card \.nw-like-count \{[^}]*clip-path: inset\(50%\);/s', $css),
         'счётчик скрыт визуально, а не удалён');
-    assert_true(strpos($js, 'btn.title = tx(liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";') !== false,
+    assert_true(strpos($js, 'v.btn.title = tx(join ? "like.joinTitle" : liked ? "news.likeRemove" : "news.like") + " (" + likes + ")";') !== false,
         'число лайков должно остаться в подсказке');
     // У SVG нет offsetWidth — перезапуск анимации сердца сломался бы молча.
     assert_true(strpos($js, 'heartEl.getBoundingClientRect();') !== false,
@@ -730,11 +727,11 @@ test('нижняя полоса рекламы подключена на лен�
 
     // Playerok — платное размещение, и живёт оно там же, где свои кампании:
     // в коде с макетами в репозитории. Отличие одно — список страниц: с
-    // октября это калькулятор ("calc"), лента трейдов и создание объявления
-    // ("trading").
+    // 13 октября это тирлист ("tierlist") и калькулятор ("calc"), трейдинг
+    // отдан каналу и кампаниям из админки.
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
-    assert_true(strpos($promo, 'pages: ["calc", "trading"]') !== false,
-        'Playerok привязан к калькулятору и трейдингу, иначе он разольётся по всему сайту');
+    assert_true(strpos($promo, 'pages: ["tierlist", "calc"]') !== false,
+        'Playerok привязан к тирлисту и калькулятору, иначе он разольётся по всему сайту');
     foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/playerok-' . $slot . '.webp'),
             "макет Playerok для слота $slot должен лежать в репозитории");

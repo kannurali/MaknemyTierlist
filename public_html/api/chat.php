@@ -88,5 +88,8 @@ if (!defined('TESTING')) {
     start_site_session();
     $raw = isset($_GET['thread']) && is_string($_GET['thread']) ? $_GET['thread'] : null;
     [$status, $payload] = handle_chat(db(), $_SESSION, $raw, time(), tg_config(app_config()));
+    // Модератору и админу в шапке переписки стоит кнопка бана собеседника
+    // (api/ban.php сам проверит, кого из них можно банить).
+    $payload['mod'] = !empty($payload['authed']) && is_moderator();
     json_out($payload, $status);
 }

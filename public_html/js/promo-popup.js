@@ -38,6 +38,7 @@
   function blocked() {
     if (cfg && cfg.isAdmin) { return true; }
     if (cfg && typeof cfg.busy === "function" && cfg.busy()) { return true; }
+    if (root.NX_GW_POP && root.NX_GW_POP.isOpen()) { return true; }
     return false;
   }
 
@@ -163,11 +164,7 @@
       $("#promoPopCta").addEventListener("click", function () {
         if (!camp) { return; }
         writeSeen(root.PROMO.recordPopupClicked(readSeen(), camp.id, Date.now()));
-        try {
-          if (typeof root.ym === "function") {
-            root.ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: "popup" });
-          }
-        } catch (_) {}
+        root.PROMO.goal("promo_click", { id: camp.id, slot: "popup" });
         close();
       });
       document.addEventListener("visibilitychange", function () {

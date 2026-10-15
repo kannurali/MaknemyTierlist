@@ -522,7 +522,19 @@ test('установка вебхука отдаёт адрес сайта и с
     assert_eq('setWebhook', $log[0][0]);
     assert_eq('https://maknemy.com/api/tg_webhook.php', $log[0][1]['url']);
     assert_eq(tg_webhook_secret(TG_TOKEN), $log[0][1]['secret_token']);
-    assert_eq(['message'], $log[0][1]['allowed_updates']);
+    // my_chat_member — каналы для условий розыгрышей (api/lib/giveaway.php).
+    assert_eq(['message', 'my_chat_member', 'chat_member'], $log[0][1]['allowed_updates']);
+
+    // Права по умолчанию: Telegram сам включит их, когда бота добавят админом.
+    $rights = array_values(array_filter($log, function ($c) { return $c[0] === 'setMyDefaultAdministratorRights'; }));
+    assert_eq(2, count($rights), 'для каналов и для групп');
+    assert_eq(true, $rights[0][1]['for_channels']);
+    assert_eq([
+        'can_manage_chat' => true, 'can_post_messages' => true, 'can_post_stories' => true,
+        'can_restrict_members' => true, 'can_invite_users' => true, 'can_manage_direct_messages' => true,
+    ], $rights[0][1]['rights'], 'ровно права со скриншота, остальные выключены');
+    assert_eq(false, isset($rights[1][1]['for_channels']));
+    assert_eq(false, isset($rights[1][1]['rights']['can_post_messages']), 'в группах публикаций нет');
 
     $fail = [];
     assert_eq(false, tg_setup_webhook(tg_recorder($fail, ['ok' => false, 'error_code' => 401]), TG_TOKEN), 'чужой токен');

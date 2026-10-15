@@ -694,7 +694,7 @@ test('HOUSE_CHANNEL ships a creative for every slot', () => {
 });
 
 test('houseFor gives the channel every free slot on every page without Playerok', () => {
-    for (const page of [undefined, 'tierlist', 'news', 'stock']) {
+    for (const page of [undefined, 'trading', 'news', 'stock']) {
         for (const slot of SLOTS) {
             assert.equal(houseFor(slot, CHANNEL_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
         }
@@ -797,7 +797,7 @@ test('eligible отсекает купленную кампанию на чуж�
         }]
     };
     assert.deepEqual(eligible(doc, 'rail', now, 'news').map(c => c.id), ['paid-news']);
-    assert.deepEqual(eligible(doc, 'rail', now, 'tierlist'), []);
+    assert.deepEqual(eligible(doc, 'rail', now, 'trading'), []);
     // Без страницы кампания с таргетингом тоже не выбирается.
     assert.deepEqual(eligible(doc, 'rail', now), []);
 });
@@ -821,9 +821,10 @@ test('у каждой страницы своя кампания из админ
     assert.deepEqual(ids('stock'), ['nw', 'all']);
     assert.deepEqual(ids('trading'), ['tr', 'all']);
     assert.deepEqual(ids('calc'), ['all']);
-    // С 3 октября калькулятор и трейдинг у Playerok, остальные страницы как были.
+    // С 3 октября калькулятор и тирлист у Playerok, остальные страницы как были.
     const run = Date.parse('2026-10-05T12:00:00Z');
-    assert.deepEqual(eligible(doc, 'rail', run, 'trading'), [PLAYEROK]);
+    assert.deepEqual(eligible(doc, 'rail', run, 'tierlist'), [PLAYEROK]);
+    assert.deepEqual(eligible(doc, 'rail', run, 'trading').map(c => c.id), ['tr', 'all']);
     assert.deepEqual(eligible(doc, 'rail', run, 'news').map(c => c.id), ['nw', 'all']);
 });
 
@@ -832,8 +833,10 @@ test('у каждой страницы своя кампания из админ
 // ============================================================================
 
 // Второе размещение Playerok идёт с 3 октября 2026 года, без даты конца. Оно
-// занимает калькулятор ("calc"), ленту трейдов и создание объявления
-// ("trading"). Сток объявляет свою страницу и сюда не входит.
+// занимает калькулятор ("calc") и тирлист ("tierlist"). С 13 октября тирлист
+// и трейдинг поменялись рекламой: лента трейдов и создание объявления
+// ("trading") ушли кампаниям из админки и каналу. Сток объявляет свою
+// страницу и сюда не входит.
 const PLAYEROK_RUN = Date.parse('2026-10-05T12:00:00Z');
 
 // Кампания из админки без списка страниц идёт на всех страницах во всех местах.
@@ -850,9 +853,9 @@ const PAID_EVERYWHERE = {
     }]
 };
 
-test('PLAYEROK занимает все четыре места калькулятора и трейдинга', () => {
+test('PLAYEROK занимает все четыре места калькулятора и тирлиста', () => {
     assert.deepEqual(PLAYEROK.slots, ['strip', 'rail', 'dock', 'popup']);
-    assert.deepEqual(PLAYEROK.pages, ['calc', 'trading']);
+    assert.deepEqual(PLAYEROK.pages, ['tierlist', 'calc']);
     assert.equal(PLAYEROK.enabled, true);
     assert.equal(PLAYEROK.start, '2026-10-03');
     assert.equal(PLAYEROK.end, '');
@@ -876,8 +879,8 @@ test('PLAYEROK занимает все четыре места калькуля�
     }
 });
 
-test('houseFor отдаёт Playerok все места калькулятора и трейдинга', () => {
-    for (const page of ['calc', 'trading']) {
+test('houseFor отдаёт Playerok все места калькулятора и тирлиста', () => {
+    for (const page of ['calc', 'tierlist']) {
         for (const slot of SLOTS) {
             assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, PLAYEROK.id, `${page} / ${slot}`);
         }
@@ -885,8 +888,8 @@ test('houseFor отдаёт Playerok все места калькулятора 
     }
 });
 
-test('тирлист, новости и сток остаются без Playerok', () => {
-    for (const page of ['tierlist', 'news', 'stock']) {
+test('трейдинг, новости и сток остаются без Playerok', () => {
+    for (const page of ['trading', 'news', 'stock']) {
         for (const slot of SLOTS) {
             assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
             assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page).map(c => c.id), ['paid'],
@@ -905,13 +908,14 @@ test('Playerok начинается 3 октября по Москве', () => {
 });
 
 test('на своих страницах Playerok перебивает кампанию из админки', () => {
-    for (const page of ['calc', 'trading']) {
+    for (const page of ['calc', 'tierlist']) {
         for (const slot of SLOTS) {
             assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page), [PLAYEROK], `${page} / ${slot}`);
         }
     }
     assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'calc').id, PLAYEROK.id);
-    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'tierlist').id, 'paid');
+    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'tierlist').id, PLAYEROK.id);
+    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'trading').id, 'paid');
 });
 
 // Исчерпанный лимит окна Playerok не открывает место чужому окну: на его
@@ -963,6 +967,39 @@ test('stampOn без DOM ничего не делает и не падает', (
     assert.equal(PROMO.stampOn(null, HOUSE_GIVEAWAY, 'popup', k => k, Date.now()), null);
 });
 
+// Борт принимает пропорции креатива: макет 320×750 в боксе 248×670 иначе
+// стоит с тёмными полосами сверху и снизу (жалоба 2026-10-05).
+function fakeBox() {
+    const props = {}, classes = new Set();
+    return {
+        props, classes,
+        style: {
+            setProperty: (k, v) => { props[k] = v; },
+            removeProperty: k => { delete props[k]; },
+        },
+        classList: { toggle: (c, on) => { if (on) classes.add(c); else classes.delete(c); return on; } },
+    };
+}
+
+test('fitBox ставит борту пропорции креатива', () => {
+    const box = fakeBox();
+    assert.equal(PROMO.fitBox(box, { src: '/images/a.jpg', w: 320, h: 750 }), true);
+    assert.equal(Number(box.props['--ptn-r']), 320 / 750);
+    assert.ok(box.classes.has('ptn-fit'));
+});
+
+test('fitBox без размеров креатива возвращает борт к размеру макета', () => {
+    const box = fakeBox();
+    PROMO.fitBox(box, PLAYEROK.creatives.rail);
+    assert.equal(Number(box.props['--ptn-r']), 320 / 1200);
+    for (const cre of [{ src: '/images/a.jpg', w: 0, h: 0 }, { src: '/images/a.jpg' }, null]) {
+        assert.equal(PROMO.fitBox(box, cre), false);
+        assert.equal(box.props['--ptn-r'], undefined);
+        assert.ok(!box.classes.has('ptn-fit'));
+    }
+    assert.equal(PROMO.fitBox(null, PLAYEROK.creatives.rail), false);
+});
+
 test('текст штампа переведён на оба языка', () => {
     const I18N = require('../public_html/js/i18n.js');
     for (const lang of ['ru', 'en']) {
@@ -979,6 +1016,32 @@ test('у TG-канала в свёрнутой полосе свой текст,
     assert.equal(PROMO.dockTextKey(PLAYEROK), '');
     assert.equal(PROMO.dockTextKey({ id: 'toString' }), '');
     assert.equal(PROMO.dockTextKey(null), '');
+});
+
+test('goal() шлёт цель и в Метрику, и в GA (id → promo_id), без счётчиков молчит', () => {
+    const saved = { ym: globalThis.ym, gtag: globalThis.gtag };
+    try {
+        delete globalThis.ym; delete globalThis.gtag;
+        PROMO.goal('promo_click', { id: 'c1' });
+
+        const calls = [];
+        globalThis.ym = (...a) => calls.push(['ym', ...a]);
+        globalThis.gtag = (...a) => calls.push(['gtag', ...a]);
+        PROMO.goal('promo_click', { id: 'c1', slot: 'popup', page: 'calc' });
+        assert.deepEqual(calls, [
+            ['ym', 111127188, 'reachGoal', 'promo_click', { id: 'c1', slot: 'popup', page: 'calc' }],
+            ['gtag', 'event', 'promo_click', { promo_id: 'c1', slot: 'popup', page: 'calc' }]
+        ]);
+
+        globalThis.ym = () => { throw new Error('boom'); };
+        calls.length = 0;
+        PROMO.goal('promo_dock_mini', { id: 'c2' });
+        assert.deepEqual(calls, [['gtag', 'event', 'promo_dock_mini', { promo_id: 'c2' }]], 'сбой Метрики не глушит GA');
+    } finally {
+        globalThis.ym = saved.ym; globalThis.gtag = saved.gtag;
+        if (saved.ym === undefined) delete globalThis.ym;
+        if (saved.gtag === undefined) delete globalThis.gtag;
+    }
 });
 
 test('текст TG-канала для свёрнутой полосы переведён на оба языка', () => {

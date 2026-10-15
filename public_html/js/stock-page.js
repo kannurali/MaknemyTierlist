@@ -491,6 +491,7 @@
     if (!node || !cre || !cre.src) return;
     node.textContent = "";
     node.classList.add("has-ad");
+    promo.fitBox(node, cre);
     var img = el("img");
     img.src = promo.srcFor(cre);
     img.alt = t("ad.imageAlt");

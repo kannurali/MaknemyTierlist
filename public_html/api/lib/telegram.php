@@ -610,7 +610,6 @@ const TG_NEWS_EXCERPT = 70;
 function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callable $build, ?callable $sleep = null): int {
     if (!in_array($topic, TG_TOPICS, true)) { return 0; }
     if (!tg_enabled($tg) || !tg_ready($pdo)) { return 0; }
-    $sleep = $sleep ?? function (int $us): void { usleep($us); };
 
     try {
         $rows = $pdo->query(
@@ -623,6 +622,18 @@ function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callab
         return 0;
     }
 
+    return tg_send_rows($pdo, $send, $rows, $build, $sleep);
+}
+
+/**
+ * Сам цикл рассылки: строки tg_links (chat_id, lang) → по сообщению на чат.
+ * Общий у рассылок цен и новостей и у розыгрышей (api/lib/giveaway.php),
+ * которые идут всем, мимо переключателей.
+ *
+ * $build($lang) → [текст, кнопки] или [текст, кнопки, доп. поля sendMessage].
+ */
+function tg_send_rows(PDO $pdo, callable $send, array $rows, callable $build, ?callable $sleep = null): int {
+    $sleep = $sleep ?? function (int $us): void { usleep($us); };
     $made = [];
     $seen = [];
     $sent = 0;
@@ -634,6 +645,7 @@ function tg_broadcast(PDO $pdo, array $tg, callable $send, string $topic, callab
         $lang = tg_lang($r['lang']);
         if (!isset($made[$lang])) { $made[$lang] = $build($lang); }
         $msg = tg_message_buttons($chatId, $made[$lang][0], $made[$lang][1]);
+        if (isset($made[$lang][2]) && is_array($made[$lang][2])) { $msg += $made[$lang][2]; }
 
         if (count($seen) > 1) { $sleep(TG_BROADCAST_GAP); }
         $res = $send('sendMessage', $msg);
@@ -858,6 +870,59 @@ function tg_after_news(PDO $pdo, array $cfg, int $newsId, int $now, ?callable $s
 }
 
 // --------------------------------------------------------------------------
+//  Права бота в каналах розыгрышей
+// --------------------------------------------------------------------------
+//
+// Без любого из этих прав канал не ставится в условия розыгрыша
+// (api/lib/giveaway.php). Их же бот просит сам: Telegram отмечает их, когда
+// бота добавляют админом (setMyDefaultAdministratorRights), и ссылка
+// tg_add_channel_url() открывает выбор канала с ними. Остальные права боту
+// не нужны и по умолчанию выключены.
+//
+// Поле ChatAdministratorRights => [имя в ссылке, как право зовётся в
+// Telegram по-русски, по-английски].
+const TG_CHANNEL_RIGHTS = [
+    'can_post_messages'          => ['post_messages', 'Отправка публикаций', 'Post Messages'],
+    'can_post_stories'           => ['post_stories', 'Публикация историй', 'Post Stories'],
+    'can_restrict_members'       => ['restrict_members', 'Блокировка пользователей', 'Ban Users'],
+    'can_invite_users'           => ['invite_users', 'Добавление подписчиков', 'Add Subscribers'],
+    'can_manage_direct_messages' => ['manage_direct_messages', 'Доступ к сообщениям канала', 'Manage Direct Messages'],
+];
+// Публикаций и сообщений канала у групп нет, историй у обычной группы — тоже.
+const TG_CHANNEL_ONLY_RIGHTS = ['can_post_messages', 'can_post_stories', 'can_manage_direct_messages'];
+
+// Нужные права: поля ChatAdministratorRights.
+function tg_admin_rights(bool $channel): array {
+    $out = [];
+    foreach (array_keys(TG_CHANNEL_RIGHTS) as $k) {
+        if ($channel || !in_array($k, TG_CHANNEL_ONLY_RIGHTS, true)) { $out[] = $k; }
+    }
+    return $out;
+}
+
+// Права по имени поля — так, как их называет Telegram.
+function tg_right_names(array $keys, string $lang): array {
+    $out = [];
+    foreach ($keys as $k) {
+        if (isset(TG_CHANNEL_RIGHTS[$k])) { $out[] = TG_CHANNEL_RIGHTS[$k][$lang === 'en' ? 2 : 1]; }
+    }
+    return $out;
+}
+
+// Ссылка «Добавить бота в канал»: Telegram предлагает выбрать канал и
+// добавляет туда бота админом с нужными правами.
+function tg_add_channel_url(string $botName): string {
+    if ($botName === '') { return ''; }
+    $names = [];
+    foreach (TG_CHANNEL_RIGHTS as $r) { $names[] = $r[0]; }
+    return 'https://t.me/' . $botName . '?startchannel&admin=' . implode('+', $names);
+}
+
+function tg_default_rights(bool $channel): array {
+    return ['can_manage_chat' => true] + array_fill_keys(tg_admin_rights($channel), true);
+}
+
+// --------------------------------------------------------------------------
 //  Установка вебхука (кнопка на /admin/support)
 // --------------------------------------------------------------------------
 
@@ -872,7 +937,10 @@ function tg_setup_webhook(callable $send, string $token): bool {
     $res = $send('setWebhook', [
         'url'                  => TG_SITE . '/api/tg_webhook.php',
         'secret_token'         => tg_webhook_secret($token),
-        'allowed_updates'      => ['message'],
+        // my_chat_member — бота добавили в канал или убрали оттуда: так
+        // админка розыгрышей узнаёт каналы. chat_member — кто вступил в
+        // такой канал по ссылке розыгрыша и кто вышел (api/lib/giveaway.php).
+        'allowed_updates'      => ['message', 'my_chat_member', 'chat_member'],
         'drop_pending_updates' => true,
         'max_connections'      => 5,
     ]);
@@ -881,5 +949,8 @@ function tg_setup_webhook(callable $send, string $token): bool {
         'commands'      => [['command' => 'stop', 'description' => 'Turn notifications off']],
         'language_code' => 'en',
     ]);
+    // Права, которые Telegram сам включит, когда бота добавляют админом.
+    $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(true), 'for_channels' => true]);
+    $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(false)]);
     return is_array($res) && !empty($res['ok']);
 }

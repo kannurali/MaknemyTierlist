@@ -2,6 +2,8 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/roblox_oauth.php';
 require_once __DIR__ . '/lib/chat.php';
+require_once __DIR__ . '/lib/likes.php';
+require_once __DIR__ . '/lib/giveaway.php';
 
 /**
  * Кто сейчас на сайте. Одна ручка на всё состояние входа:
@@ -17,6 +19,11 @@ require_once __DIR__ . '/lib/chat.php';
  *   unread — в скольких диалогах мне написали и я ещё не прочитал
  *            (chat_unread). По нему шапка ставит значок на кнопку чата и,
  *            пока вкладка открыта, раз в минуту перечитывает эту ручку.
+ *   liked  — что вошедший уже лайкнул (like_mine): тирлист и id постов.
+ *            У анонима null — лайкать он не может, вместо кнопки ему
+ *            показывают «Зарегистрироваться».
+ *   giveaways — в каких идущих розыгрышах я уже участвую (id). По нему
+ *            окно розыгрыша (js/giveaway-pop.js) не зовёт туда повторно.
  *
  * База открывается через $pdo() и только когда в сессии есть вошедший.
  * Ручку теперь дёргает шапка на каждой странице сайта, а не одна админка,
@@ -40,6 +47,8 @@ require_once __DIR__ . '/lib/chat.php';
 function handle_session(callable $pdo, array $session, array $cfg, ?int $now = null): array {
     $user   = null;
     $unread = 0;
+    $liked  = null;
+    $joined = [];
     $uid    = (string)($session['user_id'] ?? '');
     if ($uid !== '') {
         try {
@@ -48,6 +57,8 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
             if ($user !== null) {
                 roblox_touch_seen($conn, $user, $now ?? time());
                 $unread = count(chat_unread($conn, $uid));
+                $liked  = like_mine($conn, $uid);
+                $joined = gw_joined_ids($conn, $uid, $now ?? time());
             }
         } catch (PDOException $e) {
             // Таблицы users нет (не выполнен schema.sql) — считаем, что никто
@@ -68,6 +79,8 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
         'roblox'        => roblox_oauth_enabled($cfg),
         'roblox_public' => roblox_login_public($cfg),
         'unread'        => $unread,
+        'liked'         => $liked,
+        'giveaways'     => $joined,
     ];
 }
 

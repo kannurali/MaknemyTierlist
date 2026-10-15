@@ -153,6 +153,16 @@
     return layer;
   }
 
+  function fitBox(el, creative) {
+    if (!el || !el.style || !el.classList) { return false; }
+    var w = Number(creative && creative.w), h = Number(creative && creative.h);
+    var ok = w > 0 && h > 0;
+    if (ok) { el.style.setProperty("--ptn-r", String(w / h)); }
+    else { el.style.removeProperty("--ptn-r"); }
+    el.classList.toggle("ptn-fit", ok);
+    return ok;
+  }
+
   function onPage(campaign, page) {
     if (!campaign) { return false; }
     var list = campaign.pages;
@@ -533,7 +543,7 @@
     textKey: "promo.playerokText",
     ctaKey: "promo.playerokCta",
     erid: "",
-    pages: ["calc", "trading"],
+    pages: ["tierlist", "calc"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip: { src: "/assets/promo/playerok-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
@@ -570,6 +580,22 @@
     return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
 
+  var METRIKA_ID = 111127188;
+
+  function goal(name, params) {
+    var p = params || {};
+    try {
+      if (typeof root.ym === "function") { root.ym(METRIKA_ID, "reachGoal", name, p); }
+    } catch (_) {}
+    try {
+      if (typeof root.gtag === "function") {
+        var g = {};
+        Object.keys(p).forEach(function (k) { g[k === "id" ? "promo_id" : k] = p[k]; });
+        root.gtag("event", name, g);
+      }
+    } catch (_) {}
+  }
+
   var api = {
     SLOTS: SLOTS,
     CREATIVE_KEYS: CREATIVE_KEYS,
@@ -585,6 +611,7 @@
     dockTextKey: dockTextKey,
     stampFor: stampFor,
     stampOn: stampOn,
+    fitBox: fitBox,
     onPage: onPage,
     eligible: eligible,
     pickWeighted: pickWeighted,
@@ -600,7 +627,8 @@
     recordPopupShown: recordPopupShown,
     recordPopupClicked: recordPopupClicked,
     normalizeDoc: normalizeDoc,
-    migrateLegacyAd: migrateLegacyAd
+    migrateLegacyAd: migrateLegacyAd,
+    goal: goal
   };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }

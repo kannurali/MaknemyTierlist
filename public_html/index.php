@@ -141,30 +141,32 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=14" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/styles.css?v=61" /><?php else: ?><link rel="stylesheet" href="css/styles.css?v=61" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/styles.css?v=71" /><?php else: ?><link rel="stylesheet" href="css/styles.css?v=71" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=25" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=25" /><?php endif; ?>
 
-<script src="js/auth.js?v=1" fetchpriority="high"></script>
-<script src="js/topbar.js?v=15" defer fetchpriority="high"></script>
+<script src="js/auth.js?v=2" fetchpriority="high"></script>
+<script src="js/topbar.js?v=27" defer fetchpriority="high"></script>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=34" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=34" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=5" /><?php endif; ?>
 
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=3" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
 
   <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="Поставить лайк" aria-pressed="false">
-    <span class="like-heart" aria-hidden="true">🤍</span>
+    <svg class="like-heart" viewBox="0 0 26 25" aria-hidden="true"><path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/></svg>
     <span class="like-count" id="likeCount">0</span>
+    <span class="like-join" id="likeJoin" data-i18n="like.join" hidden>Зарегистрироваться</span>
   </button>
 
   <button class="donate-fab" id="donateBtn" type="button" data-i18n-title="donate.title" title="Поддержать проект" hidden>
-    <span class="donate-heart" aria-hidden="true">💜</span>
+    <svg class="donate-heart" viewBox="0 0 26 25" aria-hidden="true"><path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/></svg>
     <span class="donate-label" data-i18n="donate.button">Поддержать</span>
   </button>
 
@@ -222,6 +224,10 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
         </li>
       </ul>
 
+      <a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
+      </a>
+
       <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </a>
@@ -232,10 +238,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </nav>
 
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
-            aria-expanded="true" aria-controls="mkTopBar"
+            aria-expanded="false" aria-controls="mkTopBar"
             data-i18n-label="topbar.showNav" aria-label="Показать разделы"
             data-i18n-title="topbar.showNav" title="Показать разделы">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </header>
 
@@ -561,14 +566,17 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
   </div>
 
-  <script src="js/i18n.js?v=65" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=73" fetchpriority="high"></script>
   <script src="js/content.js?v=3" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=23" fetchpriority="high"></script>
-  <script src="js/promo-dock.js?v=10" fetchpriority="high"></script>
+  <script src="js/promo.js?v=26" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=84" fetchpriority="high"></script>
+  <script src="js/app.js?v=98" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=5" fetchpriority="high"></script>
+  <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

@@ -23,18 +23,27 @@
     "user.support": "Обращения",
     "user.cancelled": "Вход отменён",
     "user.expired": "Вход занял слишком много времени — попробуйте ещё раз",
-    "user.error": "Не удалось войти — попробуйте ещё раз"
+    "user.error": "Не удалось войти — попробуйте ещё раз",
+    "user.banned": "Этот аккаунт заблокирован на сайте",
+    "user.bannedUntil": "Этот аккаунт заблокирован на сайте до {date}"
   };
+
+  function uiLang() {
+    var i18n = window.I18N;
+    if (!i18n) return "ru";
+    var stored = null;
+    try { stored = localStorage.getItem(LANG_KEY); } catch (_) {}
+    return i18n.pickLang(stored, navigator.language);
+  }
 
   function tx(key) {
     var i18n = window.I18N;
     if (!i18n) return FALLBACK[key];
-    var stored = null;
-    try { stored = localStorage.getItem(LANG_KEY); } catch (_) {}
-    return i18n.t(key, i18n.pickLang(stored, navigator.language));
+    return i18n.t(key, uiLang());
   }
 
-  var STICK_AT = 4;
+  var STICK_AT = 48;
+  var UNSTICK_AT = 4;
 
   var WIDE = window.matchMedia("(min-width: 761px)");
 
@@ -42,13 +51,21 @@
 
   if (head) {
     var toggle = head.querySelector(".mk-top-toggle");
+    var nav = head.querySelector(".mk-nav");
+    var bar = head.querySelector(".mk-top-bar");
     var stuck = false;
     var open = false;
     var openedAt = 0;
     var pending = false;
+    var wide = WIDE.matches;
 
     function scrollY() {
       return window.scrollY || window.pageYOffset || 0;
+    }
+
+    function place() {
+      var box = WIDE.matches && bar ? bar : head;
+      head.style.setProperty("--mk-sheet-top", Math.round(box.getBoundingClientRect().bottom) + "px");
     }
 
     function syncToggle() {
@@ -66,6 +83,7 @@
     function setOpen(next) {
       open = next;
       openedAt = scrollY();
+      if (open) place();
       head.classList.toggle("is-nav-open", open);
       syncToggle();
     }
@@ -74,23 +92,51 @@
       pending = false;
       var y = scrollY();
 
-      var next = WIDE.matches && y > STICK_AT;
+      var next = WIDE.matches && y > (stuck ? UNSTICK_AT : STICK_AT);
 
       if (next !== stuck) {
         stuck = next;
         head.classList.toggle("is-stuck", stuck);
-
-        if (!stuck && open) setOpen(false);
-        if (stuck) openedAt = y;
+        if (open) setOpen(false);
       }
 
-      if (stuck && open && y - openedAt > RECLOSE_AFTER) setOpen(false);
+      if (wide !== WIDE.matches) {
+        wide = WIDE.matches;
+        if (open) setOpen(false);
+      }
+      if (open && Math.abs(y - openedAt) > RECLOSE_AFTER) setOpen(false);
+      if (open) place();
     };
 
     if (toggle) {
       syncToggle();
-      toggle.addEventListener("click", function () { setOpen(!open); });
+      toggle.addEventListener("click", function (e) {
+        setOpen(!open);
+        if (open && !e.detail && nav) {
+          var first = nav.querySelector("a");
+          if (first) first.focus();
+        }
+      });
     }
+
+    document.addEventListener("click", function (e) {
+      if (!open) return;
+      if (nav && nav.contains(e.target)) return;
+      if (toggle && toggle.contains(e.target)) return;
+      setOpen(false);
+    }, true);
+
+    document.addEventListener("keydown", function (e) {
+      if (!open || e.key !== "Escape") return;
+      setOpen(false);
+      if (toggle) toggle.focus();
+    });
+
+    window.addEventListener("resize", function () { if (open) place(); });
+
+    window.addEventListener("pageshow", function (e) {
+      if (e.persisted && open) setOpen(false);
+    });
 
     window.addEventListener("scroll", function () {
       if (pending) return;
@@ -104,10 +150,21 @@
     sync();
   }
 
+  var root = document.documentElement;
+
+  function holdGutter() {
+    var locked = getComputedStyle(document.body).overflowY === "hidden";
+    root.style.scrollbarGutter = locked && root.scrollHeight > root.clientHeight ? "stable" : "";
+  }
+
+  if (window.MutationObserver && "scrollbarGutter" in root.style) {
+    new MutationObserver(holdGutter).observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
+  }
+
   var toast = null;
   var hideTimer = 0;
 
-  function showToast(text) {
+  function showToast(text, ms) {
     if (!toast) {
       toast = document.createElement("div");
       toast.className = "mk-soon";
@@ -121,7 +178,7 @@
     clearTimeout(hideTimer);
 
     window.requestAnimationFrame(function () { toast.classList.add("is-on"); });
-    hideTimer = setTimeout(function () { toast.classList.remove("is-on"); }, 2200);
+    hideTimer = setTimeout(function () { toast.classList.remove("is-on"); }, ms || 2200);
   }
 
   function showSoon() { showToast(tx("topbar.soon")); }
@@ -133,6 +190,67 @@
     showSoon();
   });
 
+  document.addEventListener("click", function (e) {
+    if (e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    var el = e.target.closest ? e.target.closest("a.mk-pill, a.mk-chat, a.mk-avatar") : null;
+    if (el) el.classList.add("is-pressed");
+  });
+
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    var on = document.querySelectorAll(".is-pressed");
+    for (var i = 0; i < on.length; i++) on[i].classList.remove("is-pressed");
+  });
+
+  var TAP_SEL = ".mk-top-brand, .mk-tg, .mk-chat, .mk-avatar, .tc-slots, .tc-slot.is-empty, .tc-pill-l, .tc-pill-r, " +
+    ".tc-cat-card, .nw-card > h2, .nw-meta, .nw-like, .nw-copy, .tr-tool, .tr-rep-up, .tr-rep-down, .pf-react-item, " +
+    ".hm-btn, a.hm-card";
+  var TAP_DELAY = 60;
+  var TAP_HOLD = 600;
+
+  document.addEventListener("touchstart", function () {}, { passive: true });
+
+  document.addEventListener("pointerdown", function (e) {
+    if (e.pointerType === "mouse" || !e.target.closest) return;
+    var hit = [];
+    for (var el = e.target.closest(TAP_SEL); el; el = el.parentElement ? el.parentElement.closest(TAP_SEL) : null) {
+      hit.push(el);
+    }
+    if (!hit.length) return;
+    var t0 = Date.now();
+    var shown = false;
+    var show = function () {
+      shown = true;
+      for (var i = 0; i < hit.length; i++) hit[i].classList.add("is-tap");
+    };
+    var hide = function () {
+      for (var i = 0; i < hit.length; i++) hit[i].classList.remove("is-tap");
+    };
+    var timer = setTimeout(show, TAP_DELAY);
+    var stop = function () {
+      document.removeEventListener("pointerup", finish);
+      document.removeEventListener("pointercancel", finish);
+      document.removeEventListener("pointermove", move);
+      clearTimeout(timer);
+    };
+    var move = function (ev) {
+      if (ev.pointerId !== e.pointerId) return;
+      if (Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) < 10) return;
+      stop();
+      hide();
+    };
+    var finish = function (ev) {
+      if (ev.pointerId !== e.pointerId) return;
+      stop();
+      if (ev.type === "pointercancel") { hide(); return; }
+      if (!shown) show();
+      setTimeout(hide, Math.max(0, TAP_HOLD - (Date.now() - t0)));
+    };
+    document.addEventListener("pointerup", finish);
+    document.addEventListener("pointercancel", finish);
+    document.addEventListener("pointermove", move, { passive: true });
+  }, { passive: true });
+
   var PROFILE_PATH = "/profile";
 
   var AUTH_STATE = "/api/session.php";
@@ -140,7 +258,7 @@
   var auth = window.MKAuth;
 
   function takeLoginFlag() {
-    var m = /[?&]login=([a-z]+)/.exec(location.search);
+    var m = /[?&]login=([a-z]+(?:-[0-9]+)?)/.exec(location.search);
     if (!m) return "";
     if (window.history && history.replaceState) {
       try { history.replaceState(null, "", auth.here()); } catch (_) {}
@@ -148,10 +266,21 @@
     return m[1];
   }
 
+  function banDate(sec) {
+    var d = new Date(sec * 1000);
+    var opts = { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    try { return d.toLocaleString(uiLang() === "en" ? "en-GB" : "ru-RU", opts); }
+    catch (_) { return d.toLocaleString(); }
+  }
+
   function reportLogin(flag) {
+    var ban = /^banned(?:-([0-9]+))?$/.exec(flag);
     if (flag === "cancelled") showToast(tx("user.cancelled"));
     else if (flag === "expired") showToast(tx("user.expired"));
     else if (flag === "error") showToast(tx("user.error"));
+    else if (ban && ban[1]) showToast(tx("user.bannedUntil").replace("{date}", banDate(+ban[1])), 6000);
+    else if (ban) showToast(tx("user.banned"), 6000);
   }
 
   var INVITE_KEY = "nexus-signin-v1";
@@ -352,7 +481,6 @@
   function setUnread(n) {
     if (!chatLink) return;
     n = Math.max(0, Math.floor(Number(n) || 0));
-    head.classList.toggle("has-unread", n > 0);
     if (!n) {
       if (unreadBadge && unreadBadge.parentNode) unreadBadge.parentNode.removeChild(unreadBadge);
       return;
@@ -413,7 +541,10 @@
     reportLogin(takeLoginFlag());
     fetch(AUTH_STATE, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
       .then(function (s) {
+        window.MK_SESSION = s;
+        try { document.dispatchEvent(new CustomEvent("mk:session", { detail: s })); } catch (_) {}
         var invited = takeInvite();
         if (!s || !s.roblox) return;
         if (s.user) {

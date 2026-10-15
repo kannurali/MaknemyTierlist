@@ -875,8 +875,7 @@
     const url = promo ? promo.safeHref(camp.href) : "";
     if (!url || stage.classList.contains("editing")) return;
 
-    try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: camp.id, slot: slot }); }
-    catch (e) {}
+    promo.goal("promo_click", { id: camp.id, slot: slot });
     window.open(url, "_blank", "noopener");
   }
 
@@ -1219,6 +1218,7 @@
     if (!cre) { el.hidden = true; el.innerHTML = ""; return; }
     el.innerHTML = "";
     el.hidden = false;
+    promo.fitBox(el, cre);
 
     const img = document.createElement("img");
     img.src = promo.srcFor(cre);
@@ -1264,6 +1264,7 @@
   }
 
   function otherModalOpen() {
+    if (window.NX_GW_POP && window.NX_GW_POP.isOpen()) return true;
     return ["#modal", "#viewModal", "#donateModal"].some(sel => {
       const el = $(sel);
       return el && !el.hidden;
@@ -1384,8 +1385,7 @@
     $("#promoPopCta").addEventListener("click", () => {
       if (!popupCamp || !promo) return;
       writeSeen(promo.recordPopupClicked(readSeen(), popupCamp.id, Date.now()));
-      try { if (typeof ym === "function") ym(111127188, "reachGoal", "promo_click", { id: popupCamp.id, slot: "popup" }); }
-      catch (e) {}
+      promo.goal("promo_click", { id: popupCamp.id, slot: "popup" });
       closePromoPopup();
     });
     document.addEventListener("visibilitychange", () => {
@@ -2323,28 +2323,35 @@
     }
   });
 
-  const LIKED_KEY = "nexus-liked";
   let hasLiked = false;
   let likeCount = 0;
-  try { hasLiked = localStorage.getItem(LIKED_KEY) === "1"; } catch (e) {}
+  let likeAuth = null;
+  let likeBusy = false;
+  try { localStorage.removeItem("nexus-liked"); } catch (e) {}
 
   const likeBtn = $("#likeBtn");
   const likeCountEl = $("#likeCount");
+  const likeJoinEl = $("#likeJoin");
+
+  function likeJoin() {
+    return !!(likeAuth && !likeAuth.user && likeAuth.canLogin);
+  }
 
   function renderLike() {
     if (!likeBtn) return;
-    likeBtn.classList.toggle("liked", hasLiked);
-    likeBtn.setAttribute("aria-pressed", hasLiked ? "true" : "false");
-    likeBtn.title = hasLiked ? tx("like.remove") : tx("like.title");
-    const heart = likeBtn.querySelector(".like-heart");
-    if (heart) heart.textContent = hasLiked ? "💙" : "🤍";
-    if (likeCountEl) likeCountEl.textContent = likeCount.toLocaleString("ru-RU");
-  }
-
-  function setLiked(v) {
-    hasLiked = v;
-    try { localStorage.setItem(LIKED_KEY, v ? "1" : "0"); } catch (e) {}
-    renderLike();
+    const join = likeJoin();
+    const on = hasLiked && !join;
+    likeBtn.classList.toggle("is-join", join);
+    likeBtn.classList.toggle("liked", on);
+    if (join) likeBtn.removeAttribute("aria-pressed");
+    else likeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    likeBtn.dataset.i18nTitle = join ? "like.joinTitle" : on ? "like.remove" : "like.title";
+    likeBtn.title = tx(likeBtn.dataset.i18nTitle);
+    if (likeCountEl) {
+      likeCountEl.textContent = likeCount.toLocaleString("ru-RU");
+      likeCountEl.hidden = join;
+    }
+    if (likeJoinEl) likeJoinEl.hidden = !join;
   }
 
   function popLike() {
@@ -2358,34 +2365,56 @@
     try {
       const r = await fetch(API_LIKE, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dir }),
       });
-      return r.ok ? true : false;
+      const d = await r.json().catch(() => null);
+      return { status: r.status, data: d };
     } catch (e) {}
     return null;
   }
 
   function toggleLike() {
+    if (!likeAuth) return;
+    if (!likeAuth.user) {
+      if (likeAuth.canLogin && window.MKAuth) location.assign(MKAuth.startUrl());
+      return;
+    }
+    if (likeBusy) return;
     const willLike = !hasLiked;
     const dir = willLike ? 1 : -1;
 
-    setLiked(willLike);
-    popLike();
+    hasLiked = willLike;
     likeCount = Math.max(0, likeCount + dir);
+    popLike();
     renderLike();
 
-    sendLike(dir).then(ok => {
-      if (ok === false) {
-        setLiked(!willLike);
+    likeBusy = true;
+    sendLike(dir).then(res => {
+      likeBusy = false;
+      const d = res && res.data;
+      if (res && res.status === 200 && d && d.ok) {
+        hasLiked = !!d.liked;
+        if (typeof d.likes === "number") likeCount = Math.max(0, d.likes);
+      } else {
+        hasLiked = !willLike;
         likeCount = Math.max(0, likeCount - dir);
-        renderLike();
+        if (res && res.status === 401) likeAuth = { user: null, canLogin: likeAuth.canLogin };
       }
+      renderLike();
     });
   }
 
   if (likeBtn) likeBtn.addEventListener("click", toggleLike);
   renderLike();
+  if (likeBtn && window.MKAuth) {
+    MKAuth.session().then(s => {
+      likeAuth = { user: s && s.user ? s.user : null, canLogin: MKAuth.canLogin(s) };
+      hasLiked = !!(s && s.liked && s.liked.tierlist);
+      renderLike();
+    });
+  }
 
   const donateModal = $("#donateModal");
 

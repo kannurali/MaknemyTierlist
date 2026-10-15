@@ -10,6 +10,7 @@ if (!defined('CONFIG_PATH')) {
 
 require_once __DIR__ . '/lib/remember.php';
 require_once __DIR__ . '/lib/halloween.php';
+require_once __DIR__ . '/lib/ban.php';
 
 function app_config(): array {
     static $cfg = null;
@@ -84,6 +85,36 @@ function start_site_session(): void {
             $_SESSION['user_id'] = $uid;
         }
     }
+    // Бан проверяется здесь, а не в каждом эндпоинте: все, кто пишет от имени
+    // вошедшего (чат, объявления, обращения, «о себе», Telegram), берут его
+    // из этой сессии. Забаненный выходит из неё на первом же запросе, и
+    // дальше для всех них это аноним.
+    $uid = (string)($_SESSION['user_id'] ?? '');
+    if ($uid !== '' && site_banned($uid, app_config(), null, ban_db())) { ban_kick($uid); }
+}
+
+// База для проверки бана. Не открылась — бан проверяется по одному
+// config.php: из-за упавшей базы вошедший не должен получать 500 на каждом
+// запросе.
+function ban_db(): ?PDO {
+    try {
+        return db();
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+// Выкинуть забаненного: из этой сессии и со всех устройств, где помнится
+// вход. Без второго мог бы вернуться через «запомнить вход» на другом
+// компьютере — там его выкинет тот же код, но ключ жил бы ещё полгода.
+function ban_kick(string $uid): void {
+    unset($_SESSION['user_id']);
+    try {
+        remember_forget_user(db(), $uid);
+    } catch (PDOException $e) {
+        // Нет таблицы ключей — помнить вход и так негде.
+    }
+    if (remember_cookie_present($_COOKIE)) { remember_cookie_clear(); }
 }
 
 // Прежнее имя той же сессии. Оставлено как есть: его зовут все админские
@@ -168,6 +199,83 @@ function is_admin(): bool { return current_role() === 'admin'; }
 
 // Обращения разбирают и модераторы, и админы.
 function is_moderator(): bool { return current_role() !== ''; }
+
+// Бан — третий список Roblox id в config.php, banned_ids, по той же причине,
+// что и роли: выдать и снять его может только тот, у кого есть доступ к
+// серверу. Второй источник — таблица user_bans, куда банят модераторы и
+// админы из панели (api/lib/ban.php); site_bans() складывает оба, если ей
+// дали базу. Действует со следующего запроса забаненного (start_site_session),
+// войти заново он не может (api/roblox_callback.php), его объявления пропадают
+// из ленты и профиля (handle_trades). Бан сильнее роли: id в banned_ids
+// выкидывается из сессии, даже если стоит и в admin_ids.
+//
+// Бан бывает навсегда и до срока, оба вида в одном списке:
+//   '1234567890',                       — навсегда;
+//   '1234567890' => '2026-10-20',       — до 20.10.2026 00:00 по Москве;
+//   '1234567890' => '2026-10-20 18:30', — до 18:30 по Москве того дня.
+// Срок вышел — бан снимается сам, конфиг править не нужно. Срок, похожий на
+// дату, но несуществующий ('2026-02-30'), — бан без срока: тот, кто его
+// вписал, явно хотел забанить, и молча не банить было бы хуже.
+const BAN_TZ = 'Europe/Moscow';
+
+/**
+ * Конец срока из значения конфига: unix-время; 0 — дата кривая, бан без
+ * срока; null — это вообще не дата (значит, в значении id).
+ */
+function ban_parse_until($raw): ?int {
+    if (!is_string($raw) || !preg_match('/^ *([0-9]{4}-[0-9]{2}-[0-9]{2})(?: +([0-9]{1,2}:[0-9]{2}))? *$/D', $raw, $m)) {
+        return null;
+    }
+    $text = $m[1] . ' ' . (isset($m[2]) && $m[2] !== '' ? str_pad($m[2], 5, '0', STR_PAD_LEFT) : '00:00');
+    $at = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $text, new DateTimeZone(BAN_TZ));
+    // createFromFormat молча переносит 30 февраля на 2 марта, а 25:00 — на
+    // следующий день; обратное форматирование это ловит.
+    if ($at === false || $at->format('Y-m-d H:i') !== $text) { return 0; }
+    return $at->getTimestamp();
+}
+
+/**
+ * Действующие баны: [roblox id (строкой) => конец срока, 0 — навсегда].
+ * Истёкших нет. Один id дважды: «навсегда» сильнее срока, из двух сроков
+ * берётся дальний. С $pdo к config.php добавляются баны из панели
+ * (user_bans) по тому же правилу.
+ */
+function site_bans(array $cfg, int $now, ?PDO $pdo = null): array {
+    $raw  = isset($cfg['banned_ids']) && is_array($cfg['banned_ids']) ? $cfg['banned_ids'] : [];
+    $found = [];
+    foreach ($raw as $key => $val) {
+        $until = ban_parse_until($val);
+        $ids   = config_id_list(['x' => [$until === null ? $val : $key]], 'x');
+        if ($ids !== []) { $found[] = [$ids[0], $until ?? 0]; }
+    }
+    if ($pdo !== null) {
+        foreach (ban_store_list($pdo, $now) as $id => $until) { $found[] = [(string)$id, $until]; }
+    }
+    $bans = [];
+    foreach ($found as [$id, $until]) {
+        if ($until !== 0 && $until <= $now) { continue; }
+        $was = $bans[$id] ?? null;
+        $bans[$id] = ($was === 0 || $until === 0) ? 0 : max($was ?? 0, $until);
+    }
+    return $bans;
+}
+
+// Id забаненных списком строк. Ключи-числа массива PHP хранит как int, а id
+// сайта везде строки, и in_array(..., true) с int не совпал бы.
+function site_banned_ids(array $cfg, int $now, ?PDO $pdo = null): array {
+    return array_map('strval', array_keys(site_bans($cfg, $now, $pdo)));
+}
+
+/** Конец бана: unix-время, 0 — навсегда, null — не забанен. */
+function site_ban_until(string $uid, array $cfg, ?int $now = null, ?PDO $pdo = null): ?int {
+    if ($uid === '') { return null; }
+    $bans = site_bans($cfg, $now ?? time(), $pdo);
+    return array_key_exists($uid, $bans) ? $bans[$uid] : null;
+}
+
+function site_banned(string $uid, array $cfg, ?int $now = null, ?PDO $pdo = null): bool {
+    return site_ban_until($uid, $cfg, $now, $pdo) !== null;
+}
 
 // Без куки прав быть не может — отказ сразу, без пустой сессии под каждый
 // анонимный запрос.

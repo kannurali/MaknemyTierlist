@@ -256,8 +256,20 @@ test('на доске нет органов управления, которых
     assert_eq(0, substr_count($calc, 'tc-clear-side'), 'крестика очистки стороны в разметке быть не должно');
     assert_eq(0, substr_count($css, 'tc-clear-side'), 'правил .tc-clear-side в CSS быть не должно');
     assert_eq(0, substr_count($js, 'tc-clear-side'), 'обработчика .tc-clear-side в JS быть не должно');
-    assert_true(strpos($css, '.tc-slot.is-empty::before') === false,
+    assert_true(!preg_match('/content:\s*"\+"/', $css),
         'пустой слот в макете без «+»');
+});
+
+// Наведение на пустой слот по макету: пунктирная рамка и надпись «Выбрать».
+// Надпись берётся из словаря (data-pick), чтобы переключалась вместе с языком.
+test('пустой слот при наведении показывает рамку и «Выбрать» из словаря', function () use ($PUB) {
+    $css  = calc_read($PUB . '/css/calculator.css');
+    $js   = calc_read($PUB . '/js/calculator-page.js');
+    $i18n = calc_read($PUB . '/js/i18n.js');
+    assert_true(strpos($css, 'content: attr(data-pick)') !== false, 'надпись слота берётся из data-pick');
+    assert_true(strpos($css, '.tc-slot.is-empty:hover::after') !== false, 'надпись видна при наведении');
+    assert_true(strpos($js, 'btn.dataset.pick = tx("calc.slotPick")') !== false, 'JS кладёт надпись из словаря');
+    assert_eq(2, substr_count($i18n, '"calc.slotPick"'), 'ключ calc.slotPick есть и в RU, и в EN');
 });
 
 test('вердикт и разница объявлены как живая область для скринридера', function () use ($PUB) {

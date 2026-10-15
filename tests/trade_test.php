@@ -64,10 +64,13 @@ function trade_db(bool $withTables = true): PDO {
     return $pdo;
 }
 
+// Заготовка для проверок ленты и профиля: кладёт объявление прямо в базу,
+// мимо пределов публикации (2 в сутки, пауза после закрытия) и скам-фильтра —
+// их проверяют отдельные тесты через trade_create.
 function offer(PDO $pdo, string $me, array $give, array $want = [], int $at = NOW): int {
-    [$code, $body] = trade_create($pdo, $me, $give, $want, $at);
-    if ($code !== 200) { throw new RuntimeException('trade_create: ' . json_encode($body)); }
-    return $body['id'];
+    $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at) VALUES (?, ?, ?, 'open', ?)")
+        ->execute([$me, json_encode($give), json_encode($want), $at]);
+    return (int)$pdo->lastInsertId();
 }
 
 // --------------------------------------------------------------------------
@@ -121,8 +124,9 @@ test('публикация: «хочу» можно оставить пусты�
 
 test('не больше 5 активных одновременно; снял, отметил сделку или истекло — место свободно', function () {
     $pdo = trade_db();
+    // Пять живых, но вне суточного окна публикаций: предел за сутки здесь не мешает.
     $ids = [];
-    for ($i = 0; $i < TRADE_ACTIVE_MAX; $i++) { $ids[] = offer($pdo, '101', ['idDark'], [], NOW - 100 + $i); }
+    for ($i = 0; $i < TRADE_ACTIVE_MAX; $i++) { $ids[] = offer($pdo, '101', ['idDark'], [], NOW - TRADE_RATE_WINDOW - 3600 * ($i + 1)); }
     [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
     assert_eq(409, $code, 'шестое активное не принимается');
     assert_eq('too_many_active', $body['error'], 'и это названо');
@@ -130,43 +134,106 @@ test('не больше 5 активных одновременно; снял, �
     assert_eq(200, trade_create($pdo, '202', ['idDark'], [], NOW)[0], 'у другого человека свой счёт');
 
     trade_close($pdo, '101', false, $ids[0], 'cancel', NOW);
-    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + 1)[0], 'снял одно — можно выложить новое');
-    assert_eq(409, trade_create($pdo, '101', ['idDark'], [], NOW + 2)[0], 'и снова пять');
-    trade_close($pdo, '101', false, $ids[1], 'done', NOW + 3);
-    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + 4)[0], 'отметил сделку — тоже');
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + TRADE_CLOSE_COOLDOWN)[0], 'снял одно — после паузы можно выложить новое');
 
     $old = trade_db();
     for ($i = 0; $i < TRADE_ACTIVE_MAX; $i++) { offer($old, '101', ['idDark'], [], NOW - TRADE_QUIET_TTL - 100 + $i); }
     assert_eq(200, trade_create($old, '101', ['idDark'], [], NOW)[0], 'истёкшие без отклика места не занимают');
 });
 
-test('не больше 10 публикаций за 5 часов, окно скользящее', function () {
+test('не больше 2 публикаций за сутки, окно скользящее', function () {
+    assert_eq([2, 86400], [TRADE_RATE_MAX, TRADE_RATE_WINDOW], 'два за скользящие сутки');
     $pdo = trade_db();
-    offer($pdo, '101', ['idDark'], [], NOW - 3600 - TRADE_RATE_WINDOW - 1);   // вне окна и сейчас, и при публикации остальных
-    // Каждое снимаем сразу: иначе раньше сработал бы предел активных.
-    for ($i = 0; $i < TRADE_RATE_MAX; $i++) {
-        $id = offer($pdo, '101', ['idDark'], [], NOW - 3600 + $i * 60);
-        trade_close($pdo, '101', false, $id, 'cancel', NOW - 3600 + $i * 60 + 1);
-    }
+    offer($pdo, '101', ['idDark'], [], NOW - 3600 - TRADE_RATE_WINDOW - 1);   // вне окна при каждой проверке ниже
+    $first = NOW - 3600;
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], $first)[0], 'первое за сутки');
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], $first + 60)[0], 'второе за сутки');
     [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
-    assert_eq(429, $code, 'одиннадцатое за окно не принимается');
+    assert_eq(429, $code, 'третье за сутки не принимается');
     assert_eq('too_many', $body['error'], 'и это названо');
     assert_eq(0, $body['quota']['left'], 'осталось ноль');
-    assert_eq(NOW - 3600 + TRADE_RATE_WINDOW, $body['quota']['retryAt'], 'следующее — когда из окна выйдет самое старое');
-    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW - 3600 + TRADE_RATE_WINDOW)[0], 'в тот момент — можно');
+    assert_eq($first + TRADE_RATE_WINDOW, $body['quota']['retryAt'], 'следующее — когда из окна выйдет самое старое');
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], $first + TRADE_RATE_WINDOW)[0], 'в тот момент — можно');
     assert_eq(200, trade_create($pdo, '202', ['idDark'], [], NOW)[0], 'у другого человека свой счёт');
 });
 
 test('снятые объявления тоже съедают предел', function () {
     $pdo = trade_db();
     for ($i = 0; $i < TRADE_RATE_MAX; $i++) {
-        $id = offer($pdo, '101', ['idDark'], [], NOW - 60);
-        trade_close($pdo, '101', false, $id, 'cancel', NOW - 30);
+        $id = offer($pdo, '101', ['idDark'], [], NOW - 7200 + $i);
+        trade_close($pdo, '101', false, $id, 'cancel', NOW - 7000 + $i);
     }
     assert_eq(429, trade_create($pdo, '101', ['idDark'], [], NOW)[0], '«выложил — снял» предел не обходит');
     $q = trade_quota($pdo, '101', NOW);
-    assert_eq([10, 10, 0], [$q['max'], $q['used'], $q['left']], 'квота считает всё созданное');
+    assert_eq([2, 2, 0], [$q['max'], $q['used'], $q['left']], 'квота считает всё созданное');
     assert_eq(TRADE_RATE_MAX, trade_quota($pdo, '', NOW)['left'], 'у анонима квота пустая, а не ошибка');
+});
+
+test('снял сам или отметил сделку — новое объявление только через 30 минут', function () {
+    assert_eq(1800, TRADE_CLOSE_COOLDOWN, 'пауза — полчаса');
+    foreach (['cancel', 'done'] as $result) {
+        $pdo = trade_db();
+        $id = offer($pdo, '101', ['idDark'], [], NOW - TRADE_RATE_WINDOW - 60);
+        trade_close($pdo, '101', false, $id, $result, NOW - 60);
+        [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
+        assert_eq(429, $code, "$result: сразу после — нельзя");
+        assert_eq('cooldown', $body['error'], "$result: и это названо");
+        assert_eq(NOW - 60 + TRADE_CLOSE_COOLDOWN, $body['quota']['cooldownAt'], "$result: когда кончится пауза");
+        assert_eq(TRADE_RATE_MAX, $body['quota']['left'], "$result: суточный предел тут ни при чём");
+        assert_eq(429, trade_create($pdo, '101', ['idDark'], [], NOW - 60 + TRADE_CLOSE_COOLDOWN - 1)[0], "$result: за секунду до конца — нельзя");
+        assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW - 60 + TRADE_CLOSE_COOLDOWN)[0], "$result: после паузы — можно");
+        assert_eq(200, trade_create($pdo, '202', ['idDark'], [], NOW)[0], "$result: пауза только у автора");
+    }
+});
+
+test('снятое модератором и истёкшее паузы не дают', function () {
+    $pdo = trade_db();
+    $id = offer($pdo, '101', ['idDark'], [], NOW - TRADE_RATE_WINDOW - 60);
+    trade_close($pdo, '', true, $id, 'remove', NOW - 60);
+    assert_eq(0, trade_quota($pdo, '101', NOW)['cooldownAt'], 'модератор снял — паузы нет');
+    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW)[0], 'и публиковать можно');
+
+    $old = trade_db();
+    offer($old, '101', ['idDark'], [], NOW - TRADE_QUIET_TTL - 60);
+    assert_eq(0, trade_quota($old, '101', NOW)['cooldownAt'], 'истекло само — паузы нет');
+});
+
+test('скам-фильтр: стороны расходятся больше чем на 40% — не публикуется', function () {
+    assert_eq(40, TRADE_FAIR_PCT, 'порог — 40%');
+    $pdo = trade_db();
+    // Kitsune 12500 против Dragon 14250: хочу дороже на 14% — честно.
+    assert_eq(200, trade_create($pdo, '101', ['idKitsune'], ['idDragon'], NOW)[0], 'разница 14% — можно');
+
+    [$code, $body] = trade_create($pdo, '202', ['idBoat'], ['idDragon'], NOW);
+    assert_eq(400, $code, 'Fast Boat за Dragon — нельзя');
+    assert_eq('unfair', $body['error'], 'и это названо');
+    assert_eq([2400, 40], [$body['pct'], $body['max']], 'процент и порог для подсказки');
+    assert_eq(0, (int)$pdo->query("SELECT COUNT(*) FROM trade_offers WHERE user_id = 202")->fetchColumn(), 'в базу не легло');
+
+    assert_eq(400, trade_create($pdo, '202', ['idDragon'], ['idBoat'], NOW)[0], 'и в обратную сторону — тоже');
+    assert_eq(200, trade_create($pdo, '202', ['idDragon'], [], NOW)[0], 'пустое «хочу» не проверяется');
+    assert_eq(200, trade_create($pdo, '303', ['idJunk'], ['idDragon'], NOW)[0], 'сторона без цены не проверяется');
+});
+
+test('скам-фильтр: граница 40% — ещё можно, дальше — нет', function () {
+    $cat = ['a' => ['name' => 'A', 'value' => 100.0], 'b' => ['name' => 'B', 'value' => 140.0],
+            'c' => ['name' => 'C', 'value' => 141.0], 'd' => ['name' => 'D', 'value' => 60.0], 'e' => ['name' => 'E', 'value' => 59.0]];
+    assert_eq(40.0, trade_diff_pct(['a'], ['b'], $cat), '+40%');
+    assert_eq(-40.0, trade_diff_pct(['a'], ['d'], $cat), '−40%');
+    assert_true(abs(trade_diff_pct(['a'], ['c'], $cat)) > TRADE_FAIR_PCT, '+41% — за порогом');
+    assert_true(abs(trade_diff_pct(['a'], ['e'], $cat)) > TRADE_FAIR_PCT, '−41% — за порогом');
+    assert_true(abs(trade_diff_pct(['a'], ['b'], $cat)) <= TRADE_FAIR_PCT, '+40% — ещё в пределах');
+    assert_eq(null, trade_diff_pct(['a'], [], $cat), 'пустое «хочу»');
+});
+
+test('порог скама на странице публикации тот же, что на сервере', function () {
+    $js = file_get_contents(__DIR__ . '/../public_html/js/trade-new.js');
+    assert_true(strpos($js, 'const FAIR_PCT = ' . TRADE_FAIR_PCT . ';') !== false, 'trade-new.js знает порог');
+    assert_true(strpos($js, 'd.error === "cooldown"') !== false, 'страница понимает паузу');
+    assert_true(strpos($js, 'd.error === "unfair"') !== false, 'страница понимает скам-фильтр');
+    $calc = file_get_contents(__DIR__ . '/../public_html/js/calculator-page.js');
+    assert_true(strpos($calc, 'trade: () => CALC.computeTrade(sides.left, sides.right)') !== false,
+        'процент берётся из калькулятора, как на экране');
 });
 
 // --------------------------------------------------------------------------
@@ -487,6 +554,56 @@ test('объявления игрока для его профиля: тольк
     assert_eq([], trade_user_live(trade_db(false), '202', '101', NOW), 'без таблиц — пусто');
     [, $nt] = handle_trades(trade_db(false), ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW);
     assert_eq([false, []], [$nt['ready'], $nt['offers']], 'без таблиц — ready:false');
+});
+
+// Бан (banned_ids в config.php): объявлений забаненного нет ни в ленте, ни в
+// его профиле, а в базе они остаются — снятый бан их возвращает.
+test('объявления забаненного скрыты в ленте, поиске и профиле, но не удалены', function () {
+    $pdo = trade_db();
+    $a = offer($pdo, '101', ['idDragon']);
+    $b = offer($pdo, '202', ['idDark']);
+    $cfg = ['banned_ids' => ['202']];
+
+    [, $feed] = handle_trades($pdo, [], [], NOW, $cfg);
+    assert_eq([$a], array_column($feed['offers'], 'id'), 'лента без забаненного');
+    [, $found] = handle_trades($pdo, [], ['q' => 'bob'], NOW, $cfg);
+    assert_eq([], $found['offers'], 'поиск по его нику пуст');
+    [, $prof] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW, $cfg);
+    assert_eq([], $prof['offers'], 'профиль пуст');
+    [, $zero] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '000202'], NOW, $cfg);
+    assert_eq([], $zero['offers'], 'и с нулями впереди');
+
+    [, $back] = handle_trades($pdo, [], [], NOW);
+    assert_eq([$b, $a], array_column($back['offers'], 'id'), 'бан снят — всё на месте');
+});
+
+test('бан со сроком прячет объявления до срока, потом они возвращаются сами', function () {
+    $pdo = trade_db();
+    $a = offer($pdo, '101', ['idDragon']);
+    $b = offer($pdo, '202', ['idDark']);
+    $end = (new DateTimeImmutable('@' . (NOW + 3600)))->setTimezone(new DateTimeZone('Europe/Moscow'))->format('Y-m-d H:i');
+    $cfg = ['banned_ids' => ['202' => $end]];
+
+    [, $during] = handle_trades($pdo, [], [], NOW, $cfg);
+    assert_eq([$a], array_column($during['offers'], 'id'), 'пока бан — нет');
+    [, $prof] = handle_trades($pdo, ['user_id' => '101'], ['view' => 'user', 'id' => '202'], NOW, $cfg);
+    assert_eq([], $prof['offers'], 'и в профиле нет');
+
+    [, $after] = handle_trades($pdo, [], [], NOW + 7200, $cfg);
+    assert_eq([$b, $a], array_column($after['offers'], 'id'), 'срок вышел — вернулись, конфиг тот же');
+});
+
+test('лента со скрытыми авторами: страница полная, more не врёт', function () {
+    $pdo = trade_db();
+    $ins = $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at) VALUES (?, ?, '[]', 'open', ?)");
+    $give = json_encode(['idDark']);
+    for ($i = 0; $i < TRADE_PAGE_SIZE; $i++) { $ins->execute([101, $give, NOW - 100 - $i]); }
+    for ($i = 0; $i < 5; $i++) { $ins->execute([202, $give, NOW - $i]); }
+    $p = trade_feed($pdo, '', '', 0, NOW, ['202']);
+    assert_eq(TRADE_PAGE_SIZE, count($p['offers']), 'страница полная');
+    $authors = array_values(array_unique(array_map(function ($o) { return $o['author']['id']; }, $p['offers'])));
+    assert_eq(['101'], $authors, 'только незабаненный');
+    assert_eq(false, $p['more'], 'дальше пусто');
 });
 
 // Карточка объявления рисует знак у ника автора из поля logo.
