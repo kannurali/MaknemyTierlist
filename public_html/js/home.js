@@ -212,3 +212,19 @@
   paint();
   requestAnimationFrame(frame);
 })();
+
+(function () {
+  'use strict';
+
+  if (!window.IntersectionObserver || !window.matchMedia || !window.matchMedia('(hover: none)').matches) return;
+
+  function near(selector, rootMargin) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { e.target.classList.toggle('is-near', e.isIntersecting); });
+    }, { rootMargin: rootMargin });
+    document.querySelectorAll(selector).forEach(function (el) { io.observe(el); });
+  }
+
+  near('.hm-btn:not([aria-disabled="true"])', '-15% 0px -71% 0px');
+  near('a.hm-card', '-30% -49.5% -30% -49.5%');
+})();

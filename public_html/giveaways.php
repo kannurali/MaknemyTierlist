@@ -43,7 +43,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=25" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=25" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=26" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=26" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/topbar.js?v=27" defer fetchpriority="high"></script>
