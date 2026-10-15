@@ -41,13 +41,13 @@ function legal_page_open(string $slug, string $title, string $description): void
     // В Хэллоуин — фиолетовые копии стилей из css/hw/ (api/lib/halloween.php).
     $css = implode(PHP_EOL, HALLOWEEN ? [
         '<link rel="stylesheet" href="css/hw/base.css?v=15" />',
-        '<link rel="stylesheet" href="css/hw/topbar.css?v=25" />',
+        '<link rel="stylesheet" href="css/hw/topbar.css?v=26" />',
         '<link rel="stylesheet" href="css/hw/design-page.css?v=43" />',
         '<link rel="stylesheet" href="css/hw/legal.css?v=3" />',
         '<link rel="stylesheet" href="css/halloween.css?v=4" />',
     ] : [
         '<link rel="stylesheet" href="css/base.css?v=15" />',
-        '<link rel="stylesheet" href="css/topbar.css?v=25" />',
+        '<link rel="stylesheet" href="css/topbar.css?v=26" />',
         '<link rel="stylesheet" href="css/design-page.css?v=43" />',
         '<link rel="stylesheet" href="css/legal.css?v=3" />',
     ]);

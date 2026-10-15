@@ -177,6 +177,30 @@
   cursor: default;
 }
 
+.hm-card-go {
+  position: absolute;
+  left: calc(252.8 * var(--u));
+  top: calc(322 * var(--u));
+  width: calc(46.9 * var(--u));
+  height: calc(46.9 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(24, 24, 25, 0.2);
+  box-shadow: 0 calc(4 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  scale: 0.8;
+  transition:
+    opacity var(--hm-hover) var(--hm-hover-ease),
+    scale var(--hm-hover) var(--hm-hover-ease);
+}
+
+.hm-card-go svg {
+  width: calc(22.98 * var(--u));
+  height: calc(22.98 * var(--u));
+}
+
 @media (hover: hover) {
   .hm-btn:not([aria-disabled="true"]):hover,
   .hm-btn:not([aria-disabled="true"]):focus-visible {
@@ -232,30 +256,6 @@
       scale(1.0548);
   }
 
-  .hm-card-go {
-    position: absolute;
-    left: calc(252.8 * var(--u));
-    top: calc(322 * var(--u));
-    width: calc(46.9 * var(--u));
-    height: calc(46.9 * var(--u));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: rgba(24, 24, 25, 0.2);
-    box-shadow: 0 calc(4 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.25);
-    opacity: 0;
-    scale: 0.8;
-    transition:
-      opacity var(--hm-hover) var(--hm-hover-ease),
-      scale var(--hm-hover) var(--hm-hover-ease);
-  }
-
-  .hm-card-go svg {
-    width: calc(22.98 * var(--u));
-    height: calc(22.98 * var(--u));
-  }
-
   a.hm-card:hover .hm-card-go,
   a.hm-card:focus-visible .hm-card-go {
     opacity: 1;
@@ -264,26 +264,24 @@
 }
 
 @media not all and (hover: hover) {
-  .hm-card-go { display: none; }
-
-  .hm-btn:not([aria-disabled="true"]):is(:active, .is-tap) {
+  .hm-btn:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) {
     box-shadow:
       0 calc(15.4 * var(--u)) calc(46.1 * var(--u)) rgba(83, 37, 97, 0.2),
       0 calc(6.6 * var(--u)) calc(17.6 * var(--u)) rgba(180, 136, 194, 0.25);
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) {
     width: calc(298 * var(--u));
     height: calc(90 * var(--u));
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-dash rect {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) .hm-btn-dash rect {
     rx: 17px;
     stroke-width: calc(4.39 * var(--u));
     stroke-dasharray: calc(8.78 * var(--u)) calc(21.94 * var(--u));
   }
 
-  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) {
     width: calc(274 * var(--u));
     height: calc(90 * var(--u));
   }
@@ -298,18 +296,23 @@
     transition: opacity var(--hm-hover) var(--hm-hover-ease);
   }
 
-  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap)::before { opacity: 1; }
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap, .is-near)::before { opacity: 1; }
 
   .hm-card-art {
     transform-origin: 0 0;
     transition: transform var(--hm-hover) var(--hm-hover-ease);
   }
 
-  a.hm-card:is(:active, .is-tap) .hm-card-art {
+  a.hm-card:is(:active, .is-tap, .is-near) .hm-card-art {
     transform:
       translate(calc(57.51 * var(--u)), calc(-71 * var(--u)))
       rotate(23.743deg)
       scale(1.0548);
+  }
+
+  a.hm-card:is(:active, .is-tap, .is-near) .hm-card-go {
+    opacity: 1;
+    scale: 1;
   }
 }
 
@@ -832,26 +835,26 @@
       stroke-dasharray var(--hm-hover) var(--hm-hover-ease);
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap),
-  .hm-btn-accent:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap) {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap, .is-near),
+  .hm-btn-accent:not([aria-disabled="true"]):is(:hover, :focus-visible, :active, .is-tap, .is-near) {
     width: auto;
     height: 48px;
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) {
     height: 60px;
     margin: 0 -10px -12px 0;
     padding: 0 31px;
   }
 
-  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap) .hm-btn-dash rect {
+  .hm-btn-ghost:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) .hm-btn-dash rect {
     rx: 27px;
     ry: 14px;
     stroke-width: 3px;
     stroke-dasharray: 6px 15px;
   }
 
-  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap) {
+  .hm-btn-accent:not([aria-disabled="true"]):is(:active, .is-tap, .is-near) {
     height: 53px;
     margin: 0 -9px -5px 0;
     padding: 0 30.5px;
@@ -917,6 +920,29 @@
   .hm-card-name--tight { font-size: 21px; }
   .hm-card-rule  { left: 29px; top: 188.5px; width: 170px; }
   .hm-card-note  { left: 27px; top: 199px; width: 180px; font-size: 17px; line-height: 1.25; }
+
+  .hm-card-go {
+    left: 178.5px;
+    top: 227.3px;
+    width: 33px;
+    height: 33px;
+    box-shadow: 0 2.8px 2.8px rgba(0, 0, 0, 0.25);
+  }
+
+  .hm-card-go svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  a.hm-card:is(:active, .is-tap, .is-near) .hm-card-art {
+    transform: translate(40.6px, -50.1px) rotate(23.743deg) scale(1.0548);
+  }
+
+  @media (hover: hover) {
+    a.hm-card:is(:hover, :focus-visible) .hm-card-art {
+      transform: translate(40.6px, -50.1px) rotate(23.743deg) scale(1.0548);
+    }
+  }
 
   .hm-deco {
     display: none;
