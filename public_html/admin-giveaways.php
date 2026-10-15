@@ -128,7 +128,7 @@ echo <<<HTML
 
       <label class="f">Лимит участников
         <input type="number" id="fMax" class="ga-max" min="0" max="1000000" step="1" inputmode="numeric" placeholder="без лимита" />
-        <span class="muted small">Пусто — без лимита. Когда участников станет столько, приём закроется сам, не дожидаясь конца по времени, — дальше «Разыграть». Лимит не меньше числа призов.</span>
+        <span class="muted small">Пусто — без лимита. Когда участников станет столько, приём закроется сам, не дожидаясь конца по времени, и итоги подведутся сразу. Лимит не меньше числа призов.</span>
       </label>
 
       <div class="f">Проверка
@@ -142,7 +142,7 @@ echo <<<HTML
         <button class="btn primary" id="aSave" type="button">Сохранить</button>
         <button class="btn primary" id="aPublish" type="button">Опубликовать</button>
         <button class="btn" id="aEnd" type="button">Завершить досрочно</button>
-        <button class="btn primary" id="aDraw" type="button">Разыграть</button>
+        <button class="btn primary" id="aDraw" type="button">Подвести итоги сейчас</button>
         <span class="ga-gap"></span>
         <button class="btn danger" id="aDelete" type="button">Удалить</button>
       </div>
@@ -187,8 +187,8 @@ echo <<<HTML
 
 <script src="/js/i18n.js?v=75"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=6"></script>
-<script src="/js/giveaway-admin.js?v=7"></script>
+<script src="/js/giveaway.js?v=7"></script>
+<script src="/js/giveaway-admin.js?v=8"></script>
 </body>
 </html>
 HTML;

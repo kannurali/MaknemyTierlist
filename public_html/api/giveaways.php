@@ -16,6 +16,11 @@ require_once __DIR__ . '/lib/giveaway.php';
 // открывшего /giveaways?test. Это второй адрес в кеше, и только. Любой
 // другой хвост .htaccess отбивает 403, иначе флуд случайными адресами шёл
 // бы мимо кеша.
+//
+// Этот же запрос подводит итоги: есть закончившийся розыгрыш без итогов —
+// ответ уходит некешированным (иначе победители появились бы на полминуты
+// позже), а после него PHP разыгрывает призы и поздравляет победителей
+// (gw_after_due() в api/lib/giveaway.php). Отдельного cron для итогов нет.
 
 const GW_PUBLIC_CACHE = 30;
 
@@ -33,6 +38,10 @@ function handle_giveaways(callable $pdo, int $now, bool $withTest = false): arra
 if (!defined('TESTING')) {
     header('Cache-Control: no-cache, must-revalidate');
     header('X-LiteSpeed-Tag: giveaways');
-    lscache_public(GW_PUBLIC_CACHE);
-    json_out(handle_giveaways('db', time(), ($_GET['test'] ?? '') === '1'));
+    $now = time();
+    $due = false;
+    try { $due = gw_has_due(db(), $now); } catch (Throwable $e) { $due = false; }
+    if ($due) { lscache_off(); } else { lscache_public(GW_PUBLIC_CACHE); }
+    json_out(handle_giveaways('db', $now, ($_GET['test'] ?? '') === '1'));
+    if ($due) { gw_after_due(db(), app_config(), $now); }
 }

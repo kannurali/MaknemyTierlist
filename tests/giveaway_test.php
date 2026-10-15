@@ -878,6 +878,92 @@ test('лимит: виден на сайте и в админке', function () 
     assert_eq(50, $out['giveaway']['max_entries'], 'редактору');
 });
 
+// --------------------------------------------------------------------------
+//  Автоитоги
+// --------------------------------------------------------------------------
+
+function gw_lock_file(): string {
+    $f = tempnam(sys_get_temp_dir(), 'gwlock');
+    file_put_contents($f, '');
+    return $f;
+}
+
+test('автоитоги: закончившиеся разыгрываются сами, победителям пишет бот', function () {
+    $p = gw_db();
+    $ended = gw_live($p, ['title_ru' => 'Закончился']);
+    gw_crowd($p, $ended);
+    $running = gw_live($p, ['title_ru' => 'Идёт', 'ends_at' => GW_NOW + 3 * 86400]);
+    $p->exec("INSERT INTO giveaway_entries (giveaway_id, user_id, chat_id, joined_at) VALUES ($running, 1, 501, " . GW_NOW . ')');
+    gw_save($p, gw_draft(['title_ru' => 'Черновик', 'ends_at' => GW_NOW]), GW_NOW);
+    $at = GW_NOW + 86400;
+
+    assert_eq([$ended], gw_due_ids($p, $at), 'ждёт итогов только закончившийся');
+    assert_true(gw_has_due($p, $at));
+    assert_eq(false, gw_has_due($p, GW_NOW), 'до конца — нечего');
+    assert_eq(false, gw_has_due(test_db(), $at), 'нет таблиц — нечего');
+
+    $log = [];
+    $res = gw_after_due($p, gw_cfg(), $at, gw_tg($log), gw_lock_file(), function () {});
+    assert_eq(['drawn' => 1, 'failed' => 0], $res);
+    assert_eq(['drawn', 'live'], [gw_load($p, $ended)['status'], gw_load($p, $running)['status']], 'идущий не тронут');
+    assert_eq(3, count(gw_sent($log)), 'бот поздравил трёх победителей');
+    assert_eq(false, gw_has_due($p, $at), 'больше ждать нечего');
+    $list = handle_giveaways(function () use ($p) { return $p; }, $at);
+    $past = array_column($list['past'], null, 'id');
+    assert_eq(['drawn', 3], [$past[$ended]['phase'], count($past[$ended]['winners'])], 'на сайте — итоги с победителями');
+});
+
+test('автоитоги: лимит набран — итоги сразу, не дожидаясь даты', function () {
+    $p = gw_db();
+    foreach (['1' => 501, '2' => 502] as $u => $chat) { gw_user($p, $u, 'u' . $u, $chat); }
+    $id = gw_live($p, ['max_entries' => 2, 'prizes' => [['name' => 'Magnet', 'count' => 1]]]);
+    $log = [];
+    gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW);
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '2', $id, GW_NOW + 1);
+    assert_true($r[2]['last'], 'последний');
+    $res = gw_after_due($p, gw_cfg(), GW_NOW + 1, gw_tg($log), gw_lock_file(), function () {});
+    assert_eq(1, $res['drawn']);
+    assert_eq('drawn', gw_load($p, $id)['status'], 'итоги подведены через секунду после последнего');
+});
+
+test('автоитоги: Telegram молчит — ждут, повтор не раньше чем через минуту', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    $id = gw_live($p, ['channels' => [GW_CH_A]]);
+    gw_crowd($p, $id);
+    $lock = gw_lock_file();
+    $at = GW_NOW + 86400;
+    $log = [];
+    $res = gw_after_due($p, gw_cfg(), $at, gw_tg($log, [], [GW_CH_A]), $lock, function () {});
+    assert_eq(['drawn' => 0, 'failed' => 1], $res, 'не вышло');
+    assert_eq('live', gw_load($p, $id)['status'], 'ждёт итогов дальше');
+    $log = [];
+    $res = gw_after_due($p, gw_cfg(), $at + 30, gw_tg($log, [GW_CH_A => [501, 502, 503]]), $lock, function () {});
+    assert_eq(['skipped' => 'retry'], $res, 'через 30 с не пробует');
+    assert_eq([], $log, 'Telegram не трогали');
+    $res = gw_after_due($p, gw_cfg(), $at + GW_AUTO_RETRY, gw_tg($log, [GW_CH_A => [501, 502, 503]]), $lock, function () {});
+    assert_eq(['drawn' => 1, 'failed' => 0], $res, 'через минуту — вышло');
+    assert_eq('', file_get_contents($lock), 'метка неудачи стёрта');
+});
+
+test('автоитоги: второй проход, пока идёт первый, выходит сразу; без бота — ничего', function () {
+    $p = gw_db();
+    $id = gw_live($p);
+    gw_crowd($p, $id);
+    $lock = gw_lock_file();
+    $h = fopen($lock, 'c+');
+    flock($h, LOCK_EX);
+    $log = [];
+    assert_eq(['skipped' => 'busy'], gw_after_due($p, gw_cfg(), GW_NOW + 86400, gw_tg($log), $lock));
+    flock($h, LOCK_UN);
+    fclose($h);
+    assert_eq('live', gw_load($p, $id)['status']);
+    assert_eq(['skipped' => 'off'], gw_after_due($p, [], GW_NOW + 86400, gw_tg($log), $lock), 'бот не настроен');
+    $log = [];
+    gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
+    assert_eq(['drawn' => 0, 'failed' => 0], gw_draw_due($p, gw_cfg(), gw_tg($log), GW_NOW + 86401), 'разыгранный кнопкой второй раз не трогается');
+});
+
 test('до миграции max_entries: без лимита всё как раньше, с лимитом — просит миграцию', function () {
     $p = gw_db();
     $p->exec('DROP TABLE giveaways');

@@ -186,6 +186,7 @@
       n.removeAttribute("data-gw-ends");
       var card = n.closest(".gw-card");
       if (card && card.gwEnded) { card.gwEnded(); }
+      document.dispatchEvent(new CustomEvent("mk:gw-ended"));
     });
   }
 
@@ -655,7 +656,10 @@
         if (r && r.ok) {
           markJoined(g.id);
           showJoined();
-          if (r.last) { say("gw.joinedLast"); }
+          if (r.last) {
+            say("gw.joinedLast");
+            document.dispatchEvent(new CustomEvent("mk:gw-ended", { detail: { id: g.id } }));
+          }
           return;
         }
         var err = r && r.error ? r.error : "net";
