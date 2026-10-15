@@ -331,6 +331,41 @@ test('кнопка Telegram ведёт на канал и стоит перед 
         'тот же круг, что у чата и профиля');
 });
 
+// Кнопка «Реклама» (владелец, 2026-10-15): условия для рекламодателей на
+// /promote. В разделы (☰) страница не входит — на неё ведёт только эта кнопка,
+// слева от Telegram. На телефоне под неё освобождено место: надпись MAKNEMY
+// у логотипа уходит на ширине до 499 px (выбор владельца — текстовая кнопка,
+// а не значок). Адрес и класс без «ads»: такие имена режут блокировщики.
+test('кнопка «Реклама» ведёт на /promote, стоит перед Telegram и не в разделах', function () use ($PUB, $PAGES6) {
+    $all = array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php', 'giveaways.php', 'promote.php']);
+    foreach ($all as $f) {
+        $s = top_header($PUB, $f);
+        $on = $f === 'promote.php' ? ' aria-current="page"' : '';
+        assert_eq(1, substr_count($s, '<a class="mk-promote"'), "$f: одна кнопка «Реклама»");
+        assert_true(strpos($s, '<a class="mk-promote" href="/promote"' . $on . ' data-i18n="nav.promote">Реклама</a>') !== false,
+            "$f: ссылка на /promote с переводимой подписью" . ($on ? ', отмечена текущей' : ''));
+        $nav   = strpos($s, '</ul>');
+        $promo = strpos($s, '<a class="mk-promote"');
+        $tg    = strpos($s, '<a class="mk-tg"');
+        assert_true($nav !== false && $promo !== false && $tg !== false && $nav < $promo && $promo < $tg,
+            "$f: в плашке после разделов, перед Telegram");
+    }
+    $i18n = top_read($PUB . '/js/i18n.js');
+    assert_eq(2, preg_match_all('/"nav\.promote":\s+"[^"]+"/', $i18n), 'подпись на обоих языках');
+
+    $css = top_read($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/@media \(max-width: 499px\) \{\s*\.mk-top-word \{ display: none; \}/', $css),
+        'на телефоне надпись MAKNEMY уступает место кнопке');
+
+    $ht = top_read($PUB . '/.htaccess');
+    foreach (['RewriteRule ^promote/$ /promote [L,R=301]',
+              'RewriteRule ^promote\.php$ /promote [L,R=301]',
+              'RewriteRule ^promote$ /promote.php [L]'] as $rule) {
+        assert_true(strpos($ht, $rule) !== false, ".htaccess: $rule");
+    }
+    assert_true(strpos(top_read($PUB . '/sitemap.xml'), '<loc>https://maknemy.com/promote</loc>') !== false, 'адрес в sitemap');
+});
+
 // Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же круг
 // с градиентом, что и профиль, слева от него. Раздел получил страницу (/chat,
 // см. tests/chat_page_test.php) и вышел из «В активной разработке» тем же

@@ -1177,7 +1177,7 @@ test('удаление розыгрыша чистит ссылки и подп�
 test('окно розыгрыша — на всех страницах, кроме главной, правовых и самой /giveaways', function () {
     $pub = dirname(__DIR__) . '/public_html';
     $with = ['index.php', 'calculator.php', 'news.php', 'trading.php', 'trade-new.php',
-             'stock.php', 'chat.php', 'profile.php', 'support.php'];
+             'stock.php', 'chat.php', 'profile.php', 'support.php', 'promote.php'];
     foreach ($with as $page) {
         $html = file_get_contents("$pub/$page");
         $blocks = strpos($html, 'js/news-blocks.js?v=');

@@ -212,6 +212,18 @@ RewriteRule ^giveaways\.php$ /giveaways [L,R=301]
 
 RewriteRule ^giveaways$ /giveaways.php [L]
 
+# -------------------------------- Реклама --------------------------------
+# Условия для рекламодателей; в шапке на неё ведёт кнопка «Реклама». Адрес
+# не /ads намеренно: пути и классы с «ads» режут блокировщики рекламы, и
+# страница пропала бы ровно у тех, кто их ставит. Пути внутри promote.php
+# документ-относительные — отсюда тот же приём, что у /stock.
+RewriteRule ^promote/$ /promote [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^promote\.php$ /promote [L,R=301]
+
+RewriteRule ^promote$ /promote.php [L]
+
 # /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
 # именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy
 # URL / Terms of Service URL), а там адрес меняется только через повторное
