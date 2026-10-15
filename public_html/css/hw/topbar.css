@@ -34,6 +34,8 @@ html { -webkit-tap-highlight-color: transparent; }
 
   --mk-bar-bg: rgba(0, 0, 0, 0.536);
 
+  --mk-pop-ease: linear(0, 0.008 1%, 0.03 2%, 0.074 3.2%, 0.133 4.5%, 0.262 6.8%, 0.537 11%, 0.66 13%, 0.784 15.2%, 0.877 17.2%, 0.953 19.2%, 1.012 21.2%, 1.06 23.5%, 1.09 25.8%, 1.107 28.7%, 1.105 32%, 1.016 46.5%, 1 50.7%, 1);
+
   position: sticky;
   top: 0;
   z-index: 60;
@@ -47,6 +49,10 @@ html { -webkit-tap-highlight-color: transparent; }
   overflow: hidden;
   overflow-x: clip;
   overflow-y: visible;
+}
+
+@supports not (transition-timing-function: linear(0, 1)) {
+  .mk-top { --mk-pop-ease: var(--ease-quick); }
 }
 
 .mk-top::before {
@@ -101,7 +107,7 @@ html { -webkit-tap-highlight-color: transparent; }
   cursor: pointer;
   transform: translateY(-50%);
   scale: var(--mk-pop);
-  transition: filter .15s, background .18s ease, --mk-pop var(--dur-quick) var(--ease-quick);
+  transition: filter .15s, background .18s ease, --mk-pop var(--dur-quick) var(--mk-pop-ease);
 }
 .mk-top-toggle::before,
 .mk-top-toggle::after {
@@ -151,7 +157,7 @@ html { -webkit-tap-highlight-color: transparent; }
   height: calc(56 * var(--u));
   display: block;
   scale: var(--mk-pop);
-  transition: --mk-pop var(--dur-quick) var(--ease-quick);
+  transition: --mk-pop var(--dur-quick) var(--mk-pop-ease);
 }
 @media (hover: hover) {
   .mk-top-brand:hover .mk-top-mark { --mk-pop: 1.286; }
@@ -302,7 +308,7 @@ html { -webkit-tap-highlight-color: transparent; }
   color: #fff;
   cursor: pointer;
   scale: var(--mk-pop);
-  transition: filter .15s, transform .08s, --mk-pop var(--dur-quick) var(--ease-quick);
+  transition: filter .15s, transform .08s, --mk-pop var(--dur-quick) var(--mk-pop-ease);
 }
 @media (hover: hover) {
   .mk-tg:hover,
