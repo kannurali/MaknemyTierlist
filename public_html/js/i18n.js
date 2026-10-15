@@ -786,41 +786,41 @@
       "home.cardNews":          "Новости",
       "home.cardNewsNote":      "узнай самые свежие новинки в твоей любимой игре!",
 
-      "home.faqTitle":          "Немного о важном",
-      "home.faqSub":            "ваша гарантия успешных трейдов - ваша любознательность!",
+      "home.faqTitle":          "О проекте Maknemy",
+      "home.faqSub":            "Независимый фанатский сайт по Blox Fruits: удобные инструменты, новости и справочные материалы.",
 
-      "home.faqQ1":             "Кто такой Maknemy и как появился этот проект?",
-      "home.faqA1p1":           "Maknemy — мой медийный проект, посвящённый Roblox и Blox Fruits. Я создаю новости, обзоры, разборы обновлений и контент о трейдинге.",
-      "home.faqA1p2":           "В процессе я заметил, что игрокам часто не хватает одного понятного места, где можно быстро узнать примерную ценность предметов и разобраться в изменениях рынка. Так появился Maknemy Tierlist — проект, который объединяет мою аналитику, сайт и сообщества вокруг трейдинга.",
+      "home.faqQ1":             "Кто стоит за проектом?",
+      "home.faqA1p1":           "Меня зовут Максим, в интернете я известен как Maknemy. Я Roblox-креатор, блогер и дизайнер: создаю новости, обзоры, гайды и материалы о Blox Fruits.",
+      "home.faqA1p2":           "Maknemy.com — независимый фанатский проект, созданный прежде всего для русскоязычного сообщества. Он не является официальным сайтом Roblox или разработчиков Blox Fruits.",
 
-      "home.faqQ2":             "Что можно найти в Maknemy Tierlist?",
-      "home.faqA2p1":           "Maknemy Tierlist помогает ориентироваться в экономике Blox Fruits. На сайте собраны оценки фруктов, перманентных фруктов, пассов, оружия, аксессуаров и конфигураций — бывших скинов и мутаций.",
-      "home.faqA2p2":           "Проект также включает обновления цен, новости рынка и материалы, которые помогают игрокам лучше понимать происходящее в трейдах. Главная площадка проекта — сайт maknemy.com.",
+      "home.faqQ2":             "Почему сайт называется Maknemy?",
+      "home.faqA2p1":           "Maknemy — мой ник и название собственного бренда, под которым объединены сайт, контент и сообщество. Мы развиваем узнаваемый авторский проект благодаря полезным материалам и удобным инструментам, без громких названий с обещаниями лёгкой выгоды.",
 
-      "home.faqQ3":             "Как формируются цены на фрукты, пассы и конфигурации?",
-      "home.faqA3p1":           "Цены не должны основываться только на одной цифре или случайном калькуляторе. При оценке учитываются спрос, редкость предмета, его доступность, популярность, изменения после обновлений и то, насколько игроки действительно готовы обменивать его на другие ценности.",
-      "home.faqA3p2":           "Также важны сообщения и наблюдения самого сообщества. Если предмет стал чаще появляться в трейдах, потерял спрос или, наоборот, начал резко дорожать, это отражается на его актуальной оценке.",
-      "home.faqA3p3":           "При этом цена в тир-листе — это ориентир по рынку, а не официальная стоимость и не гарантия выгоды.",
+      "home.faqQ3":             "Что можно найти на сайте?",
+      "home.faqA3p1":           "Тирлист предметов, калькулятор обменов, объявления о трейдах, новости и справочную информацию о фруктах, перманентах, геймпассах, скинах и мутациях.",
+      "home.faqA3p2":           "Всё это создано для удобства игроков: чтобы проще искать нужные сведения, сравнивать предметы и следить за изменениями в игре.",
 
-      "home.faqQ4":             "Почему цены меняются и как следить за актуальными значениями?",
-      "home.faqA4p1":           "Экономика Blox Fruits постоянно меняется. После выхода обновлений, реворков, новых фруктов, скинов или механик интерес игроков может резко измениться.",
-      "home.faqA4p2":           "Предмет, который вчера считался очень востребованным, сегодня может потерять спрос. То же самое работает и наоборот: редкий или популярный предмет может начать цениться значительно выше.",
-      "home.faqA4p3":           "Поэтому не стоит ориентироваться на старые скриншоты и давно сохранённые списки. Лучше проверять текущую версию тир-листа, дату обновления цен и последние новости проекта.",
+      "home.faqQ4":             "Как понимать оценки предметов?",
+      "home.faqA4p1":           "Значения в тирлисте — ориентировочные оценки, основанные на наблюдениях за трейдами, спросом, доступностью предметов и предложениями сообщества. Они могут меняться после обновлений и изменений интереса игроков.",
+      "home.faqA4p2":           "Наша задача — отражать происходящее в обменах, а не управлять экономикой или устанавливать обязательные условия трейдов. Игроки самостоятельно решают, какие предложения им подходят.",
+      "home.faqA4p3":           "Оценки и расчёты не являются официальными ценами и не гарантируют выгодный или успешный обмен. Информация может содержать неточности и обновляться с задержкой.",
 
-      "home.faqQ5":             "Как использовать тир-лист, чтобы не переплачивать?",
-      "home.faqA5p1":           "Сначала нужно сравнить ценность обеих сторон сделки, но нельзя смотреть только на итоговые цифры. Важно учитывать спрос на каждый предмет и понимать, насколько легко его потом обменять.",
-      "home.faqA5p2":           "Иногда предмет может иметь высокую оценку, но почти никому не быть нужным. А другой предмет может стоить немного меньше, но пользоваться большим спросом и быстрее продаваться или обмениваться.",
-      "home.faqA5p3":           "Maknemy Tierlist стоит использовать как отправную точку для анализа сделки. Окончательное решение всегда должно учитывать текущие предложения, спрос и твою собственную цель.",
+      "home.faqQ5":             "О чём помнить при обменах?",
+      "home.faqA5p1":           "Проверяйте предметы и условия в игровом окне обмена. Не передавайте другим людям пароль, коды подтверждения и cookies аккаунта, в том числе ради «проверки предметов» или получения приза.",
+      "home.faqA5p2":           "Инструменты сайта помогают сравнивать предложения, но не подтверждают честность другого игрока.",
 
-      "home.faqQ6":             "Как не попасться на скам при трейде?",
-      "home.faqA6p1":           "Никому нельзя передавать пароль, cookies, коды подтверждения или данные аккаунта ради «проверки предметов». Maknemy Tierlist никогда не требует отправлять такие данные.",
-      "home.faqA6p2":           "Перед подтверждением сделки нужно внимательно проверить имена игроков, предметы и их количество. Нельзя доверять одним только скриншотам, обещаниям, срочности или сообщениям от якобы администраторов.",
-      "home.faqA6p3":           "Также нужно осторожно относиться к подозрительным ссылкам, фальшивым сайтам и кросс-трейдам. Тир-лист помогает оценить сделку, но не может гарантировать честность другого игрока.",
+      "home.faqQ6":             "Для чего на сайте реклама?",
+      "home.faqA6p1":           "Реклама других проектов — один из способов монетизации и поддержки развития maknemy.com.",
+      "home.faqA6p2":           "При выборе рекламодателей мы учитываем правила Roblox и отказываем проектам, предлагающим их нарушение: например, продажу аккаунтов, неофициальную продажу Robux и игровых предметов за реальные деньги, читы или мошеннические услуги.",
+      "home.faqA6p3":           "Размещение рекламы не означает одобрения проекта со стороны Roblox или разработчиков Blox Fruits.",
 
-      "home.faqQ7":             "Что дальше ждёт Maknemy Tierlist?",
-      "home.faqA7p1":           "Maknemy Tierlist не должен оставаться просто таблицей с ценами. Сейчас проект развивается дальше: сайт готовится выйти из бета-версии, обновляется дизайн и структура новостей.",
-      "home.faqA7p2":           "В будущем планируется добавить публичную площадку для поиска трейдов и объективный калькулятор сделок, который будет помогать сравнивать предложения без искусственного завышения или занижения цен.",
-      "home.faqA7p3":           "При этом даже самый удобный калькулятор не сможет полностью заменить понимание спроса и рынка. Главная цель проекта — дать игрокам полезную основу для решений и постепенно превратить Maknemy Tierlist в полноценную торговую платформу для Roblox."
+      "home.faqQ7":             "Можно ли бесплатно выиграть призы?",
+      "home.faqA7p1":           "Да. На сайте проходят конкурсы, в которых можно бесплатно выиграть призы. Покупки и оплата участия не требуются.",
+      "home.faqA7p2":           "Призы, условия, сроки, способ выбора победителей и порядок получения наград указываются в объявлении конкретного конкурса. Участие даёт возможность выиграть, но не гарантирует получение приза.",
+
+      "home.faqQ8":             "Как будет развиваться проект?",
+      "home.faqA8p1":           "В планах — полноценный вики-раздел по Blox Fruits с подробной информацией о предметах, способностях и игровых механиках, понятной структурой и удобной навигацией.",
+      "home.faqA8p2":           "Также планируем улучшать существующие инструменты, новости и поиск информации, сохраняя главную цель проекта — удобство и пользу для игроков."
     },
 
     en: {
@@ -1597,41 +1597,41 @@
       "home.cardNews":          "News",
       "home.cardNewsNote":      "find out the freshest news in your favourite game!",
 
-      "home.faqTitle":          "A few things worth knowing",
-      "home.faqSub":            "your guarantee of good trades is your own curiosity!",
+      "home.faqTitle":          "About Maknemy",
+      "home.faqSub":            "An independent fan site for Blox Fruits: handy tools, news and reference material.",
 
-      "home.faqQ1":             "Who is Maknemy and how did this project start?",
-      "home.faqA1p1":           "Maknemy is my media project about Roblox and Blox Fruits. I make news, reviews, update breakdowns and content about trading.",
-      "home.faqA1p2":           "Along the way I noticed that players often lacked a single clear place to quickly check the rough worth of an item and make sense of market shifts. That is how Maknemy Tierlist appeared — a project that brings my analytics, the site and the communities around trading together.",
+      "home.faqQ1":             "Who is behind the project?",
+      "home.faqA1p1":           "My name is Maxim, and online I go by Maknemy. I am a Roblox creator, blogger and designer: I make news, reviews, guides and other material about Blox Fruits.",
+      "home.faqA1p2":           "Maknemy.com is an independent fan project made first and foremost for the Russian-speaking community. It is not an official site of Roblox or of the Blox Fruits developers.",
 
-      "home.faqQ2":             "What can you find in Maknemy Tierlist?",
-      "home.faqA2p1":           "Maknemy Tierlist helps you find your way around the Blox Fruits economy. The site collects values for fruits, permanent fruits, passes, weapons, accessories and configurations — the former skins and mutations.",
-      "home.faqA2p2":           "The project also covers value updates, market news and material that helps players understand what is going on in trades. The main home of the project is maknemy.com.",
+      "home.faqQ2":             "Why is the site called Maknemy?",
+      "home.faqA2p1":           "Maknemy is my nickname and the name of my own brand, which brings the site, the content and the community together. We are building a recognisable author's project through useful material and handy tools, without loud names that promise easy profit.",
 
-      "home.faqQ3":             "How are the values for fruits, passes and configurations worked out?",
-      "home.faqA3p1":           "A value should never rest on a single number or a random calculator. Working one out takes in demand, how rare the item is, how easy it is to get, how popular it is, what changed after an update, and how willing players really are to trade it for other valuables.",
-      "home.faqA3p2":           "Reports and observations from the community matter too. If an item starts showing up in trades more often, loses demand or suddenly climbs in price, that is reflected in its current value.",
-      "home.faqA3p3":           "Even so, a value in the tier list is a reference point for the market, not an official price and not a guarantee of profit.",
+      "home.faqQ3":             "What can you find on the site?",
+      "home.faqA3p1":           "An item tier list, a trade calculator, trade listings, news and reference information on fruits, permanent fruits, gamepasses, skins and mutations.",
+      "home.faqA3p2":           "All of it is made with players in mind: to make it easier to find what you need, compare items and keep up with changes in the game.",
 
-      "home.faqQ4":             "Why do values change, and how do you keep up with the current ones?",
-      "home.faqA4p1":           "The Blox Fruits economy never stands still. After updates, reworks, new fruits, skins or mechanics, what players want can change sharply.",
-      "home.faqA4p2":           "An item that was in high demand yesterday can lose it today. It works the other way round as well: a rare or popular item can start being valued far higher.",
-      "home.faqA4p3":           "So do not go by old screenshots and lists saved long ago. Check the current version of the tier list, the date the values were updated and the latest news of the project.",
+      "home.faqQ4":             "How should the item values be read?",
+      "home.faqA4p1":           "The values in the tier list are rough estimates based on what we see in trades, demand, how available items are and offers from the community. They can change after updates and as players' interest shifts.",
+      "home.faqA4p2":           "Our job is to reflect what is happening in trades, not to steer the economy or set binding trade terms. Players decide for themselves which offers suit them.",
+      "home.faqA4p3":           "The values and calculations are not official prices and do not guarantee a profitable or successful trade. The information may contain inaccuracies and may be updated with a delay.",
 
-      "home.faqQ5":             "How do you use the tier list and avoid overpaying?",
-      "home.faqA5p1":           "Start by comparing the worth of both sides of the trade, but do not look at the totals alone. Take the demand for each item into account and think about how easy it will be to trade it on later.",
-      "home.faqA5p2":           "An item can carry a high value and still be wanted by almost nobody. Another one can be worth a little less and yet be in demand, selling or trading much faster.",
-      "home.faqA5p3":           "Use Maknemy Tierlist as the starting point for looking at a deal. The final call should always account for the offers on the table, the demand and your own goal.",
+      "home.faqQ5":             "What should you keep in mind when trading?",
+      "home.faqA5p1":           "Check the items and terms in the in-game trade window. Never give anyone your password, confirmation codes or account cookies, including for an “item check” or to claim a prize.",
+      "home.faqA5p2":           "The site's tools help you compare offers, but they cannot vouch for the honesty of the other player.",
 
-      "home.faqQ6":             "How do you avoid being scammed in a trade?",
-      "home.faqA6p1":           "Never give anyone your password, cookies, confirmation codes or account details for an “item check”. Maknemy Tierlist never asks you to send data like that.",
-      "home.faqA6p2":           "Before you confirm a trade, check the player names, the items and how many of them there are. Do not trust screenshots on their own, or promises, urgency and messages from people claiming to be administrators.",
-      "home.faqA6p3":           "Be wary of suspicious links, fake sites and cross-trades as well. The tier list helps you judge a deal, but it cannot vouch for the honesty of the other player.",
+      "home.faqQ6":             "Why are there ads on the site?",
+      "home.faqA6p1":           "Ads for other projects are one of the ways maknemy.com earns money and keeps growing.",
+      "home.faqA6p2":           "When choosing advertisers, we follow the Roblox rules and turn down projects that offer to break them: for example, selling accounts, unofficial sales of Robux or in-game items for real money, cheats or scam services.",
+      "home.faqA6p3":           "An ad on the site does not mean the project is endorsed by Roblox or the Blox Fruits developers.",
 
-      "home.faqQ7":             "What is next for Maknemy Tierlist?",
-      "home.faqA7p1":           "Maknemy Tierlist should not stay a table of prices. The project keeps growing: the site is getting ready to leave beta, and the design and the structure of the news are being reworked.",
-      "home.faqA7p2":           "A public place to look for trades is planned, along with an even-handed trade calculator that compares offers without inflating or deflating values.",
-      "home.faqA7p3":           "Even the handiest calculator cannot fully replace an understanding of demand and the market. The goal of the project is to give players a solid basis for their decisions and to grow Maknemy Tierlist into a full trading platform for Roblox."
+      "home.faqQ7":             "Can you win prizes for free?",
+      "home.faqA7p1":           "Yes. The site runs giveaways where you can win prizes for free. No purchases or entry fees are required.",
+      "home.faqA7p2":           "The prizes, terms, dates, how winners are picked and how rewards are handed out are given in the announcement of each giveaway. Taking part gives you a chance to win but does not guarantee a prize.",
+
+      "home.faqQ8":             "How will the project grow?",
+      "home.faqA8p1":           "Next up is a full Blox Fruits wiki with detailed information on items, abilities and game mechanics, a clear structure and easy navigation.",
+      "home.faqA8p2":           "We also plan to improve the existing tools, the news and how information is found, while keeping the project's main goal: convenience and real use for players."
     }
   };
 

@@ -1008,8 +1008,8 @@ test('оформление полосы прокрутки не отключае
 test('ответ в «Немного о важном» раскрывается плавно', function () use ($PUB) {
     $home = read_file_or_fail($PUB . '/home.php');
     preg_match_all('/<div class="hm-faq-a">\s*<div class="hm-faq-a-in">(.*?)<\/div>\s*<\/div>/s', $home, $m);
-    assert_eq(7, substr_count($home, '<div class="hm-faq-a">'), 'семь вопросов');
-    assert_eq(7, count($m[1]), 'текст каждого ответа лежит в обёртке');
+    assert_eq(8, substr_count($home, '<div class="hm-faq-a">'), 'восемь вопросов');
+    assert_eq(8, count($m[1]), 'текст каждого ответа лежит в обёртке');
     foreach ($m[1] as $i => $body) {
         assert_eq(0, preg_match('/<div/', $body), 'в обёртке ответа ' . ($i + 1) . ' только абзацы');
     }

@@ -277,11 +277,11 @@
   function wire() {
     const input = $("#trQuery");
     let timer = null;
-    const run = () => {
+    const run = force => {
       clearTimeout(timer);
       timer = null;
       const q = input.value.trim().replace(/\s+/g, " ").slice(0, 40);
-      if (q === state.query) { return; }
+      if (q === state.query && !force) { return; }
       state.query = q;
       loadFeed(true);
     };
@@ -289,7 +289,12 @@
       clearTimeout(timer);
       timer = setTimeout(run, SEARCH_DEBOUNCE_MS);
     });
-    $("#trSearch").addEventListener("submit", e => { e.preventDefault(); run(); });
+    $("#trSearch").addEventListener("submit", e => {
+      e.preventDefault();
+      if (!input.value.trim() && !state.query) { input.focus(); return; }
+      run(true);
+      if (window.matchMedia && window.matchMedia("(hover: none)").matches) { input.blur(); }
+    });
 
     $("#trMore").addEventListener("click", () => loadFeed(false));
 
