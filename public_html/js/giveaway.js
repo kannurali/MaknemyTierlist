@@ -451,6 +451,7 @@
     var seen = readConds();
     (g.conds || []).forEach(function (c, i) {
       var li = condItem("own", pick(c.text), c.url, pick(c.btn) || t("gw.subscribe"));
+      if (c.chat) { li.setAttribute("data-chat", c.chat); }
       var key = g.id + ":" + i;
       if (g.id && seen.indexOf(key) >= 0) { mark(li, "ok"); }
       var a = li.querySelector("a");
@@ -639,6 +640,10 @@
           var missing = r.missing || [];
           Object.keys(ui.cChannels || {}).forEach(function (k) {
             mark(ui.cChannels[k], missing.indexOf(k) >= 0 ? "bad" : "ok");
+          });
+          (ui.cOwn || []).forEach(function (li) {
+            var chat = li.getAttribute("data-chat");
+            if (chat) { mark(li, missing.indexOf(chat) >= 0 ? "bad" : "ok"); }
           });
           setCta("gw.check");
           say("gw.err.channels");

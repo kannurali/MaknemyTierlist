@@ -385,7 +385,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=4" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=5" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

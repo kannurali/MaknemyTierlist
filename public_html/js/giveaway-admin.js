@@ -23,7 +23,7 @@
     no_prizes: "нет призов",
     ends_in_past: "время конца уже прошло",
     ends_too_far: "конец дальше чем через 90 дней",
-    channel_not_admin: "у бота нет нужных прав в одном из отмеченных каналов (см. «Каналы бота» слева)",
+    channel_not_admin: "у бота нет нужных прав в одном из отмеченных каналов или каналов своих условий (см. «Каналы бота» слева)",
     invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Добавление подписчиков»)"
   };
 
@@ -42,6 +42,8 @@
     "bad cond text": "У условия нет текста (или он длиннее 100 символов).",
     "bad cond url": "Ссылка условия должна начинаться с https:// и быть без пробелов (до 300 символов).",
     "bad cond button": "Надпись на кнопке условия — до 24 символов.",
+    "bad cond chat": "Канал проверки у условия не найден — выберите его заново.",
+    "bad channels": "Каналов, которые проверяет бот (отмеченных и у своих условий), — не больше пяти.",
     conds_migrate: "Для своих условий выполните docs/migrations/2026-10-15-giveaway-conds.sql.",
     test_migrate: "Для тестовых розыгрышей выполните docs/migrations/2026-10-15-giveaway-test.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
@@ -501,15 +503,58 @@
     url.placeholder = "https://youtube.com/@maknemy";
     url.value = c ? c.url : "";
     url.className = "ga-cond-url";
+    const chat = document.createElement("select");
+    chat.className = "ga-cond-chat";
+    chat.title = "Если ссылка ведёт в канал, где бот — админ, выберите его: бот будет проверять подписку, как у отмеченных каналов выше.";
+    fillCondChat(chat, c ? c.chat || "" : "");
     const del = document.createElement("button");
     del.type = "button";
     del.className = "btn small danger";
     del.textContent = "✕";
     del.title = "Убрать условие";
     del.addEventListener("click", () => { row.remove(); changed(); });
-    [ru, en, btn, url].forEach(i => i.addEventListener("input", changed));
-    row.append(ru, en, btn, url, del);
+    [ru, en, btn].forEach(i => i.addEventListener("input", changed));
+    url.addEventListener("input", () => {
+      if (!chat.value) chat.value = chatByUrl(url.value);
+      markTgCond(row);
+      changed();
+    });
+    chat.addEventListener("change", () => { markTgCond(row); changed(); });
+    row.append(ru, en, btn, url, chat, del);
+    markTgCond(row);
     return row;
+  }
+
+  function fillCondChat(sel, cur) {
+    sel.textContent = "";
+    sel.add(new Option("Бот не проверяет", ""));
+    S.channels.forEach(c => {
+      sel.add(new Option("Проверять: " + (c.title || c.id) + (c.admin ? "" : " (у бота нет прав)"), c.id));
+    });
+    if (cur && !S.channels.some(c => c.id === cur)) sel.add(new Option("Проверять: канал " + cur + " (нет в списке)", cur));
+    sel.value = cur;
+  }
+
+  function chatByUrl(raw) {
+    const u = raw.trim().replace(/^https?:\/\/(?:www\.)?(?:t|telegram)\.me\//i, "https://t.me/").replace(/\/+$/, "");
+    const name = /^https:\/\/t\.me\/([A-Za-z0-9_]{4,})$/.exec(u);
+    const c = S.channels.find(ch => (ch.url && ch.url.replace(/\/+$/, "") === u)
+      || (name && ch.username && ch.username.toLowerCase() === name[1].toLowerCase()));
+    return c ? c.id : "";
+  }
+
+  function markTgCond(row) {
+    const url = row.querySelector(".ga-cond-url").value.trim();
+    const tg = /^https?:\/\/(?:www\.)?(?:t|telegram)\.me\//i.test(url);
+    row.classList.toggle("is-tg-free", tg && !row.querySelector(".ga-cond-chat").value);
+  }
+
+  function refreshCondChats() {
+    $("fConds").querySelectorAll(".ga-cond").forEach(r => {
+      const sel = r.querySelector(".ga-cond-chat");
+      fillCondChat(sel, sel.value);
+      markTgCond(r);
+    });
   }
 
   function readConds() {
@@ -517,7 +562,8 @@
       ru: r.querySelector(".ga-cond-ru").value.trim(),
       en: r.querySelector(".ga-cond-en").value.trim(),
       btn_ru: r.querySelector(".ga-cond-btn").value.trim(),
-      url: r.querySelector(".ga-cond-url").value.trim()
+      url: r.querySelector(".ga-cond-url").value.trim(),
+      chat: r.querySelector(".ga-cond-chat").value
     })).filter(c => c.ru || c.url);
   }
 
@@ -549,6 +595,7 @@
   }
 
   function renderChannelsList() {
+    refreshCondChats();
     const ul = $("gwChannels");
     ul.textContent = "";
     S.channels.forEach(c => {
@@ -670,9 +717,10 @@
     $("aDraw").hidden = !(g && g.phase === "ended");
     $("aDelete").hidden = !(g && g.id);
     $("aSave").hidden = locked();
+    $("fCondsLive").hidden = !(g && g.status === "live");
 
     const dis = locked();
-    $("gwEditor").querySelectorAll("input, textarea").forEach(i => { i.disabled = dis; });
+    $("gwEditor").querySelectorAll("input, textarea, select").forEach(i => { i.disabled = dis; });
     $("fTest").disabled = !!(g && g.id && g.status !== "draft");
     $("fBody").contentEditable = dis ? "false" : "true";
     $("fTools").querySelectorAll("button").forEach(b => { b.disabled = dis; });
@@ -926,7 +974,7 @@
         body: d.body.blocks,
         prizes: d.prizes,
         channels: chans,
-        conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url, btn: { ru: c.btn_ru, en: "" } })),
+        conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url, btn: { ru: c.btn_ru, en: "" }, chat: c.chat })),
         ends_at: d.ends_at || Math.floor(Date.now() / 1000) + 86400,
         entries: S.cur.entries || 0,
         winners: (S.cur.list || []).filter(e => e.prize !== null)

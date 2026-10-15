@@ -11,8 +11,11 @@
 // наполняет сам Telegram: добавили бота в канал — вебхуку приходит
 // my_chat_member (gw_channel_update()). Подписку бот проверяет при участии и
 // ещё раз при розыгрыше: отписавшийся после участия приз не получает.
-// Кроме каналов бывают свои условия — текст со ссылкой (conds_json). Их бот
-// не проверяет, на участие они не влияют.
+// Кроме каналов бывают свои условия — текст со ссылкой (conds_json). Обычно
+// бот их не проверяет и на участие они не влияют. Но если у условия выбран
+// канал бота (поле chat) — его подписку бот проверяет так же, как у каналов
+// из списка: ссылка своя (например, приглашение, созданное вручную), а
+// проверка та же (gw_checked_channels()).
 //
 // Админ без нужных прав (TG_CHANNEL_RIGHTS в telegram.php) — всё равно что
 // не админ: is_admin = 0, в колонке missing — каких прав не хватает. Бот
@@ -50,8 +53,8 @@ const GW_PRIZES_MAX      = 20;
 const GW_PRIZE_NAME_MAX  = 60;
 const GW_PRIZE_COUNT_MAX = 1000;
 const GW_CHANNELS_MAX    = 5;
-// Свои условия: текст и ссылка (YouTube, TikTok, канал без бота). Бот их не
-// проверяет — нажатие на условие просто открывает ссылку.
+// Свои условия: текст и ссылка (YouTube, TikTok, канал без бота). Нажатие на
+// условие открывает ссылку; бот проверяет только те, у которых выбран канал.
 const GW_CONDS_MAX       = 5;
 const GW_COND_TEXT_MAX   = 100;
 const GW_COND_URL_MAX    = 300;
@@ -175,7 +178,16 @@ function gw_validate(array $in): array {
         if (mb_strlen($btnRu) > GW_COND_BTN_MAX || mb_strlen($btnEn) > GW_COND_BTN_MAX) { return $fail('bad cond button'); }
         // Без русской надписи кнопка «Подписаться» на обоих языках.
         if ($btnRu === '') { $btnEn = ''; }
-        $conds[] = ['ru' => $ru, 'en' => $en, 'url' => $url, 'btn_ru' => $btnRu, 'btn_en' => $btnEn];
+        $chat = '';
+        if (isset($c['chat']) && $c['chat'] !== '' && $c['chat'] !== null) {
+            $chatId = gw_chat_id($c['chat']);
+            if ($chatId === null) { return $fail('bad cond chat'); }
+            $chat = (string)$chatId;
+        }
+        $conds[] = ['ru' => $ru, 'en' => $en, 'url' => $url, 'btn_ru' => $btnRu, 'btn_en' => $btnEn, 'chat' => $chat];
+    }
+    if (count(gw_checked_channels(['channels_json' => json_encode($channels), 'conds_json' => json_encode($conds)])) > GW_CHANNELS_MAX) {
+        return $fail('bad channels');
     }
 
     $ends = $in['ends_at'] ?? 0;
@@ -209,8 +221,9 @@ function gw_cond_url($v): ?string {
     return $v;
 }
 
-// Свои условия из базы: [{ru, en, url, btn_ru, btn_en}]. Кривые строки
-// пропускаются; у сохранённых до надписей на кнопках они пустые.
+// Свои условия из базы: [{ru, en, url, btn_ru, btn_en, chat}]. Кривые строки
+// пропускаются; у сохранённых до надписей на кнопках они пустые, до выбора
+// канала — chat пустой (бот не проверяет).
 function gw_conds($json): array {
     $str = function (array $c, string $k): string { return isset($c[$k]) && is_string($c[$k]) ? $c[$k] : ''; };
     $out = [];
@@ -219,10 +232,28 @@ function gw_conds($json): array {
         $url = gw_cond_url($c['url'] ?? null);
         if ($url === null) { continue; }
         $btnRu = $str($c, 'btn_ru');
+        $chat = gw_chat_id($c['chat'] ?? null);
         $out[] = [
             'ru' => $c['ru'], 'en' => $str($c, 'en'), 'url' => $url,
             'btn_ru' => $btnRu, 'btn_en' => $btnRu === '' ? '' : $str($c, 'btn_en'),
+            'chat' => $chat === null ? '' : (string)$chat,
         ];
+    }
+    return $out;
+}
+
+// Каналы, подписку на которые бот проверяет: отмеченные в списке и
+// выбранные у своих условий, без повторов. Отсюда берут участие, розыгрыш,
+// снятие участия при отписке и проверка перед публикацией.
+function gw_checked_channels(array $row): array {
+    $out = [];
+    foreach (gw_decode_list($row['channels_json'] ?? null) as $c) {
+        $id = gw_chat_id($c);
+        if ($id !== null && !in_array($id, $out, true)) { $out[] = $id; }
+    }
+    foreach (gw_conds($row['conds_json'] ?? null) as $c) {
+        $id = gw_chat_id($c['chat']);
+        if ($id !== null && !in_array($id, $out, true)) { $out[] = $id; }
     }
     return $out;
 }
@@ -346,8 +377,8 @@ function gw_publish_problems(array $row, array $channels, int $now): array {
     $ends = (int)$row['ends_at'];
     if ($ends <= $now) { $out[] = 'ends_in_past'; }
     elseif ($ends > $now + GW_MAX_SPAN) { $out[] = 'ends_too_far'; }
-    foreach (gw_decode_list($row['channels_json']) as $id) {
-        $c = $channels[(int)$id] ?? null;
+    foreach (gw_checked_channels($row) as $id) {
+        $c = $channels[$id] ?? null;
         if (!$c || (int)$c['is_admin'] !== 1) { $out[] = 'channel_not_admin'; break; }
     }
     return $out;
@@ -442,6 +473,9 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
             'text' => ['ru' => $c['ru'], 'en' => $c['en']],
             'url'  => $c['url'],
             'btn'  => ['ru' => $c['btn_ru'], 'en' => $c['btn_en']],
+            // Канал, который проверяет бот: по нему окно отмечает условие,
+            // когда участие не пустило (missing). Пусто — не проверяется.
+            'chat' => $c['chat'],
         ];
     }
     $img = (string)$row['image_url'] !== ''
@@ -594,7 +628,7 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
     $st->execute([':g' => $id, ':c' => $chat]);
     if ($st->fetchColumn() !== false) { return [409, ['ok' => false, 'error' => 'tg_used']]; }
 
-    $channels = gw_decode_list($row['channels_json']);
+    $channels = gw_checked_channels($row);
     if ($channels) {
         $chk = gw_check_channels($send, $channels, $chat);
         if ($chk['error']) { return [503, ['ok' => false, 'error' => 'tg_down']]; }
@@ -722,8 +756,9 @@ function gw_publish(PDO $pdo, int $id, int $now, ?callable $send = null, int $bo
     $row = gw_load($pdo, $id);
     if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], null]; }
     if ($row['status'] !== 'draft') { return [409, ['ok' => false, 'error' => 'not draft'], null]; }
-    if ($send !== null) { gw_recheck_rights($pdo, $send, $botId, gw_decode_list($row['channels_json']), $now); }
-    $problems = gw_publish_problems($row, gw_channels($pdo, gw_decode_list($row['channels_json'])), $now);
+    $checked = gw_checked_channels($row);
+    if ($send !== null) { gw_recheck_rights($pdo, $send, $botId, $checked, $now); }
+    $problems = gw_publish_problems($row, gw_channels($pdo, $checked), $now);
     if ($problems) { return [409, ['ok' => false, 'error' => 'incomplete', 'problems' => $problems], null]; }
     if ($send !== null) {
         $failed = gw_ensure_links($pdo, $send, $row, $now);
@@ -781,7 +816,7 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
     if (gw_phase($row, $now) !== 'ended') { return [409, ['ok' => false, 'error' => 'not ended'], []]; }
 
     $prizes   = gw_decode_list($row['prizes_json']);
-    $channels = gw_decode_list($row['channels_json']);
+    $channels = gw_checked_channels($row);
     $banned   = array_flip(site_banned_ids($cfg, $now, $pdo));
 
     $st = $pdo->prepare(
@@ -1165,7 +1200,7 @@ function gw_announce_text(array $row, string $lang): string {
     }
     $title = gw_title($row, $lang);
     $date  = gw_date((int)$row['ends_at'], $lang);
-    $cond  = gw_decode_list($row['channels_json']) ? 'ch' : (gw_conds($row['conds_json'] ?? null) ? 'own' : '');
+    $cond  = gw_checked_channels($row) ? 'ch' : (gw_conds($row['conds_json'] ?? null) ? 'own' : '');
     if ($lang === 'en') {
         return "🎁 New giveaway on maknemy.com\n\n" . $title . "\n\nPrizes:\n" . implode("\n", $lines)
             . "\n\nResults: " . $date . '.'
@@ -1373,7 +1408,7 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
         $st->execute([':u' => $uid]);
         $notes = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            if (!in_array($channel, array_map('intval', gw_decode_list($row['channels_json'])), true)) { continue; }
+            if (!in_array($channel, gw_checked_channels($row), true)) { continue; }
             $del = $pdo->prepare('DELETE FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :u');
             $del->execute([':g' => (int)$row['id'], ':u' => $uid]);
             if ($del->rowCount() < 1) { continue; }
@@ -1452,7 +1487,7 @@ function gw_report(PDO $pdo, array $row): array {
 function gw_joined_text(array $row, string $lang): string {
     $title = gw_title($row, $lang);
     $date  = gw_date((int)$row['ends_at'], $lang);
-    $cond  = gw_decode_list($row['channels_json']) ? true : false;
+    $cond  = gw_checked_channels($row) ? true : false;
     if ($lang === 'en') {
         return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\nResults: " . $date . '.'
             . ($cond ? "\n\nDon't unsubscribe from the channels in the conditions: if you do, your entry is removed automatically." : '')
