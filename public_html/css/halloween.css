@@ -64,6 +64,11 @@ body {
 .stage {
   background-color: transparent;
   background-image: none;
+  box-shadow: none;
+}
+
+.stage::before {
+  display: none;
 }
 
 .petals {
