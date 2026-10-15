@@ -238,8 +238,8 @@ test('автоперевод: пустой EN переводится, неизм
 
 const GW_YT = 'https://youtube.com/@maknemy?sub_confirmation=1';
 
-function gw_cond(string $ru, string $url = GW_YT, string $en = '', string $btn = '', string $btnEn = ''): array {
-    return ['ru' => $ru, 'en' => $en, 'url' => $url, 'btn_ru' => $btn, 'btn_en' => $btnEn];
+function gw_cond(string $ru, string $url = GW_YT, string $en = '', string $btn = '', string $btnEn = '', string $chat = ''): array {
+    return ['ru' => $ru, 'en' => $en, 'url' => $url, 'btn_ru' => $btn, 'btn_en' => $btnEn, 'chat' => $chat];
 }
 
 test('свои условия: текст обязателен, ссылка только http(s)', function () {
@@ -277,7 +277,7 @@ test('свои условия видны в админке и на сайте, �
         gw_admin_item($p, gw_load($p, $id), GW_NOW)['conds'], 'админка');
     $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
     assert_eq([['text' => ['ru' => 'Подписаться на YouTube', 'en' => 'Subscribe on YouTube'], 'url' => GW_YT,
-        'btn' => ['ru' => 'Смотреть', 'en' => 'Watch']]], $list['live'][0]['conds'], 'сайт');
+        'btn' => ['ru' => 'Смотреть', 'en' => 'Watch'], 'chat' => '']], $list['live'][0]['conds'], 'сайт');
     $log = [];
     assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'участие без проверки условия');
     assert_true(strpos(gw_announce_text(gw_load($p, $id), 'ru'), 'Условия — в карточке') !== false, 'рассылка про условия');
@@ -324,6 +324,96 @@ test('свои условия: EN переводится, неизменённо
     [$s, $out] = gw_save($p, gw_draft(['title_en' => 'T', 'body' => ['v' => 1, 'blocks' => []],
         'conds' => [gw_cond('Новое')]]), GW_NOW, $fail);
     assert_eq([200, 1], [$s, $out['translate_failed']], 'переводчик молчит — сохранено, EN пустой');
+});
+
+const GW_STOCK = 'https://t.me/+dtbxvZn9baA1OTVi';
+
+test('своё условие с каналом: бот проверяет подписку, как у отмеченных', function () {
+    $bad = [
+        'канал не числом' => [gw_cond('Сток', GW_STOCK, '', '', '', '@stock')],
+        'канал ноль'      => [gw_cond('Сток', GW_STOCK, '', '', '', '0')],
+    ];
+    foreach ($bad as $why => $conds) {
+        assert_eq('bad cond chat', gw_validate(gw_draft(['conds' => $conds]))['error'], $why);
+    }
+    $six = gw_validate(gw_draft(['channels' => [-1, -2, -3, -4, -5], 'conds' => [gw_cond('Ещё', GW_STOCK, '', '', '', '-6')]]));
+    assert_eq('bad channels', $six['error'], 'проверяемых каналов вместе — не больше пяти');
+    $v = gw_validate(gw_draft(['channels' => [GW_CH_A], 'conds' => [
+        gw_cond('Сток', GW_STOCK, '', '', '', (string)GW_CH_B), gw_cond('Тоже A', GW_STOCK, '', '', '', (string)GW_CH_A)]]));
+    assert_true($v['ok'], 'канал у условия и тот же, что отмечен, — можно');
+
+    $p = gw_db();
+    gw_channel($p, GW_CH_B, 'Сток');
+    gw_user($p, '1', 'ann', 501);
+    $id = gw_live($p, ['conds' => [gw_cond('Подписаться на сток', GW_STOCK, '', '', '', (string)GW_CH_B), gw_cond('YouTube')]]);
+    assert_eq((string)GW_CH_B, gw_admin_item($p, gw_load($p, $id), GW_NOW)['conds'][0]['chat'], 'админка видит канал');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq([(string)GW_CH_B, ''], array_column($list['live'][0]['conds'], 'chat'), 'сайт: по какому каналу отметить условие');
+    assert_eq([], $list['live'][0]['channels'], 'в каналах условия не дублируется');
+    assert_eq([GW_CH_B], gw_checked_channels(gw_load($p, $id)), 'проверяется канал условия');
+
+    $log = [];
+    [$s, $out] = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW);
+    assert_eq([409, 'channels', [(string)GW_CH_B]], [$s, $out['error'], $out['missing']], 'не подписан — не пускает');
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_B => [501]]), '1', $id, GW_NOW)[0], 'подписался — участвует');
+    assert_true(strpos(gw_joined_text(gw_load($p, $id), 'ru'), 'участие снимется автоматически') !== false, 'бот предупреждает об отписке');
+    assert_true(strpos(gw_announce_text(gw_load($p, $id), 'ru'), 'подпишитесь на каналы из условий') !== false, 'рассылка про каналы');
+
+    $notes = gw_member_update($p, gw_member(GW_CH_B, 501, 'left'), GW_NOW + 10);
+    assert_eq([501, 'Сток'], [$notes[0]['chat_id'] ?? null, $notes[0]['channel'] ?? null], 'отписался — участие снято, бот пишет');
+    assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn());
+
+    gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_B => [501]]), '1', $id, GW_NOW + 20);
+    [$s, $out, $winners] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
+    assert_eq([200, 0, 1], [$s, $out['winners'], $out['skipped']], 'к итогам отписался — приз не получает');
+});
+
+test('своё условие с каналом: публикация проверяет права бота в нём', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_B, 'Сток', false);
+    [, $out] = gw_save($p, gw_draft(['conds' => [gw_cond('Сток', GW_STOCK, '', '', '', (string)GW_CH_B)]]), GW_NOW);
+    $log = [];
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW, gw_tg($log));
+    assert_eq([409, ['channel_not_admin']], [$s, $res['problems']], 'без прав нельзя');
+    [, $out] = gw_save($p, gw_draft(['conds' => [gw_cond('Сток', GW_STOCK, '', '', '', '-1009999999999')]]), GW_NOW);
+    assert_eq(['channel_not_admin'], gw_publish($p, $out['id'], GW_NOW)[1]['problems'], 'неизвестный боту канал — тоже');
+
+    $p->exec('UPDATE tg_channels SET is_admin = 1');
+    [, $out] = gw_save($p, gw_draft(['conds' => [gw_cond('Сток', GW_STOCK, '', '', '', (string)GW_CH_B)]]), GW_NOW);
+    $log = [];
+    [$s] = gw_publish($p, $out['id'], GW_NOW, gw_tg($log));
+    assert_eq(200, $s, 'с правами — публикуется');
+    assert_eq([], gw_sent($log, 'createChatInviteLink'), 'своя ссылка: приглашение розыгрыша не заводится');
+});
+
+test('идущий розыгрыш: убранное условие бот больше не требует', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_channel($p, GW_CH_B, 'Сток');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    $conds = [gw_cond('Сток', GW_STOCK, '', '', '', (string)GW_CH_B), gw_cond('YouTube')];
+    $id = gw_live($p, ['channels' => [GW_CH_A], 'conds' => $conds]);
+    $log = [];
+    $subsB = [GW_CH_B => [501, 502]];
+    assert_eq([(string)GW_CH_A], gw_enter($p, gw_cfg(), gw_tg($log, $subsB), '1', $id, GW_NOW)[1]['missing'], 'пока канал A в условиях — требует');
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [502]] + $subsB), '2', $id, GW_NOW)[0], 'bob подписан на оба');
+
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'channels' => [], 'conds' => $conds]), GW_NOW);
+    assert_eq(200, $s, 'идущий розыгрыш правится');
+    assert_eq('live', gw_load($p, $id)['status'], 'и остаётся идущим');
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log, $subsB), '1', $id, GW_NOW)[0], 'канал A убран — не требует');
+    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 502, 'left'), GW_NOW + 5), 'отписка от убранного канала участие не снимает');
+
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'channels' => [], 'conds' => [gw_cond('YouTube')]]), GW_NOW + 10);
+    assert_eq(200, $s);
+    assert_eq([], gw_checked_channels(gw_load($p, $id)), 'своё условие с каналом убрано — проверять нечего');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW + 10);
+    assert_eq([[], 1], [$list['live'][0]['channels'], count($list['live'][0]['conds'])], 'карточка показывает только оставшиеся');
+    $log = [];
+    [$s, $out] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
+    assert_eq([200, 2], [$s, $out['winners']], 'на итогах убранные условия не проверяются');
+    assert_eq([], gw_sent($log, 'getChatMember'), 'Telegram не спрашивали');
 });
 
 test('условие, сохранённое до надписей на кнопке, читается с пустой надписью', function () {
@@ -1024,6 +1114,50 @@ test('после итогов отписка участие не трогает'
     gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), $id, GW_NOW + 86400);
     assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 90000));
     assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'победитель остался в списке');
+});
+
+test('ссылка своего условия: обрезанную Telegram ссылку узнаём по началу', function () {
+    $cases = [
+        'целиком'              => [GW_STOCK, true],
+        'обрезана'             => ['https://t.me/+dtbxvZn9…', true],
+        'обрезана тремя точками' => ['https://t.me/+dtbxvZn9...', true],
+        'другая ссылка'        => ['https://t.me/+zzzzzzzz…', false],
+        'слишком коротко'      => ['https://t.me/+dtb…', false],
+        'другой хвост целиком' => ['https://t.me/+dtbxvZn9baA1OTVj', false],
+        'регистр хеша важен'   => ['https://t.me/+DTBXVZN9…', false],
+    ];
+    foreach ($cases as $why => [$seen, $want]) {
+        assert_eq($want, gw_invite_match($seen, GW_STOCK), $why);
+    }
+    assert_true(gw_invite_match('https://t.me/+dtbxvZn9…', 'http://telegram.me/joinchat/dtbxvZn9baA1OTVi/'), 'старая запись joinchat — то же приглашение');
+    assert_eq(false, gw_invite_match('https://t.me/maknemy…', 'https://t.me/maknemy'), 'публичный адрес — не приглашение');
+});
+
+test('вступил по ссылке своего условия — в отчёте рекламодателю', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_B, 'Сток');
+    gw_channel($p, GW_CH_A, 'Публичный', true, 'pub_a');
+    $id = gw_live($p, ['conds' => [gw_cond('Сток', GW_STOCK, '', '', '', (string)GW_CH_B),
+        gw_cond('Публичный', 'https://t.me/pub_a', '', '', '', (string)GW_CH_A)]]);
+    $other = gw_live($p, ['title_ru' => 'Без условий']);
+
+    gw_member_update($p, gw_member(GW_CH_B, 901, 'member', 'https://t.me/+dtbxvZn9…', 'ann'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 902, 'member', 'https://t.me/+someoneelse…'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 903, 'member'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_A, 904, 'member', 'https://t.me/+dtbxvZn9…'), GW_NOW);
+    gw_member_update($p, gw_member(GW_CH_B, 905, 'member', 'https://t.me/+dtbxvZn9…'), GW_NOW + 86400);
+    $subs = $p->query('SELECT giveaway_id, tg_user_id FROM giveaway_subs')->fetchAll(PDO::FETCH_NUM);
+    assert_eq([[$id, 901]], array_map(function ($r) { return array_map('intval', $r); }, $subs),
+        'только по ссылке условия, в канал условия, в этот розыгрыш и пока он идёт');
+
+    gw_member_update($p, gw_member(GW_CH_B, 901, 'left'), GW_NOW + 10);
+    $rep = gw_report($p, gw_load($p, $id));
+    assert_eq(['Сток', 'Публичный'], array_column($rep['channels'], 'title'), 'каналы своих условий в отчёте');
+    $ch = $rep['channels'][0];
+    assert_eq([GW_STOCK, true, true, 1, 0, '@ann'], [$ch['link'], $ch['own'], $ch['counts'], $ch['joined'], $ch['stayed'], $ch['list'][0]['tg_name']],
+        'ссылка условия, пришёл 1, ушёл');
+    assert_eq(['https://t.me/pub_a', false], [$rep['channels'][1]['link'], $rep['channels'][1]['counts']], 'публичный адрес не считается — отчёт об этом говорит');
+    assert_eq([], gw_report($p, gw_load($p, $other))['channels'], 'у розыгрыша без условий каналов нет');
 });
 
 test('удаление розыгрыша чистит ссылки и подписчиков', function () {
