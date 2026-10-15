@@ -500,6 +500,34 @@
   color: var(--gw-mute);
   font-size: 14px;
 }
+.gw-tally {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.gw-left {
+  margin-left: auto;
+  color: var(--gw-cream);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.gw-meter {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(140, 190, 255, .12);
+  box-shadow: inset 0 0 0 1px var(--gw-line);
+}
+.gw-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gw-amber) 0%, var(--gw-gold) 100%);
+  box-shadow: 0 0 10px rgba(255, 196, 61, .45);
+}
+.gw-tally.is-full .gw-left { color: var(--gw-gold); }
+.gw-card:not([data-phase="live"]) .gw-meter-fill { box-shadow: none; opacity: .7; }
 .gw-ico {
   flex: none;
   width: 18px;

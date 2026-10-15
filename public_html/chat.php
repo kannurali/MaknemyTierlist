@@ -100,7 +100,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=4" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=4" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -387,7 +387,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=5" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=6" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

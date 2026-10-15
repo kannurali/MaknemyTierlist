@@ -20,7 +20,8 @@ require __DIR__ . '/../public_html/api/session.php';
 //  - «Telegram не ответил» никого не лишает приза: розыгрыш просто не пишется;
 //  - о старте бот пишет всем подключившим бота, даже выключившим рассылки;
 //  - черновик снаружи не виден;
-//  - тестовый виден только по ?test=1, и о его старте бот не пишет никому.
+//  - тестовый виден только по ?test=1, и о его старте бот не пишет никому;
+//  - при лимите участников последний вступивший закрывает приём, лишних нет.
 
 const GW_NOW   = 1790000000;
 const GW_TOKEN = '123456789:AAHfakeTokenForTestsOnly_abcdefghij';
@@ -40,14 +41,14 @@ function gw_db(): PDO {
         seen_at INTEGER NOT NULL DEFAULT 0, notified_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (thread_id, user_id))');
     $pdo->exec('CREATE TABLE tg_prefs (
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
-    // Зеркалит docs/migrations/2026-10-14-giveaways.sql, 2026-10-15-giveaway-conds.sql
-    // и 2026-10-15-giveaway-test.sql.
+    // Зеркалит docs/migrations/2026-10-14-giveaways.sql, 2026-10-15-giveaway-conds.sql,
+    // 2026-10-15-giveaway-test.sql и 2026-10-15-giveaway-max-entries.sql.
     $pdo->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
         title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
         body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
-        ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
         published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
     $pdo->exec("CREATE TABLE giveaway_entries (
         giveaway_id INTEGER NOT NULL, user_id INTEGER NOT NULL, chat_id INTEGER NOT NULL,
@@ -763,6 +764,138 @@ test('session.php говорит, где я участвую', function () {
     assert_eq([$id], $s['giveaways']);
     $anon = handle_session(function () use ($p) { return $p; }, [], gw_cfg(), GW_NOW);
     assert_eq([], $anon['giveaways'], 'гостю пусто');
+});
+
+// --------------------------------------------------------------------------
+//  Лимит участников
+// --------------------------------------------------------------------------
+
+test('лимит: проверка поля', function () {
+    foreach ([-1, 1.5, '10', GW_ENTRIES_MAX + 1, true] as $bad) {
+        assert_eq('bad max_entries', gw_validate(gw_draft(['max_entries' => $bad]))['error'], 'не пускаем: ' . json_encode($bad));
+    }
+    assert_eq(0, gw_validate(gw_draft())['row']['max_entries'], 'нет поля — без лимита');
+    assert_eq(0, gw_validate(gw_draft(['max_entries' => null]))['row']['max_entries'], 'null — без лимита');
+    assert_eq(500, gw_validate(gw_draft(['max_entries' => 500]))['row']['max_entries']);
+});
+
+test('лимит: последний участник закрывает приём, следующий получает full', function () {
+    $p = gw_db();
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502, 'en');
+    gw_user($p, '3', 'cat', 503);
+    $id = gw_live($p, ['max_entries' => 3, 'prizes' => [['name' => 'Magnet', 'count' => 1]]]);
+    $log = [];
+
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW);
+    assert_eq([200, false], [$r[0], $r[2]['last']], 'первый — не последний');
+    assert_eq('live', gw_phase(gw_load($p, $id), GW_NOW), 'идёт');
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '2', $id, GW_NOW + 1);
+    assert_eq([200, false], [$r[0], $r[2]['last']]);
+
+    $p->exec('UPDATE giveaways SET max_entries = 2');
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '3', $id, GW_NOW + 2);
+    assert_eq([409, 'full'], [$r[0], $r[1]['error']], 'лимит опустили напрямую — места нет');
+    assert_eq(GW_NOW + 2, (int)gw_load($p, $id)['ends_at'], 'и приём закрылся');
+    $p->exec('UPDATE giveaways SET max_entries = 3, ends_at = ' . (GW_NOW + 86400));
+
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '3', $id, GW_NOW + 5);
+    assert_eq([200, true], [$r[0], $r[2]['last']], 'третий занял последнее место');
+    assert_eq(['ok' => true, 'joined' => true, 'last' => true], $r[1], 'окно узнаёт, что приём закрыт');
+    $row = gw_load($p, $id);
+    assert_eq([GW_NOW + 5, 'ended'], [(int)$row['ends_at'], gw_phase($row, GW_NOW + 5)], 'приём закрыт сразу');
+    assert_eq(GW_NOW + 5, (int)$r[2]['row']['ends_at'], 'боту — строка с новым концом');
+
+    gw_user($p, '4', 'dan', 504);
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '4', $id, GW_NOW + 6);
+    assert_eq([409, 'full'], [$r[0], $r[1]['error']], 'четвёртому — места нет');
+    assert_eq(3, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'лишних нет');
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW + 6);
+    assert_eq([409, 'full'], [$r[0], $r[1]['error']], 'приём закрыт для всех');
+
+    [$s, $out] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 7);
+    assert_eq([200, 1, 3], [$s, $out['winners'], $out['entries']], 'разыгрывается сразу, не дожидаясь даты');
+});
+
+test('лимит: бот пишет о нём в рассылке и в «вы участвуете»', function () {
+    $p = gw_db();
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502, 'en');
+    $id = gw_live($p, ['max_entries' => 2, 'prizes' => [['name' => 'Magnet', 'count' => 1]]]);
+    $row = gw_load($p, $id);
+    assert_true(strpos(gw_announce_text($row, 'ru'), 'или раньше, когда участников станет 2') !== false, 'рассылка RU');
+    assert_true(strpos(gw_announce_text($row, 'en'), 'once the entry count reaches 2') !== false, 'рассылка EN');
+    assert_true(strpos(gw_announce_text(gw_load($p, gw_live($p)), 'ru'), 'или раньше') === false, 'без лимита — как раньше');
+
+    $log = [];
+    $first = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[2];
+    $last = gw_enter($p, gw_cfg(), gw_tg($log), '2', $id, GW_NOW + 1)[2];
+    $log = [];
+    gw_after_join($p, gw_cfg(), $first, gw_tg($log));
+    gw_after_join($p, gw_cfg(), $last, gw_tg($log));
+    $msgs = gw_sent($log);
+    assert_true(strpos($msgs[0][1]['text'], 'когда участников станет 2') !== false, 'первому — дата и лимит');
+    assert_true(strpos($msgs[1][1]['text'], 'You took the last spot: 2 entries') !== false, 'последнему — приём закрыт');
+    assert_true(strpos($msgs[1][1]['text'], 'Results:') === false, 'и без прошедшей даты');
+});
+
+test('лимит: опустили в админке ниже числа участников — приём закрыт', function () {
+    $p = gw_db();
+    $id = gw_live($p, ['max_entries' => 10]);
+    gw_crowd($p, $id);
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'max_entries' => 8]), GW_NOW);
+    assert_eq(200, $s);
+    assert_eq('live', gw_phase(gw_load($p, $id), GW_NOW), 'выше числа участников — идёт');
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'max_entries' => 5]), GW_NOW + 1);
+    assert_eq(200, $s);
+    $row = gw_load($p, $id);
+    assert_eq([5, 'ended'], [gw_max($row), gw_phase($row, GW_NOW + 1)], 'набран — закрыт');
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'max_entries' => 0, 'ends_at' => GW_NOW + 86400]), GW_NOW + 2);
+    assert_eq('live', gw_phase(gw_load($p, $id), GW_NOW + 2), 'лимит сняли и продлили — снова идёт');
+});
+
+test('лимит: меньше числа призов — публиковать нельзя', function () {
+    $p = gw_db();
+    [, $out] = gw_save($p, gw_draft(['max_entries' => 2]), GW_NOW);
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW);
+    assert_eq([409, ['max_below_prizes']], [$s, $res['problems']], 'Magnet ×2 и Box — три места на двоих');
+    gw_save($p, gw_draft(['id' => $out['id'], 'max_entries' => 3]), GW_NOW);
+    assert_eq(200, gw_publish($p, $out['id'], GW_NOW)[0], 'ровно по числу призов — можно');
+});
+
+test('лимит: виден на сайте и в админке', function () {
+    $p = gw_db();
+    $id = gw_live($p, ['max_entries' => 50]);
+    $free = gw_live($p);
+    gw_crowd($p, $id);
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq([$free => 0, $id => 50], array_column($list['live'], 'max_entries', 'id'), 'карточке');
+    assert_eq(5, array_column($list['live'], 'entries', 'id')[$id]);
+    $log = [];
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg($log), ['action' => 'list'], GW_NOW);
+    assert_eq([$free => 0, $id => 50], array_column($out['giveaways'], 'max', 'id'), 'списку админки');
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg($log), ['action' => 'get', 'id' => $id], GW_NOW);
+    assert_eq(50, $out['giveaway']['max_entries'], 'редактору');
+});
+
+test('до миграции max_entries: без лимита всё как раньше, с лимитом — просит миграцию', function () {
+    $p = gw_db();
+    $p->exec('DROP TABLE giveaways');
+    $p->exec("CREATE TABLE giveaways (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
+        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
+        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
+        ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
+    [$s, $out] = gw_save($p, gw_draft(['max_entries' => 10]), GW_NOW);
+    assert_eq([409, 'max_migrate'], [$s, $out['error']]);
+    $id = gw_live($p);
+    gw_user($p, '1', 'ann', 501);
+    $log = [];
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'участие без замка');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq([0, 1], [$list['live'][0]['max_entries'], $list['live'][0]['entries']], 'сайт показывает');
 });
 
 // --------------------------------------------------------------------------
