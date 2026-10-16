@@ -1,6 +1,7 @@
 
 .hm {
   --u: min(1px, calc(100vw / 1443));
+  --hm-bleed: max(0px, (100vw - 1443 * var(--u)) / 2);
 
   --hm-accent-a: #61b5e9;
   --hm-accent-b: #2d4aed;
@@ -36,7 +37,9 @@
 .hm-lead {
   position: relative;
   width: 100%;
+  max-width: calc(1443 * var(--u));
   height: calc(1237 * var(--u));
+  margin: 0 auto;
 }
 
 .hm-lead > * {
@@ -317,9 +320,9 @@
 }
 
 .hm-ticker {
-  left: calc(-235 * var(--u));
+  left: calc(-235 * var(--u) - var(--hm-bleed));
   top: calc(579 * var(--u));
-  width: calc(1912 * var(--u));
+  width: calc(1912 * var(--u) + 2 * var(--hm-bleed));
   height: calc(98 * var(--u));
   overflow: hidden;
   background: linear-gradient(100deg, var(--hm-accent-a), var(--hm-accent-b));
@@ -367,9 +370,9 @@
 }
 
 .hm-cards {
-  left: 0;
+  left: calc(-1 * var(--hm-bleed));
   top: calc(779 * var(--u));
-  width: 100%;
+  width: calc(100% + 2 * var(--hm-bleed));
   height: calc(405 * var(--u));
 
   touch-action: pan-y;
@@ -473,6 +476,8 @@
 
 .hm-faq {
   position: relative;
+  max-width: calc(1443 * var(--u));
+  margin: 0 auto;
   padding: calc(86 * var(--u)) calc(42 * var(--u)) calc(60 * var(--u));
 }
 
@@ -660,11 +665,13 @@
 .hm-sakura-r {
   left: calc(1231 * var(--u));
   top: calc(28 * var(--u));
+  margin-left: var(--hm-bleed);
 }
 
 .hm-sakura-l {
   left: calc(167.51 * var(--u));
   top: calc(252 * var(--u));
+  margin-left: calc(-1 * var(--hm-bleed));
   rotate: 86.69deg;
 }
 
