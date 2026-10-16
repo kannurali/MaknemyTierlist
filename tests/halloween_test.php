@@ -152,7 +152,7 @@ test('в тему страница отдаёт копии стилей и де�
     $decor = halloween_decor('trading');
     assert_eq(3, substr_count($decor, '<img class="hw-bat" src="assets/halloween/bat.webp"'), 'три мыши на /trading');
     assert_true(strpos($decor, '--r:-53.5deg') !== false, 'поворот из макета');
-    assert_eq('', halloween_decor('stock'), 'у страницы без декора — пусто');
+    assert_eq('', halloween_decor('privacy'), 'у страницы без декора — пусто');
     foreach (HALLOWEEN_DECOR as $page => $items) {
         foreach ($items as $d) {
             assert_true($d[0] !== 'web', "$page: паутину убрали по просьбе владельца");

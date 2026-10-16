@@ -49,7 +49,7 @@ page_lscache();
 <script src="js/topbar.js?v=27" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=4" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=4" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=5" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=5" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -131,11 +131,20 @@ page_lscache();
   </header>
 
   <main class="gw-page">
-    <div class="gw-wrap">
-      <header class="gw-head">
+    <?= halloween_decor('giveaways', 'hw-decor hw-decor--column') ?>
+    <header class="gw-head">
+      <div class="gw-head-in">
+        <img class="gw-head-branch<?= HALLOWEEN ? ' is-flip' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
+        <span class="gw-ghost gw-ghost-a" aria-hidden="true" data-i18n="gw.title">Розыгрыши</span>
+        <span class="gw-ghost gw-ghost-b" aria-hidden="true" data-i18n="gw.title">Розыгрыши</span>
         <h1 class="gw-page-title" data-i18n="gw.title">Розыгрыши</h1>
-        <p class="gw-lead" data-i18n="gw.lead">Призы Blox Fruits от Maknemy. Войдите через Roblox, подключите бота в Telegram и участвуйте.</p>
-      </header>
+        <p class="gw-kicker" data-i18n="gw.kicker">Призы Blox Fruits от Maknemy</p>
+        <p class="gw-lead" data-i18n="gw.lead">Войдите через Roblox, подключите бота в Telegram и участвуйте.</p>
+        <img class="gw-head-gift" src="<?= hw_img('assets/design/home/card-giveaways.webp') ?>" width="482" height="482" alt="" aria-hidden="true" />
+      </div>
+    </header>
+
+    <div class="gw-wrap">
 
       <p class="gw-state" id="gwState" role="status" aria-live="polite" data-i18n="gw.loading">Загружаем розыгрыши…</p>
       <div class="gw-live" id="gwLive"></div>
@@ -164,9 +173,9 @@ page_lscache();
     </p>
   </footer>
 
-  <script src="js/i18n.js?v=75" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=77" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=7" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=8" fetchpriority="high"></script>
   <script src="js/giveaways-page.js?v=2" fetchpriority="high"></script>
 </body>
 </html>

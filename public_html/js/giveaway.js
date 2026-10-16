@@ -245,6 +245,15 @@
     ], "gw-gift" + (cls ? " " + cls : ""));
   }
 
+  function clockIcon() {
+    return svg("0 0 24 24", [
+      ["circle", { cx: "12", cy: "13.5", r: "7.5" }],
+      ["path", { d: "M12 9.5v4l2.6 1.6" }],
+      ["path", { d: "M9.5 2.8h5" }],
+      ["path", { d: "M18.4 6.2l1.5-1.5" }]
+    ], "gw-clock-ico");
+  }
+
   function peopleIcon() {
     return svg("0 0 24 24", [
       ["circle", { cx: "9", cy: "8", r: "3.6" }],
@@ -299,12 +308,27 @@
     return p && p.count > 0 ? p.count : 1;
   }
 
+  function themed() {
+    return !!document.querySelector("link[rel='stylesheet'][href*='css/hw/']");
+  }
+
+  function giftArt() {
+    var img = el("img", "gw-gift-art");
+    img.src = themed() ? "/assets/halloween/card-giveaways.webp" : "/assets/design/home/card-giveaways.webp";
+    img.alt = "";
+    img.decoding = "async";
+    img.addEventListener("error", function () {
+      if (img.parentNode) { img.parentNode.replaceChild(giftIcon(), img); }
+    });
+    return img;
+  }
+
   function prizePic(p, cls) {
     var box = el("span", cls);
     var gift = function () {
       box.textContent = "";
       box.classList.add("is-gift");
-      box.appendChild(giftIcon());
+      box.appendChild(giftArt());
     };
     if (p && p.icon) {
       var img = el("img");
@@ -341,7 +365,11 @@
       var main = icons.length === 3 ? i === 1 : icons.length === 1;
       stage.appendChild(prizePic(p, "gw-stage-pic" + (main ? " is-main" : "")));
     });
-    if (!icons.length) { stage.appendChild(giftIcon("gw-stage-gift")); }
+    if (!icons.length) {
+      var lone = el("span", "gw-stage-pic is-main is-gift");
+      lone.appendChild(giftArt());
+      stage.appendChild(lone);
+    }
     media.appendChild(stage);
     return media;
   }
@@ -526,6 +554,7 @@
     if (live) {
       var clk = el("div", "gw-clock");
       clk.setAttribute("data-gw-ends", String(g.ends_at));
+      clk.appendChild(clockIcon());
       clk.appendChild(el("span", "gw-clock-label", t("gw.endsIn")));
       clk.appendChild(clock(el("span", "gw-clock-time"), g.ends_at - Date.now() / 1000));
       head.appendChild(clk);
@@ -535,19 +564,20 @@
     }
     aside.appendChild(head);
 
-    main.appendChild(renderBody(g));
-
+    var page = opts.mode === "page";
     var drawn = g.phase === "drawn" && g.winners && g.winners.length;
     if (drawn) {
       main.appendChild(renderWinners(g));
+      main.appendChild(renderBody(g));
     } else {
       if (g.prizes && g.prizes.length) { main.appendChild(renderPrizes(g)); }
+      main.appendChild(renderBody(g));
       if (live) { main.appendChild(renderConditions(g, ui)); }
       if (g.phase === "drawn") { main.appendChild(el("p", "gw-note", t("gw.noWinners"))); }
       if (g.phase === "ended") { main.appendChild(el("p", "gw-note", t("gw.waitDraw"))); }
     }
 
-    main.appendChild(renderTally(g));
+    (page && live ? aside : main).appendChild(renderTally(g));
     content.appendChild(main);
     root_.appendChild(content);
 
@@ -567,7 +597,7 @@
         actions.appendChild(all);
       }
       foot.appendChild(actions);
-      content.appendChild(foot);
+      (page ? aside : content).appendChild(foot);
       if (opts.preview) { ui.cta.disabled = true; }
       else { wire(root_, g, ui, opts); }
     }
