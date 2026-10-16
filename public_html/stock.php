@@ -10,8 +10,10 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // держать в кеше LiteSpeed, как трейдинг: кто вошёл, решает скрипт.
 //
 // Откуда сток и почему подписан ботом Fool's eyes — см. api/lib/stock.php.
-// Макета в Figma у страницы нет: она собрана из тех же элементов, что
-// трейдинг, — градиент шапки, стеклянные плашки, Bootshaus в заголовках.
+// Макета в Figma у страницы нет: она собрана из элементов главной (надпись
+// с призрачными дублями, 3D-рендеры карточек, ветки по краям), калькулятора
+// (почти чёрные панели, таймер в рамке с значком, как «Проверим?») и новостей
+// (заголовок дилера на флажке).
 header('Cache-Control: no-cache, must-revalidate');
 page_lscache();
 ?>
@@ -87,7 +89,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=1" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/stock.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/stock.css?v=3" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/stock.css?v=4" /><?php else: ?><link rel="stylesheet" href="css/stock.css?v=4" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
@@ -175,6 +177,9 @@ page_lscache();
   </header>
 
   <main class="sk-page">
+   <?= halloween_decor('stock', 'hw-decor hw-decor--column') ?>
+   <img class="sk-branch sk-branch-l" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+   <img class="sk-branch sk-branch-r<?= HALLOWEEN ? ' is-flip' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
    <div class="sk-frame">
     <div class="sk-rail-slot" aria-hidden="true">
       <aside class="sk-rail" id="skRail" data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
@@ -183,8 +188,20 @@ page_lscache();
     <div class="sk-wrap">
 
       <header class="sk-head">
-        <h1 class="sk-title" data-i18n="stock.title">Сток фруктов</h1>
-        <p class="sk-lead" data-i18n="stock.lead">Что прямо сейчас продают дилеры фруктов в Blox Fruits. Страница обновляется сама.</p>
+        <div class="sk-head-text">
+          <span class="sk-ghost sk-ghost-a" aria-hidden="true" data-i18n="stock.title">Сток фруктов</span>
+          <h1 class="sk-title" data-i18n="stock.title">Сток фруктов</h1>
+          <span class="sk-ghost sk-ghost-b" aria-hidden="true" data-i18n="stock.title">Сток фруктов</span>
+          <p class="sk-lead" data-i18n="stock.lead">Что прямо сейчас продают дилеры фруктов в Blox Fruits. Страница обновляется сама.</p>
+          <a class="sk-to-watch" id="skToWatch" href="#watch" hidden>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10.2a6 6 0 0 1 12 0v3.3c0 1 .4 1.9 1.1 2.6l.4.4H4.5l.4-.4c.7-.7 1.1-1.6 1.1-2.6v-3.3ZM9.6 19.4a2.6 2.6 0 0 0 4.8 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="stock.watchTitle">Уведомления в Telegram</span>
+          </a>
+        </div>
+        <div class="sk-head-art" aria-hidden="true">
+          <img class="sk-art-fruit" src="<?= hw_img('assets/design/home/card-fruits.webp') ?>" alt="" loading="lazy" decoding="async" />
+          <img class="sk-art-coin" src="<?= hw_img('assets/design/home/card-prices.webp') ?>" alt="" />
+        </div>
       </header>
 
       <p class="sk-state" id="skState" role="status" aria-live="polite" data-i18n="stock.loading">Загружаем сток…</p>
@@ -196,10 +213,11 @@ page_lscache();
             <p class="sk-dealer-note" data-i18n="stock.normalNote">Дилер в любом море, смена каждые 4 часа</p>
           </div>
           <div class="sk-clock">
+            <span class="sk-clock-badge" aria-hidden="true"><svg viewBox="0 0 19 19" fill="none"><path d="M2.4 7.6V16.1C2.4 17.15 3.25 18.05 4.3 18.05H14.7C15.75 18.05 16.6 17.15 16.6 16.1V7.6M7.15 18.05V13.3C7.15 12.25 8 11.4 9.05 11.4H9.95C11 11.4 11.85 12.25 11.85 13.3V18.05M0.95 5.7L2.6 1.9C2.85 1.3 3.45 0.95 4.1 0.95H14.9C15.55 0.95 16.15 1.3 16.4 1.9L18.05 5.7C18.05 7 16.95 8.1 15.65 8.1C14.3 8.1 13.25 7 13.25 5.7C13.25 7 12.15 8.1 10.85 8.1H8.15C6.85 8.1 5.75 7 5.75 5.7C5.75 7 4.7 8.1 3.35 8.1C2.05 8.1 0.95 7 0.95 5.7Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <span class="sk-clock-label" data-i18n="stock.changeIn">Смена через</span>
             <span class="sk-clock-time" data-left>—</span>
+            <span class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></span>
           </div>
-          <div class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></div>
           <ul class="sk-shelf" data-list aria-labelledby="skNormalTitle"></ul>
         </section>
 
@@ -209,17 +227,18 @@ page_lscache();
             <p class="sk-dealer-note" data-i18n="stock.mirageNote">Дилер на острове Mirage, смена каждые 2 часа</p>
           </div>
           <div class="sk-clock">
+            <span class="sk-clock-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M20 14.6A8.4 8.4 0 0 1 9.4 4a8.4 8.4 0 1 0 10.6 10.6Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M16.2 3.2v3.2M14.6 4.8h3.2M20 8.6v2M19 9.6h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
             <span class="sk-clock-label" data-i18n="stock.changeIn">Смена через</span>
             <span class="sk-clock-time" data-left>—</span>
+            <span class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></span>
           </div>
-          <div class="sk-track" aria-hidden="true"><span class="sk-track-fill" data-fill></span></div>
           <ul class="sk-shelf" data-list aria-labelledby="skMirageTitle"></ul>
         </section>
       </div>
 
       <p class="sk-meta">
         <span class="sk-seen" id="skSeen"></span>
-        <span class="sk-source"><span data-i18n="stock.source">Данные: бот</span> <b>Fool's eyes</b></span>
+        <span class="sk-source"><span data-i18n="stock.source">Данные: бот</span> <img class="sk-source-mark" src="assets/design/logo-fool.png" alt="" aria-hidden="true" /><b>Fool's eyes</b></span>
       </p>
 
       <div class="sk-mid" id="skMid"></div>
@@ -287,7 +306,7 @@ page_lscache();
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
-  <script src="js/stock-page.js?v=3" fetchpriority="high"></script>
+  <script src="js/stock-page.js?v=4" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=7" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>

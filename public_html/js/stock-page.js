@@ -18,6 +18,7 @@
   var SOON_MS = 20000;
   var WAKE_LAG_MS = 15000;
   var STALE_AFTER = 900;
+  var SOON_SEC = 600;
   var LINK_POLL_MS = 4000;
   var LINK_POLL_FOR = 15 * 60 * 1000;
 
@@ -150,7 +151,6 @@
         li.appendChild(cost);
         if (watch.keys[f.key]) {
           var star = el("span", "sk-star");
-          star.textContent = "★";
           star.setAttribute("role", "img");
           star.setAttribute("aria-label", t("stock.watched"));
           star.title = t("stock.watched");
@@ -212,6 +212,7 @@
       if (s && s.ends) done = changing ? 1 : Math.min(1, Math.max(0, 1 - (s.ends - n) / period));
       fill.style.width = (done * 100).toFixed(2) + "%";
       card.classList.toggle("is-changing", changing);
+      card.classList.toggle("is-soon", !!(s && s.ends) && !changing && s.ends - n <= SOON_SEC);
       left.setAttribute("aria-label", t("stock.changeIn") + " " + left.textContent);
     });
 
@@ -293,6 +294,8 @@
     var box = $("watch");
     if (!box || !watch.shown) return;
     box.hidden = false;
+    var jump = $("skToWatch");
+    if (jump) jump.hidden = false;
 
     var msg = $("skWatchMsg");
     var go = $("skWatchGo");
