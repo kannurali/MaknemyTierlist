@@ -202,7 +202,7 @@
     for (var i = 0; i < on.length; i++) on[i].classList.remove("is-pressed");
   });
 
-  var TAP_SEL = ".mk-top-brand, .mk-tg, .mk-chat, .mk-avatar, .tc-slots, .tc-slot.is-empty, .tc-pill-l, .tc-pill-r, " +
+  var TAP_SEL = ".mk-top-brand, .mk-promote, .mk-tg, .mk-chat, .mk-avatar, .tc-slots, .tc-slot.is-empty, .tc-pill-l, .tc-pill-r, " +
     ".tc-cat-card, .nw-card > h2, .nw-meta, .nw-like, .nw-copy, .tr-tool, .tr-rep-up, .tr-rep-down, .pf-react-item, " +
     ".hm-btn, a.hm-card";
   var TAP_DELAY = 60;
