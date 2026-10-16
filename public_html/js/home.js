@@ -76,20 +76,26 @@
   var originals = Array.prototype.slice.call(row.children);
   if (!originals.length) return;
 
-  originals.forEach(function (li) {
-    var clone = li.cloneNode(true);
-    clone.setAttribute('aria-hidden', 'true');
-    clone.querySelectorAll('a, button, [tabindex]').forEach(function (el) {
-      el.setAttribute('tabindex', '-1');
+  function cloneSet() {
+    originals.forEach(function (li) {
+      var clone = li.cloneNode(true);
+      clone.setAttribute('aria-hidden', 'true');
+      clone.querySelectorAll('a, button, [tabindex]').forEach(function (el) {
+        el.setAttribute('tabindex', '-1');
+      });
+      row.appendChild(clone);
     });
-    row.appendChild(clone);
-  });
+  }
+  cloneSet();
 
   var setW = 0;
   function measure() {
     var first = row.children[0];
     var clone = row.children[originals.length];
     setW = clone ? clone.offsetLeft - first.offsetLeft : 0;
+    if (setW <= 0) return;
+    var sets = Math.max(2, Math.ceil((box.clientWidth - row.offsetLeft) / setW) + 1);
+    while (row.children.length < sets * originals.length) cloneSet();
   }
 
   var SPEED = 32;
@@ -211,6 +217,47 @@
   measure();
   paint();
   requestAnimationFrame(frame);
+})();
+
+(function () {
+  'use strict';
+
+  var box = document.querySelector('.hm-ticker');
+  var track = box && box.querySelector('.hm-ticker-track');
+  var lists = track ? Array.prototype.slice.call(track.querySelectorAll('.hm-ticker-list')) : [];
+  if (!lists.length) return;
+
+  var items = Array.prototype.slice.call(lists[0].children);
+  if (!items.length) return;
+
+  var duration = parseFloat(getComputedStyle(track).animationDuration) || 8;
+  var reps = 1;
+
+  function fit() {
+    var one = lists[0].offsetWidth / reps;
+    if (!one) return;
+    var need = Math.max(1, Math.ceil(box.clientWidth / (2 * one)));
+    if (need === reps) return;
+    lists.forEach(function (ul) {
+      while (ul.children.length > need * items.length) ul.removeChild(ul.lastElementChild);
+      while (ul.children.length < need * items.length) {
+        var li = items[ul.children.length % items.length].cloneNode(true);
+        li.setAttribute('aria-hidden', 'true');
+        ul.appendChild(li);
+      }
+    });
+    reps = need;
+    track.style.animationDuration = duration * reps + 's';
+  }
+
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () { requestAnimationFrame(fit); });
+    ro.observe(box);
+    ro.observe(lists[0]);
+  } else {
+    window.addEventListener('resize', fit);
+  }
+  fit();
 })();
 
 (function () {

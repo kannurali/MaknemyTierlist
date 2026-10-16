@@ -96,7 +96,7 @@ page_lscache();
 <script src="js/topbar.js?v=28" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=30" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=31" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -402,6 +402,6 @@ page_lscache();
 </footer>
 
 <script src="js/i18n.js?v=79" fetchpriority="high"></script>
-<script src="js/home.js?v=6" fetchpriority="high"></script>
+<script src="js/home.js?v=7" fetchpriority="high"></script>
 </body>
 </html>
