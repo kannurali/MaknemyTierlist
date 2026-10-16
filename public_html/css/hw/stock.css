@@ -491,47 +491,6 @@ body > .sk-page { flex: 1 0 auto; }
   white-space: nowrap;
 }
 
-.sk-item.is-lead {
-  flex-basis: 100%;
-  grid-template-areas:
-    "pic ."
-    "pic name"
-    "pic rar"
-    "pic price"
-    "pic .";
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: 1fr auto auto auto 1fr;
-  justify-items: start;
-  column-gap: 18px;
-  padding: 14px 20px 14px 14px;
-  background:
-    radial-gradient(34% 82% at 16% 50%, var(--r-glow), transparent 76%),
-    var(--sk-tile);
-  text-align: left;
-}
-.sk-item.is-lead .sk-pic {
-  width: 116px;
-  height: 116px;
-}
-.sk-item.is-lead .sk-item-name {
-  margin: 0;
-  padding: .1em 0 0;
-  font-size: 32px;
-}
-.sk-item.is-lead .sk-item-rarity {
-  margin-top: 4px;
-  padding: 0;
-  font-size: 13px;
-}
-.sk-item.is-lead .sk-item-price {
-  align-self: auto;
-  justify-self: start;
-  margin-top: 12px;
-  padding: 9px 14px 7px;
-  border-radius: 10px;
-  font-size: 27px;
-}
-
 .sk-item.is-watched { box-shadow: inset 0 0 0 2px var(--sk-a); }
 
 @container (min-width: 560px) {
@@ -544,9 +503,6 @@ body > .sk-page { flex: 1 0 auto; }
   .sk-item .sk-pic { width: 62px; height: 62px; }
   .sk-item-name { padding: .1em 5px 0; font-size: 16px; }
   .sk-item-price { padding: 7px 4px 6px; font-size: 16px; }
-  .sk-item.is-lead .sk-pic { width: 88px; height: 88px; }
-  .sk-item.is-lead .sk-item-name { font-size: 26px; }
-  .sk-item.is-lead .sk-item-price { font-size: 22px; }
 }
 
 .sk-star {
@@ -1112,14 +1068,6 @@ body > .sk-page { flex: 1 0 auto; }
   .sk-item-name { margin-top: 6px; padding: .1em 5px 0; font-size: 16px; }
   .sk-item-rarity { font-size: 11px; }
   .sk-item-price { margin-top: 8px; padding: 7px 4px 6px; font-size: 16px; }
-  .sk-item.is-lead {
-    column-gap: 14px;
-    padding: 10px 14px 10px 10px;
-  }
-  .sk-item.is-lead .sk-pic { width: 88px; height: 88px; }
-  .sk-item.is-lead .sk-item-name { font-size: 26px; }
-  .sk-item.is-lead .sk-item-rarity { font-size: 12px; }
-  .sk-item.is-lead .sk-item-price { margin-top: 9px; padding: 7px 11px 6px; font-size: 22px; }
   .sk-star { top: 5px; right: 5px; width: 22px; height: 22px; }
   .sk-star::before { inset: 5px; }
 
@@ -1163,7 +1111,4 @@ body > .sk-page { flex: 1 0 auto; }
   .sk-item .sk-pic { width: 54px; height: 54px; }
   .sk-item-name { font-size: 15px; }
   .sk-item-price { font-size: 15px; }
-  .sk-item.is-lead .sk-pic { width: 72px; height: 72px; }
-  .sk-item.is-lead .sk-item-name { font-size: 22px; }
-  .sk-item.is-lead .sk-item-price { font-size: 19px; }
 }

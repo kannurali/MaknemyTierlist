@@ -133,7 +133,7 @@
         return;
       }
       s.fruits.slice().sort(byPrice).forEach(function (f, i) {
-        var li = el("li", i === 0 ? "sk-item is-lead" : "sk-item");
+        var li = el("li", "sk-item");
         li.dataset.rarity = f.rarity || "";
         li.style.setProperty("--i", String(i));
         if (watch.keys[f.key]) li.classList.add("is-watched");
