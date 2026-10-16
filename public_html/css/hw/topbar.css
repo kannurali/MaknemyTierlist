@@ -216,6 +216,7 @@ html { -webkit-tap-highlight-color: transparent; }
   transition: opacity .18s ease, transform .18s ease, visibility 0s;
 }
 .mk-nav li { display: flex; min-width: 0; }
+.mk-nav li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 .mk-pill {
   flex: 1 1 auto;

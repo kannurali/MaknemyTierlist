@@ -33,7 +33,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=27" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=27" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=28" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=28" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/topbar.js?v=28" defer fetchpriority="high"></script>
@@ -97,6 +97,12 @@ page_lscache();
           <a class="mk-pill" href="/news">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 9.50002C18.05 14.2221 14.222 18.05 9.49995 18.05M18.05 9.50002C18.05 4.77798 14.222 0.950013 9.49995 0.950013M18.05 9.50002C18.05 7.92601 14.222 6.65002 9.49995 6.65002C4.77792 6.65002 0.949949 7.92601 0.949949 9.50002M18.05 9.50002C18.05 11.074 14.222 12.35 9.49995 12.35C4.77792 12.35 0.949949 11.074 0.949949 9.50002M9.49995 18.05C4.77792 18.05 0.949949 14.2221 0.949949 9.50002M9.49995 18.05C11.074 18.05 12.35 14.2221 12.35 9.50002C12.35 4.77798 11.074 0.950013 9.49995 0.950013M9.49995 18.05C7.92594 18.05 6.64995 14.2221 6.64995 9.50002C6.64995 4.77798 7.92594 0.950013 9.49995 0.950013M0.949949 9.50002C0.949949 4.77798 4.77792 0.950013 9.49995 0.950013" stroke="currentColor" stroke-width="1.9"/></svg>
             <span class="mk-pill-text" data-i18n="nav.news">Новости</span>
+          </a>
+        </li>
+        <li>
+          <a class="mk-pill" href="/giveaways">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 5.2V18.05M2.4 9V15.85C2.4 17.07 3.38 18.05 4.6 18.05H14.4C15.62 18.05 16.6 17.07 16.6 15.85V9M2.15 5.2H16.85C17.51 5.2 18.05 5.74 18.05 6.4V7.8C18.05 8.46 17.51 9 16.85 9H2.15C1.49 9 0.95 8.46 0.95 7.8V6.4C0.95 5.74 1.49 5.2 2.15 5.2ZM9.5 5.2C9.5 5.2 8.6 0.95 5.9 0.95C4.85 0.95 4.1 1.75 4.1 2.75C4.1 4.3 6.2 5.2 9.5 5.2ZM9.5 5.2C9.5 5.2 10.4 0.95 13.1 0.95C14.15 0.95 14.9 1.75 14.9 2.75C14.9 4.3 12.8 5.2 9.5 5.2Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.giveaways">Розыгрыши</span>
           </a>
         </li>
       </ul>
