@@ -25,7 +25,7 @@ echo <<<HTML
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
-<link rel="stylesheet" href="/css/giveaway.css?v=4" />
+<link rel="stylesheet" href="/css/giveaway.css?v=5" />
 <link rel="stylesheet" href="/css/giveaway-admin.css?v=6" />
 </head>
 <body>
@@ -185,9 +185,9 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=75"></script>
+<script src="/js/i18n.js?v=77"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=7"></script>
+<script src="/js/giveaway.js?v=8"></script>
 <script src="/js/giveaway-admin.js?v=8"></script>
 </body>
 </html>
