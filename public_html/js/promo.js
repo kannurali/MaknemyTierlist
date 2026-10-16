@@ -124,8 +124,9 @@
     }
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
     var s = stampFor(campaign, now);
+    var gw = gwFor(campaign);
     var cre = creativeFor(campaign, slot);
-    if (!s || !cre) { return null; }
+    if ((!s && !gw) || !cre) { return null; }
     if (!hosted) {
       var wrap = doc.createElement("span");
       wrap.className = "ptn-stamp-host";
@@ -139,18 +140,173 @@
     fit.className = "ptn-stamp-fit";
     var w = Number(cre.w), h = Number(cre.h);
     fit.style.setProperty("--ptn-r", String(w > 0 && h > 0 ? w / h : 1));
-    var mark = doc.createElement("span");
-    mark.className = "ptn-stamp-mark ptn-stamp-" + slot;
-    [["small", s.topKey], ["b", s.mainKey]].forEach(function (p) {
-      var line = doc.createElement(p[0]);
-      line.setAttribute("data-i18n", p[1]);
-      line.textContent = typeof t === "function" ? t(p[1]) : p[1];
-      mark.appendChild(line);
-    });
-    fit.appendChild(mark);
+    if (s) {
+      var mark = doc.createElement("span");
+      mark.className = "ptn-stamp-mark ptn-stamp-" + slot;
+      [["small", s.topKey], ["b", s.mainKey]].forEach(function (p) {
+        var line = doc.createElement(p[0]);
+        line.setAttribute("data-i18n", p[1]);
+        line.textContent = typeof t === "function" ? t(p[1]) : p[1];
+        mark.appendChild(line);
+      });
+      fit.appendChild(mark);
+    }
+    if (gw) { fit.appendChild(gwCounter(doc, gw, slot)); }
     layer.appendChild(fit);
     host.appendChild(layer);
     return layer;
+  }
+
+  var GW_API = "/api/giveaways.php";
+  var GWC_POLL_MS = 30000;
+  var gwc = { started: false, data: null };
+
+  function gwFor(campaign) {
+    var id = Math.round(Number(campaign && campaign.gw));
+    return isFinite(id) && id > 0 ? id : 0;
+  }
+
+  function gwCounter(doc, id, slot) {
+    var box = doc.createElement("span");
+    box.className = "ptn-gwc ptn-gwc-" + slot;
+    box.setAttribute("data-gw", String(id));
+    box.hidden = true;
+    var text = doc.createElement("span");
+    text.className = "ptn-gwc-text";
+    var bar = doc.createElement("span");
+    bar.className = "ptn-gwc-bar";
+    bar.appendChild(doc.createElement("i"));
+    box.appendChild(text);
+    box.appendChild(bar);
+    if (gwc.data) { gwcPaint(box, Date.now()); }
+    gwcStart(doc);
+    return box;
+  }
+
+  function gwcT(key, vars) {
+    var g = root.NX_GW;
+    if (g && g.t) { return g.t(key, vars); }
+    var i18n = root.I18N;
+    var lang = root.document && root.document.documentElement.lang === "en" ? "en" : "ru";
+    return i18n ? i18n.t(key, lang, vars) : key;
+  }
+
+  function gwcPlural(n) {
+    var g = root.NX_GW;
+    if ((g && g.lang ? g.lang() : root.document.documentElement.lang) === "en") { return n === 1 ? "one" : "many"; }
+    var a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) { return "one"; }
+    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
+    return "many";
+  }
+
+  function gwcFind(id) {
+    var d = gwc.data || {};
+    var all = (d.live || []).concat(d.past || []);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i] && all[i].id === id) { return all[i]; }
+    }
+    return null;
+  }
+
+  function gwcPad(n) { return n < 10 ? "0" + n : String(n); }
+
+  function gwcClock(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var d = Math.floor(sec / 86400);
+    var hms = gwcPad(Math.floor(sec % 86400 / 3600)) + ":" + gwcPad(Math.floor(sec % 3600 / 60)) + ":" + gwcPad(sec % 60);
+    return (d ? gwcT("gw.days", { n: d }) + " " : "") + hms;
+  }
+
+  function gwcState(g, nowMs) {
+    var now = nowMs / 1000;
+    var live = g.phase === "live" && g.ends_at > now;
+    if (!live) { return { text: gwcT("gw.ended"), num: "", p: 1, ends: 0 }; }
+    var max = g.max_entries || 0;
+    if (max > 0) {
+      var n = g.entries || 0;
+      var left = Math.max(0, max - n);
+      return {
+        text: left ? gwcT("gw.spotsLeft." + gwcPlural(left), { n: left }) : gwcT("gw.spotsNone"),
+        num: left ? String(left) : "",
+        p: Math.min(1, n / max),
+        ends: 0
+      };
+    }
+    var start = g.published_at || now;
+    var span = g.ends_at - start;
+    var time = gwcClock(g.ends_at - now);
+    return {
+      text: gwcT("gw.endsIn") + " " + time,
+      num: time,
+      p: span > 0 ? Math.min(1, Math.max(0, (now - start) / span)) : 0,
+      ends: g.ends_at
+    };
+  }
+
+  function gwcPaint(box, nowMs) {
+    var g = gwcFind(Number(box.getAttribute("data-gw")));
+    box.hidden = !g;
+    if (!g) { return; }
+    var st = gwcState(g, nowMs);
+    var text = box.querySelector(".ptn-gwc-text");
+    text.textContent = "";
+    var at = st.num ? st.text.indexOf(st.num) : -1;
+    if (at < 0) {
+      text.textContent = st.text;
+    } else {
+      var b = root.document.createElement("b");
+      b.textContent = st.num;
+      text.appendChild(root.document.createTextNode(st.text.slice(0, at)));
+      text.appendChild(b);
+      text.appendChild(root.document.createTextNode(st.text.slice(at + st.num.length)));
+    }
+    box.querySelector(".ptn-gwc-bar i").style.setProperty("--p", (st.p * 100).toFixed(2) + "%");
+    if (st.ends) { box.setAttribute("data-ends", String(st.ends)); }
+    else { box.removeAttribute("data-ends"); }
+    box.classList.toggle("is-closed", st.p >= 1);
+  }
+
+  function gwcPaintAll() {
+    var doc = root.document;
+    if (!doc || !gwc.data) { return; }
+    var now = Date.now();
+    var list = doc.querySelectorAll(".ptn-gwc[data-gw]");
+    for (var i = 0; i < list.length; i++) { gwcPaint(list[i], now); }
+  }
+
+  function gwcLoad(fresh) {
+    var g = root.NX_GW;
+    var p = g && g.load ? g.load(fresh)
+      : root.fetch ? root.fetch(GW_API, { cache: fresh ? "no-store" : "default" })
+        .then(function (r) { return r.ok ? r.json() : null; }) : null;
+    if (!p) { return; }
+    p.then(function (d) {
+      if (d && typeof d === "object") { gwc.data = d; gwcPaintAll(); }
+    }, function () {});
+  }
+
+  function gwcStart(doc) {
+    if (gwc.started) { return; }
+    gwc.started = true;
+    var go = function () {
+      gwcLoad(false);
+      root.setInterval(function () {
+        if (doc.visibilityState === "visible" && doc.querySelector(".ptn-gwc")) { gwcLoad(true); }
+      }, GWC_POLL_MS);
+      root.setInterval(function () {
+        if (doc.visibilityState === "visible" && doc.querySelector(".ptn-gwc[data-ends]")) { gwcPaintAll(); }
+      }, 1000);
+      doc.addEventListener("visibilitychange", function () {
+        if (doc.visibilityState === "visible" && doc.querySelector(".ptn-gwc")) { gwcLoad(true); }
+      });
+      doc.addEventListener("mk:langchange", gwcPaintAll);
+      if (root.MutationObserver) {
+        new root.MutationObserver(gwcPaintAll).observe(doc.documentElement, { attributes: true, attributeFilter: ["lang"] });
+      }
+    };
+    if (doc.readyState === "loading") { doc.addEventListener("DOMContentLoaded", go); }
+    else { go(); }
   }
 
   function fitBox(el, creative) {
@@ -397,6 +553,7 @@
         slots: slots,
         creatives: creatives,
         popup: popupCfg(c),
+        gw: clampInt(c.gw, 0, 2147483647, 0),
         notes: str(c.notes)
       });
     }

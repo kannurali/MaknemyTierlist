@@ -183,6 +183,7 @@
 .ga-ch-off { opacity: .6; }
 .ga-quick { justify-content: flex-end; }
 .ga-max { max-width: 180px; }
+.ga-endby input[type="radio"] { width: auto; }
 
 .ga-actions { align-items: center; }
 .ga-gap { flex: 1 1 auto; }

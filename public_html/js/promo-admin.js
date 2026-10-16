@@ -5,6 +5,7 @@
   var API_PROMO   = "/api/promo.php";
   var API_UPLOAD  = "/api/upload.php";
   var API_TIERLIST = "/api/tierlist.php";
+  var API_GIVEAWAYS = "/api/giveaways.php";
   var PREVIEW_KEY = "nx-ptn-preview";
 
   var SPECS = {
@@ -65,6 +66,38 @@
   function markDirty() { dirty = true; hint("есть несохранённые правки"); }
 
   var EXPIRED = "сессия истекла: войдите заново на /admin и повторите";
+
+  var giveaways = [];
+
+  function loadGiveaways() {
+    return fetch(API_GIVEAWAYS, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        giveaways = [];
+        [["live", "идёт"], ["past", "закончился"]].forEach(function (p) {
+          ((j && j[p[0]]) || []).forEach(function (g) {
+            giveaways.push({ id: g.id, label: "#" + g.id + " " + ((g.title && g.title.ru) || "Без названия") + " — " + p[1] });
+          });
+        });
+      })
+      .catch(function () {});
+  }
+
+  function renderGwSelect(c) {
+    var sel = $("#fGw");
+    sel.innerHTML = "";
+    var opts = [{ id: 0, label: "Нет" }].concat(giveaways);
+    if (c.gw && !giveaways.some(function (g) { return g.id === c.gw; })) {
+      opts.push({ id: c.gw, label: "#" + c.gw + " — нет на сайте (черновик или удалён)" });
+    }
+    opts.forEach(function (g) {
+      var o = document.createElement("option");
+      o.value = String(g.id);
+      o.textContent = g.label;
+      sel.appendChild(o);
+    });
+    sel.value = String(c.gw || 0);
+  }
 
   function loadDoc() {
     return fetch(API_PROMO, { cache: "no-store" })
@@ -145,6 +178,7 @@
     $("#fText").value = c.text;
     $("#fCta").value = c.cta;
     $("#fErid").value = c.erid || "";
+    renderGwSelect(c);
     $("#fNotes").value = c.notes;
     $("#fDelay").value = Math.round(c.popup.delayMs / 1000);
     $("#fCap").value = c.popup.capHours;
@@ -492,6 +526,13 @@
     bind("#fCap", function (c, v) { c.popup.capHours = Math.max(1, Math.min(720, parseInt(v, 10) || 24)); });
     bind("#fWeek", function (c, v) { c.popup.maxPerWeek = Math.max(1, Math.min(50, parseInt(v, 10) || 3)); });
 
+    $("#fGw").addEventListener("change", function () {
+      var c = camp();
+      if (!c) return;
+      c.gw = parseInt($("#fGw").value, 10) || 0;
+      markDirty();
+    });
+
     $("#fErid").addEventListener("input", function () {
       var c = camp();
       if (!c) return;
@@ -574,7 +615,8 @@
   function renderAll() { renderList(); renderEditor(); }
 
   function start() {
-    loadDoc().then(function (ok) {
+    Promise.all([loadDoc(), loadGiveaways()]).then(function (r) {
+      var ok = r[0];
       if (!ok) hint("не удалось загрузить кампании", "bad");
       renderAll();
     });

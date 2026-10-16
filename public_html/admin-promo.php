@@ -95,6 +95,11 @@ echo <<<HTML
         <div class="err" id="eridErr" hidden>Такой токен сайт не покажет: допустимы латиница, цифры, дефис и подчёркивание.</div>
       </label>
 
+      <label class="f">Счётчик розыгрыша <span class="muted">(поверх макета: сколько мест осталось или сколько времени до итогов, обновляется сам)</span>
+        <select id="fGw"><option value="0">Нет</option></select>
+        <div class="pages-note">У борта счётчик внизу по центру, у полос и окна — в правом нижнем углу: держите это место в макете свободным.</div>
+      </label>
+
       <label class="f">Заметки <span class="muted">(видно только вам — на сайт не уходят)</span>
         <textarea id="fNotes" rows="2" placeholder="оплачено до 20.09, контакт @…"></textarea>
       </label>
@@ -120,8 +125,8 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/promo.js?v=26"></script>
-<script src="/js/promo-admin.js?v=8"></script>
+<script src="/js/promo.js?v=27"></script>
+<script src="/js/promo-admin.js?v=9"></script>
 </body>
 </html>
 HTML;
