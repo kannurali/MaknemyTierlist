@@ -366,6 +366,19 @@ test('кнопка «Реклама» ведёт на /promote, стоит пе�
     assert_true(strpos(top_read($PUB . '/sitemap.xml'), '<loc>https://maknemy.com/promote</loc>') !== false, 'адрес в sitemap');
 });
 
+// Оглавление /promote уводило на главную (владелец, 2026-10-16): у страниц
+// <base href="/">, и "#pm-card" браузер читает как "/#pm-card". Якорь обязан
+// нести путь страницы — тогда это переход внутри неё, без перезагрузки.
+test('якоря /promote ведут в разделы страницы, а не на главную', function () use ($PUB) {
+    $page = top_read($PUB . '/promote.php');
+    assert_true(strpos($page, '<base href="/" />') !== false, 'у страницы base href="/"');
+    assert_eq(0, preg_match_all('/href="#[^"]+"/', $page), 'нет голых href="#…"');
+    assert_true(preg_match_all('/href="\/promote#([a-z-]+)"/', $page, $m) >= 12, 'оглавление на месте');
+    foreach (array_unique($m[1]) as $id) {
+        assert_eq(1, substr_count($page, 'id="' . $id . '"'), "раздел #$id есть на странице");
+    }
+});
+
 // Кнопка чата появилась в макете шапки (Figma, нода 244:7171) — такой же круг
 // с градиентом, что и профиль, слева от него. Раздел получил страницу (/chat,
 // см. tests/chat_page_test.php) и вышел из «В активной разработке» тем же
