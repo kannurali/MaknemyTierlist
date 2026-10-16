@@ -176,18 +176,18 @@ page_lscache();
 
       <nav class="pm-toc" aria-label="Разделы страницы">
         <ul>
-          <li><a href="#pm-results">Участники конкурса</a></li>
-          <li><a href="#pm-card">Карточка конкурса</a></li>
-          <li><a href="#pm-display">Баннеры</a></li>
-          <li><a href="#pm-bundle">Несколько страниц</a></li>
-          <li><a href="#pm-telegram">Telegram</a></li>
-          <li><a href="#pm-combo">Сайт + Telegram</a></li>
-          <li><a href="#pm-clicks">Оплата за переходы</a></li>
-          <li><a href="#pm-make">Создание рекламы</a></li>
-          <li><a href="#pm-trial">Начните с суток</a></li>
-          <li><a href="#pm-projects">Проекты</a></li>
-          <li><a href="#pm-rules">Правила</a></li>
-          <li><a href="#pm-order">Заказать</a></li>
+          <li><a href="/promote#pm-results">Участники конкурса</a></li>
+          <li><a href="/promote#pm-card">Карточка конкурса</a></li>
+          <li><a href="/promote#pm-display">Баннеры</a></li>
+          <li><a href="/promote#pm-bundle">Несколько страниц</a></li>
+          <li><a href="/promote#pm-telegram">Telegram</a></li>
+          <li><a href="/promote#pm-combo">Сайт + Telegram</a></li>
+          <li><a href="/promote#pm-clicks">Оплата за переходы</a></li>
+          <li><a href="/promote#pm-make">Создание рекламы</a></li>
+          <li><a href="/promote#pm-trial">Начните с суток</a></li>
+          <li><a href="/promote#pm-projects">Проекты</a></li>
+          <li><a href="/promote#pm-rules">Правила</a></li>
+          <li><a href="/promote#pm-order">Заказать</a></li>
         </ul>
       </nav>
 
@@ -243,7 +243,7 @@ page_lscache();
           </div>
           <p class="pm-main">В одном блоке — не более четырёх рекламодателей. Каждому резервируется не менее 25% показов этого блока. Это доля показов блока, а не доля всей аудитории сайта.</p>
           <p class="pm-main">Для запуска достаточно ссылки, изображения приза и условий. Оформление карточки по нашему шаблону входит в стоимость.</p>
-          <p class="pm-main pm-quiet">Карточка продаётся на срок: количество переходов и участников в её стоимость не гарантируется. Для заказа определённого количества участников выберите предложение <a href="#pm-results">«Участники конкурса — $12 за 1&nbsp;000»</a>.</p>
+          <p class="pm-main pm-quiet">Карточка продаётся на срок: количество переходов и участников в её стоимость не гарантируется. Для заказа определённого количества участников выберите предложение <a href="/promote#pm-results">«Участники конкурса — $12 за 1&nbsp;000»</a>.</p>
         </div>
       </section>
 
