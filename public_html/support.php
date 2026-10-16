@@ -190,7 +190,7 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
-  <script src="js/i18n.js?v=78" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=79" fetchpriority="high"></script>
   <script src="js/support-page.js?v=1" defer></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=9" fetchpriority="high"></script>

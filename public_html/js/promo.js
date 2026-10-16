@@ -227,7 +227,7 @@
       var n = g.entries || 0;
       var left = Math.max(0, max - n);
       return {
-        text: left ? gwcT("gw.spotsLeft." + gwcPlural(left), { n: left }) : gwcT("gw.spotsNone"),
+        text: left ? gwcT("promo.gwLeft." + gwcPlural(left), { n: left }) : gwcT("gw.ended"),
         num: left ? String(left) : "",
         p: Math.min(1, n / max),
         ends: 0
@@ -255,12 +255,14 @@
     if (at < 0) {
       text.textContent = st.text;
     } else {
-      var b = root.document.createElement("b");
-      b.textContent = st.num;
-      text.appendChild(root.document.createTextNode(st.text.slice(0, at)));
-      text.appendChild(b);
-      text.appendChild(root.document.createTextNode(st.text.slice(at + st.num.length)));
+      [["span", st.text.slice(0, at)], ["b", st.num], ["span", st.text.slice(at + st.num.length)]].forEach(function (p) {
+        if (!p[1].trim()) { return; }
+        var part = root.document.createElement(p[0]);
+        part.textContent = p[1];
+        text.appendChild(part);
+      });
     }
+    box.classList.toggle("is-time", !!st.ends);
     box.querySelector(".ptn-gwc-bar i").style.setProperty("--p", (st.p * 100).toFixed(2) + "%");
     if (st.ends) { box.setAttribute("data-ends", String(st.ends)); }
     else { box.removeAttribute("data-ends"); }
