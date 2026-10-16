@@ -47,7 +47,7 @@ page_lscache();
 <script src="js/topbar.js?v=28" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<link rel="stylesheet" href="css/promo-stamp.css?v=1" />
+<link rel="stylesheet" href="css/promo-stamp.css?v=2" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=29" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 
@@ -367,8 +367,8 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=77" fetchpriority="high"></script>
-  <script src="js/promo.js?v=26" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=78" fetchpriority="high"></script>
+  <script src="js/promo.js?v=27" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
 
@@ -377,7 +377,7 @@ page_lscache();
   <script src="js/calculator-page.js?v=28" fetchpriority="high"></script>
   <script src="js/trade-new.js?v=2" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=8" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=9" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

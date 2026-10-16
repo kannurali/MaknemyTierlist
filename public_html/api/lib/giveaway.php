@@ -22,12 +22,17 @@
 // сразу пишет добавившему, чего ему не дали; перед публикацией права
 // перечитываются у Telegram.
 //
+// Когда итоги, админ выбирает сам (поле end_by): «по времени» — дата конца
+// без лимита участников; «по числу участников» — лимит без даты. У второго в
+// ends_at лежит GW_NO_DEADLINE: так «идёт, пока ends_at в будущем» работает
+// без новой колонки и без миграции, а показывают вместо даты лимит.
+//
 // Лимит участников (колонка max_entries, 0 — без лимита). Кто занял последнее
 // место, тот закрывает приём: ends_at становится «сейчас», и дальше розыгрыш
-// живёт как закончившийся по времени. Время конца остаётся обязательным —
-// приём закрывает то, что наступит раньше. Последнее место разыгрывается под
-// замком строки розыгрыша (gw_add_entry()), чтобы два одновременных нажатия
-// не прошли оба.
+// живёт как закончившийся по времени. У розыгрышей, сохранённых до выбора
+// end_by, есть и дата, и лимит — приём закрывает то, что наступит раньше.
+// Последнее место разыгрывается под замком строки розыгрыша (gw_add_entry()),
+// чтобы два одновременных нажатия не прошли оба.
 //
 // Кто выигрывает. Итоги подводятся сами, как только розыгрыш закончился —
 // по времени или по лимиту (gw_after_due()): отдельного cron нет, проход
@@ -84,6 +89,10 @@ const GW_PAST_LIMIT      = 12;
 // Сколько участников отдаёт админке «открыть розыгрыш». Победители — всегда.
 const GW_ADMIN_ENTRIES   = 500;
 const GW_STATUSES        = ['draft', 'live', 'drawn'];
+// ends_at розыгрыша «по числу участников»: 2100-01-01, верхняя граница поля.
+// Раньше лимит его не наступит, а набранный лимит ставит ends_at = «сейчас».
+const GW_NO_DEADLINE     = 4102444800;
+const GW_END_BY          = ['time', 'entries'];
 const GW_TZ              = 'Europe/Moscow';
 
 // --------------------------------------------------------------------------
@@ -204,10 +213,16 @@ function gw_validate(array $in): array {
     }
 
     $ends = $in['ends_at'] ?? 0;
-    if (!nb_is_int_between($ends, 0, 4102444800)) { return $fail('bad ends_at'); }
+    if (!nb_is_int_between($ends, 0, GW_NO_DEADLINE)) { return $fail('bad ends_at'); }
 
     $max = $in['max_entries'] ?? 0;
     if (!nb_is_int_between($max, 0, GW_ENTRIES_MAX)) { return $fail('bad max_entries'); }
+
+    // Без end_by — как до выбора: и дата, и лимит, что наступит раньше.
+    $endBy = $in['end_by'] ?? null;
+    if ($endBy !== null && !in_array($endBy, GW_END_BY, true)) { return $fail('bad end_by'); }
+    if ($endBy === 'entries') { $ends = GW_NO_DEADLINE; }
+    if ($endBy === 'time') { $max = 0; }
 
     return ['ok' => true, 'error' => '', 'row' => [
         'title_ru'      => $titleRu,
@@ -319,6 +334,17 @@ function gw_has_max(PDO $pdo): bool {
 // Лимит участников, 0 — без лимита.
 function gw_max(array $row): int {
     return max(0, (int)($row['max_entries'] ?? 0));
+}
+
+// Розыгрыш «по числу участников»: даты конца нет, итоги — когда наберётся
+// лимит. Набранный лимит ставит настоящий ends_at, и даты снова «есть».
+function gw_no_deadline(array $row): bool {
+    return (int)$row['ends_at'] >= GW_NO_DEADLINE;
+}
+
+// Как его показывать: entries — лимит вместо даты, time — дата.
+function gw_end_by(array $row): string {
+    return gw_no_deadline($row) ? 'entries' : 'time';
 }
 
 // Сколько всего мест-победителей во всех призах.
@@ -433,7 +459,10 @@ function gw_publish_problems(array $row, array $channels, int $now): array {
     if (trim((string)$row['title_ru']) === '') { $out[] = 'no_title'; }
     if (!gw_decode_list($row['prizes_json'])) { $out[] = 'no_prizes'; }
     $ends = (int)$row['ends_at'];
-    if ($ends <= $now) { $out[] = 'ends_in_past'; }
+    if (gw_no_deadline($row)) {
+        if (gw_max($row) <= 0) { $out[] = 'no_max'; }
+    }
+    elseif ($ends <= $now) { $out[] = 'ends_in_past'; }
     elseif ($ends > $now + GW_MAX_SPAN) { $out[] = 'ends_too_far'; }
     foreach (gw_checked_channels($row) as $id) {
         $c = $channels[$id] ?? null;
@@ -550,6 +579,7 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
         'channels'     => $chs,
         'conds'        => $conds,
         'ends_at'      => (int)$row['ends_at'],
+        'end_by'       => gw_end_by($row),
         'published_at' => (int)$row['published_at'],
         'entries'      => $counts[$id] ?? 0,
         'max_entries'  => gw_max($row),
@@ -803,6 +833,10 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         if ($old['status'] === 'drawn') { return [409, ['ok' => false, 'error' => 'drawn']]; }
         $r['blocks'] = gw_reuse_en($r['blocks'], gw_decode_blocks($old['body_json']));
         if ($old['status'] !== 'draft') { $r['test'] = gw_is_test($old); }
+        // Закончившийся (лимит набран или «Завершить досрочно») правка
+        // «по числу участников» не открывает заново: даты в форме нет, и
+        // сохранение описания иначе вернуло бы приём.
+        if (gw_no_deadline($r) && gw_phase($old, $now) === 'ended') { $r['ends_at'] = (int)$old['ends_at']; }
     }
 
     $deadline = microtime(true) + TR_BUDGET_SEC;
@@ -1040,6 +1074,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'channels'     => array_map('strval', gw_decode_list($row['channels_json'])),
         'conds'        => gw_conds($row['conds_json'] ?? null),
         'ends_at'      => (int)$row['ends_at'],
+        'end_by'       => gw_end_by($row),
         'published_at' => (int)$row['published_at'],
         'drawn_at'     => (int)$row['drawn_at'],
         'test'         => gw_is_test($row),
@@ -1063,6 +1098,7 @@ function gw_admin_list(PDO $pdo, int $now): array {
             'phase'   => gw_phase($r, $now),
             'title'   => (string)$r['title_ru'],
             'ends_at' => (int)$r['ends_at'],
+            'end_by'  => gw_end_by($r),
             'entries' => $counts[(int)$r['id']] ?? 0,
             'max'     => gw_max($r),
             'test'    => gw_is_test($r),
@@ -1292,6 +1328,16 @@ function gw_max_note(array $row, string $lang): string {
                           : ' или раньше, когда участников станет ' . $max;
 }
 
+// Когда итоги — для сообщений бота: дата или, у розыгрыша «по числу
+// участников», лимит.
+function gw_when(array $row, string $lang): string {
+    if (gw_no_deadline($row)) {
+        return $lang === 'en' ? 'once ' . gw_max($row) . ' people have entered'
+                              : 'когда участников станет ' . gw_max($row);
+    }
+    return gw_date((int)$row['ends_at'], $lang) . gw_max_note($row, $lang);
+}
+
 function gw_title(array $row, string $lang): string {
     $en = (string)$row['title_en'];
     return $lang === 'en' && $en !== '' ? $en : (string)$row['title_ru'];
@@ -1320,7 +1366,7 @@ function gw_announce_text(array $row, string $lang): string {
         $lines[] = '• ' . $p['name'] . ((int)$p['count'] > 1 ? ' × ' . (int)$p['count'] : '');
     }
     $title = gw_title($row, $lang);
-    $date  = gw_date((int)$row['ends_at'], $lang) . gw_max_note($row, $lang);
+    $date  = gw_when($row, $lang);
     $cond  = gw_checked_channels($row) ? 'ch' : (gw_conds($row['conds_json'] ?? null) ? 'own' : '');
     if ($lang === 'en') {
         return "🎁 New giveaway on maknemy.com\n\n" . $title . "\n\nPrizes:\n" . implode("\n", $lines)
@@ -1750,7 +1796,7 @@ function gw_report(PDO $pdo, array $row): array {
 // $last — человек занял последнее место, и приём уже закрыт.
 function gw_joined_text(array $row, string $lang, bool $last = false): string {
     $title = gw_title($row, $lang);
-    $date  = gw_date((int)$row['ends_at'], $lang) . gw_max_note($row, $lang);
+    $date  = gw_when($row, $lang);
     $cond  = gw_checked_channels($row) ? true : false;
     if ($lang === 'en') {
         return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\n"
@@ -1767,13 +1813,16 @@ function gw_joined_text(array $row, string $lang, bool $last = false): string {
 function gw_left_text(array $row, string $channel, string $lang, int $now): string {
     $title = gw_title($row, $lang);
     $open  = gw_phase($row, $now) === 'live';
-    $date  = gw_date((int)$row['ends_at'], $lang);
+    $byMax = gw_no_deadline($row);
+    $date  = $byMax ? '' : gw_date((int)$row['ends_at'], $lang);
     if ($lang === 'en') {
         return "❌ You unsubscribed from «" . $channel . "», so your entry in the giveaway «" . $title . "» was removed."
-            . ($open ? "\n\nTo get back in, subscribe again and tap «Enter» on the site before " . $date . '.' : '');
+            . ($open ? "\n\nTo get back in, subscribe again and tap «Enter» on the site "
+                . ($byMax ? 'while spots remain.' : 'before ' . $date . '.') : '');
     }
     return "❌ Вы отписались от канала «" . $channel . "», поэтому участие в розыгрыше «" . $title . "» снято."
-        . ($open ? "\n\nЧтобы вернуться, подпишитесь снова и нажмите «Участвовать» на сайте до " . $date . '.' : '');
+        . ($open ? "\n\nЧтобы вернуться, подпишитесь снова и нажмите «Участвовать» на сайте "
+            . ($byMax ? 'пока есть места.' : 'до ' . $date . '.') : '');
 }
 
 // Только что вступил — бот подтверждает. Ответ сайту уже ушёл.

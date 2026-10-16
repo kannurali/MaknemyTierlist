@@ -26,7 +26,7 @@ echo <<<HTML
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
 <link rel="stylesheet" href="/css/giveaway.css?v=5" />
-<link rel="stylesheet" href="/css/giveaway-admin.css?v=6" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=7" />
 </head>
 <body>
 {$nav}
@@ -113,22 +113,34 @@ echo <<<HTML
         <div><button class="btn small" id="fCondAdd" type="button">＋ Условие</button></div>
       </div>
 
-      <div class="row">
-        <label class="f">Конец (МСК)
-          <input type="datetime-local" id="fEnds" />
-        </label>
-        <div class="f ga-quick">Быстро
-          <div class="slot-row">
-            <button class="btn small" type="button" data-plus="1">+1 день</button>
-            <button class="btn small" type="button" data-plus="3">+3 дня</button>
-            <button class="btn small" type="button" data-plus="7">+7 дней</button>
-          </div>
+      <div class="f">Когда итоги
+        <div class="pages ga-endby" role="radiogroup">
+          <label class="page-chk"><input type="radio" name="fEndBy" id="fEndTime" value="time" /> По времени</label>
+          <label class="page-chk"><input type="radio" name="fEndBy" id="fEndEntries" value="entries" /> По числу участников</label>
         </div>
+        <span class="muted small" id="fEndLegacy" hidden>Сейчас у розыгрыша и дата конца, и лимит участников. После сохранения останется только выбранное здесь.</span>
       </div>
 
-      <label class="f">Лимит участников
-        <input type="number" id="fMax" class="ga-max" min="0" max="1000000" step="1" inputmode="numeric" placeholder="без лимита" />
-        <span class="muted small">Пусто — без лимита. Когда участников станет столько, приём закроется сам, не дожидаясь конца по времени, и итоги подведутся сразу. Лимит не меньше числа призов.</span>
+      <div class="f" id="fEndTimeBox">
+        <div class="row">
+          <label class="f">Конец (МСК)
+            <input type="datetime-local" id="fEnds" />
+          </label>
+          <div class="f ga-quick">Быстро
+            <div class="slot-row">
+              <button class="btn small" type="button" data-plus="1">+1 день</button>
+              <button class="btn small" type="button" data-plus="2">+2 дня</button>
+              <button class="btn small" type="button" data-plus="3">+3 дня</button>
+              <button class="btn small" type="button" data-plus="7">+7 дней</button>
+            </div>
+          </div>
+        </div>
+        <span class="muted small">В это время приём закроется и итоги подведутся сами. Участвовать может сколько угодно человек.</span>
+      </div>
+
+      <label class="f" id="fEndEntriesBox">Число участников
+        <input type="number" id="fMax" class="ga-max" min="1" max="1000000" step="1" inputmode="numeric" placeholder="например, 1000" />
+        <span class="muted small">Когда участников станет столько, приём закроется и итоги подведутся сразу. Срока нет — розыгрыш идёт, пока не наберётся. Не меньше числа призов.</span>
       </label>
 
       <div class="f">Проверка
@@ -185,10 +197,10 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=77"></script>
+<script src="/js/i18n.js?v=78"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=8"></script>
-<script src="/js/giveaway-admin.js?v=8"></script>
+<script src="/js/giveaway.js?v=9"></script>
+<script src="/js/giveaway-admin.js?v=9"></script>
 </body>
 </html>
 HTML;

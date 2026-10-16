@@ -879,6 +879,82 @@ test('лимит: виден на сайте и в админке', function () 
 });
 
 // --------------------------------------------------------------------------
+//  Когда итоги: по времени или по числу участников
+// --------------------------------------------------------------------------
+
+test('end_by: по времени — лимита нет, по числу участников — даты нет', function () {
+    $v = gw_validate(gw_draft(['end_by' => 'time', 'max_entries' => 500]));
+    assert_eq([GW_NOW + 86400, 0], [$v['row']['ends_at'], $v['row']['max_entries']], 'по времени лимит отбрасывается');
+    $v = gw_validate(gw_draft(['end_by' => 'entries', 'max_entries' => 500]));
+    assert_eq([GW_NO_DEADLINE, 500], [$v['row']['ends_at'], $v['row']['max_entries']], 'по числу дата отбрасывается');
+    $v = gw_validate(gw_draft(['max_entries' => 500]));
+    assert_eq([GW_NOW + 86400, 500], [$v['row']['ends_at'], $v['row']['max_entries']], 'без end_by — как раньше, оба');
+    foreach (['', 'both', 1, true] as $bad) {
+        assert_eq('bad end_by', gw_validate(gw_draft(['end_by' => $bad]))['error'], 'не пускаем: ' . json_encode($bad));
+    }
+});
+
+test('end_by: по числу участников — публикуется без даты, идёт до лимита', function () {
+    $p = gw_db();
+    [, $out] = gw_save($p, gw_draft(['end_by' => 'entries', 'max_entries' => 0]), GW_NOW);
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW);
+    assert_eq([409, ['no_max']], [$s, $res['problems']], 'без лимита итогов не будет никогда');
+
+    foreach (['1' => 501, '2' => 502, '3' => 503] as $u => $chat) { gw_user($p, $u, 'u' . $u, $chat); }
+    $id = gw_live($p, ['end_by' => 'entries', 'max_entries' => 3, 'prizes' => [['name' => 'Kitsune', 'count' => 1]]]);
+    $far = GW_NOW + 400 * 86400;
+    assert_eq('live', gw_phase(gw_load($p, $id), $far), 'через год всё ещё идёт');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    $g = array_column($list['live'], null, 'id')[$id];
+    assert_eq(['entries', 3], [$g['end_by'], $g['max_entries']], 'карточке — лимит вместо даты');
+    $log = [];
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg($log), ['action' => 'list'], GW_NOW);
+    assert_eq('entries', array_column($out['giveaways'], 'end_by', 'id')[$id], 'списку админки');
+
+    $log = [];
+    foreach (['1', '2'] as $u) { assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log), $u, $id, GW_NOW)[0]); }
+    $r = gw_enter($p, gw_cfg(), gw_tg($log), '3', $id, GW_NOW + 50);
+    assert_true($r[2]['last'], 'третий закрыл приём');
+    $row = gw_load($p, $id);
+    assert_eq([GW_NOW + 50, 'ended', 'time'], [(int)$row['ends_at'], gw_phase($row, GW_NOW + 50), gw_end_by($row)],
+        'лимит набран — у розыгрыша появилась настоящая дата конца');
+});
+
+test('end_by: правка закончившегося «по числу» приём не открывает', function () {
+    $p = gw_db();
+    $id = gw_live($p, ['end_by' => 'entries', 'max_entries' => 50]);
+    [$s] = gw_end($p, $id, GW_NOW);
+    assert_eq(200, $s, 'завершили досрочно');
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'end_by' => 'entries', 'max_entries' => 50, 'title_ru' => 'Поправили']), GW_NOW + 5);
+    assert_eq(200, $s);
+    $row = gw_load($p, $id);
+    assert_eq([GW_NOW, 'ended'], [(int)$row['ends_at'], gw_phase($row, GW_NOW + 5)], 'остался закончившимся');
+
+    $id = gw_live($p, ['end_by' => 'time']);
+    gw_save($p, gw_draft(['id' => $id, 'end_by' => 'entries', 'max_entries' => 20]), GW_NOW);
+    $row = gw_load($p, $id);
+    assert_eq([GW_NO_DEADLINE, 20], [(int)$row['ends_at'], gw_max($row)], 'идущий можно переключить на число участников');
+    gw_save($p, gw_draft(['id' => $id, 'end_by' => 'time', 'ends_at' => GW_NOW + 7200]), GW_NOW);
+    $row = gw_load($p, $id);
+    assert_eq([GW_NOW + 7200, 0], [(int)$row['ends_at'], gw_max($row)], 'и обратно на время');
+});
+
+test('end_by: бот пишет лимит вместо даты', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502, 'en');
+    $id = gw_live($p, ['end_by' => 'entries', 'max_entries' => 1000, 'channels' => [GW_CH_A]]);
+    $row = gw_load($p, $id);
+    assert_true(strpos(gw_announce_text($row, 'ru'), 'Итоги: когда участников станет 1000.') !== false, 'рассылка RU');
+    assert_true(strpos(gw_announce_text($row, 'en'), 'Results: once 1000 people have entered.') !== false, 'рассылка EN');
+    assert_true(strpos(gw_announce_text($row, 'ru'), '2100') === false, 'без заглушки-даты');
+    assert_true(strpos(gw_joined_text($row, 'ru'), 'Итоги — когда участников станет 1000.') !== false, '«вы участвуете»');
+    assert_true(strpos(gw_left_text($row, 'Канал A', 'ru', GW_NOW), 'на сайте пока есть места.') !== false, 'отписка RU');
+    assert_true(strpos(gw_left_text($row, 'Канал A', 'en', GW_NOW), 'while spots remain.') !== false, 'отписка EN');
+});
+
+// --------------------------------------------------------------------------
 //  Автоитоги
 // --------------------------------------------------------------------------
 

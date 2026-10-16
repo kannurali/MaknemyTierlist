@@ -136,6 +136,9 @@ function promo_normalize(array $doc): array {
                 'capHours'   => promo_clamp_int($pop['capHours'] ?? 24, 1, 720, 24),
                 'maxPerWeek' => promo_clamp_int($pop['maxPerWeek'] ?? 3, 1, 50, 3),
             ],
+            // Розыгрыш, чей счётчик рисуется поверх макета (PROMO.stampOn):
+            // сколько мест осталось или сколько времени до итогов. 0 — нет.
+            'gw'         => promo_clamp_int($c['gw'] ?? 0, 0, 2147483647, 0),
             'notes'      => promo_str($c['notes'] ?? ''),
         ];
     }

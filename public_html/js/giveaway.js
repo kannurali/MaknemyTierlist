@@ -254,13 +254,13 @@
     ], "gw-clock-ico");
   }
 
-  function peopleIcon() {
+  function peopleIcon(cls) {
     return svg("0 0 24 24", [
       ["circle", { cx: "9", cy: "8", r: "3.6" }],
       ["path", { d: "M2.6 19.5c.7-3.7 3.2-5.7 6.4-5.7s5.7 2 6.4 5.7" }],
       ["path", { d: "M15.2 4.6a3.6 3.6 0 0 1 0 6.8" }],
       ["path", { d: "M17.6 14.2c2 .8 3.4 2.6 3.8 5.3" }]
-    ], "gw-ico");
+    ], cls || "gw-ico");
   }
 
   function plural(n) {
@@ -551,7 +551,14 @@
     title.id = "gwTitle" + g.id;
     head.appendChild(title);
 
-    if (live) {
+    if (live && g.end_by === "entries") {
+      var need = Math.max(0, (g.max_entries || 0) - (g.entries || 0));
+      var cnt = el("div", "gw-clock is-count");
+      cnt.appendChild(peopleIcon("gw-clock-ico"));
+      cnt.appendChild(el("span", "gw-clock-label", t("gw.endsIn")));
+      cnt.appendChild(el("span", "gw-clock-time", t("gw.peopleLeft." + plural(need), { n: need })));
+      head.appendChild(cnt);
+    } else if (live) {
       var clk = el("div", "gw-clock");
       clk.setAttribute("data-gw-ends", String(g.ends_at));
       clk.appendChild(clockIcon());
@@ -627,7 +634,8 @@
       Object.keys(ui.cChannels || {}).forEach(function (k) { mark(ui.cChannels[k], "ok"); });
       (ui.cOwn || []).forEach(function (li) { mark(li, "ok"); });
       setCta("gw.joined", true);
-      say(g.max_entries ? "gw.joinedNoteMax" : "gw.joinedNote", { date: date(g.ends_at), max: g.max_entries });
+      say(g.end_by === "entries" ? "gw.joinedNoteCount" : g.max_entries ? "gw.joinedNoteMax" : "gw.joinedNote",
+        { date: date(g.ends_at), max: g.max_entries });
       if (opts.onJoined) { opts.onJoined(g); }
     }
 

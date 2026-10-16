@@ -591,7 +591,7 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
   </footer>
 
-  <script src="js/i18n.js?v=77" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=78" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=5" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfTg !== null): ?>
@@ -603,7 +603,7 @@ $pfTitle = $pfNick !== ''
   <script src="js/profile-trades.js?v=3" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=8" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=9" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

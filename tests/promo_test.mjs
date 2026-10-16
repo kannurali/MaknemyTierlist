@@ -424,6 +424,20 @@ test('normalizeDoc keeps a valid erid and blanks anything else', () => {
     assert.equal(d.campaigns[4].erid, '', 'a campaign without one is normal');
 });
 
+// gw links a banner to a giveaway: stampOn draws its live counter on top.
+test('normalizeDoc keeps the linked giveaway id and drops junk', () => {
+    const d = normalizeDoc({
+        campaigns: [
+            { id: 'a', gw: 5 },
+            { id: 'b', gw: '7' },
+            { id: 'c', gw: -3 },
+            { id: 'd', gw: 'kitsune' },
+            { id: 'e' }
+        ]
+    });
+    assert.deepEqual(d.campaigns.map(c => c.gw), [5, 7, 0, 0, 0]);
+});
+
 test('normalizeDoc clamps popup settings into their safe range', () => {
     const d = normalizeDoc({
         campaigns: [

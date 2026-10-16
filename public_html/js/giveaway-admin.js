@@ -5,6 +5,7 @@
   const UPLOAD = "/api/upload.php";
   const TIERLIST = "/api/tierlist.php";
   const MSK = 3 * 3600;
+  const NO_DEADLINE = 4102444800;
   const NBSP = String.fromCharCode(160);
 
   const $ = id => document.getElementById(id);
@@ -25,6 +26,7 @@
     ends_too_far: "конец дальше чем через 90 дней",
     channel_not_admin: "у бота нет нужных прав в одном из отмеченных каналов или каналов своих условий (см. «Каналы бота» слева)",
     max_below_prizes: "лимит участников меньше числа призов",
+    no_max: "не указано, сколько нужно участников",
     invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Добавление подписчиков»)"
   };
 
@@ -47,7 +49,8 @@
     "bad channels": "Каналов, которые проверяет бот (отмеченных и у своих условий), — не больше пяти.",
     conds_migrate: "Для своих условий выполните docs/migrations/2026-10-15-giveaway-conds.sql.",
     test_migrate: "Для тестовых розыгрышей выполните docs/migrations/2026-10-15-giveaway-test.sql.",
-    "bad max_entries": "Лимит участников — целое число от 0 до 1 000 000.",
+    "bad max_entries": "Число участников — целое, от 1 до 1 000 000.",
+    "bad end_by": "Выберите, когда итоги: по времени или по числу участников.",
     max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
@@ -686,7 +689,9 @@
       }
       const sub = document.createElement("div");
       sub.className = "li-sub";
-      sub.textContent = "Участников: " + g.entries + (g.max ? " из " + g.max : "") + (g.ends_at ? " · конец " + fmtDate(g.ends_at) + " МСК" : "");
+      const when = g.end_by === "entries" ? " · итоги на " + g.max + " участниках"
+        : g.ends_at ? " · конец " + fmtDate(g.ends_at) + " МСК" : "";
+      sub.textContent = "Участников: " + g.entries + (g.max ? " из " + g.max : "") + when;
       li.append(top, sub);
       li.addEventListener("click", () => open(g.id));
       ul.appendChild(li);
@@ -962,8 +967,9 @@
       prizes: readPrizes(),
       channels: readChannels(),
       conds: readConds(),
-      ends_at: fromInput($("fEnds").value),
-      max_entries: readMax(),
+      end_by: endBy(),
+      ends_at: endBy() === "time" ? fromInput($("fEnds").value) : 0,
+      max_entries: endBy() === "entries" ? readMax() : 0,
       test: $("fTest").checked
     };
   }
@@ -973,6 +979,15 @@
     if (v === "") return 0;
     const n = Number(v);
     return Number.isInteger(n) ? n : -1;
+  }
+
+  function endBy() { return $("fEndEntries").checked ? "entries" : "time"; }
+
+  function syncEndBy() {
+    const byMax = endBy() === "entries";
+    $("fEndTimeBox").hidden = byMax;
+    $("fEndEntriesBox").hidden = !byMax;
+    if (!byMax && !$("fEnds").value) $("fEnds").value = toInput(Math.floor(Date.now() / 1000) + 3 * 86400);
   }
 
   let prevTimer = 0;
@@ -995,7 +1010,8 @@
         prizes: d.prizes,
         channels: chans,
         conds: d.conds.map(c => ({ text: { ru: c.ru || c.url, en: c.en }, url: c.url, btn: { ru: c.btn_ru, en: "" }, chat: c.chat })),
-        ends_at: d.ends_at || Math.floor(Date.now() / 1000) + 86400,
+        end_by: d.end_by,
+        ends_at: d.end_by === "entries" ? NO_DEADLINE : d.ends_at || Math.floor(Date.now() / 1000) + 86400,
         entries: S.cur.entries || 0,
         max_entries: Math.max(0, d.max_entries),
         winners: (S.cur.list || []).filter(e => e.prize !== null)
@@ -1027,8 +1043,12 @@
     const cs = $("fConds");
     cs.textContent = "";
     (g.conds || []).forEach(c => cs.appendChild(condRow(c)));
-    $("fEnds").value = toInput(g.ends_at);
+    const byMax = g.end_by === "entries" || g.max_entries > 0;
+    $(byMax ? "fEndEntries" : "fEndTime").checked = true;
+    $("fEndLegacy").hidden = !(g.end_by === "time" && g.max_entries > 0 && g.status !== "drawn");
+    $("fEnds").value = g.end_by === "entries" ? "" : toInput(g.ends_at);
     $("fMax").value = g.max_entries ? String(g.max_entries) : "";
+    syncEndBy();
     $("fTest").checked = !!g.test;
     msg("");
     hint("");
@@ -1175,6 +1195,7 @@
     $("fImgDel").addEventListener("click", () => { setImage(null); changed(); });
     ["fTitleRu", "fTitleEn", "fEnds", "fMax"].forEach(id => $(id).addEventListener("input", changed));
     $("fTest").addEventListener("change", changed);
+    ["fEndTime", "fEndEntries"].forEach(id => $(id).addEventListener("change", () => { syncEndBy(); changed(); }));
     document.querySelectorAll("[data-plus]").forEach(b => b.addEventListener("click", () => {
       const base = Math.max(Math.floor(Date.now() / 1000), fromInput($("fEnds").value) || 0);
       $("fEnds").value = toInput(base + (+b.dataset.plus) * 86400);

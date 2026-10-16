@@ -131,6 +131,19 @@ test('the ad marking token is kept when it is one and dropped when it is not', f
     assert_eq('', $saved['campaigns'][2]['erid'], 'no token is the normal case');
 });
 
+test('the linked giveaway survives a save as an id, junk becomes 0', function () {
+    $pdo = test_db();
+    $doc = ['campaigns' => [
+        ['id' => 'a', 'gw' => 5],
+        ['id' => 'b', 'gw' => 'kitsune'],
+        ['id' => 'c', 'gw' => -1],
+        ['id' => 'd'],
+    ]];
+    handle_promo_save($pdo, $doc, tmp_dir_p(), 2000);
+    [, $saved] = handle_promo_get($pdo, false);
+    assert_eq([5, 0, 0, 0], array_column($saved['campaigns'], 'gw'), 'the public document carries the id');
+});
+
 // ------------------------------------------------------------ normalization
 
 test('a dangerous href is neutralised before it reaches the database', function () {
