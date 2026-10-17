@@ -43,13 +43,13 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=28" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=28" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=29" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=28" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=29" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=5" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=5" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -109,14 +109,14 @@ page_lscache();
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/giveaways" aria-current="page">
-            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 5.2V18.05M2.4 9V15.85C2.4 17.07 3.38 18.05 4.6 18.05H14.4C15.62 18.05 16.6 17.07 16.6 15.85V9M2.15 5.2H16.85C17.51 5.2 18.05 5.74 18.05 6.4V7.8C18.05 8.46 17.51 9 16.85 9H2.15C1.49 9 0.95 8.46 0.95 7.8V6.4C0.95 5.74 1.49 5.2 2.15 5.2ZM9.5 5.2C9.5 5.2 8.6 0.95 5.9 0.95C4.85 0.95 4.1 1.75 4.1 2.75C4.1 4.3 6.2 5.2 9.5 5.2ZM9.5 5.2C9.5 5.2 10.4 0.95 13.1 0.95C14.15 0.95 14.9 1.75 14.9 2.75C14.9 4.3 12.8 5.2 9.5 5.2Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.giveaways">Розыгрыши</span>
+          <a class="mk-pill" href="/ads">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.6 6.9V12.1M5.6 12.1L6.75 16.55C6.98 17.43 7.77 18.05 8.68 18.05C9.98 18.05 10.93 16.82 10.6 15.56L10.1 13.65M2.95 6.9H5.6L12.85 3.05C13.88 2.5 15.1 3.25 15.1 4.4V14.6C15.1 15.75 13.88 16.5 12.85 15.95L5.6 12.1H2.95C1.85 12.1 0.95 11.2 0.95 10.1V8.9C0.95 7.8 1.85 6.9 2.95 6.9ZM17.45 7.3C18.18 8.65 18.18 10.35 17.45 11.7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.promote">Реклама</span>
           </a>
         </li>
       </ul>
 
-      <a class="mk-promote" href="/ads" data-i18n="nav.promote">Реклама</a>
+      <a class="mk-promote" href="/giveaways" aria-current="page" data-i18n="nav.giveaways">Розыгрыши</a>
 
       <a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
@@ -147,7 +147,83 @@ page_lscache();
         <span class="gw-ghost gw-ghost-b" aria-hidden="true" data-i18n="gw.title">Розыгрыши</span>
         <h1 class="gw-page-title" data-i18n="gw.title">Розыгрыши</h1>
         <p class="gw-kicker" data-i18n="gw.kicker">Призы Blox Fruits от Maknemy</p>
-        <p class="gw-lead" data-i18n="gw.lead">Войдите через Roblox, подключите бота в Telegram и участвуйте.</p>
+        <p class="gw-lead" id="gwLead" data-i18n="gw.lead">Войдите через Roblox, подключите бота в Telegram и участвуйте.</p>
+<?php
+// Подписка на обновления розыгрышей. Гость видит строку gw-lead как есть;
+// вошедшему js/gw-notify.js прячет её и показывает этот блок: вопрос и
+// «Подписаться» (бот ещё не подключён или подписка выключена) либо «Вы
+// подписаны» и настройки напоминаний. Разметка от сессии не зависит —
+// страница лежит в кеше, состояние выбирает скрипт по tg_link.php.
+?>
+        <section class="gw-nt" id="gwNotify" aria-labelledby="gwNtTitle" data-state="ask" hidden>
+          <span class="gw-nt-tile" aria-hidden="true">
+            <svg class="gw-nt-bell" viewBox="0 0 24 24" focusable="false"><path d="M12 3.2a5.6 5.6 0 0 0-5.6 5.6v3.5c0 1.3-.5 2.5-1.4 3.4l-.6.7h15.2l-.6-.7c-.9-.9-1.4-2.1-1.4-3.4V8.8A5.6 5.6 0 0 0 12 3.2Z"/><path d="M9.7 19.6a2.4 2.4 0 0 0 4.6 0"/></svg>
+            <svg class="gw-nt-tick" viewBox="0 0 24 24" focusable="false"><path d="m5.6 12.6 4.1 4.1 8.7-9.3"/></svg>
+          </span>
+          <div class="gw-nt-body">
+            <div class="gw-nt-text" aria-live="polite">
+              <p class="gw-nt-title" id="gwNtTitle">Хотите первыми узнавать о новых розыгрышах?</p>
+              <p class="gw-nt-note" id="gwNtNote"></p>
+            </div>
+            <div class="gw-nt-actions">
+              <button class="gw-nt-go" id="gwNtGo" type="button">
+                <svg class="gw-nt-plane" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
+                <span data-i18n="gw.notify.go">Подписаться на обновления</span>
+              </button>
+              <a class="gw-nt-go" id="gwNtBot" href="https://t.me/" target="_blank" rel="noopener" hidden>
+                <svg class="gw-nt-plane" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
+                <span data-i18n="gw.notify.openBot">Открыть бота</span>
+              </a>
+              <button class="gw-sub gw-sub-btn gw-nt-set" id="gwNtSet" type="button" aria-expanded="false" aria-controls="gwNtPanel" hidden>
+                <span data-i18n="gw.notify.settings">Настройки уведомлений</span>
+                <svg class="gw-nt-chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg>
+              </button>
+            </div>
+            <p class="gw-nt-msg" id="gwNtMsg" role="status" aria-live="polite"></p>
+
+            <form class="gw-nt-panel" id="gwNtPanel" novalidate hidden>
+              <label class="gw-nt-sw">
+                <span class="gw-nt-sw-text">
+                  <span class="gw-nt-sw-name" id="gwNtOnName" data-i18n="gw.notify.msgs">Сообщения о розыгрышах</span>
+                  <span class="gw-nt-sw-hint" id="gwNtOnHint" data-i18n="gw.notify.msgsHint">Новые розыгрыши, итоги и всё, что происходит на этой странице</span>
+                </span>
+                <input class="gw-nt-switch" id="gwNtOn" type="checkbox" role="switch" aria-labelledby="gwNtOnName" aria-describedby="gwNtOnHint" />
+              </label>
+
+              <fieldset class="gw-nt-rem" id="gwNtRem">
+                <legend class="gw-nt-legend" data-i18n="gw.notify.remind">Напоминания</legend>
+                <div class="gw-nt-row">
+                  <input class="gw-nt-box" id="gwNtTime" type="checkbox" />
+                  <label class="gw-nt-label" id="gwNtTimeL" for="gwNtTime" data-i18n="gw.notify.timeLabel">Напомнить, когда до конца останется</label>
+                  <span class="gw-nt-ctl">
+                    <input class="gw-nt-num" id="gwNtTimeN" type="number" inputmode="numeric" min="1" step="1" aria-labelledby="gwNtTimeL" />
+                    <span class="gw-nt-sel">
+                      <select id="gwNtTimeU" data-i18n-label="gw.notify.unit" aria-label="Единица времени">
+                        <option value="60">минут</option>
+                        <option value="3600">часов</option>
+                        <option value="86400">дней</option>
+                      </select>
+                    </span>
+                  </span>
+                </div>
+                <div class="gw-nt-row">
+                  <input class="gw-nt-box" id="gwNtPlaces" type="checkbox" aria-describedby="gwNtPlacesH" />
+                  <label class="gw-nt-label" id="gwNtPlacesL" for="gwNtPlaces" data-i18n="gw.notify.placesLabel">Напомнить, когда останется</label>
+                  <span class="gw-nt-ctl">
+                    <input class="gw-nt-num" id="gwNtPlacesN" type="number" inputmode="numeric" min="1" max="100000" step="1" aria-labelledby="gwNtPlacesL gwNtPlacesU" />
+                    <span class="gw-nt-unit" id="gwNtPlacesU">мест</span>
+                  </span>
+                  <span class="gw-nt-hint" id="gwNtPlacesH" data-i18n="gw.notify.placesHint">Только для розыгрышей с лимитом участников.</span>
+                </div>
+              </fieldset>
+
+              <div class="gw-nt-foot">
+                <button class="gw-nt-save" id="gwNtSave" type="submit" data-i18n="gw.notify.save">Сохранить</button>
+                <p class="gw-nt-saved" id="gwNtSaved" role="status" aria-live="polite"></p>
+              </div>
+            </form>
+          </div>
+        </section>
         <img class="gw-head-gift" src="<?= hw_img('assets/design/home/card-giveaways.webp') ?>" width="482" height="482" alt="" aria-hidden="true" />
       </div>
     </header>
@@ -181,9 +257,10 @@ page_lscache();
     </p>
   </footer>
 
-  <script src="js/i18n.js?v=79" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=80" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=9" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=10" fetchpriority="high"></script>
   <script src="js/giveaways-page.js?v=2" fetchpriority="high"></script>
+  <script src="js/gw-notify.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

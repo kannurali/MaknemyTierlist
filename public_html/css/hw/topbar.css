@@ -474,8 +474,6 @@ a.mk-avatar { text-decoration: none; }
 .mk-user-item:focus-visible { outline: 2px solid #e4bfff; outline-offset: -2px; }
 .mk-user-item[disabled] { opacity: .5; cursor: default; }
 
-.mk-user-login { font-weight: 700; }
-
 .mk-user-lang {
   display: flex;
   align-items: center;
@@ -672,7 +670,13 @@ a.mk-avatar { text-decoration: none; }
 }
 
 @media (max-width: 340px) {
-  .mk-promote { padding: 0 9px; font-size: 15px; letter-spacing: .02em; }
+  .mk-top,
+  .mk-top-bar { gap: 5px; }
+  .mk-tg,
+  .mk-chat,
+  .mk-avatar,
+  .mk-top-toggle { width: 38px; height: 38px; }
+  .mk-promote { height: 38px; padding: 0 8px; font-size: 15px; letter-spacing: .02em; }
 }
 
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) {

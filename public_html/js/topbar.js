@@ -298,14 +298,15 @@
     return true;
   }
 
-  function addLoginItem(menu) {
-    var a = document.createElement("a");
-    a.className = "mk-user-item mk-user-login";
-    a.setAttribute("role", "menuitem");
-    a.href = auth.startUrl();
-    a.textContent = tx("user.login");
-    a.setAttribute("data-i18n", "user.login");
-    menu.insertBefore(a, menu.firstChild);
+  function loginDirect(btn) {
+    var label = tx("user.login");
+    btn.setAttribute("data-login", "1");
+    btn.removeAttribute("aria-haspopup");
+    btn.removeAttribute("aria-expanded");
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("title", label);
+    btn.setAttribute("data-i18n-label", "user.login");
+    btn.setAttribute("data-i18n-title", "user.login");
   }
 
   var PANEL = {
@@ -454,6 +455,10 @@
     btn.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
+      if (btn.hasAttribute("data-login")) {
+        location.assign(auth.startUrl());
+        return;
+      }
       setMenuOpen(!menuOpen);
     });
 
@@ -551,7 +556,7 @@
           showUser(avatarBtn, avatarMenu, s.user, s.admin ? "admin" : s.moderator ? "support" : "");
           startUnread(s.unread);
         }
-        else if (s.roblox_public || invited) addLoginItem(avatarMenu);
+        else if (s.roblox_public || invited) loginDirect(avatarBtn);
       })
       .catch(function () {});
   }

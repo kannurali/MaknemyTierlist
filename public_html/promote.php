@@ -28,16 +28,16 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=28" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=28" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=29" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=28" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=29" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promote.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/promote.css?v=1" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=5" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=5" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -95,14 +95,14 @@ page_lscache();
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/giveaways">
-            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 5.2V18.05M2.4 9V15.85C2.4 17.07 3.38 18.05 4.6 18.05H14.4C15.62 18.05 16.6 17.07 16.6 15.85V9M2.15 5.2H16.85C17.51 5.2 18.05 5.74 18.05 6.4V7.8C18.05 8.46 17.51 9 16.85 9H2.15C1.49 9 0.95 8.46 0.95 7.8V6.4C0.95 5.74 1.49 5.2 2.15 5.2ZM9.5 5.2C9.5 5.2 8.6 0.95 5.9 0.95C4.85 0.95 4.1 1.75 4.1 2.75C4.1 4.3 6.2 5.2 9.5 5.2ZM9.5 5.2C9.5 5.2 10.4 0.95 13.1 0.95C14.15 0.95 14.9 1.75 14.9 2.75C14.9 4.3 12.8 5.2 9.5 5.2Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.giveaways">Розыгрыши</span>
+          <a class="mk-pill" href="/ads" aria-current="page">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.6 6.9V12.1M5.6 12.1L6.75 16.55C6.98 17.43 7.77 18.05 8.68 18.05C9.98 18.05 10.93 16.82 10.6 15.56L10.1 13.65M2.95 6.9H5.6L12.85 3.05C13.88 2.5 15.1 3.25 15.1 4.4V14.6C15.1 15.75 13.88 16.5 12.85 15.95L5.6 12.1H2.95C1.85 12.1 0.95 11.2 0.95 10.1V8.9C0.95 7.8 1.85 6.9 2.95 6.9ZM17.45 7.3C18.18 8.65 18.18 10.35 17.45 11.7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.promote">Реклама</span>
           </a>
         </li>
       </ul>
 
-      <a class="mk-promote" href="/ads" aria-current="page" data-i18n="nav.promote">Реклама</a>
+      <a class="mk-promote" href="/giveaways" data-i18n="nav.giveaways">Розыгрыши</a>
 
       <a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
@@ -532,9 +532,9 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
-  <script src="js/i18n.js?v=79" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=80" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=9" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=10" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
