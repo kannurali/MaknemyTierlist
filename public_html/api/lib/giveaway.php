@@ -44,8 +44,11 @@
 // перемешанному списку участников.
 //
 // Что пишет бот. О старте — всем подключившим бота, мимо переключателей в
-// профиле (так решил владелец: о розыгрышах знать должны все). О победе —
-// каждому победителю. Связывается с победителем владелец сам.
+// профиле (так решил владелец: о розыгрышах знать должны все), кроме тех, кто
+// сам отписался от розыгрышей на /giveaways (gw_prefs, lib/gw_prefs.php). Там
+// же подписчик выбирает напоминания: за сколько до итогов и за сколько мест до
+// лимита (раздел «Напоминания подписчикам»). О победе — каждому победителю.
+// Связывается с победителем владелец сам.
 //
 // Тестовый розыгрыш (колонка test) — чтобы проверить всё вживую, не трогая
 // посетителей. В /api/giveaways.php его нет, поэтому ни окна, ни карточки на
@@ -62,6 +65,7 @@
 // PHP 7.4: без match, без str_contains, без именованных аргументов.
 
 require_once __DIR__ . '/telegram.php';
+require_once __DIR__ . '/gw_prefs.php';
 require_once __DIR__ . '/news_blocks.php';
 require_once __DIR__ . '/translate.php';
 
@@ -742,7 +746,7 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
     // Занял последнее место — окно и бот скажут «приём закрыт» вместо даты итогов.
     $last = (int)$row['ends_at'] <= $now;
     return [200, ['ok' => true, 'joined' => true] + ($last ? ['last' => true] : []),
-        ['chat_id' => $chat, 'lang' => tg_lang($link['lang']), 'row' => $row, 'last' => $last]];
+        ['chat_id' => $chat, 'lang' => tg_lang($link['lang']), 'row' => $row, 'last' => $last, 'user' => $me]];
 }
 
 /**
@@ -1392,13 +1396,26 @@ function gw_win_text(array $row, string $prize, string $lang): string {
         . "\n\nСкоро с вами свяжется владелец сайта.";
 }
 
+// Кому писать о старте: всем подключившим бота, кроме отписавшихся от
+// розыгрышей. Таблицы gw_prefs нет — всем, как было до подписки.
+function gw_announce_rows(PDO $pdo): array {
+    try {
+        return $pdo->query(
+            'SELECT l.chat_id, l.lang FROM tg_links l LEFT JOIN gw_prefs p ON p.user_id = l.user_id
+              WHERE p.user_id IS NULL OR p.subscribed = 1 ORDER BY l.linked_at, l.user_id'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return $pdo->query('SELECT chat_id, lang FROM tg_links ORDER BY linked_at, user_id')->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
 /**
- * Рассылка о старте — всем, кто подключил бота, без учёта переключателей.
- * Сколько ушло.
+ * Рассылка о старте — всем, кто подключил бота, без учёта переключателей
+ * профиля, но без отписавшихся от розыгрышей. Сколько ушло.
  */
 function gw_announce(PDO $pdo, callable $send, array $row, ?callable $sleep = null): int {
     try {
-        $rows = $pdo->query('SELECT chat_id, lang FROM tg_links ORDER BY linked_at, user_id')->fetchAll(PDO::FETCH_ASSOC);
+        $rows = gw_announce_rows($pdo);
     } catch (PDOException $e) {
         return 0;
     }
@@ -1538,6 +1555,250 @@ function gw_after_channel(PDO $pdo, array $cfg, int $chatId, int $now): void {
         gw_channel_refresh($pdo, $tg, tg_http($tg['token']), $chatId, $now);
     } catch (Throwable $e) {
         error_log('giveaway channel: ' . $e->getMessage());
+    }
+}
+
+// --------------------------------------------------------------------------
+//  Напоминания подписчикам
+// --------------------------------------------------------------------------
+//
+// В «Настройках уведомлений» на /giveaways человек сам выбирает, за сколько
+// до итогов напомнить и за сколько мест до лимита (lib/gw_prefs.php). Каждое
+// напоминание — одно на человека и розыгрыш: строка в gw_reminders ставится
+// до отправки, и второй проход её уже не пошлёт.
+//
+// «По времени» проверяет тот же запрос к /api/giveaways.php, что подводит
+// итоги, — после ответа (gw_after_remind()). Cron нет, поэтому напоминание
+// может опоздать, пока на сайт никто не заходит; текст считает оставшееся
+// время в момент отправки, так что опоздавшее не врёт. Напоминания нет, если
+// его момент наступил раньше публикации розыгрыша или раньше, чем человек
+// сохранил настройку: иначе «за 3 дня» у розыгрыша на 2 дня пришло бы сразу
+// вслед за рассылкой о старте.
+//
+// «По местам» — сразу после вступления очередного участника
+// (gw_after_places()), только у розыгрыша с лимитом и только если порог
+// меньше лимита. Только что вступивший своё напоминание не получает: ему
+// бот уже написал «вы участвуете».
+//
+// Участвующему бот пишет «вы участвуете», остальным — «успейте». Тестовый
+// розыгрыш напоминает только своим участникам — это сами тестирующие.
+
+// Правило «тестовый — только участникам». До миграции
+// 2026-10-15-giveaway-test.sql колонки test нет, и тестовых не бывает.
+function gw_remind_test_sql(PDO $pdo): string {
+    return gw_has_test($pdo) ? ' AND (g.test = 0 OR e.user_id IS NOT NULL)' : '';
+}
+
+/**
+ * Кому пора напомнить о времени: строки giveaway_id, user_id, chat_id, lang,
+ * joined. Нет таблиц — никому.
+ */
+function gw_remind_time_due(PDO $pdo, int $now, int $limit = 0): array {
+    try {
+        $st = $pdo->prepare(
+            "SELECT g.id AS giveaway_id, p.user_id, l.chat_id, l.lang,
+                    CASE WHEN e.user_id IS NULL THEN 0 ELSE 1 END AS joined
+               FROM giveaways g
+               JOIN gw_prefs p ON p.subscribed = 1 AND p.time_left > 0
+               JOIN tg_links l ON l.user_id = p.user_id
+               LEFT JOIN giveaway_entries e ON e.giveaway_id = g.id AND e.user_id = p.user_id
+               LEFT JOIN gw_reminders r ON r.giveaway_id = g.id AND r.user_id = p.user_id AND r.kind = 'time'
+              WHERE g.status = 'live' AND g.ends_at > :now AND g.ends_at < :nodl
+                AND g.ends_at - p.time_left <= :now2
+                AND g.ends_at - p.time_left >= g.published_at
+                AND g.ends_at - p.time_left >= p.updated_at
+                AND r.giveaway_id IS NULL" . gw_remind_test_sql($pdo) . "
+              ORDER BY g.ends_at, g.id, p.user_id" . ($limit > 0 ? ' LIMIT ' . $limit : '')
+        );
+        // Целыми, а не строками: в SQLite разность колонок не имеет типа, и
+        // строковый параметр рядом с ней сравнивается как текст.
+        $st->bindValue(':now', $now, PDO::PARAM_INT);
+        $st->bindValue(':nodl', GW_NO_DEADLINE, PDO::PARAM_INT);
+        $st->bindValue(':now2', $now, PDO::PARAM_INT);
+        $st->execute();
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+// Есть ли кому напомнить о времени. Один короткий запрос на каждый
+// некешированный ответ /api/giveaways.php.
+function gw_has_remind(PDO $pdo, int $now): bool {
+    return (bool)gw_remind_time_due($pdo, $now, 1);
+}
+
+/**
+ * Кому напомнить о местах после очередного участника: те же поля плюс left —
+ * сколько мест осталось. Приём закрыт или лимита нет — никому.
+ */
+function gw_remind_places_due(PDO $pdo, array $row, int $now): array {
+    $max = gw_max($row);
+    if ($max <= 0 || $row['status'] !== 'live' || (int)$row['ends_at'] <= $now) { return []; }
+    $id = (int)$row['id'];
+    $left = $max - (gw_entry_counts($pdo, [$id])[$id] ?? 0);
+    if ($left <= 0) { return []; }
+    try {
+        $st = $pdo->prepare(
+            "SELECT g.id AS giveaway_id, p.user_id, l.chat_id, l.lang,
+                    CASE WHEN e.user_id IS NULL THEN 0 ELSE 1 END AS joined
+               FROM giveaways g
+               JOIN gw_prefs p ON p.subscribed = 1 AND p.places_left >= :left AND p.places_left < :max
+               JOIN tg_links l ON l.user_id = p.user_id
+               LEFT JOIN giveaway_entries e ON e.giveaway_id = g.id AND e.user_id = p.user_id
+               LEFT JOIN gw_reminders r ON r.giveaway_id = g.id AND r.user_id = p.user_id AND r.kind = 'places'
+              WHERE g.id = :g AND r.giveaway_id IS NULL" . gw_remind_test_sql($pdo) . "
+              ORDER BY p.user_id"
+        );
+        $st->execute([':left' => $left, ':max' => $max, ':g' => $id]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+    foreach ($rows as $i => $r) { $rows[$i]['left'] = $left; }
+    return $rows;
+}
+
+// Застолбить напоминание. true — его ещё не было, слать можно.
+function gw_remind_claim(PDO $pdo, int $id, string $user, string $kind, int $now): bool {
+    try {
+        $pdo->prepare('INSERT INTO gw_reminders (giveaway_id, user_id, kind, sent_at) VALUES (:g, :u, :k, :at)')
+            ->execute([':g' => $id, ':u' => $user, ':k' => $kind, ':at' => $now]);
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function gw_plural_ru(int $n, string $one, string $few, string $many): string {
+    $m10 = $n % 10;
+    $m100 = $n % 100;
+    if ($m10 === 1 && $m100 !== 11) { return $one; }
+    if ($m10 >= 2 && $m10 <= 4 && ($m100 < 12 || $m100 > 14)) { return $few; }
+    return $many;
+}
+
+// Сколько осталось, с точностью до минуты: «1 день 4 часа», «3 часа 20 минут»,
+// «45 минут». Две старшие единицы, нулевые не пишутся.
+function gw_span(int $sec, string $lang): string {
+    $min = max(1, (int)round($sec / 60));
+    $d = intdiv($min, 1440);
+    $h = intdiv($min % 1440, 60);
+    $m = $min % 60;
+    $parts = $d > 0 ? [[$d, 'd'], [$h, 'h']] : ($h > 0 ? [[$h, 'h'], [$m, 'm']] : [[$m, 'm']]);
+    $ru = ['d' => ['день', 'дня', 'дней'], 'h' => ['час', 'часа', 'часов'], 'm' => ['минута', 'минуты', 'минут']];
+    $en = ['d' => 'day', 'h' => 'hour', 'm' => 'minute'];
+    $out = [];
+    foreach ($parts as [$n, $u]) {
+        if ($n <= 0) { continue; }
+        $out[] = $n . ' ' . ($lang === 'en' ? $en[$u] . ($n === 1 ? '' : 's') : gw_plural_ru($n, $ru[$u][0], $ru[$u][1], $ru[$u][2]));
+    }
+    return implode(' ', $out);
+}
+
+function gw_remind_time_text(array $row, int $left, bool $joined, string $lang): string {
+    $title = gw_title($row, $lang);
+    $span  = gw_span($left, $lang);
+    if ($lang === 'en') {
+        return "⏰ The giveaway «" . $title . "» on maknemy.com ends in " . $span . ".\n\n"
+            . ($joined ? "You're in ✅ If you win, I'll message you here." : "You haven't entered yet — there's still time.");
+    }
+    return "⏰ До итогов розыгрыша «" . $title . "» на maknemy.com — " . $span . ".\n\n"
+        . ($joined ? 'Вы участвуете ✅ О победе я напишу сюда.' : 'Вы ещё не участвуете — успейте, пока приём открыт.');
+}
+
+function gw_remind_places_text(array $row, int $left, bool $joined, string $lang): string {
+    $title = gw_title($row, $lang);
+    $max   = gw_max($row);
+    if ($lang === 'en') {
+        return "🔥 Only " . $left . ' spot' . ($left === 1 ? '' : 's') . ' of ' . $max . " left in the giveaway «" . $title . "» on maknemy.com.\n\n"
+            . ($joined ? "You're in ✅" : 'Grab yours while they last.');
+    }
+    return "🔥 В розыгрыше «" . $title . "» на maknemy.com осталось " . $left . ' ' . gw_plural_ru($left, 'место', 'места', 'мест')
+        . ' из ' . $max . ".\n\n"
+        . ($joined ? 'Вы участвуете ✅' : 'Успейте занять своё, пока места есть.');
+}
+
+/**
+ * Разослать напоминания вида $kind по строкам из gw_remind_*_due(). Сколько
+ * ушло. $skipUser — только что вступивший: напоминание за ним столбится, но
+ * не шлётся. Telegram-чат, привязанный к двум аккаунтам, получает одно.
+ */
+function gw_remind_send(PDO $pdo, callable $send, string $kind, array $rows, int $now, string $skipUser = '', ?callable $sleep = null): int {
+    $sleep = $sleep ?? function (int $us): void { usleep($us); };
+    $loaded = [];
+    $seen = [];
+    $tried = 0;
+    $sent = 0;
+    foreach ($rows as $r) {
+        $id = (int)$r['giveaway_id'];
+        $user = (string)$r['user_id'];
+        if (!gw_remind_claim($pdo, $id, $user, $kind, $now) || $user === $skipUser) { continue; }
+        $chat = (int)$r['chat_id'];
+        if (isset($seen[$id . ':' . $chat])) { continue; }
+        $seen[$id . ':' . $chat] = true;
+        if (!array_key_exists($id, $loaded)) { $loaded[$id] = gw_load($pdo, $id); }
+        $row = $loaded[$id];
+        if (!$row) { continue; }
+
+        $lang = tg_lang($r['lang']);
+        $joined = (int)$r['joined'] === 1;
+        $text = $kind === 'time'
+            ? gw_remind_time_text($row, (int)$row['ends_at'] - $now, $joined, $lang)
+            : gw_remind_places_text($row, (int)$r['left'], $joined, $lang);
+        $btn = $joined ? ($lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш') : ($lang === 'en' ? 'Join' : 'Участвовать');
+        $msg = tg_message_buttons($chat, $text, [[$btn, gw_link($id, !$joined, gw_is_test($row))]]);
+        $msg['link_preview_options'] = ['is_disabled' => true];
+
+        if ($tried++ > 0) { $sleep(TG_BROADCAST_GAP); }
+        $res = $send('sendMessage', $msg);
+        if (is_array($res) && (int)($res['error_code'] ?? 0) === 429) {
+            $wait = (int)($res['parameters']['retry_after'] ?? 1);
+            $sleep(max(1, min(30, $wait)) * 1000000);
+            $res = $send('sendMessage', $msg);
+        }
+        if (tg_after_send($pdo, $chat, $res)) { $sent++; }
+    }
+    return $sent;
+}
+
+/**
+ * Напоминания о времени после ответа /api/giveaways.php. Проход один за раз —
+ * замок-файл, второй запрос в это время просто выходит. $send и $lockPath
+ * подставляют тесты.
+ */
+function gw_after_remind(PDO $pdo, array $cfg, int $now, ?callable $send = null, ?string $lockPath = null, ?callable $sleep = null): array {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return ['skipped' => 'off']; }
+    tg_finish_response();
+    tg_long_run();
+    $lock = @fopen($lockPath ?? sys_get_temp_dir() . '/maknemy-gw-remind.lock', 'c');
+    if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) { return ['skipped' => 'busy']; }
+    try {
+        $res = ['sent' => gw_remind_send($pdo, $send ?? tg_http($tg['token']), 'time', gw_remind_time_due($pdo, $now), $now, '', $sleep)];
+    } catch (Throwable $e) {
+        error_log('giveaway remind: ' . $e->getMessage());
+        $res = ['skipped' => 'error'];
+    }
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    return $res;
+}
+
+// Напоминания о местах после вступления. $note — третий элемент ответа
+// gw_enter(). Ответ сайту уже ушёл.
+function gw_after_places(PDO $pdo, array $cfg, array $note, int $now, ?callable $send = null, ?callable $sleep = null): int {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return 0; }
+    tg_finish_response();
+    tg_long_run();
+    try {
+        $rows = gw_remind_places_due($pdo, $note['row'], $now);
+        if (!$rows) { return 0; }
+        return gw_remind_send($pdo, $send ?? tg_http($tg['token']), 'places', $rows, $now, (string)($note['user'] ?? ''), $sleep);
+    } catch (Throwable $e) {
+        error_log('giveaway places: ' . $e->getMessage());
+        return 0;
     }
 }
 

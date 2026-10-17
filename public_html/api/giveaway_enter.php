@@ -38,8 +38,10 @@ if (!defined('TESTING')) {
     // сразу, а не через полминуты кеша.
     if (!empty($result[2]['last'])) { header('X-LiteSpeed-Purge: tag=giveaways'); }
     json_out($result[1], $result[0]);
-    // Только что вступил — бот подтверждает уже после ответа окну. Занял
+    // Только что вступил — бот подтверждает уже после ответа окну, а
+    // подписчикам, ждавшим «осталось N мест», уходит напоминание. Занял
     // последнее место — тут же подводятся итоги.
     if (!empty($result[2])) { gw_after_join(db(), $cfg, $result[2]); }
+    if (!empty($result[2]) && empty($result[2]['last'])) { gw_after_places(db(), $cfg, $result[2], time()); }
     if (!empty($result[2]['last'])) { gw_after_due(db(), $cfg, time()); }
 }

@@ -1,12 +1,15 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/telegram.php';
+require_once __DIR__ . '/lib/gw_prefs.php';
 
 // Колокольчик в чате и в профиле — POST /api/tg_link.php
 //   {"action":"link","lang":"ru"} → {"ok":true,"url":"https://t.me/<бот>?start=<код>"}
 //   {"action":"unlink"}           → {"ok":true}
-//   {"action":"status"}           → {"ok":true,"tg":{on, linked, name, mod, prefs}}
+//   {"action":"status"}           → {"ok":true,"tg":{on, linked, name, mod, prefs, gw}}
 //   {"action":"prefs","prices":true,"news":false} → {"ok":true,"prefs":{…}}
+//   {"action":"gw_prefs","subscribed":true,"time_left":3600,"places_left":10}
+//                                 → {"ok":true,"gw":{…}} — розыгрыши, см. lib/gw_prefs.php
 //
 // status профиль спрашивает, пока человек жмёт Start в Telegram: так
 // колокольчик сам становится синим, как в чате.
@@ -23,9 +26,12 @@ function handle_tg_link(PDO $pdo, array $cfg, string $me, array $body, int $now)
     }
     if ($action === 'status') {
         if ($me === '') { return [401, ['ok' => false, 'error' => 'not_logged_in']]; }
-        return [200, ['ok' => true, 'tg' => tg_profile_status($pdo, tg_config($cfg), $me)]];
+        $tg = tg_profile_status($pdo, tg_config($cfg), $me);
+        $tg['gw'] = gw_prefs_get($pdo, $me);
+        return [200, ['ok' => true, 'tg' => $tg]];
     }
     if ($action === 'prefs') { return tg_prefs_set($pdo, $me, $body); }
+    if ($action === 'gw_prefs') { return gw_prefs_set($pdo, $me, $body, $now); }
     return [400, ['ok' => false, 'error' => 'bad_action']];
 }
 
@@ -36,7 +42,7 @@ function handle_tg_link(PDO $pdo, array $cfg, string $me, array $body, int $now)
 // несколько секунд, пока ждёт Start.
 function tg_link_limit(string $action): int {
     if ($action === 'link')  { return 30; }
-    if ($action === 'prefs') { return 60; }
+    if ($action === 'prefs' || $action === 'gw_prefs') { return 60; }
     return 0;
 }
 

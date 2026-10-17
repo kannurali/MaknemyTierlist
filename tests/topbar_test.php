@@ -331,28 +331,38 @@ test('кнопка Telegram ведёт на канал и стоит перед 
         'тот же круг, что у чата и профиля');
 });
 
-// Кнопка «Реклама» (владелец, 2026-10-15): условия для рекламодателей на
-// /ads. В разделы (☰) страница не входит — на неё ведёт только эта кнопка,
-// слева от Telegram. На телефоне под неё освобождено место: надпись MAKNEMY
-// у логотипа уходит на ширине до 499 px (выбор владельца — текстовая кнопка,
-// а не значок). Класс без «ads»: такие имена режут блокировщики. Адрес /ads
+// Текстовая кнопка слева от Telegram. С 2026-10-15 это была «Реклама»
+// (условия для рекламодателей на /ads), 2026-10-18 владелец «пока что»
+// поменял её местами с «Розыгрышами» из разделов (☰): кнопка ведёт на
+// /giveaways, а /ads стал разделом с мегафоном. На телефоне под кнопку
+// освобождено место: надпись MAKNEMY у логотипа уходит на ширине до 499 px
+// (выбор владельца — текстовая кнопка, а не значок). Класс mk-promote
+// остался: стили те же, а имена с «ads» режут блокировщики. Адрес /ads
 // выбрал владелец (2026-10-17), прежний /promote уводит туда 301.
-test('кнопка «Реклама» ведёт на /ads, стоит перед Telegram и не в разделах', function () use ($PUB, $PAGES6) {
+test('кнопка перед Telegram ведёт на /giveaways, «Реклама» — в разделах', function () use ($PUB, $PAGES6) {
     $all = array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php', 'giveaways.php', 'promote.php']);
     foreach ($all as $f) {
         $s = top_header($PUB, $f);
-        $on = $f === 'promote.php' ? ' aria-current="page"' : '';
-        assert_eq(1, substr_count($s, '<a class="mk-promote"'), "$f: одна кнопка «Реклама»");
-        assert_true(strpos($s, '<a class="mk-promote" href="/ads"' . $on . ' data-i18n="nav.promote">Реклама</a>') !== false,
-            "$f: ссылка на /ads с переводимой подписью" . ($on ? ', отмечена текущей' : ''));
+        $on = $f === 'giveaways.php' ? ' aria-current="page"' : '';
+        assert_eq(1, substr_count($s, '<a class="mk-promote"'), "$f: одна текстовая кнопка");
+        assert_true(strpos($s, '<a class="mk-promote" href="/giveaways"' . $on . ' data-i18n="nav.giveaways">Розыгрыши</a>') !== false,
+            "$f: ссылка на /giveaways с переводимой подписью" . ($on ? ', отмечена текущей' : ''));
         $nav   = strpos($s, '</ul>');
         $promo = strpos($s, '<a class="mk-promote"');
         $tg    = strpos($s, '<a class="mk-tg"');
         assert_true($nav !== false && $promo !== false && $tg !== false && $nav < $promo && $promo < $tg,
             "$f: в плашке после разделов, перед Telegram");
+
+        $cur  = $f === 'promote.php' ? ' aria-current="page"' : '';
+        $pill = strpos($s, '<a class="mk-pill" href="/ads"' . $cur . '>');
+        assert_true($pill !== false && $pill < $nav, "$f: «Реклама» в разделах" . ($cur ? ', отмечена текущей' : ''));
+        assert_eq(0, substr_count($s, 'class="mk-pill" href="/giveaways"'), "$f: «Розыгрышей» в разделах больше нет");
+        assert_true(strpos($s, '<span class="mk-pill-text" data-i18n="nav.promote">Реклама</span>') !== false,
+            "$f: подпись раздела переводится");
     }
     $i18n = top_read($PUB . '/js/i18n.js');
-    assert_eq(2, preg_match_all('/"nav\.promote":\s+"[^"]+"/', $i18n), 'подпись на обоих языках');
+    assert_eq(2, preg_match_all('/"nav\.promote":\s+"[^"]+"/', $i18n), '«Реклама» на обоих языках');
+    assert_eq(2, preg_match_all('/"nav\.giveaways":\s+"[^"]+"/', $i18n), '«Розыгрыши» на обоих языках');
 
     $css = top_read($PUB . '/css/topbar.css');
     assert_true((bool)preg_match('/@media \(max-width: 499px\) \{\s*\.mk-top-word \{ display: none; \}/', $css),
@@ -483,12 +493,18 @@ test('карусель карточек не забирает указатель
 // остальным её открывает ключ roblox_login_public (api/session.php отдаёт его
 // как roblox_public). Поведение гоняет tools/check-signin-invite-ui.mjs, здесь
 // проверяется, что правило не пропало из кода.
+//
+// Гостю кнопка профиля сразу ведёт на вход (владелец, 2026-10-18), без меню;
+// выбор языка остался в меню профиля вошедшего.
 test('кнопка входа — только по приглашению или когда вход открыт всем', function () use ($PUB) {
     $js = top_read($PUB . '/js/topbar.js');
-    assert_true(strpos($js, 'else if (s.roblox_public || invited) addLoginItem(avatarMenu);') !== false,
-        'пункт входа только при открытом входе или по приглашению');
-    assert_eq(0, preg_match('/else addLoginItem\(avatarMenu\);/', $js),
-        'безусловного пункта входа остаться не должно');
+    assert_true(strpos($js, 'else if (s.roblox_public || invited) loginDirect(avatarBtn);') !== false,
+        'вход только при открытом входе или по приглашению');
+    assert_eq(0, preg_match('/else loginDirect\(avatarBtn\);/', $js),
+        'безусловного входа остаться не должно');
+    assert_true((bool)preg_match('/if \(btn\.hasAttribute\("data-login"\)\) \{\s*location\.assign\(auth\.startUrl\(\)\);\s*return;/', $js),
+        'гостю кнопка профиля сразу открывает вход, а не меню');
+    assert_eq(0, substr_count($js, 'addLoginItem'), 'пункта «Войти» в меню больше нет');
     assert_true(strpos($js, 'var INVITE_KEY = "nexus-signin-v1";') !== false,
         'приглашение запоминается под своим ключом');
     assert_true(strpos($js, 'var INVITE_RE = /([?&])signin(=[^&]*)?(&|$)/;') !== false,

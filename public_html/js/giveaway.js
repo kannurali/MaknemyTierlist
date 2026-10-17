@@ -16,6 +16,7 @@
 
   var dataPromise = null;
   var sessionPromise = null;
+  var tgPromise = null;
   var ticker = 0;
 
   function lang() {
@@ -147,6 +148,27 @@
     }).then(function (r) {
       return r.json().catch(function () { return { ok: false, error: r.status === 429 ? "rate_limited" : "net" }; });
     });
+  }
+
+  function tgStatus(fresh) {
+    if (!tgPromise || fresh) {
+      tgPromise = post(LINK, { action: "status" })
+        .then(function (r) { return r && r.ok && r.tg ? r.tg : null; })
+        .catch(function () { return null; });
+    }
+    return tgPromise;
+  }
+
+  function tgLinked(tg) {
+    tgPromise = Promise.resolve(tg);
+    document.dispatchEvent(new CustomEvent("mk:tg-linked", { detail: tg }));
+  }
+
+  function openWin() {
+    var w = null;
+    try { w = root.open("", "_blank"); } catch (_) { w = null; }
+    if (w) { try { w.opener = null; } catch (_) {} }
+    return w;
   }
 
   function pad(n) { return n < 10 ? "0" + n : String(n); }
@@ -526,6 +548,16 @@
     return sec;
   }
 
+  function condAction(li, label, onClick) {
+    var b = el("button", "gw-sub gw-sub-btn", label);
+    b.type = "button";
+    b.hidden = true;
+    b.addEventListener("click", onClick);
+    li.classList.add("has-btn");
+    li.appendChild(b);
+    return b;
+  }
+
   function mark(li, state) {
     if (!li) { return; }
     li.classList.toggle("is-ok", state === "ok");
@@ -614,6 +646,8 @@
 
   function wire(cardEl, g, ui, opts) {
     var st = { joined: false, busy: false, tgUrl: "", poll: 0, pollUntil: 0, user: null };
+    ui.bLogin = condAction(ui.cLogin, t("gw.condLoginBtn"), goLogin);
+    ui.bTg = condAction(ui.cTg, t("gw.condTgBtn"), openTg);
 
     function say(key, vars) {
       ui.msg.textContent = key ? t(key, vars) : "";
@@ -648,8 +682,8 @@
         if (document.hidden) { pollLink(); return; }
         post(LINK, { action: "status" }).then(function (r) {
           if (r && r.ok && r.tg && r.tg.linked) {
-            mark(ui.cTg, "ok");
-            st.tgUrl = "";
+            tgLinked(r.tg);
+            onTgLinked();
             attempt();
             return;
           }
@@ -658,9 +692,26 @@
       }, LINK_POLL_MS);
     }
 
+    function onTgLinked() {
+      mark(ui.cTg, "ok");
+      ui.bTg.hidden = true;
+      st.tgUrl = "";
+      if (ui.cta.getAttribute("data-key") === "gw.connectTg") {
+        setCta("gw.join");
+        say("");
+      }
+    }
+
+    function waitTg() {
+      say("gw.tgWait");
+      st.pollUntil = Date.now() + LINK_POLL_FOR;
+      pollLink();
+    }
+
     function askTg() {
       mark(ui.cLogin, "ok");
       mark(ui.cTg, "bad");
+      ui.bTg.hidden = false;
       post(LINK, { action: "link", lang: lang() }).then(function (r) {
         if (r && r.ok && r.url) {
           st.tgUrl = r.url;
@@ -671,6 +722,37 @@
           say(r && r.error === "off" ? "gw.err.tg_off" : "gw.err.net");
         }
       }).catch(function () { setCta("gw.join"); say("gw.err.net"); });
+    }
+
+    function openTg() {
+      if (st.tgUrl) {
+        root.open(st.tgUrl, "_blank", "noopener");
+        waitTg();
+        return;
+      }
+      var w = openWin();
+      ui.bTg.disabled = true;
+      post(LINK, { action: "link", lang: lang() }).then(function (r) {
+        ui.bTg.disabled = false;
+        if (r && r.ok && r.url) {
+          st.tgUrl = r.url;
+          if (w) {
+            w.location.href = r.url;
+            waitTg();
+          } else {
+            setCta("gw.connectTg");
+            say("gw.tgNote");
+          }
+          return;
+        }
+        if (w) { w.close(); }
+        if (r && r.error === "not_logged_in") { goLogin(); return; }
+        say(r && r.error === "off" ? "gw.err.tg_off" : "gw.err.net");
+      }).catch(function () {
+        ui.bTg.disabled = false;
+        if (w) { w.close(); }
+        say("gw.err.net");
+      });
     }
 
     function goLogin() {
@@ -732,9 +814,7 @@
     ui.cta.addEventListener("click", function () {
       if (st.tgUrl) {
         root.open(st.tgUrl, "_blank", "noopener");
-        say("gw.tgWait");
-        st.pollUntil = Date.now() + LINK_POLL_FOR;
-        pollLink();
+        waitTg();
         return;
       }
       if (st.user === false) { goLogin(); return; }
@@ -751,11 +831,24 @@
 
     cardEl.gwJoin = attempt;
 
+    document.addEventListener("mk:tg-linked", function () {
+      if (!st.joined && cardEl.isConnected) { onTgLinked(); }
+    });
+
     session().then(function (s) {
       st.user = s ? !!s.user : null;
       if (s && s.user) { mark(ui.cLogin, "ok"); }
       if (isJoined(g.id, s)) { showJoined(); return; }
-      if (st.user === false) { setCta("gw.joinLogin"); }
+      if (st.user === false) {
+        setCta("gw.joinLogin");
+        ui.bLogin.hidden = false;
+        return;
+      }
+      if (!st.user) { return; }
+      tgStatus().then(function (tg) {
+        if (st.joined || !tg) { return; }
+        if (tg.linked) { onTgLinked(); } else { ui.bTg.hidden = false; }
+      });
     });
   }
 
@@ -764,6 +857,8 @@
   root.NX_GW = {
     load: load,
     session: session,
+    tgStatus: tgStatus,
+    tgLinked: tgLinked,
     card: card,
     isJoined: isJoined,
     takeResume: takeResume,
