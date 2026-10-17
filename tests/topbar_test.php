@@ -332,18 +332,19 @@ test('кнопка Telegram ведёт на канал и стоит перед 
 });
 
 // Кнопка «Реклама» (владелец, 2026-10-15): условия для рекламодателей на
-// /promote. В разделы (☰) страница не входит — на неё ведёт только эта кнопка,
+// /ads. В разделы (☰) страница не входит — на неё ведёт только эта кнопка,
 // слева от Telegram. На телефоне под неё освобождено место: надпись MAKNEMY
 // у логотипа уходит на ширине до 499 px (выбор владельца — текстовая кнопка,
-// а не значок). Адрес и класс без «ads»: такие имена режут блокировщики.
-test('кнопка «Реклама» ведёт на /promote, стоит перед Telegram и не в разделах', function () use ($PUB, $PAGES6) {
+// а не значок). Класс без «ads»: такие имена режут блокировщики. Адрес /ads
+// выбрал владелец (2026-10-17), прежний /promote уводит туда 301.
+test('кнопка «Реклама» ведёт на /ads, стоит перед Telegram и не в разделах', function () use ($PUB, $PAGES6) {
     $all = array_merge($PAGES6, ['support.php', 'trade-new.php', 'trading.php', 'giveaways.php', 'promote.php']);
     foreach ($all as $f) {
         $s = top_header($PUB, $f);
         $on = $f === 'promote.php' ? ' aria-current="page"' : '';
         assert_eq(1, substr_count($s, '<a class="mk-promote"'), "$f: одна кнопка «Реклама»");
-        assert_true(strpos($s, '<a class="mk-promote" href="/promote"' . $on . ' data-i18n="nav.promote">Реклама</a>') !== false,
-            "$f: ссылка на /promote с переводимой подписью" . ($on ? ', отмечена текущей' : ''));
+        assert_true(strpos($s, '<a class="mk-promote" href="/ads"' . $on . ' data-i18n="nav.promote">Реклама</a>') !== false,
+            "$f: ссылка на /ads с переводимой подписью" . ($on ? ', отмечена текущей' : ''));
         $nav   = strpos($s, '</ul>');
         $promo = strpos($s, '<a class="mk-promote"');
         $tg    = strpos($s, '<a class="mk-tg"');
@@ -358,22 +359,23 @@ test('кнопка «Реклама» ведёт на /promote, стоит пе�
         'на телефоне надпись MAKNEMY уступает место кнопке');
 
     $ht = top_read($PUB . '/.htaccess');
-    foreach (['RewriteRule ^promote/$ /promote [L,R=301]',
-              'RewriteRule ^promote\.php$ /promote [L,R=301]',
-              'RewriteRule ^promote$ /promote.php [L]'] as $rule) {
+    foreach (['RewriteRule ^ads/$ /ads [L,R=301]',
+              'RewriteRule ^promote/?$ /ads [L,R=301]',
+              'RewriteRule ^promote\.php$ /ads [L,R=301]',
+              'RewriteRule ^ads$ /promote.php [L]'] as $rule) {
         assert_true(strpos($ht, $rule) !== false, ".htaccess: $rule");
     }
-    assert_true(strpos(top_read($PUB . '/sitemap.xml'), '<loc>https://maknemy.com/promote</loc>') !== false, 'адрес в sitemap');
+    assert_true(strpos(top_read($PUB . '/sitemap.xml'), '<loc>https://maknemy.com/ads</loc>') !== false, 'адрес в sitemap');
 });
 
-// Оглавление /promote уводило на главную (владелец, 2026-10-16): у страниц
+// Оглавление /ads (тогда /promote) уводило на главную (владелец, 2026-10-16): у страниц
 // <base href="/">, и "#pm-card" браузер читает как "/#pm-card". Якорь обязан
 // нести путь страницы — тогда это переход внутри неё, без перезагрузки.
-test('якоря /promote ведут в разделы страницы, а не на главную', function () use ($PUB) {
+test('якоря /ads ведут в разделы страницы, а не на главную', function () use ($PUB) {
     $page = top_read($PUB . '/promote.php');
     assert_true(strpos($page, '<base href="/" />') !== false, 'у страницы base href="/"');
     assert_eq(0, preg_match_all('/href="#[^"]+"/', $page), 'нет голых href="#…"');
-    assert_true(preg_match_all('/href="\/promote#([a-z-]+)"/', $page, $m) >= 12, 'оглавление на месте');
+    assert_true(preg_match_all('/href="\/ads#([a-z-]+)"/', $page, $m) >= 12, 'оглавление на месте');
     foreach (array_unique($m[1]) as $id) {
         assert_eq(1, substr_count($page, 'id="' . $id . '"'), "раздел #$id есть на странице");
     }
