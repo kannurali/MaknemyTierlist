@@ -153,11 +153,11 @@ test('ответ Vulcan на /stock разбирается: оба вида, ц�
         ['key' => 'light', 'name' => 'Light', 'price' => 650000],
         ['key' => 'gravity', 'name' => 'Gravity', 'price' => 2500000],
     ], $s['normal']['fruits'], 'обычный сток');
-    assert_eq(1790899211, $s['normal']['ends'], 'метка смены обычного');
+    assert_eq(1790899200, $s['normal']['ends'], 'смена обычного — ровно в начале часа (у Vulcan 00:00:11)');
     assert_eq(['bomb', 'dark', 'diamond', 'rubber', 'buddha', 'pain'],
         array_column($s['mirage']['fruits'], 'key'), 'Mirage');
     assert_eq(2300000, $s['mirage']['fruits'][5]['price'], 'цена Pain');
-    assert_eq(1790899272, $s['mirage']['ends'], 'метка смены Mirage');
+    assert_eq(1790899200, $s['mirage']['ends'], 'смена Mirage — тоже ровно в начале часа (у Vulcan 00:01:12)');
 });
 
 // Автопост при смене — новые компоненты Discord (flags 32768): контейнер
@@ -170,7 +170,7 @@ test('настоящий автопост Vulcan разбирается: оди�
         ['key' => 'flame', 'name' => 'Flame', 'price' => 250000],
         ['key' => 'eagle', 'name' => 'Eagle', 'price' => 550000],
     ], $s['normal']['fruits'], 'фрукты');
-    assert_eq(1790913612, $s['normal']['ends'], 'смена через четыре часа');
+    assert_eq(1790913600, $s['normal']['ends'], 'смена через четыре часа, ровно в начале часа');
 });
 
 // Тот же формат с заголовком Mirage, упоминанием роли и кнопкой в контейнере
@@ -197,6 +197,20 @@ test('автопост в новых компонентах Discord разбир
     assert_eq(1790906400, $s['mirage']['ends'], 'время смены');
 });
 
+// Vulcan пишет время смены с опозданием (20:00:12, 20:01:12), а в игре сток
+// меняется ровно в начале часа — таймеры на странице показывают ровное время.
+test('время смены приводится к началу часа, далёкое — остаётся', function () {
+    $hour = 1790899200;
+    assert_eq($hour, stock_snap($hour + 12), '+12 с');
+    assert_eq($hour, stock_snap($hour + 72), '+1 мин 12 с');
+    assert_eq($hour, stock_snap($hour - 30), 'чуть раньше часа');
+    assert_eq($hour, stock_snap($hour + 600), 'ровно 10 минут — ещё к часу');
+    assert_eq($hour + 1800, stock_snap($hour + 1800), 'полчаса — не похоже на смену в начале часа');
+    $pdo = sk_db();
+    $pdo->exec("INSERT INTO stock (kind, fruits, ends_at, seen_at, message_id) VALUES ('mirage', '[]', " . ($hour + 72) . ", 0, '1')");
+    assert_eq($hour, stock_read($pdo)['mirage']['ends'], 'старая строка в базе тоже читается с ровным часом');
+});
+
 test('строка без цены, кнопка и болтовня фруктами не становятся', function () {
     $s = stock_parse_text("NORMAL STOCK\nhello there\n**Stock Change in** - <t:1790899211:R>\nJoin • server");
     assert_eq([], $s, 'ни одного фрукта — вида нет');
@@ -221,7 +235,7 @@ test('первый сток — новая смена, тот же сток с �
     assert_eq([], stock_apply($pdo, $p, '11', SK_NOW + 60), 'повтор той же смены');
     $p['mirage']['ends'] += 7200;
     assert_eq(['mirage'], array_keys(stock_apply($pdo, $p, '12', SK_NOW + 7200)), 'Mirage сменился');
-    assert_eq(1790899272 + 7200, stock_read($pdo)['mirage']['ends'], 'в базе новая метка');
+    assert_eq(1790899200 + 7200, stock_read($pdo)['mirage']['ends'], 'в базе новая метка');
 });
 
 test('сообщение со старой сменой свежий сток не затирает', function () {
@@ -358,7 +372,7 @@ test('о смене пишут только тем, чей фрукт в ней 
     $by = [];
     foreach ($log as [$method, $p]) { $by[$p['chat_id']] = $p; }
     assert_true(!isset($by[333]), 'Kitsune в стоке нет — третьему не пишем');
-    assert_eq("🔔 Сток Mirage\nDark — 500 000\nPain — 2 300 000\n\n⏳ Смена через 38 мин",
+    assert_eq("🔔 Сток Mirage\nDark — 500 000\nPain — 2 300 000\n\n⏳ Смена через 37 мин",
         $by[111]['text'], 'одно сообщение со всеми совпадениями вида');
     assert_eq("🔔 Normal stock\nGravity — 2,500,000\n\n⏳ Next change in 37 min", $by[222]['text'], 'по-английски');
     assert_eq('https://maknemy.com/stock#watch', $by[111]['reply_markup']['inline_keyboard'][1][0]['url'],
@@ -504,7 +518,7 @@ test('ответ api/stock.php: сток, подпись источника, с�
     stock_apply($pdo, stock_parse_message(sk_fixture('command')), '10', SK_NOW);
     $out = stock_public($pdo, []);
     assert_eq("Fool's eyes", $out['source'], 'источник — наш бот');
-    assert_eq(1790899211, $out['normal']['ends'], 'метка смены');
+    assert_eq(1790899200, $out['normal']['ends'], 'метка смены');
     assert_eq(SK_NOW, $out['normal']['seen'], 'когда видели');
     assert_eq(false, isset($out['normal']['message_id']), 'id сообщения Discord наружу не уходит');
     assert_eq(10, count($out['catalog']), 'список из фруктов стока, когда тирлиста нет');
