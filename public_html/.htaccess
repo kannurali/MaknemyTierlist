@@ -214,15 +214,20 @@ RewriteRule ^giveaways$ /giveaways.php [L]
 
 # -------------------------------- Реклама --------------------------------
 # Условия для рекламодателей; в шапке на неё ведёт кнопка «Реклама». Адрес
-# не /ads намеренно: пути и классы с «ads» режут блокировщики рекламы, и
-# страница пропала бы ровно у тех, кто их ставит. Пути внутри promote.php
-# документ-относительные — отсюда тот же приём, что у /stock.
-RewriteRule ^promote/$ /promote [L,R=301]
+# /ads выбрал владелец (2026-10-17). Сверено на эту дату: EasyList, RU AdList,
+# AdGuard Base/Russian и uBlock filters не прячут ссылку на /ads и не
+# блокируют саму страницу; задевает только `.com/ads?$popup`, то есть
+# /ads?… во всплывающем окне. Классы и файлы по-прежнему без «ads» — по ним
+# бьют косметические правила. Пути внутри promote.php документ-относительные —
+# отсюда тот же приём, что у /stock. Первый адрес, /promote (2026-10-15 —
+# 2026-10-17), навсегда уводим сюда.
+RewriteRule ^ads/$ /ads [L,R=301]
+RewriteRule ^promote/?$ /ads [L,R=301]
 
 RewriteCond %{ENV:REDIRECT_STATUS} ^$
-RewriteRule ^promote\.php$ /promote [L,R=301]
+RewriteRule ^promote\.php$ /ads [L,R=301]
 
-RewriteRule ^promote$ /promote.php [L]
+RewriteRule ^ads$ /promote.php [L]
 
 # /privacy и /terms — правовые страницы. Адреса короткие не ради красоты:
 # именно их мы вписываем в карточку OAuth-приложения Roblox (Privacy Policy

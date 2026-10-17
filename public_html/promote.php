@@ -2,9 +2,10 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
-// Условия рекламы для рекламодателей — /promote. В разделах шапки её нет:
-// ведёт сюда только кнопка «Реклама» рядом с Telegram. Адрес и классы без
+// Условия рекламы для рекламодателей — /ads. В разделах шапки её нет:
+// ведёт сюда только кнопка «Реклама» рядом с Telegram. Классы и файлы без
 // «ads»/«ad-»: такие имена режут блокировщики рекламы (см. README, promo).
+// Почему сам адрес /ads можно — в .htaccess.
 header('Cache-Control: no-cache, must-revalidate');
 page_lscache();
 ?>
@@ -19,7 +20,7 @@ page_lscache();
 
 <title>Реклама на maknemy.com и в Telegram | Maknemy</title>
 <meta name="description" content="Реклама среди игроков Blox Fruits на maknemy.com и в Telegram: баннеры, карточки конкурсов, участники конкурса, оплата за переходы. От $2." />
-<link rel="canonical" href="https://maknemy.com/promote" />
+<link rel="canonical" href="https://maknemy.com/ads" />
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
@@ -101,7 +102,7 @@ page_lscache();
         </li>
       </ul>
 
-      <a class="mk-promote" href="/promote" aria-current="page" data-i18n="nav.promote">Реклама</a>
+      <a class="mk-promote" href="/ads" aria-current="page" data-i18n="nav.promote">Реклама</a>
 
       <a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
@@ -132,7 +133,7 @@ page_lscache();
         <div class="pm-hero-copy">
           <h1 class="pm-title" id="pmTitle">Реклама на maknemy.com и в Telegram</h1>
           <p class="pm-lead">Продвигайте конкурс, канал или проект среди игроков Blox Fruits. У Maknemy можно заказать размещение от одних суток, рекламу на неделю или месяц, оплату за переходы и привлечение участников конкурса.</p>
-          <p class="pm-budget">Небольшой бюджет — тоже подходит: рекламная вставка или карточка конкурса — от <b class="pm-fig">$2</b>, продвижение конкурса с оплатой за результат — <b class="pm-fig">$12</b> за 1&nbsp;000 участников.</p>
+          <p class="pm-budget">Небольшой бюджет — тоже подходит: рекламная вставка или карточка конкурса — от <b class="pm-fig">$2</b>, продвижение конкурса с оплатой за результат — <b class="pm-fig">$36</b> за 1&nbsp;000 участников.</p>
           <p class="pm-reach">На maknemy.com — около 30&nbsp;000 просмотров страниц в сутки суммарно по сайту. Тирлист — самая посещаемая страница. Посещаемость меняется; просмотры страниц не равны числу уникальных посетителей или показов конкретного объявления.</p>
           <div class="pm-hero-cta">
             <a class="pm-btn" href="https://t.me/mksvtn" target="_blank" rel="noopener">
@@ -182,29 +183,29 @@ page_lscache();
 
       <nav class="pm-toc" aria-label="Разделы страницы">
         <ul>
-          <li><a href="/promote#pm-results">Участники конкурса</a></li>
-          <li><a href="/promote#pm-card">Карточка конкурса</a></li>
-          <li><a href="/promote#pm-display">Баннеры</a></li>
-          <li><a href="/promote#pm-bundle">Несколько страниц</a></li>
-          <li><a href="/promote#pm-telegram">Telegram</a></li>
-          <li><a href="/promote#pm-combo">Сайт + Telegram</a></li>
-          <li><a href="/promote#pm-clicks">Оплата за переходы</a></li>
-          <li><a href="/promote#pm-make">Создание рекламы</a></li>
-          <li><a href="/promote#pm-trial">Начните с суток</a></li>
-          <li><a href="/promote#pm-projects">Проекты</a></li>
-          <li><a href="/promote#pm-rules">Правила</a></li>
-          <li><a href="/promote#pm-order">Заказать</a></li>
+          <li><a href="/ads#pm-results">Участники конкурса</a></li>
+          <li><a href="/ads#pm-card">Карточка конкурса</a></li>
+          <li><a href="/ads#pm-display">Баннеры</a></li>
+          <li><a href="/ads#pm-bundle">Несколько страниц</a></li>
+          <li><a href="/ads#pm-telegram">Telegram</a></li>
+          <li><a href="/ads#pm-combo">Сайт + Telegram</a></li>
+          <li><a href="/ads#pm-clicks">Оплата за переходы</a></li>
+          <li><a href="/ads#pm-make">Создание рекламы</a></li>
+          <li><a href="/ads#pm-trial">Начните с суток</a></li>
+          <li><a href="/ads#pm-projects">Проекты</a></li>
+          <li><a href="/ads#pm-rules">Правила</a></li>
+          <li><a href="/ads#pm-order">Заказать</a></li>
         </ul>
       </nav>
 
       <section class="pm-sec" id="pm-results" aria-labelledby="pm-results-h">
-        <h2 class="pm-h2" id="pm-results-h">Участники конкурса&nbsp;— $12 за 1&nbsp;000</h2>
+        <h2 class="pm-h2" id="pm-results-h">Участники конкурса&nbsp;— $36 за 1&nbsp;000</h2>
         <div class="pm-split">
           <p class="pm-main pm-intro">Хотите привлечь аудиторию в свой конкурс? Продвинем его на maknemy.com. Также можно согласовать включение ваших соцсетей в условия партнёрского розыгрыша.</p>
           <div class="pm-side">
             <ul class="pm-rate">
-              <li><span class="pm-rate-name"><b>1&nbsp;000</b> подтверждённых участников</span><span class="pm-vh"> — </span><b class="pm-rate-cost">$12</b><span class="pm-vh">.</span></li>
-              <li><span class="pm-rate-name"><b>2&nbsp;000</b> подтверждённых участников</span><span class="pm-vh"> — </span><b class="pm-rate-cost">$24</b><span class="pm-vh">.</span></li>
+              <li><span class="pm-rate-name"><b>1&nbsp;000</b> подтверждённых участников</span><span class="pm-vh"> — </span><b class="pm-rate-cost">$36</b><span class="pm-vh">.</span></li>
+              <li><span class="pm-rate-name"><b>2&nbsp;000</b> подтверждённых участников</span><span class="pm-vh"> — </span><b class="pm-rate-cost">$72</b><span class="pm-vh">.</span></li>
             </ul>
           </div>
           <p class="pm-main">Посетитель сайта переходит на конкурс, выполняет согласованные условия и подтверждает участие. Список обязательных соцсетей и способ проверки определяем до оплаты.</p>
@@ -220,7 +221,7 @@ page_lscache();
 
         <div class="pm-notes is-flow">
           <p>Это участники конкурса: их количество может отличаться от числа новых подписчиков в каждой соцсети, поскольку часть людей уже может быть на вас подписана. Условия, связанные с другими площадками, включаем в гарантию только при возможности корректной проверки и соответствии правилам этих площадок.</p>
-          <p>Срок набора, способ учёта, организатора и ответственного за выдачу призов согласуем заранее. $12 — стоимость продвижения; расходы на призы согласуются отдельно.</p>
+          <p>Срок набора, способ учёта, организатора и ответственного за выдачу призов согласуем заранее. $36 — стоимость продвижения; расходы на призы согласуются отдельно.</p>
           <p>Итоги проходят в объявленную дату. При недоборе к окончанию согласованного срока возвращаем оплату за невыполненный объём пропорционально недостающему количеству участников. По отдельной договорённости остаток можно перенести на следующую кампанию. Сохранение подписки и дальнейшая активность после конкурса в гарантию не входят.</p>
         </div>
       </section>
@@ -249,7 +250,7 @@ page_lscache();
           </div>
           <p class="pm-main">В одном блоке — не более четырёх рекламодателей. Каждому резервируется не менее 25% показов этого блока. Это доля показов блока, а не доля всей аудитории сайта.</p>
           <p class="pm-main">Для запуска достаточно ссылки, изображения приза и условий. Оформление карточки по нашему шаблону входит в стоимость.</p>
-          <p class="pm-main pm-quiet">Карточка продаётся на срок: количество переходов и участников в её стоимость не гарантируется. Для заказа определённого количества участников выберите предложение <a href="/promote#pm-results">«Участники конкурса — $12 за 1&nbsp;000»</a>.</p>
+          <p class="pm-main pm-quiet">Карточка продаётся на срок: количество переходов и участников в её стоимость не гарантируется. Для заказа определённого количества участников выберите предложение <a href="/ads#pm-results">«Участники конкурса — $36 за 1&nbsp;000»</a>.</p>
         </div>
       </section>
 
@@ -426,15 +427,14 @@ page_lscache();
         <div class="pm-split">
           <p class="pm-main pm-intro">Если важен объём переходов на канал, конкурс, сайт или другой проект, можно заказать кампанию с оплатой за фактически учтённые клики.</p>
           <div class="pm-side">
-            <p class="pm-per"><b>1,8₽</b> за подтверждённый переход.</p>
             <div class="pm-tbl">
               <table class="pm-table">
                 <thead>
                   <tr><th scope="col">Объём</th><th scope="col" class="pm-num">Бюджет</th></tr>
                 </thead>
                 <tbody>
-                  <tr><th scope="row">500 переходов</th><td class="pm-cost">900₽</td></tr>
-                  <tr><th scope="row">1&nbsp;000 переходов</th><td class="pm-cost">1&nbsp;800₽</td></tr>
+                  <tr><th scope="row">500 переходов</th><td class="pm-cost">$24</td></tr>
+                  <tr><th scope="row">1&nbsp;000 переходов</th><td class="pm-cost">$36</td></tr>
                 </tbody>
               </table>
             </div>

@@ -41,7 +41,7 @@
   <!-- Условия рекламы: в разделах шапки их нет, только кнопка «Реклама»,
        поэтому поисковику адрес сообщается здесь. Меняются редко. -->
   <url>
-    <loc>https://maknemy.com/promote</loc>
+    <loc>https://maknemy.com/ads</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
