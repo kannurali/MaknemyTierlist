@@ -26,7 +26,7 @@ echo <<<HTML
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
 <link rel="stylesheet" href="/css/giveaway.css?v=6" />
-<link rel="stylesheet" href="/css/giveaway-admin.css?v=7" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=8" />
 </head>
 <body>
 {$nav}
@@ -173,6 +173,7 @@ echo <<<HTML
       <section class="ga-report" id="gwReport" hidden>
         <div class="list-head">Для рекламодателя</div>
         <p class="ga-sources" id="gwSources"></p>
+        <div class="ga-cards-wrap" id="gwCards" hidden></div>
         <div class="ga-report-channels" id="gwReportChannels"></div>
       </section>
     </section>
@@ -197,10 +198,10 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=80"></script>
+<script src="/js/i18n.js?v=81"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=10"></script>
-<script src="/js/giveaway-admin.js?v=9"></script>
+<script src="/js/giveaway.js?v=11"></script>
+<script src="/js/giveaway-admin.js?v=10"></script>
 </body>
 </html>
 HTML;

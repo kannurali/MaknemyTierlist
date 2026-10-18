@@ -470,6 +470,23 @@ test('баннер стоит между калькулятором и верд�
     assert_true($stripT + $stripH < $resT, 'вердикт начинается ниже баннера');
     assert_true($resT + $resH <= $frameH, 'вердикт помещается во фрейм');
 
+    // Строка розыгрыша (js/gw-card.js, 2026-10-18) встаёт между доской и
+    // баннером: пока она есть, баннер и вердикт уезжают ниже, фрейм растёт.
+    $gw = function (string $sel, string $p) use ($num) {
+        return $num('/\.tc-frame:has\(> \.tc-gwc:not\(\[hidden\]\)\) ' . preg_quote($sel, '/') . ' \{[^}]*' . $p . ': calc\(([\d.]+) \* var\(--u\)\)/s');
+    };
+    $rowT = $prop('.tc-gwc', 'top');
+    $rowH = $prop('.tc-gwc', 'height');
+    $gwStripT = $gw('.tc-strip-slot', 'top');
+    $gwResT = $gw('.tc-result', 'top');
+    $gwFrameH = $num('/\.tc-frame:has\(> \.tc-gwc:not\(\[hidden\]\)\) \{[^}]*height: calc\(([\d.]+) \* var\(--u\)\)/s');
+    assert_true($boardT + $boardH < $rowT, 'строка розыгрыша ниже доски');
+    assert_true($rowT + $rowH < $gwStripT, 'баннер ниже строки розыгрыша');
+    assert_true($gwStripT + $stripH < $gwResT, 'вердикт ниже баннера и со строкой');
+    assert_true($gwResT + $resH <= $gwFrameH, 'со строкой вердикт помещается во фрейм');
+    assert_eq($resT - ($stripT + $stripH), $gwResT - ($gwStripT + $stripH), 'зазор баннер—вердикт тот же');
+    assert_true((bool)preg_match('/@media \(min-width: 901px\) \{\s*\.tc-frame:has/', $css), 'сдвиг только на компьютере: на телефоне раскладка потоком');
+
     assert_true((bool)preg_match('/@media \(max-width: 900px\) \{.*?\.tc-strip-slot \{[^}]*aspect-ratio: 4 \/ 1;/s', $css),
         'на телефоне баннер держит 4:1 до ответа /api/promo.php');
 

@@ -6,6 +6,7 @@ require __DIR__ . '/../public_html/api/lib/giveaway.php';
 require __DIR__ . '/../public_html/api/giveaways.php';
 require __DIR__ . '/../public_html/api/giveaway_admin.php';
 require __DIR__ . '/../public_html/api/session.php';
+require __DIR__ . '/../public_html/api/gw_stat.php';
 
 // Розыгрыши — api/lib/giveaway.php и его эндпоинты.
 //
@@ -1389,7 +1390,8 @@ test('отписался — участие снято, бот пишет, в о
     assert_true(strpos($msg['text'], 'отписались от канала «Канал A»') !== false && strpos($msg['text'], 'подпишитесь снова') !== false, 'текст отписки');
 
     $rep = gw_report($p, gw_load($p, $id));
-    assert_eq(['tg' => 1, 'pop' => 0, 'page' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
+    assert_eq(['tg' => 1, 'pop' => 0, 'page' => 0, 'c-tier' => 0, 'c-tmid' => 0, 'c-trade' => 0, 'c-calc' => 0,
+        'c-stock' => 0, 'c-news' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
     $ch = $rep['channels'][0];
     assert_eq([1, 0, $link], [$ch['joined'], $ch['stayed'], $ch['link']], 'пришёл 1, остался 0');
     assert_eq(['501', '@ann', GW_NOW + 10, '1', false], [$ch['list'][0]['tg_id'], $ch['list'][0]['tg_name'], $ch['list'][0]['left_at'],
@@ -1485,6 +1487,115 @@ test('окно розыгрыша — на всех страницах, кром
     foreach (['home.php', 'privacy.php', 'terms.php', 'giveaways.php'] as $page) {
         assert_eq(false, strpos(file_get_contents("$pub/$page"), 'giveaway-pop.js'), "$page: окна нет");
     }
+});
+
+// --------------------------------------------------------------------------
+//  Карточки розыгрыша на страницах сайта (js/gw-card.js, api/gw_stat.php)
+// --------------------------------------------------------------------------
+
+function gw_cards_db(): PDO {
+    $p = gw_db();
+    // Зеркалит docs/migrations/2026-10-18-giveaway-card-stats.sql.
+    $p->exec('CREATE TABLE gw_card_stats (giveaway_id INTEGER NOT NULL, place TEXT NOT NULL,
+        views INTEGER NOT NULL DEFAULT 0, clicks INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (giveaway_id, place))');
+    return $p;
+}
+
+function gw_card_rows(PDO $p): array {
+    $out = [];
+    foreach ($p->query('SELECT giveaway_id, place, views, clicks FROM gw_card_stats ORDER BY giveaway_id, place')->fetchAll(PDO::FETCH_NUM) as $r) {
+        $out[] = [(int)$r[0], $r[1], (int)$r[2], (int)$r[3]];
+    }
+    return $out;
+}
+
+test('карточки: показы и переходы складываются по местам', function () {
+    $p = gw_cards_db();
+    $id = gw_live($p);
+    $n = handle_gw_stat($p, ['e' => [
+        ['id' => $id, 'p' => 'tier', 'k' => 'v'],
+        ['id' => $id, 'p' => 'tmid', 'k' => 'v'],
+        ['id' => (string)$id, 'p' => 'tier', 'k' => 'v'],
+        ['id' => $id, 'p' => 'tier', 'k' => 'c'],
+    ]]);
+    assert_eq(4, $n, 'все четыре события приняты');
+    handle_gw_stat($p, ['e' => [['id' => $id, 'p' => 'tier', 'k' => 'c'], ['id' => $id, 'p' => 'trade', 'k' => 'v']]]);
+    assert_eq([[$id, 'tier', 2, 2], [$id, 'tmid', 1, 0], [$id, 'trade', 1, 0]], gw_card_rows($p), 'строки по местам');
+});
+
+test('карточки: чужие места, черновики, мусор и лишнее не пишутся', function () {
+    $p = gw_cards_db();
+    $id = gw_live($p);
+    [, $draft] = gw_save($p, gw_draft(['title_ru' => 'Черновик']), GW_NOW);
+    $n = handle_gw_stat($p, ['e' => [
+        ['id' => $id, 'p' => 'home', 'k' => 'v'],
+        ['id' => $id, 'p' => 'tier', 'k' => 'x'],
+        ['id' => '5abc', 'p' => 'tier', 'k' => 'v'],
+        ['id' => -1, 'p' => 'tier', 'k' => 'v'],
+        ['id' => $draft['id'], 'p' => 'tier', 'k' => 'v'],
+        ['id' => 999, 'p' => 'tier', 'k' => 'v'],
+        'мусор',
+    ]]);
+    assert_eq(0, $n, 'ничего не принято');
+    assert_eq(0, handle_gw_stat($p, []), 'пустое тело');
+    assert_eq(0, handle_gw_stat($p, ['e' => 'v']), 'e не список');
+    $many = array_fill(0, 30, ['id' => $id, 'p' => 'calc', 'k' => 'v']);
+    assert_eq(12, handle_gw_stat($p, ['e' => $many]), 'в пачке не больше 12 событий');
+    assert_eq([[$id, 'calc', 12, 0]], gw_card_rows($p));
+});
+
+test('карточки: до миграции учёт молчит, отчёт с нулями', function () {
+    $p = gw_db();
+    $id = gw_live($p);
+    assert_eq(0, handle_gw_stat($p, ['e' => [['id' => $id, 'p' => 'tier', 'k' => 'v']]]), 'таблицы нет — ничего');
+    $cards = gw_report($p, gw_load($p, $id))['cards'];
+    assert_eq(GW_CARD_PLACES, array_column($cards, 'place'), 'все места по порядку');
+    assert_eq(0, array_sum(array_column($cards, 'views')) + array_sum(array_column($cards, 'clicks')), 'нули');
+});
+
+test('карточки: участие с карточки помечено местом, отчёт сводит показы, переходы и участия', function () {
+    $p = gw_cards_db();
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    gw_user($p, '3', 'cat', 503);
+    $id = gw_live($p);
+    $log = [];
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW, gw_src('c-tier'))[0], 'вступил с карточки тирлиста');
+    gw_enter($p, gw_cfg(), gw_tg($log), '2', $id, GW_NOW, gw_src('c-trade'));
+    gw_enter($p, gw_cfg(), gw_tg($log), '3', $id, GW_NOW, gw_src('c-home'));
+    assert_eq(['c-tier', 'c-trade', ''], $p->query('SELECT src FROM giveaway_entries ORDER BY user_id')->fetchAll(PDO::FETCH_COLUMN),
+        'чужое место не сохраняется');
+    handle_gw_stat($p, ['e' => [['id' => $id, 'p' => 'tier', 'k' => 'v'], ['id' => $id, 'p' => 'tier', 'k' => 'c']]]);
+    $rep = gw_report($p, gw_load($p, $id));
+    assert_eq(1, $rep['sources']['c-tier'], 'источник c-tier');
+    $byPlace = array_column($rep['cards'], null, 'place');
+    assert_eq(['place' => 'tier', 'views' => 1, 'clicks' => 1, 'entries' => 1], $byPlace['tier']);
+    assert_eq(['place' => 'trade', 'views' => 0, 'clicks' => 0, 'entries' => 1], $byPlace['trade']);
+});
+
+test('карточки: слоты стоят на пяти страницах, скрипт после giveaway.js', function () {
+    $pub = dirname(__DIR__) . '/public_html';
+    $marks = [
+        'index.php'      => 'data-gwc-tiers',
+        'trading.php'    => 'data-gwc-feed=".tr-card"',
+        'calculator.php' => 'data-gwc="calc"',
+        'stock.php'      => 'data-gwc="stock"',
+        'news.php'       => 'data-gwc="news"',
+    ];
+    foreach ($marks as $page => $mark) {
+        $html = file_get_contents("$pub/$page");
+        assert_true(strpos($html, $mark) !== false, "$page: место карточки");
+        $gw = strpos($html, 'js/giveaway.js?v=');
+        $card = strpos($html, 'js/gw-card.js?v=');
+        assert_true($gw !== false && $card !== false && $gw < $card, "$page: gw-card.js после giveaway.js");
+        assert_true(strpos($html, 'href="css/gw-card.css?v=') !== false, "$page: стили карточки");
+    }
+    $calc = file_get_contents("$pub/calculator.php");
+    assert_true(strpos($calc, 'data-gwc="calc"') < strpos($calc, 'class="tc-strip-slot"'), 'калькулятор: строка перед нижней полосой');
+    $stock = file_get_contents("$pub/stock.php");
+    assert_true(strpos($stock, 'data-gwc="stock"') < strpos($stock, 'class="sk-grid"'), 'сток: карточка перед дилерами');
+    $news = file_get_contents("$pub/news.php");
+    assert_true(strpos($news, 'data-gwc="news"') < strpos($news, 'id="feed"'), 'новости: карточка над лентой');
 });
 
 run_tests();

@@ -196,6 +196,10 @@
   text-shadow: 0 0 .55cqw rgba(203,120,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
 }
 
+.stage:not(.is-export) .tl-header { margin-bottom: 2.2cqw; }
+.stage:not(.is-export) .title-block { margin-top: 2.7cqw; }
+.stage:not(.is-export) .tl-title { font-size: 5.7cqw; }
+
 .tiers, .legend, .tl-footer, .credits { width: 84.63cqw; margin-inline: auto; }
 
 .tiers {
@@ -1218,6 +1222,8 @@ body.ptn-locked { overflow: hidden; }
 
   .date { font-size: 4.2cqw; }
   .tl-title { font-size: 8.4cqw; }
+  .stage:not(.is-export) .tl-title { font-size: 7.2cqw; }
+  .stage:not(.is-export) .tl-header { margin-bottom: 1.6cqw; }
 
   .legend { padding: 2.71cqw 2.82cqw 5.42cqw 2.71cqw; border-radius: 2.5cqw; }
   .legend-title { font-size: 3.96cqw; }
