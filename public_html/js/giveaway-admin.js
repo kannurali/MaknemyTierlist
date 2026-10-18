@@ -52,7 +52,7 @@
     "bad max_entries": "Число участников — целое, от 1 до 1 000 000.",
     "bad end_by": "Выберите, когда итоги: по времени или по числу участников.",
     max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
-    drop_migrate: "Чтобы не снимать участие у отписавшихся, выполните docs/migrations/2026-10-18-giveaway-drop-unsub.sql.",
+    drop_migrate: "Чтобы не снимать участие у отписавшихся, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -745,7 +745,8 @@
     const sec = $("gwPeople");
     sec.hidden = !(g && g.id && g.status !== "draft");
     if (sec.hidden) return;
-    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + (g.list.length < g.entries ? " (показаны " + g.list.length + ")" : "");
+    const all = g.entries + (g.left || 0);
+    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + (g.left ? " · отписались: " + g.left : "") + (g.list.length < all ? " (показаны " + g.list.length + ")" : "");
     const body = $("gwPeopleBody");
     body.textContent = "";
     if (!g.list.length) {
@@ -784,6 +785,10 @@
       from.textContent = SOURCES[e.src] || "—";
       const prize = document.createElement("td");
       prize.textContent = e.prize !== null && g.prizes[e.prize] ? "🏆 " + g.prizes[e.prize].name : "";
+      if (e.left_at) {
+        tr.style.opacity = "0.55";
+        prize.textContent = "Отписался " + fmtDate(e.left_at) + " — не участвует";
+      }
       const act = document.createElement("td");
       const chat = document.createElement("a");
       chat.href = "/chat?to=" + encodeURIComponent(e.id);

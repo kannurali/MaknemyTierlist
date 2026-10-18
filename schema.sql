@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS user_bans (
 -- (docs/migrations/2026-10-15-giveaway-max-entries.sql).
 -- drop_unsub — 1: отписка от канала условий снимает участие, бот об этом
 -- пишет, на итогах подписку перепроверяют; 0 — подписку проверяют только при
--- участии (docs/migrations/2026-10-18-giveaway-drop-unsub.sql).
+-- участии (docs/migrations/2026-10-18-giveaway-unsub.sql).
 CREATE TABLE IF NOT EXISTS giveaways (
   id            INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   status        VARCHAR(8)      NOT NULL DEFAULT 'draft',
@@ -285,7 +285,10 @@ CREATE TABLE IF NOT EXISTS giveaways (
 -- «Разыграть»; NULL — не выиграл (или розыгрыша ещё не было).
 -- src — откуда человек пришёл участвовать: tg — по кнопке из сообщения
 -- бота, pop — из окна на странице сайта, page — со страницы /giveaways.
--- Отписался от канала из условий — строка удаляется (участие снято).
+-- left_at — когда участие снято за отписку от канала условий, 0 — участвует.
+-- Строка остаётся следом того, что человек вступал подписанным, но в число
+-- участников и в розыгрыш не входит. checked_at — когда бот сам последний раз
+-- перепроверил подписку (docs/migrations/2026-10-18-giveaway-unsub.sql).
 CREATE TABLE IF NOT EXISTS giveaway_entries (
   giveaway_id INT UNSIGNED    NOT NULL,
   user_id     BIGINT UNSIGNED NOT NULL,
@@ -293,10 +296,13 @@ CREATE TABLE IF NOT EXISTS giveaway_entries (
   joined_at   BIGINT UNSIGNED NOT NULL,
   prize       SMALLINT        NULL,
   src         VARCHAR(8)      NOT NULL DEFAULT '',
+  left_at     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  checked_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (giveaway_id, user_id),
   UNIQUE KEY uq_chat (giveaway_id, chat_id),
   KEY idx_user (user_id),
-  KEY idx_chat (chat_id)
+  KEY idx_chat (chat_id),
+  KEY idx_check (left_at, checked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------------------------

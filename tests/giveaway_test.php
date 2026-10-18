@@ -44,7 +44,7 @@ function gw_db(): PDO {
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
     // Зеркалит docs/migrations/2026-10-14-giveaways.sql, 2026-10-15-giveaway-conds.sql,
     // 2026-10-15-giveaway-test.sql, 2026-10-15-giveaway-max-entries.sql и
-    // 2026-10-18-giveaway-drop-unsub.sql.
+    // 2026-10-18-giveaway-unsub.sql.
     $pdo->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
         title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
@@ -55,6 +55,7 @@ function gw_db(): PDO {
     $pdo->exec("CREATE TABLE giveaway_entries (
         giveaway_id INTEGER NOT NULL, user_id INTEGER NOT NULL, chat_id INTEGER NOT NULL,
         joined_at INTEGER NOT NULL, prize INTEGER NULL, src TEXT NOT NULL DEFAULT '',
+        left_at INTEGER NOT NULL DEFAULT 0, checked_at INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (giveaway_id, user_id), UNIQUE (giveaway_id, chat_id))");
     $pdo->exec('CREATE TABLE giveaway_links (
         giveaway_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, invite_url TEXT NOT NULL, created_at INTEGER NOT NULL,
@@ -364,7 +365,8 @@ test('своё условие с каналом: бот проверяет по�
 
     $notes = gw_member_update($p, gw_member(GW_CH_B, 501, 'left'), GW_NOW + 10);
     assert_eq([501, 'Сток'], [$notes[0]['chat_id'] ?? null, $notes[0]['channel'] ?? null], 'отписался — участие снято, бот пишет');
-    assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn());
+    assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries WHERE left_at = 0')->fetchColumn());
+    assert_eq(GW_NOW + 10, (int)$p->query('SELECT left_at FROM giveaway_entries')->fetchColumn(), 'строка осталась с отметкой');
 
     gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_B => [501]]), '1', $id, GW_NOW + 20);
     [$s, $out, $winners] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
@@ -1380,7 +1382,7 @@ test('отписался — участие снято, бот пишет, в о
     $notes = gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 10);
     assert_eq(1, count($notes), 'одно уведомление');
     assert_eq([501, 'Канал A', $id], [$notes[0]['chat_id'], $notes[0]['channel'], (int)$notes[0]['row']['id']]);
-    $left = $p->query('SELECT giveaway_id, user_id FROM giveaway_entries ORDER BY giveaway_id, user_id')->fetchAll(PDO::FETCH_NUM);
+    $left = $p->query('SELECT giveaway_id, user_id FROM giveaway_entries WHERE left_at = 0 ORDER BY giveaway_id, user_id')->fetchAll(PDO::FETCH_NUM);
     assert_eq([[$id, 2], [$other, 1]], array_map(function ($r) { return array_map('intval', $r); }, $left),
         'снято только там, где канал A в условиях');
     assert_eq([$other], gw_joined_ids($p, '1', GW_NOW), 'окно снова позовёт в розыгрыш');
@@ -1464,8 +1466,13 @@ test('галочку меняют у идущего розыгрыша: со с�
     assert_eq([200, 0, 1], [$s, $out['winners'], $out['skipped']], 'на итогах ann уже перепроверяют');
 });
 
-test('до миграции drop_unsub: отписка снимает участие, снять галочку нельзя', function () {
+test('до миграции unsub: отписка удаляет участие, снять галочку нельзя, в фоне не проверяют', function () {
     $p = gw_db();
+    $p->exec('DROP TABLE giveaway_entries');
+    $p->exec("CREATE TABLE giveaway_entries (
+        giveaway_id INTEGER NOT NULL, user_id INTEGER NOT NULL, chat_id INTEGER NOT NULL,
+        joined_at INTEGER NOT NULL, prize INTEGER NULL, src TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (giveaway_id, user_id), UNIQUE (giveaway_id, chat_id))");
     $p->exec('DROP TABLE giveaways');
     $p->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
@@ -1482,7 +1489,135 @@ test('до миграции drop_unsub: отписка снимает участ
     assert_eq(true, gw_admin_item($p, gw_load($p, $id), GW_NOW)['drop_unsub'], 'админка: галочка стоит');
     $log = [];
     gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), '1', $id, GW_NOW);
+    assert_eq(['checked' => 0, 'left' => []], gw_sweep($p, gw_tg($log), GW_NOW + 3600), 'в фоне не проверяют');
     assert_eq([501], array_column(gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 5), 'chat_id'), 'снимает, как раньше');
+    assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'строка удалена, как раньше');
+    assert_eq(200, gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), '1', $id, GW_NOW + 10)[0], 'вступить снова можно');
+});
+
+// Три участника канала A: ann 501, bob 502, cat 503. Вступили в GW_NOW.
+function gw_three(PDO $p, array $extra = []): int {
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    gw_user($p, '3', 'cat', 503);
+    $id = gw_live($p, ['channels' => [GW_CH_A]] + $extra);
+    $log = [];
+    foreach (['1', '2', '3'] as $u) { gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501, 502, 503]]), $u, $id, GW_NOW); }
+    return $id;
+}
+
+test('перепроверка в фоне: отписавшийся помечен, бот пишет, строка осталась', function () {
+    $p = gw_db();
+    $id = gw_three($p);
+    $log = [];
+    assert_eq(['checked' => 0, 'left' => []], gw_sweep($p, gw_tg($log), GW_NOW + 60), 'только что проверенных не трогает');
+    assert_eq([], gw_sent($log, 'getChatMember'));
+
+    $log = [];
+    $out = gw_sweep($p, gw_tg($log, [GW_CH_A => [501, 503]]), GW_NOW + 700);
+    assert_eq(3, $out['checked'], 'проверены все трое');
+    assert_eq([[502, 'Канал A', $id]], array_map(function ($n) { return [$n['chat_id'], $n['channel'], (int)$n['row']['id']]; }, $out['left']), 'bob отписался');
+    assert_eq(3, count(gw_sent($log, 'getChatMember')), 'по запросу на человека');
+    assert_eq(GW_NOW + 700, (int)$p->query('SELECT left_at FROM giveaway_entries WHERE user_id = 2')->fetchColumn(), 'строка bob осталась с отметкой');
+    assert_eq(2, gw_entry_counts($p, [$id])[$id], 'в число участников не входит');
+    assert_eq([], gw_joined_ids($p, '2', GW_NOW + 700), 'окно снова зовёт bob участвовать');
+    $item = gw_admin_item($p, gw_load($p, $id), GW_NOW + 700);
+    assert_eq([2, 1], [$item['entries'], $item['left']], 'админка: участвуют 2, отписался 1');
+    assert_eq(['2', GW_NOW + 700], [end($item['list'])['id'], end($item['list'])['left_at']], 'отписавшийся — в конце списка, с датой');
+
+    $log = [];
+    assert_eq(1, gw_left_send($p, gw_tg($log), $out['left'], GW_NOW + 700, function () {}), 'сообщение ушло');
+    $msg = gw_sent($log)[0][1];
+    assert_eq(502, $msg['chat_id']);
+    assert_true(strpos($msg['text'], 'Вы отписались от канала «Канал A»') !== false && strpos($msg['text'], 'подпишитесь снова') !== false, 'текст');
+
+    $log = [];
+    assert_eq(0, gw_sweep($p, gw_tg($log), GW_NOW + 900)['checked'], 'через 200 с — никого: проверены недавно, bob снят');
+    $out = gw_sweep($p, gw_tg($log, [GW_CH_A => [501, 503]]), GW_NOW + 1400, 1);
+    assert_eq([1, 1], [$out['checked'], count(gw_sent($log, 'getChatMember'))], 'не больше запросов, чем разрешено');
+});
+
+test('отписавшийся вернулся: подписался и нажал «Участвовать» — строка ожила', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    gw_user($p, '3', 'cat', 503);
+    $id = gw_live($p, ['channels' => [GW_CH_A], 'max_entries' => 3, 'end_by' => 'entries']);
+    $log = [];
+    $all = [GW_CH_A => [501, 502, 503]];
+    gw_enter($p, gw_cfg(), gw_tg($log, $all), '1', $id, GW_NOW);
+    gw_enter($p, gw_cfg(), gw_tg($log, $all), '2', $id, GW_NOW);
+    gw_sweep($p, gw_tg($log, [GW_CH_A => [501]]), GW_NOW + 700);
+    gw_enter($p, gw_cfg(), gw_tg($log, $all), '3', $id, GW_NOW + 750);
+    assert_eq(['live', 2], [gw_phase(gw_load($p, $id), GW_NOW + 750), gw_entry_counts($p, [$id])[$id]], 'лимит 3, участвуют 2 — приём открыт');
+    [$s, $out] = gw_enter($p, gw_cfg(), gw_tg($log), '2', $id, GW_NOW + 800);
+    assert_eq([409, 'channels'], [$s, $out['error']], 'без подписки не вернуть');
+    [$s, $out, $note] = gw_enter($p, gw_cfg(), gw_tg($log, $all), '2', $id, GW_NOW + 800, 'page');
+    assert_eq([200, true], [$s, $out['joined']], 'вернулся');
+    assert_eq(502, $note['chat_id'] ?? null, 'бот снова пишет «вы участвуете»');
+    $r = $p->query('SELECT left_at, checked_at, joined_at, src FROM giveaway_entries WHERE user_id = 2')->fetch(PDO::FETCH_ASSOC);
+    assert_eq([0, GW_NOW + 800, GW_NOW, ''], [(int)$r['left_at'], (int)$r['checked_at'], (int)$r['joined_at'], $r['src']], 'первое вступление сохранено');
+    assert_eq(3, gw_entry_counts($p, [$id])[$id]);
+    assert_eq(GW_NOW + 800, (int)gw_load($p, $id)['ends_at'], 'занял третье место — приём закрыт');
+});
+
+test('итоги: отписавшиеся не разыгрываются, найденных бот помечает и предупреждает', function () {
+    $p = gw_db();
+    $id = gw_three($p);
+    $log = [];
+    gw_sweep($p, gw_tg($log, [GW_CH_A => [501, 503]]), GW_NOW + 700);
+    $log = [];
+    [$s, $out, $winners, $gone] = gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), $id, GW_NOW + 86400);
+    assert_eq([200, 1, 2, 1], [$s, $out['winners'], $out['entries'], $out['skipped']], 'bob не в розыгрыше, cat отсеян');
+    assert_eq(2, count(gw_sent($log, 'getChatMember')), 'bob даже не проверяли');
+    assert_eq([503], array_column($gone, 'chat_id'), 'cat — кому написать');
+    assert_eq(GW_NOW + 86400, (int)$p->query('SELECT left_at FROM giveaway_entries WHERE user_id = 3')->fetchColumn(), 'cat помечен');
+    assert_true(strpos(gw_left_text($gone[0]['row'], $gone[0]['channel'], 'ru', GW_NOW + 86400), 'подпишитесь снова') === false,
+        'после конца вернуться не предлагают');
+
+    $p2 = gw_db();
+    $id2 = gw_three($p2);
+    $log = [];
+    $res = gw_draw_due($p2, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), GW_NOW + 86400, function () {}, function (int $n) { return 0; });
+    assert_eq(['drawn' => 1, 'failed' => 0], $res);
+    $to = array_map(function ($c) { return $c[1]['chat_id']; }, gw_sent($log));
+    sort($to);
+    assert_eq([501, 502, 503], $to, 'автоитоги: победителю — поздравление, двоим отписавшимся — «участие снято»');
+});
+
+test('перепроверка: Telegram молчит — трое в конец очереди и проход окончен; без галочки не проверяют', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_B, 'Канал B');
+    $id = gw_three($p);
+    gw_user($p, '4', 'dan', 504);
+    $log = [];
+    gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [504]]), '4', $id, GW_NOW);
+    $log = [];
+    $out = gw_sweep($p, gw_tg($log, [], [GW_CH_A]), GW_NOW + 700);
+    assert_eq([0, [], 3], [$out['checked'], $out['left'], count(gw_sent($log, 'getChatMember'))], 'после трёх ошибок — стоп');
+    assert_eq(3, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries WHERE checked_at = ' . (GW_NOW + 700))->fetchColumn(), 'трое ушли в конец');
+    assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries WHERE left_at > 0')->fetchColumn(), 'никого не сняли');
+
+    $p = gw_db();
+    gw_three($p, ['drop_unsub' => false]);
+    $log = [];
+    assert_eq(0, gw_sweep($p, gw_tg($log), GW_NOW + 700)['checked'], 'галочка снята — не проверяют');
+    assert_eq([], gw_sent($log, 'getChatMember'));
+});
+
+test('перепроверка после ответа: не чаще раза в минуту, без бота — ничего', function () {
+    $p = gw_db();
+    gw_three($p);
+    $lock = gw_lock_file();
+    $log = [];
+    assert_eq(['skipped' => 'off'], gw_after_sweep($p, [], GW_NOW + 700, gw_tg($log), $lock), 'бот не настроен');
+    $res = gw_after_sweep($p, gw_cfg(), GW_NOW + 700, gw_tg($log, [GW_CH_A => [501, 503]]), $lock);
+    assert_eq(['checked' => 3, 'left' => 1], $res, 'проверил троих и снял bob');
+    assert_eq([502], array_map(function ($c) { return $c[1]['chat_id']; }, gw_sent($log)), 'и написал ему');
+    assert_eq(['skipped' => 'early'], gw_after_sweep($p, gw_cfg(), GW_NOW + 730, gw_tg($log), $lock), 'через 30 с — рано');
+    assert_eq(0, gw_after_sweep($p, gw_cfg(), GW_NOW + 760, gw_tg($log), $lock)['checked'], 'через минуту — проход, но проверять некого');
 });
 
 test('ссылка своего условия: обрезанную Telegram ссылку узнаём по началу', function () {

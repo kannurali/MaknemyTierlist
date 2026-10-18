@@ -67,6 +67,16 @@
 // можно без последствий. Учёт подписчиков для рекламодателя (giveaway_subs)
 // ведётся в обоих случаях. До миграции включена у всех, как было.
 //
+// Снятое участие не удаляется: у строки giveaway_entries ставится left_at.
+// Она остаётся доказательством, что человек вступал и был подписан, но
+// выиграть он уже не может, в число участников не входит, а окно снова зовёт
+// его участвовать — подписался заново и нажал, строка оживает. Узнаёт об
+// отписке бот тремя путями: вебхук chat_member (сразу, но на бою Telegram его
+// не присылал), фоновая перепроверка getChatMember (gw_sweep(), понемногу
+// после ответов /api/giveaways.php) и итоги. Сообщение одно — при отметке.
+// До миграции 2026-10-18-giveaway-unsub.sql строка удаляется, перепроверки
+// в фоне нет.
+//
 // Ничего из этого не роняет остальной сайт: нет таблиц — окно молчит,
 // страница пуста, админка просит миграцию.
 //
@@ -344,7 +354,7 @@ function gw_has_max(PDO $pdo): bool {
     }
 }
 
-// Колонку drop_unsub добавляет миграция 2026-10-18-giveaway-drop-unsub.sql.
+// Колонку drop_unsub добавляет миграция 2026-10-18-giveaway-unsub.sql.
 // До неё отписка снимает участие везде, а снять галочку админка не даёт.
 function gw_has_drop(PDO $pdo): bool {
     try {
@@ -358,6 +368,22 @@ function gw_has_drop(PDO $pdo): bool {
 // Снимает ли отписка участие. Нет колонки — снимает, как до галочки.
 function gw_drops_unsub(array $row): bool {
     return !array_key_exists('drop_unsub', $row) || !empty($row['drop_unsub']);
+}
+
+// Колонки left_at и checked_at у giveaway_entries — та же миграция.
+function gw_has_left(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT left_at, checked_at FROM giveaway_entries LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// «Ещё участвует» в запрос к giveaway_entries под псевдонимом $e. До
+// миграции отписавшихся в таблице нет — условие не нужно.
+function gw_active_sql(PDO $pdo, string $e = 'e'): string {
+    return gw_has_left($pdo) ? ' AND ' . $e . '.left_at = 0' : '';
 }
 
 // Лимит участников, 0 — без лимита.
@@ -541,11 +567,13 @@ function gw_phase(array $row, int $now): string {
     return (string)$row['status'];
 }
 
+// Сколько участвует. Отписавшиеся (left_at) не считаются — и на карточке, и
+// в лимите участников.
 function gw_entry_counts(PDO $pdo, array $ids): array {
     if (!$ids) { return []; }
     $st = $pdo->query(
-        'SELECT giveaway_id, COUNT(*) AS n FROM giveaway_entries WHERE giveaway_id IN ('
-        . implode(',', array_map('intval', $ids)) . ') GROUP BY giveaway_id'
+        'SELECT e.giveaway_id, COUNT(*) AS n FROM giveaway_entries e WHERE e.giveaway_id IN ('
+        . implode(',', array_map('intval', $ids)) . ')' . gw_active_sql($pdo) . ' GROUP BY e.giveaway_id'
     );
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $out[(int)$r['giveaway_id']] = (int)$r['n']; }
@@ -663,7 +691,7 @@ function gw_joined_ids(PDO $pdo, string $me, int $now): array {
     try {
         $st = $pdo->prepare(
             "SELECT e.giveaway_id FROM giveaway_entries e JOIN giveaways g ON g.id = e.giveaway_id
-              WHERE e.user_id = :u AND g.status = 'live' AND g.ends_at > :now"
+              WHERE e.user_id = :u AND g.status = 'live' AND g.ends_at > :now" . gw_active_sql($pdo)
         );
         $st->execute([':u' => $me, ':now' => $now]);
         return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
@@ -736,7 +764,9 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
         return [409, ['ok' => false, 'error' => $row && $row['status'] === 'live' && gw_full($pdo, $row) ? 'full' : 'closed']];
     }
 
-    $st = $pdo->prepare('SELECT 1 FROM giveaway_entries WHERE giveaway_id = :g AND user_id = :u');
+    // Отписавшийся (строка с left_at) вступает заново: проверка подписки та
+    // же, а gw_add_entry() оживляет его строку.
+    $st = $pdo->prepare('SELECT 1 FROM giveaway_entries e WHERE e.giveaway_id = :g AND e.user_id = :u' . gw_active_sql($pdo));
     $st->execute([':g' => $id, ':u' => $me]);
     if ($st->fetchColumn() !== false) { return [200, ['ok' => true, 'joined' => true]]; }
 
@@ -746,9 +776,10 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
     if (!$link) { return [409, ['ok' => false, 'error' => 'tg']]; }
     $chat = (int)$link['chat_id'];
 
-    $st = $pdo->prepare('SELECT 1 FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :c');
+    $st = $pdo->prepare('SELECT user_id FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :c');
     $st->execute([':g' => $id, ':c' => $chat]);
-    if ($st->fetchColumn() !== false) { return [409, ['ok' => false, 'error' => 'tg_used']]; }
+    $owner = $st->fetchColumn();
+    if ($owner !== false && (string)$owner !== $me) { return [409, ['ok' => false, 'error' => 'tg_used']]; }
 
     $channels = gw_checked_channels($row);
     if ($channels) {
@@ -786,6 +817,7 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
  */
 function gw_add_entry(PDO $pdo, int $id, string $me, int $chat, int $now, string $src): array {
     $hasMax = gw_has_max($pdo);
+    $hasLeft = gw_has_left($pdo);
     $pdo->beginTransaction();
     try {
         if ($hasMax) {
@@ -801,8 +833,19 @@ function gw_add_entry(PDO $pdo, int $id, string $me, int $chat, int $now, string
             $pdo->commit();
             return ['full', gw_load($pdo, $id)];
         }
-        $pdo->prepare('INSERT INTO giveaway_entries (giveaway_id, user_id, chat_id, joined_at, src) VALUES (:g, :u, :c, :at, :src)')
-            ->execute([':g' => $id, ':u' => $me, ':c' => $chat, ':at' => $now, ':src' => $src]);
+        // Строка отписавшегося оживает: первое вступление и источник остаются.
+        $back = 0;
+        if ($hasLeft) {
+            $up = $pdo->prepare('UPDATE giveaway_entries SET left_at = 0, checked_at = :at, chat_id = :c
+                                  WHERE giveaway_id = :g AND user_id = :u AND left_at > 0');
+            $up->execute([':at' => $now, ':c' => $chat, ':g' => $id, ':u' => $me]);
+            $back = $up->rowCount();
+        }
+        if ($back === 0) {
+            $pdo->prepare('INSERT INTO giveaway_entries (giveaway_id, user_id, chat_id, joined_at, src'
+                    . ($hasLeft ? ', checked_at' : '') . ') VALUES (:g, :u, :c, :at, :src' . ($hasLeft ? ', :at2' : '') . ')')
+                ->execute([':g' => $id, ':u' => $me, ':c' => $chat, ':at' => $now, ':src' => $src] + ($hasLeft ? [':at2' => $now] : []));
+        }
         if (gw_close_full($pdo, $row, $now)) { $row = gw_load($pdo, $id); }
         $pdo->commit();
         return ['', $row];
@@ -977,31 +1020,35 @@ function gw_rand_default(): callable {
 }
 
 /**
- * Разыграть закончившийся розыгрыш. [код, тело, победители для бота].
+ * Разыграть закончившийся розыгрыш. [код, тело, победители для бота,
+ * отписавшиеся для бота — те же записи, что у gw_member_update()].
  *
  * Участники перемешиваются, и призы по порядку раздаются первым подходящим:
  * не забанен, бот всё ещё подключён (иначе о победе не сказать) и подписан на
  * все каналы прямо сейчас. Не ответил Telegram хоть раз — розыгрыш не
  * записывается вовсе: «не смог проверить» не должно значить «проиграл».
  * Отписку не снимающему участие (drop_unsub = 0) подписку не перепроверяют:
- * её проверили при участии, а дальше она не важна.
+ * её проверили при участии, а дальше она не важна. Уже отписавшиеся (left_at)
+ * в розыгрыш не попадают, а найденные сейчас получают left_at и сообщение.
  *
  * $rand(n) → число 0..n-1; тесты подставляют предсказуемое.
  */
 function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?callable $rand = null): array {
     $rand = $rand ?? gw_rand_default();
     $row = gw_load($pdo, $id);
-    if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], []]; }
-    if ($row['status'] === 'drawn') { return [409, ['ok' => false, 'error' => 'drawn'], []]; }
-    if (gw_phase($row, $now) !== 'ended') { return [409, ['ok' => false, 'error' => 'not ended'], []]; }
+    if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], [], []]; }
+    if ($row['status'] === 'drawn') { return [409, ['ok' => false, 'error' => 'drawn'], [], []]; }
+    if (gw_phase($row, $now) !== 'ended') { return [409, ['ok' => false, 'error' => 'not ended'], [], []]; }
 
     $prizes   = gw_decode_list($row['prizes_json']);
     $channels = gw_drops_unsub($row) ? gw_checked_channels($row) : [];
     $banned   = array_flip(site_banned_ids($cfg, $now, $pdo));
 
+    $hasLeft  = gw_has_left($pdo);
+
     $st = $pdo->prepare(
         'SELECT e.user_id, l.chat_id, l.lang FROM giveaway_entries e LEFT JOIN tg_links l ON l.user_id = e.user_id
-          WHERE e.giveaway_id = :g ORDER BY e.joined_at, e.user_id'
+          WHERE e.giveaway_id = :g' . gw_active_sql($pdo) . ' ORDER BY e.joined_at, e.user_id'
     );
     $st->execute([':g' => $id]);
     $pool = $st->fetchAll(PDO::FETCH_ASSOC);
@@ -1019,6 +1066,7 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
     }
 
     $winners = [];
+    $gone = [];
     $skipped = 0;
     $usedChats = [];
     foreach ($pool as $cand) {
@@ -1030,8 +1078,12 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
         }
         if ($channels) {
             $chk = gw_check_channels($send, $channels, (int)$cand['chat_id']);
-            if ($chk['error']) { return [503, ['ok' => false, 'error' => 'tg_down'], []]; }
-            if (!$chk['ok']) { $skipped++; continue; }
+            if ($chk['error']) { return [503, ['ok' => false, 'error' => 'tg_down'], [], []]; }
+            if (!$chk['ok']) {
+                $skipped++;
+                $gone[$uid] = gw_left_note($pdo, $row, (int)$cand['chat_id'], (int)$chk['missing'][0]);
+                continue;
+            }
         }
         $usedChats[(int)$cand['chat_id']] = true;
         $winners[] = [
@@ -1048,11 +1100,15 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
         $st->execute([':now' => $now, ':now2' => $now, ':id' => $id]);
         if ($st->rowCount() !== 1) {
             $pdo->rollBack();
-            return [409, ['ok' => false, 'error' => 'drawn'], []];
+            return [409, ['ok' => false, 'error' => 'drawn'], [], []];
         }
         $pdo->prepare('UPDATE giveaway_entries SET prize = NULL WHERE giveaway_id = :g')->execute([':g' => $id]);
         $up = $pdo->prepare('UPDATE giveaway_entries SET prize = :p WHERE giveaway_id = :g AND user_id = :u');
         foreach ($winners as $w) { $up->execute([':p' => $w['prize'], ':g' => $id, ':u' => $w['user_id']]); }
+        if ($hasLeft && $gone) {
+            $mark = $pdo->prepare('UPDATE giveaway_entries SET left_at = :at WHERE giveaway_id = :g AND user_id = :u AND left_at = 0');
+            foreach (array_keys($gone) as $uid) { $mark->execute([':at' => $now, ':g' => $id, ':u' => (string)$uid]); }
+        }
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) { $pdo->rollBack(); }
@@ -1065,19 +1121,24 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
         'slots'    => count($slots),
         'entries'  => count($pool),
         'skipped'  => $skipped,
-    ], $winners];
+    ], $winners, array_values($gone)];
 }
 
 // Розыгрыш для админки: все поля и участники с победителями.
 function gw_admin_item(PDO $pdo, array $row, int $now): array {
     $id = (int)$row['id'];
+    // Отписавшиеся — в конце списка, с датой отписки: это след того, что они
+    // вступали подписанными.
+    $hasLeft = gw_has_left($pdo);
     $st = $pdo->prepare(
-        'SELECT e.user_id, e.chat_id, e.joined_at, e.prize, e.src, u.username, u.display_name, u.avatar_url, l.tg_name
+        'SELECT e.user_id, e.chat_id, e.joined_at, e.prize, e.src, ' . ($hasLeft ? 'e.left_at' : '0 AS left_at') . ',
+                u.username, u.display_name, u.avatar_url, l.tg_name
            FROM giveaway_entries e
            LEFT JOIN users u ON u.roblox_id = e.user_id
            LEFT JOIN tg_links l ON l.user_id = e.user_id
           WHERE e.giveaway_id = :g
-          ORDER BY CASE WHEN e.prize IS NULL THEN 1 ELSE 0 END, e.prize, e.joined_at DESC
+          ORDER BY CASE WHEN e.prize IS NULL THEN 1 ELSE 0 END, e.prize, '
+            . ($hasLeft ? 'CASE WHEN e.left_at = 0 THEN 0 ELSE 1 END, ' : '') . 'e.joined_at DESC
           LIMIT ' . GW_ADMIN_ENTRIES
     );
     $st->execute([':g' => $id]);
@@ -1092,9 +1153,16 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
             'joined_at' => (int)$e['joined_at'],
             'prize'     => $e['prize'] === null ? null : (int)$e['prize'],
             'src'       => (string)$e['src'],
+            'left_at'   => (int)$e['left_at'],
         ];
     }
     $count = gw_entry_counts($pdo, [$id])[$id] ?? 0;
+    $left = 0;
+    if ($hasLeft) {
+        $st = $pdo->prepare('SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = :g AND left_at > 0');
+        $st->execute([':g' => $id]);
+        $left = (int)$st->fetchColumn();
+    }
     return [
         'id'           => $id,
         'status'       => (string)$row['status'],
@@ -1115,6 +1183,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'test'         => gw_is_test($row),
         'drop_unsub'   => gw_drops_unsub($row),
         'entries'      => $count,
+        'left'         => $left,
         'max_entries'  => gw_max($row),
         'list'         => $entries,
     ];
@@ -1490,13 +1559,16 @@ function gw_after_publish(PDO $pdo, array $cfg, array $row, ?callable $send = nu
     }
 }
 
-function gw_after_draw(PDO $pdo, array $cfg, array $row, array $winners, ?callable $send = null, ?callable $sleep = null): void {
+// $gone — отписавшиеся, найденные на итогах (четвёртый элемент gw_draw()).
+function gw_after_draw(PDO $pdo, array $cfg, array $row, array $winners, ?callable $send = null, ?callable $sleep = null, array $gone = []): void {
     $tg = tg_config($cfg);
-    if (!tg_enabled($tg) || !$winners) { return; }
+    if (!tg_enabled($tg) || (!$winners && !$gone)) { return; }
     tg_finish_response();
     tg_long_run();
+    $send = $send ?? tg_http($tg['token']);
     try {
-        gw_notify_winners($pdo, $send ?? tg_http($tg['token']), $row, $winners, $sleep);
+        if ($winners) { gw_notify_winners($pdo, $send, $row, $winners, $sleep); }
+        if ($gone) { gw_left_send($pdo, $send, $gone, time(), $sleep); }
     } catch (Throwable $e) {
         error_log('giveaway winners: ' . $e->getMessage());
     }
@@ -1535,7 +1607,7 @@ function gw_has_due(PDO $pdo, int $now): bool {
 function gw_draw_due(PDO $pdo, array $cfg, callable $send, int $now, ?callable $sleep = null, ?callable $rand = null): array {
     $out = ['drawn' => 0, 'failed' => 0];
     foreach (gw_due_ids($pdo, $now) as $id) {
-        [$s, , $winners] = gw_draw($pdo, $cfg, $send, $id, $now, $rand);
+        [$s, , $winners, $gone] = gw_draw($pdo, $cfg, $send, $id, $now, $rand);
         if ($s !== 200) {
             // drawn — его только что разыграл кто-то другой (кнопка в админке).
             if ($s !== 409) { $out['failed']++; }
@@ -1543,6 +1615,7 @@ function gw_draw_due(PDO $pdo, array $cfg, callable $send, int $now, ?callable $
         }
         $out['drawn']++;
         if ($winners) { gw_notify_winners($pdo, $send, gw_load($pdo, $id), $winners, $sleep); }
+        if ($gone) { gw_left_send($pdo, $send, $gone, $now, $sleep); }
     }
     return $out;
 }
@@ -1633,7 +1706,7 @@ function gw_remind_time_due(PDO $pdo, int $now, int $limit = 0): array {
                FROM giveaways g
                JOIN gw_prefs p ON p.subscribed = 1 AND p.time_left > 0
                JOIN tg_links l ON l.user_id = p.user_id
-               LEFT JOIN giveaway_entries e ON e.giveaway_id = g.id AND e.user_id = p.user_id
+               LEFT JOIN giveaway_entries e ON e.giveaway_id = g.id AND e.user_id = p.user_id" . gw_active_sql($pdo) . "
                LEFT JOIN gw_reminders r ON r.giveaway_id = g.id AND r.user_id = p.user_id AND r.kind = 'time'
               WHERE g.status = 'live' AND g.ends_at > :now AND g.ends_at < :nodl
                 AND g.ends_at - p.time_left <= :now2
@@ -1677,7 +1750,7 @@ function gw_remind_places_due(PDO $pdo, array $row, int $now): array {
                FROM giveaways g
                JOIN gw_prefs p ON p.subscribed = 1 AND p.places_left >= :left AND p.places_left < :max
                JOIN tg_links l ON l.user_id = p.user_id
-               LEFT JOIN giveaway_entries e ON e.giveaway_id = g.id AND e.user_id = p.user_id
+               LEFT JOIN giveaway_entries e ON e.giveaway_id = g.id AND e.user_id = p.user_id" . gw_active_sql($pdo) . "
                LEFT JOIN gw_reminders r ON r.giveaway_id = g.id AND r.user_id = p.user_id AND r.kind = 'places'
               WHERE g.id = :g AND r.giveaway_id IS NULL" . gw_remind_test_sql($pdo) . "
               ORDER BY p.user_id"
@@ -2096,24 +2169,147 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
 
         $st = $pdo->prepare(
             "SELECT g.* FROM giveaway_entries e JOIN giveaways g ON g.id = e.giveaway_id
-              WHERE e.chat_id = :u AND g.status = 'live'"
+              WHERE e.chat_id = :u AND g.status = 'live'" . gw_active_sql($pdo)
         );
         $st->execute([':u' => $uid]);
         $notes = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
             if (!gw_drops_unsub($row) || !in_array($channel, gw_checked_channels($row), true)) { continue; }
-            $del = $pdo->prepare('DELETE FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :u');
-            $del->execute([':g' => (int)$row['id'], ':u' => $uid]);
-            if ($del->rowCount() < 1) { continue; }
-            $title = gw_channels($pdo, [$channel])[$channel]['title'] ?? '';
-            $lang = $pdo->prepare('SELECT lang FROM tg_links WHERE chat_id = :u LIMIT 1');
-            $lang->execute([':u' => $uid]);
-            $notes[] = ['chat_id' => $uid, 'lang' => tg_lang($lang->fetchColumn()), 'row' => $row, 'channel' => (string)$title];
+            if (!gw_mark_left($pdo, (int)$row['id'], $uid, $now)) { continue; }
+            $notes[] = gw_left_note($pdo, $row, $uid, $channel);
         }
         return $notes;
     } catch (PDOException $e) {
+        error_log('giveaway member update: ' . $e->getMessage());
         return [];
     }
+}
+
+/**
+ * Снять участие отписавшегося: left_at у его строки (до миграции — строка
+ * удаляется). true — сняли сейчас, и бот должен написать; false — уже было
+ * снято раньше.
+ */
+function gw_mark_left(PDO $pdo, int $gid, int $chat, int $now): bool {
+    if (gw_has_left($pdo)) {
+        $st = $pdo->prepare('UPDATE giveaway_entries SET left_at = :at WHERE giveaway_id = :g AND chat_id = :c AND left_at = 0');
+        $st->execute([':at' => $now, ':g' => $gid, ':c' => $chat]);
+    } else {
+        $st = $pdo->prepare('DELETE FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :c');
+        $st->execute([':g' => $gid, ':c' => $chat]);
+    }
+    return $st->rowCount() > 0;
+}
+
+// Кому и что написать о снятом участии: chat_id, язык, розыгрыш, название канала.
+function gw_left_note(PDO $pdo, array $row, int $chat, int $channel): array {
+    $title = gw_channels($pdo, [$channel])[$channel]['title'] ?? '';
+    $st = $pdo->prepare('SELECT lang FROM tg_links WHERE chat_id = :u LIMIT 1');
+    $st->execute([':u' => $chat]);
+    return ['chat_id' => $chat, 'lang' => tg_lang($st->fetchColumn()), 'row' => $row, 'channel' => (string)$title];
+}
+
+// --------------------------------------------------------------------------
+//  Перепроверка подписки в фоне
+// --------------------------------------------------------------------------
+//
+// На бою вебхук не узнавал о выходах из каналов: отписавшиеся доживали до
+// итогов, а бот им ничего не писал. Поэтому участников идущих розыгрышей бот
+// перепроверяет сам — getChatMember, не больше GW_SWEEP_CALLS запросов за
+// проход, проход не чаще раза в GW_SWEEP_EVERY секунд, после ответа
+// /api/giveaways.php (как автоитоги и напоминания). Первыми идут те, кого
+// дольше всех не проверяли (checked_at), одного человека — не чаще раза в
+// GW_SWEEP_RECHECK секунд. Отписался — gw_mark_left() и то же сообщение, что
+// из вебхука. Бот не может проверить канал (Telegram молчит, бота
+// разжаловали) — человек не трогается и уходит в конец очереди; три таких
+// ответа подряд заканчивают проход.
+
+const GW_SWEEP_EVERY   = 60;
+const GW_SWEEP_CALLS   = 40;
+const GW_SWEEP_RECHECK = 600;
+
+/**
+ * Один проход перепроверки. ['checked' => сколько людей проверено,
+ * 'left' => записи для сообщения «вы отписались»]. До миграции — ничего.
+ */
+function gw_sweep(PDO $pdo, callable $send, int $now, int $calls = GW_SWEEP_CALLS): array {
+    $out = ['checked' => 0, 'left' => []];
+    if ($calls <= 0 || !gw_has_left($pdo)) { return $out; }
+    $st = $pdo->prepare(
+        "SELECT e.giveaway_id, e.chat_id FROM giveaway_entries e JOIN giveaways g ON g.id = e.giveaway_id
+          WHERE g.status = 'live' AND g.ends_at > :now AND e.left_at = 0 AND e.checked_at <= :old"
+          . (gw_has_drop($pdo) ? ' AND g.drop_unsub = 1' : '') . '
+          ORDER BY e.checked_at, e.joined_at LIMIT ' . (int)$calls
+    );
+    $st->bindValue(':now', $now, PDO::PARAM_INT);
+    $st->bindValue(':old', $now - GW_SWEEP_RECHECK, PDO::PARAM_INT);
+    $st->execute();
+    $touch = $pdo->prepare('UPDATE giveaway_entries SET checked_at = :at WHERE giveaway_id = :g AND chat_id = :c');
+    $rows = [];
+    $errors = 0;
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $e) {
+        $gid = (int)$e['giveaway_id'];
+        $chat = (int)$e['chat_id'];
+        if (!array_key_exists($gid, $rows)) { $rows[$gid] = gw_load($pdo, $gid); }
+        $row = $rows[$gid];
+        if (!$row) { continue; }
+        $chs = gw_checked_channels($row);
+        if (count($chs) > $calls) { break; }
+        $missing = null;
+        $error = false;
+        foreach ($chs as $c) {
+            $calls--;
+            $s = gw_member_state($send, $c, $chat);
+            if ($s === 'error') { $error = true; break; }
+            if ($s === 'no') { $missing = $c; break; }
+        }
+        if ($missing !== null) {
+            if (gw_mark_left($pdo, $gid, $chat, $now)) { $out['left'][] = gw_left_note($pdo, $row, $chat, $missing); }
+        } else {
+            $touch->execute([':at' => $now, ':g' => $gid, ':c' => $chat]);
+        }
+        if ($error) {
+            if (++$errors >= 3) { break; }
+            continue;
+        }
+        $errors = 0;
+        $out['checked']++;
+    }
+    return $out;
+}
+
+/**
+ * Перепроверка после ответа /api/giveaways.php. Проход один за раз —
+ * замок-файл, в нём время начала последнего прохода: следующий — не раньше
+ * чем через GW_SWEEP_EVERY секунд. $send и $lockPath подставляют тесты.
+ */
+function gw_after_sweep(PDO $pdo, array $cfg, int $now, ?callable $send = null, ?string $lockPath = null): array {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return ['skipped' => 'off']; }
+    $lock = @fopen($lockPath ?? sys_get_temp_dir() . '/maknemy-gw-sweep.lock', 'c+');
+    if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) { return ['skipped' => 'busy']; }
+    $res = ['skipped' => 'early'];
+    try {
+        $last = (int)stream_get_contents($lock);
+        if ($last <= 0 || $now - $last >= GW_SWEEP_EVERY) {
+            ftruncate($lock, 0);
+            rewind($lock);
+            fwrite($lock, (string)$now);
+            fflush($lock);
+            tg_finish_response();
+            tg_long_run();
+            $send = $send ?? tg_http($tg['token']);
+            $done = gw_sweep($pdo, $send, $now);
+            gw_left_send($pdo, $send, $done['left'], $now);
+            $res = ['checked' => $done['checked'], 'left' => count($done['left'])];
+        }
+    } catch (Throwable $e) {
+        error_log('giveaway sweep: ' . $e->getMessage());
+        $res = ['skipped' => 'error'];
+    }
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    return $res;
 }
 
 /**
@@ -2125,7 +2321,7 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
 function gw_report(PDO $pdo, array $row): array {
     $id = (int)$row['id'];
     $sources = array_fill_keys(GW_SOURCES, 0) + ['' => 0];
-    $st = $pdo->prepare('SELECT src, COUNT(*) AS n FROM giveaway_entries WHERE giveaway_id = :g GROUP BY src');
+    $st = $pdo->prepare('SELECT e.src, COUNT(*) AS n FROM giveaway_entries e WHERE e.giveaway_id = :g' . gw_active_sql($pdo) . ' GROUP BY e.src');
     $st->execute([':g' => $id]);
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $k = gw_src($r['src']);
@@ -2145,7 +2341,7 @@ function gw_report(PDO $pdo, array $row): array {
                FROM giveaway_subs s
                LEFT JOIN tg_links l ON l.chat_id = s.tg_user_id
                LEFT JOIN users u ON u.roblox_id = l.user_id
-               LEFT JOIN giveaway_entries e ON e.giveaway_id = s.giveaway_id AND e.chat_id = s.tg_user_id
+               LEFT JOIN giveaway_entries e ON e.giveaway_id = s.giveaway_id AND e.chat_id = s.tg_user_id' . gw_active_sql($pdo) . '
               WHERE s.giveaway_id = :g AND s.channel_id = :c
               ORDER BY s.joined_at, s.tg_user_id'
         );
@@ -2231,20 +2427,34 @@ function gw_after_join(PDO $pdo, array $cfg, array $note, ?callable $send = null
     }
 }
 
-// Отписавшимся — что участие снято. Ответ Telegram на вебхук уже ушёл.
-function gw_after_member(PDO $pdo, array $cfg, array $notes, int $now, ?callable $send = null): void {
-    $tg = tg_config($cfg);
-    if (!tg_enabled($tg) || !$notes) { return; }
-    tg_finish_response();
-    $send = $send ?? tg_http($tg['token']);
-    foreach ($notes as $n) {
+// Отписавшимся — что участие снято. Записи — из gw_member_update(),
+// gw_sweep() или gw_draw(). Сколько ушло.
+function gw_left_send(PDO $pdo, callable $send, array $notes, int $now, ?callable $sleep = null): int {
+    $sleep = $sleep ?? function (int $us): void { usleep($us); };
+    $sent = 0;
+    foreach ($notes as $i => $n) {
         try {
+            if ($i > 0) { $sleep(TG_BROADCAST_GAP); }
             $lang = tg_lang($n['lang']);
             $msg = tg_message_buttons((int)$n['chat_id'], gw_left_text($n['row'], $n['channel'], $lang, $now),
                 [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$n['row']['id'], false, gw_is_test($n['row']))]]);
-            tg_after_send($pdo, (int)$n['chat_id'], $send('sendMessage', $msg));
+            $res = $send('sendMessage', $msg);
+            if (tg_after_send($pdo, (int)$n['chat_id'], $res)) {
+                $sent++;
+            } else {
+                error_log('giveaway left: ' . (is_array($res) ? (string)($res['description'] ?? 'no description') : 'no answer'));
+            }
         } catch (Throwable $e) {
             error_log('giveaway left: ' . $e->getMessage());
         }
     }
+    return $sent;
+}
+
+// После вебхука. Ответ Telegram на вебхук уже ушёл.
+function gw_after_member(PDO $pdo, array $cfg, array $notes, int $now, ?callable $send = null): void {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg) || !$notes) { return; }
+    tg_finish_response();
+    gw_left_send($pdo, $send ?? tg_http($tg['token']), $notes, $now);
 }

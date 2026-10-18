@@ -22,7 +22,9 @@ require_once __DIR__ . '/lib/giveaway.php';
 // позже), а после него PHP разыгрывает призы и поздравляет победителей
 // (gw_after_due() в api/lib/giveaway.php). Отдельного cron для итогов нет.
 // Тем же ходом уходят напоминания «до итогов осталось…» тем, кто их выбрал
-// в настройках уведомлений (gw_after_remind()).
+// в настройках уведомлений (gw_after_remind()), и понемногу перепроверяется
+// подписка участников — отписавшимся бот пишет, что участие снято
+// (gw_after_sweep()).
 
 const GW_PUBLIC_CACHE = 30;
 
@@ -48,4 +50,5 @@ if (!defined('TESTING')) {
     if ($due) { gw_after_due(db(), app_config(), $now); }
     try { $remind = gw_has_remind(db(), time()); } catch (Throwable $e) { $remind = false; }
     if ($remind) { gw_after_remind(db(), app_config(), time()); }
+    gw_after_sweep(db(), app_config(), time());
 }
