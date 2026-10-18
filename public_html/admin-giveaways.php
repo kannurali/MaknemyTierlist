@@ -205,7 +205,7 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=81"></script>
+<script src="/js/i18n.js?v=82"></script>
 <script src="/js/news-blocks.js?v=3"></script>
 <script src="/js/giveaway.js?v=11"></script>
 <script src="/js/giveaway-admin.js?v=11"></script>

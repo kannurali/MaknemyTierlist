@@ -331,7 +331,8 @@
   function eligible(doc, slot, nowMs, page) {
     var d = normalizeDoc(doc);
     if (SLOTS.indexOf(slot) < 0) { return []; }
-    if (bookedFor(PLAYEROK, slot, nowMs, page)) { return [PLAYEROK]; }
+    var booked = bookedOn(slot, nowMs, page);
+    if (booked) { return [booked]; }
     var out = [];
     for (var i = 0; i < d.campaigns.length; i++) {
       var c = d.campaigns[i];
@@ -702,7 +703,7 @@
     textKey: "promo.playerokText",
     ctaKey: "promo.playerokCta",
     erid: "",
-    pages: ["tierlist", "calc"],
+    pages: ["trading", "calc"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip: { src: "/assets/promo/playerok-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
@@ -714,6 +715,35 @@
     notes: ""
   };
 
+  var STARVELL = {
+    id: "starvell-2026-10",
+    name: "starvell-2026-10",
+    advertiser: "Starvell",
+    enabled: true,
+    weight: 1,
+    start: "2026-10-18",
+    end: "",
+    href: "https://starvell.com/lead/045fa3/roblox/blox-fruits",
+    text: "",
+    cta: "",
+    textKey: "promo.starvellText",
+    ctaKey: "promo.starvellCta",
+    erid: "",
+    pages: ["tierlist"],
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip:    { src: "/assets/promo/starvell-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
+      rail:     { src: "/assets/promo/starvell-rail.webp",      w: 300,  h: 1200, anim: false, poster: "" },
+      dock:     { src: "/assets/promo/starvell-dock.webp",      w: 640,  h: 200,  anim: false, poster: "" },
+      dockMini: { src: "/assets/promo/starvell-dock-mini.webp", w: 810,  h: 224,  anim: false, poster: "" },
+      popup:    { src: "/assets/promo/starvell-popup.webp",     w: 800,  h: 800,  anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
+    notes: ""
+  };
+
+  var BOOKED = [PLAYEROK, STARVELL];
+
   function bookedFor(campaign, slot, now, page) {
     return campaign.enabled
       && onPage(campaign, page)
@@ -721,9 +751,17 @@
       && !!creativeFor(campaign, slot);
   }
 
+  function bookedOn(slot, nowMs, page) {
+    for (var i = 0; i < BOOKED.length; i++) {
+      if (bookedFor(BOOKED[i], slot, nowMs, page)) { return BOOKED[i]; }
+    }
+    return null;
+  }
+
   function houseFor(slot, nowMs, page) {
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
-    if (bookedFor(PLAYEROK, slot, now, page)) { return PLAYEROK; }
+    var booked = bookedOn(slot, now, page);
+    if (booked) { return booked; }
     if (bookedFor(HOUSE_GIVEAWAY, slot, now, page)) { return HOUSE_GIVEAWAY; }
     if (bookedFor(HOUSE_CHANNEL, slot, now, page)) { return HOUSE_CHANNEL; }
     if (slot === "popup") { return HOUSE_TG; }
@@ -781,6 +819,8 @@
     HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
     HOUSE_CHANNEL: HOUSE_CHANNEL,
     PLAYEROK: PLAYEROK,
+    STARVELL: STARVELL,
+    bookedOn: bookedOn,
     houseFor: houseFor,
     popupPick: popupPick,
     recordPopupShown: recordPopupShown,

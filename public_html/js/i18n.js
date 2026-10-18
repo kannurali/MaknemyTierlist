@@ -682,6 +682,8 @@
       "promo.channelCta":       "Подписаться",
       "promo.playerokText":     "Фрукты, мутации, скины и донат — по лучшим ценам на Playerok",
       "promo.playerokCta":      "Перейти на Playerok",
+      "promo.starvellText":     "Фрукты Blox Fruits на Starvell — выбери свой следующий апгрейд",
+      "promo.starvellCta":      "К покупкам",
       "promo.houseSlotText":    "Разместите здесь свою рекламу",
       "promo.houseSlotCta":     "Написать",
 
@@ -1576,6 +1578,8 @@
       "promo.channelCta":       "Subscribe",
       "promo.playerokText":     "Fruits, mutations, skins and top-ups at the best prices on Playerok",
       "promo.playerokCta":      "Go to Playerok",
+      "promo.starvellText":     "Blox Fruits on Starvell — pick your next upgrade",
+      "promo.starvellCta":      "Shop now",
       "promo.houseSlotText":    "Place your ad here",
       "promo.houseSlotCta":     "Contact us",
 
