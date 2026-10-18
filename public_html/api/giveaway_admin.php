@@ -78,8 +78,8 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'draw') {
         if (!tg_enabled($tg)) { return [503, ['ok' => false, 'error' => 'tg_off'], null]; }
-        [$s, $p, $winners] = gw_draw($pdo, $cfg, $send, $id, $now);
-        return [$s, $p, $s === 200 ? ['winners', gw_load($pdo, $id), $winners] : null];
+        [$s, $p, $winners, $gone] = gw_draw($pdo, $cfg, $send, $id, $now);
+        return [$s, $p, $s === 200 ? ['winners', gw_load($pdo, $id), $winners, $gone] : null];
     }
     if ($action === 'delete') {
         [$s, $p] = gw_delete($pdo, $id);
@@ -109,5 +109,5 @@ if (!defined('TESTING')) {
     json_out($payload, $status);
 
     if ($after && $after[0] === 'announce') { gw_after_publish(db(), $cfg, $after[1]); }
-    if ($after && $after[0] === 'winners' && $after[1]) { gw_after_draw(db(), $cfg, $after[1], $after[2]); }
+    if ($after && $after[0] === 'winners' && $after[1]) { gw_after_draw(db(), $cfg, $after[1], $after[2], null, null, $after[3]); }
 }

@@ -250,6 +250,10 @@ CREATE TABLE IF NOT EXISTS user_bans (
 -- max_entries — лимит участников, 0 — без лимита. Последний участник
 -- закрывает приём: ends_at становится «сейчас»
 -- (docs/migrations/2026-10-15-giveaway-max-entries.sql).
+-- drop_unsub — гарантия: 1 — отписавшийся от канала условий выбывает из числа
+-- участников и освобождает место в лимите; 0 — остаётся в числе участников и
+-- занимает место. Выиграть он не может в обоих случаях
+-- (docs/migrations/2026-10-18-giveaway-unsub.sql).
 CREATE TABLE IF NOT EXISTS giveaways (
   id            INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   status        VARCHAR(8)      NOT NULL DEFAULT 'draft',
@@ -263,6 +267,7 @@ CREATE TABLE IF NOT EXISTS giveaways (
   prizes_json   TEXT            NULL,
   channels_json TEXT            NULL,
   conds_json    TEXT            NULL,
+  drop_unsub    TINYINT(1)      NOT NULL DEFAULT 1,
   max_entries   INT UNSIGNED    NOT NULL DEFAULT 0,
   ends_at       BIGINT UNSIGNED NOT NULL DEFAULT 0,
   created_at    BIGINT UNSIGNED NOT NULL,
@@ -281,7 +286,11 @@ CREATE TABLE IF NOT EXISTS giveaways (
 -- «Разыграть»; NULL — не выиграл (или розыгрыша ещё не было).
 -- src — откуда человек пришёл участвовать: tg — по кнопке из сообщения
 -- бота, pop — из окна на странице сайта, page — со страницы /giveaways.
--- Отписался от канала из условий — строка удаляется (участие снято).
+-- left_at — когда человек отписался от канала условий, 0 — подписан. Строка
+-- остаётся следом того, что он вступал подписанным, но в розыгрыш не входит;
+-- в числе участников — только у розыгрыша без гарантии (drop_unsub = 0).
+-- checked_at — когда бот сам последний раз перепроверил подписку
+-- (docs/migrations/2026-10-18-giveaway-unsub.sql).
 CREATE TABLE IF NOT EXISTS giveaway_entries (
   giveaway_id INT UNSIGNED    NOT NULL,
   user_id     BIGINT UNSIGNED NOT NULL,
@@ -289,10 +298,13 @@ CREATE TABLE IF NOT EXISTS giveaway_entries (
   joined_at   BIGINT UNSIGNED NOT NULL,
   prize       SMALLINT        NULL,
   src         VARCHAR(8)      NOT NULL DEFAULT '',
+  left_at     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  checked_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (giveaway_id, user_id),
   UNIQUE KEY uq_chat (giveaway_id, chat_id),
   KEY idx_user (user_id),
-  KEY idx_chat (chat_id)
+  KEY idx_chat (chat_id),
+  KEY idx_check (left_at, checked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------------------------

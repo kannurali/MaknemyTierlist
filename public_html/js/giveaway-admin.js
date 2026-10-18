@@ -52,6 +52,7 @@
     "bad max_entries": "Число участников — целое, от 1 до 1 000 000.",
     "bad end_by": "Выберите, когда итоги: по времени или по числу участников.",
     max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
+    drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -715,6 +716,7 @@
     const st = STATUS[phase] || STATUS.draft;
     let text = g && g.id ? st[0] : "Новый розыгрыш — ещё не сохранён";
     if (g && g.test) text += " · тестовый";
+    if (g && g.id && g.drop_unsub === false) text += " · без гарантии: отписавшиеся занимают места";
     if (g && g.id && g.status !== "draft" && g.max_entries && g.entries >= g.max_entries) text += " · лимит участников набран";
     if (g && g.published_at) text += " · опубликован " + fmtDate(g.published_at) + " МСК";
     if (g && g.drawn_at) text += " · разыгран " + fmtDate(g.drawn_at) + " МСК";
@@ -743,7 +745,9 @@
     const sec = $("gwPeople");
     sec.hidden = !(g && g.id && g.status !== "draft");
     if (sec.hidden) return;
-    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + (g.list.length < g.entries ? " (показаны " + g.list.length + ")" : "");
+    const all = g.rows || g.entries;
+    const left = g.left ? (g.drop_unsub === false ? " · из них отписались: " : " · отписались (не считаются): ") + g.left : "";
+    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + left + (g.list.length < all ? " (показаны " + g.list.length + ")" : "");
     const body = $("gwPeopleBody");
     body.textContent = "";
     if (!g.list.length) {
@@ -782,6 +786,10 @@
       from.textContent = SOURCES[e.src] || "—";
       const prize = document.createElement("td");
       prize.textContent = e.prize !== null && g.prizes[e.prize] ? "🏆 " + g.prizes[e.prize].name : "";
+      if (e.left_at) {
+        tr.style.opacity = "0.55";
+        prize.textContent = "Отписался " + fmtDate(e.left_at) + " — не участвует";
+      }
       const act = document.createElement("td");
       const chat = document.createElement("a");
       chat.href = "/chat?to=" + encodeURIComponent(e.id);
@@ -1029,7 +1037,8 @@
       end_by: endBy(),
       ends_at: endBy() === "time" ? fromInput($("fEnds").value) : 0,
       max_entries: endBy() === "entries" ? readMax() : 0,
-      test: $("fTest").checked
+      test: $("fTest").checked,
+      drop_unsub: $("fDropUnsub").checked
     };
   }
 
@@ -1109,6 +1118,7 @@
     $("fMax").value = g.max_entries ? String(g.max_entries) : "";
     syncEndBy();
     $("fTest").checked = !!g.test;
+    $("fDropUnsub").checked = g.drop_unsub !== false;
     msg("");
     hint("");
     renderStatus();
@@ -1122,7 +1132,7 @@
     return {
       id: 0, status: "draft", phase: "draft", title_ru: "", title_en: "", image: null,
       body: { v: 1, blocks: [] }, prizes: [], channels: [], conds: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
-      published_at: 0, drawn_at: 0, test: false, entries: 0, max_entries: 0, list: []
+      published_at: 0, drawn_at: 0, test: false, drop_unsub: true, entries: 0, max_entries: 0, list: []
     };
   }
 
@@ -1253,7 +1263,7 @@
     $("fImgFile").addEventListener("change", e => { upload(e.target.files[0]); e.target.value = ""; });
     $("fImgDel").addEventListener("click", () => { setImage(null); changed(); });
     ["fTitleRu", "fTitleEn", "fEnds", "fMax"].forEach(id => $(id).addEventListener("input", changed));
-    $("fTest").addEventListener("change", changed);
+    ["fTest", "fDropUnsub"].forEach(id => $(id).addEventListener("change", changed));
     ["fEndTime", "fEndEntries"].forEach(id => $(id).addEventListener("change", () => { syncEndBy(); changed(); }));
     document.querySelectorAll("[data-plus]").forEach(b => b.addEventListener("click", () => {
       const base = Math.max(Math.floor(Date.now() / 1000), fromInput($("fEnds").value) || 0);
