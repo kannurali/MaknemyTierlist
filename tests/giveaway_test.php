@@ -1390,7 +1390,7 @@ test('отписался — участие снято, бот пишет, в о
     assert_true(strpos($msg['text'], 'отписались от канала «Канал A»') !== false && strpos($msg['text'], 'подпишитесь снова') !== false, 'текст отписки');
 
     $rep = gw_report($p, gw_load($p, $id));
-    assert_eq(['tg' => 1, 'pop' => 0, 'page' => 0, 'c-tier' => 0, 'c-tmid' => 0, 'c-trade' => 0, 'c-calc' => 0,
+    assert_eq(['tg' => 1, 'pop' => 0, 'page' => 0, 'c-tier' => 0, 'c-trade' => 0, 'c-calc' => 0,
         'c-stock' => 0, 'c-news' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
     $ch = $rep['channels'][0];
     assert_eq([1, 0, $link], [$ch['joined'], $ch['stayed'], $ch['link']], 'пришёл 1, остался 0');
@@ -1514,13 +1514,14 @@ test('карточки: показы и переходы складываютс�
     $id = gw_live($p);
     $n = handle_gw_stat($p, ['e' => [
         ['id' => $id, 'p' => 'tier', 'k' => 'v'],
-        ['id' => $id, 'p' => 'tmid', 'k' => 'v'],
+        ['id' => $id, 'p' => 'news', 'k' => 'v'],
         ['id' => (string)$id, 'p' => 'tier', 'k' => 'v'],
         ['id' => $id, 'p' => 'tier', 'k' => 'c'],
     ]]);
     assert_eq(4, $n, 'все четыре события приняты');
     handle_gw_stat($p, ['e' => [['id' => $id, 'p' => 'tier', 'k' => 'c'], ['id' => $id, 'p' => 'trade', 'k' => 'v']]]);
-    assert_eq([[$id, 'tier', 2, 2], [$id, 'tmid', 1, 0], [$id, 'trade', 1, 0]], gw_card_rows($p), 'строки по местам');
+    assert_eq([[$id, 'news', 1, 0], [$id, 'tier', 2, 2], [$id, 'trade', 1, 0]], gw_card_rows($p), 'строки по местам');
+    assert_eq(0, handle_gw_stat($p, ['e' => [['id' => $id, 'p' => 'tmid', 'k' => 'v']]]), 'середины тирлиста больше нет');
 });
 
 test('карточки: чужие места, черновики, мусор и лишнее не пишутся', function () {

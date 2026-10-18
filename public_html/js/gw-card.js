@@ -7,7 +7,7 @@
   var FLUSH_MS = 2500;
   var MAX_BATCH = 12;
 
-  var PLACES = ["tier", "tmid", "trade", "calc", "stock", "news"];
+  var PLACES = ["tier", "trade", "calc", "stock", "news"];
 
   function src(place) { return "c-" + place; }
 
@@ -190,13 +190,6 @@
       body.appendChild(meta(g, false));
       return [pic(g), body, button("gwc.see")];
     },
-    tmid: function (g) {
-      var body = el("span", "gwc-body");
-      body.appendChild(tag("gwc.kicker"));
-      body.appendChild(el("b", "gwc-title", prize(g)));
-      body.appendChild(meta(g, true));
-      return [pic(g), body, button("gwc.see")];
-    },
     trade: function (g) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.tradeHead"));
@@ -233,7 +226,7 @@
 
   function shellFor(place) {
     var shell = el(place === "trade" ? "li" : "div", "gwc-slot gwc-slot--" + place);
-    if (place === "tier" || place === "tmid") { shell.classList.add("ptn-export-hide"); }
+    if (place === "tier") { shell.classList.add("ptn-export-hide"); }
     shell.setAttribute("data-gwc-place", place);
     return shell;
   }
@@ -336,25 +329,10 @@
     var stage = document.getElementById("stage");
     var off = !pick && readHint() === "0";
     var editing = stage && stage.classList.contains("editing");
-    var tiers = Array.prototype.filter.call(box.children, function (n) { return n.classList.contains("tier"); });
-    ["tier", "tmid"].forEach(function (place) {
-      var node = nodeFor(place);
-      if (editing || off || !tiers.length) { if (node.parentNode) { node.parentNode.removeChild(node); } return; }
-      var ref = null;
-      if (place === "tier") {
-        ref = tiers[0];
-      } else {
-        var ad = box.querySelector(":scope > .ptn-card");
-        ref = ad ? ad.nextElementSibling : null;
-        if (!ad) { if (node.parentNode) { node.parentNode.removeChild(node); } return; }
-      }
-      if (ref === node) { return; }
-      if (ref) {
-        if (node.nextElementSibling !== ref || node.parentNode !== box) { box.insertBefore(node, ref); }
-      } else if (box.lastElementChild !== node) {
-        box.appendChild(node);
-      }
-    });
+    var first = Array.prototype.filter.call(box.children, function (n) { return n.classList.contains("tier"); })[0];
+    var node = nodeFor("tier");
+    if (editing || off || !first) { if (node.parentNode) { node.parentNode.removeChild(node); } return; }
+    if (node.nextElementSibling !== first || node.parentNode !== box) { box.insertBefore(node, first); }
   }
 
   function placeFeed(box, sel) {

@@ -16,7 +16,7 @@ const NOW = 1790000000;
 const live = (id, extra = {}) => ({ id, phase: 'live', ends_at: NOW + 3600, prizes: [{ name: 'Kitsune Fruit', count: 1 }], ...extra });
 
 test('places match the server list and become c-* sources', () => {
-  assert.deepEqual(GWC.PLACES, ['tier', 'tmid', 'trade', 'calc', 'stock', 'news']);
+  assert.deepEqual(GWC.PLACES, ['tier', 'trade', 'calc', 'stock', 'news']);
   GWC.PLACES.forEach(p => {
     const src = GWC.src(p);
     assert.match(src, /^c-[a-z]{3,6}$/, 'giveaway.js accepts it');
