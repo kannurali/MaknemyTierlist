@@ -42,13 +42,14 @@ function gw_db(): PDO {
     $pdo->exec('CREATE TABLE tg_prefs (
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
     // Зеркалит docs/migrations/2026-10-14-giveaways.sql, 2026-10-15-giveaway-conds.sql,
-    // 2026-10-15-giveaway-test.sql и 2026-10-15-giveaway-max-entries.sql.
+    // 2026-10-15-giveaway-test.sql, 2026-10-15-giveaway-max-entries.sql и
+    // 2026-10-18-giveaway-drop-unsub.sql.
     $pdo->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
         title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
         body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
-        max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        drop_unsub INTEGER NOT NULL DEFAULT 1, max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
         published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
     $pdo->exec("CREATE TABLE giveaway_entries (
         giveaway_id INTEGER NOT NULL, user_id INTEGER NOT NULL, chat_id INTEGER NOT NULL,
@@ -1409,6 +1410,77 @@ test('после итогов отписка участие не трогает'
     gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), $id, GW_NOW + 86400);
     assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 90000));
     assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'победитель остался в списке');
+});
+
+test('галочка снята: отписка участие не снимает, бот молчит, итоги без перепроверки', function () {
+    assert_true(gw_validate(gw_draft())['row']['drop_unsub'], 'по умолчанию отписка снимает участие');
+    assert_eq(false, gw_validate(gw_draft(['drop_unsub' => false]))['row']['drop_unsub'], 'галочку можно снять');
+
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    [$id, $link] = gw_live_links($p, ['drop_unsub' => false]);
+    assert_eq(false, gw_admin_item($p, gw_load($p, $id), GW_NOW)['drop_unsub'], 'админка видит снятую галочку');
+    $log = [];
+    $subs = [GW_CH_A => [501, 502]];
+    gw_member_update($p, gw_member(GW_CH_A, 501, 'member', $link, 'ann'), GW_NOW);
+    assert_eq(409, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'при участии подписку всё равно проверяют');
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '1', $id, GW_NOW);
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '2', $id, GW_NOW);
+    assert_true(strpos(gw_joined_text(gw_load($p, $id), 'ru'), 'отпишетесь') === false, 'бот не пугает отпиской');
+
+    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 10), 'отписался — бот молчит');
+    assert_eq(2, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'участие осталось');
+    assert_eq(0, gw_report($p, gw_load($p, $id))['channels'][0]['stayed'], 'рекламодатель всё равно видит отписку');
+
+    $log = [];
+    [$s, $out] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
+    assert_eq([200, 2, 0], [$s, $out['winners'], $out['skipped']], 'отписавшиеся выигрывают');
+    assert_eq([], gw_sent($log, 'getChatMember'), 'на итогах Telegram не спрашивали');
+});
+
+test('галочку меняют у идущего розыгрыша: со следующей отписки снимает', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    gw_user($p, '2', 'bob', 502);
+    $id = gw_live($p, ['channels' => [GW_CH_A], 'drop_unsub' => false]);
+    $log = [];
+    $subs = [GW_CH_A => [501, 502]];
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '1', $id, GW_NOW);
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '2', $id, GW_NOW);
+    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 5), 'без галочки ann осталась');
+
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'channels' => [GW_CH_A]]), GW_NOW + 10);
+    assert_eq([200, 'live', true], [$s, gw_load($p, $id)['status'], gw_drops_unsub(gw_load($p, $id))], 'галочку поставили, розыгрыш идёт');
+    $notes = gw_member_update($p, gw_member(GW_CH_A, 502, 'left'), GW_NOW + 20);
+    assert_eq([502], array_column($notes, 'chat_id'), 'теперь отписка снимает, бот пишет');
+
+    $log = [];
+    [$s, $out] = gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => []]), $id, GW_NOW + 86400);
+    assert_eq([200, 0, 1], [$s, $out['winners'], $out['skipped']], 'на итогах ann уже перепроверяют');
+});
+
+test('до миграции drop_unsub: отписка снимает участие, снять галочку нельзя', function () {
+    $p = gw_db();
+    $p->exec('DROP TABLE giveaways');
+    $p->exec("CREATE TABLE giveaways (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
+        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
+        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
+        max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_user($p, '1', 'ann', 501);
+    [$s, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A], 'drop_unsub' => false]), GW_NOW);
+    assert_eq([409, 'drop_migrate'], [$s, $out['error']]);
+    $id = gw_live($p, ['channels' => [GW_CH_A]]);
+    assert_eq(true, gw_admin_item($p, gw_load($p, $id), GW_NOW)['drop_unsub'], 'админка: галочка стоит');
+    $log = [];
+    gw_enter($p, gw_cfg(), gw_tg($log, [GW_CH_A => [501]]), '1', $id, GW_NOW);
+    assert_eq([501], array_column(gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 5), 'chat_id'), 'снимает, как раньше');
 });
 
 test('ссылка своего условия: обрезанную Telegram ссылку узнаём по началу', function () {

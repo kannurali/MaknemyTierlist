@@ -113,6 +113,13 @@ echo <<<HTML
         <div><button class="btn small" id="fCondAdd" type="button">＋ Условие</button></div>
       </div>
 
+      <div class="f">Отписка
+        <div class="pages">
+          <label class="page-chk"><input type="checkbox" id="fDropUnsub" checked /> Снимать участие у отписавшихся — бот напишет «вы отписались и больше не участвуете»</label>
+        </div>
+        <span class="muted small">Касается каналов, которые проверяет бот. С галочкой: вышел из канала — участие снято сразу, а на итогах подписку проверят ещё раз. Без галочки: подписку проверяют только при участии — отписаться потом можно, участие и шанс на приз остаются. Учёт подписчиков для рекламодателя ведётся в обоих случаях. Галочку можно менять и у идущего розыгрыша.</span>
+      </div>
+
       <div class="f">Когда итоги
         <div class="pages ga-endby" role="radiogroup">
           <label class="page-chk"><input type="radio" name="fEndBy" id="fEndTime" value="time" /> По времени</label>
@@ -200,7 +207,7 @@ echo <<<HTML
 <script src="/js/i18n.js?v=80"></script>
 <script src="/js/news-blocks.js?v=3"></script>
 <script src="/js/giveaway.js?v=10"></script>
-<script src="/js/giveaway-admin.js?v=9"></script>
+<script src="/js/giveaway-admin.js?v=11"></script>
 </body>
 </html>
 HTML;

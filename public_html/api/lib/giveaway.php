@@ -10,7 +10,8 @@
 // Условия — подписка на каналы, где бот администратор. Список каналов
 // наполняет сам Telegram: добавили бота в канал — вебхуку приходит
 // my_chat_member (gw_channel_update()). Подписку бот проверяет при участии и
-// ещё раз при розыгрыше: отписавшийся после участия приз не получает.
+// ещё раз при розыгрыше: отписавшийся после участия приз не получает (если у
+// розыгрыша включено снятие при отписке — см. «Отписка» ниже).
 // Кроме каналов бывают свои условия — текст со ссылкой (conds_json). Обычно
 // бот их не проверяет и на участие они не влияют. Но если у условия выбран
 // канал бота (поле chat) — его подписку бот проверяет так же, как у каналов
@@ -58,6 +59,13 @@
 // поздравление победителю приходят как обычно — это сами тестирующие.
 // Пометка ставится только у черновика: идущий розыгрыш тестом не станет и
 // тестом быть не перестанет.
+//
+// Отписка (колонка drop_unsub, галочка у каждого розыгрыша, по умолчанию
+// включена). Включена: вышел из канала условий — участие снято, бот пишет
+// «вы отписались и больше не участвуете», а на итогах подписку перепроверяют.
+// Выключена: подписку бот проверяет только при участии, отписаться потом
+// можно без последствий. Учёт подписчиков для рекламодателя (giveaway_subs)
+// ведётся в обоих случаях. До миграции включена у всех, как было.
 //
 // Ничего из этого не роняет остальной сайт: нет таблиц — окно молчит,
 // страница пуста, админка просит миграцию.
@@ -244,6 +252,7 @@ function gw_validate(array $in): array {
         'ends_at'       => (int)$ends,
         'max_entries'   => (int)$max,
         'test'          => ($in['test'] ?? false) === true,
+        'drop_unsub'    => ($in['drop_unsub'] ?? true) !== false,
     ]];
 }
 
@@ -333,6 +342,22 @@ function gw_has_max(PDO $pdo): bool {
     } catch (PDOException $e) {
         return false;
     }
+}
+
+// Колонку drop_unsub добавляет миграция 2026-10-18-giveaway-drop-unsub.sql.
+// До неё отписка снимает участие везде, а снять галочку админка не даёт.
+function gw_has_drop(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT drop_unsub FROM giveaways LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// Снимает ли отписка участие. Нет колонки — снимает, как до галочки.
+function gw_drops_unsub(array $row): bool {
+    return !array_key_exists('drop_unsub', $row) || !empty($row['drop_unsub']);
 }
 
 // Лимит участников, 0 — без лимита.
@@ -829,6 +854,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     if ($r['test'] && !$hasTest) { return [409, ['ok' => false, 'error' => 'test_migrate']]; }
     $hasMax = gw_has_max($pdo);
     if ($r['max_entries'] > 0 && !$hasMax) { return [409, ['ok' => false, 'error' => 'max_migrate']]; }
+    $hasDrop = gw_has_drop($pdo);
+    if (!$r['drop_unsub'] && !$hasDrop) { return [409, ['ok' => false, 'error' => 'drop_migrate']]; }
 
     $old = null;
     if ($id > 0) {
@@ -870,12 +897,14 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     if ($hasConds) { $cols[':conds'] = gw_conds_encode($r['conds']); }
     if ($hasTest) { $cols[':test'] = $r['test'] ? 1 : 0; }
     if ($hasMax) { $cols[':max'] = $r['max_entries']; }
+    if ($hasDrop) { $cols[':drop'] = $r['drop_unsub'] ? 1 : 0; }
     if ($id > 0) {
         $pdo->prepare(
             'UPDATE giveaways SET title_ru = :title_ru, title_en = :title_en, image_url = :image_url,
                     image_w = :image_w, image_h = :image_h, body_json = :body, prizes_json = :prizes,
                     channels_json = :channels, ' . ($hasConds ? 'conds_json = :conds, ' : '')
                     . ($hasTest ? 'test = :test, ' : '') . ($hasMax ? 'max_entries = :max, ' : '')
+                    . ($hasDrop ? 'drop_unsub = :drop, ' : '')
                     . 'ends_at = :ends, updated_at = :now
               WHERE id = :id'
         )->execute($cols + [':id' => $id]);
@@ -886,10 +915,10 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         $pdo->prepare(
             "INSERT INTO giveaways (status, title_ru, title_en, image_url, image_w, image_h, body_json,
                     prizes_json, channels_json, " . ($hasConds ? 'conds_json, ' : '') . ($hasTest ? 'test, ' : '')
-                    . ($hasMax ? 'max_entries, ' : '') . "ends_at, created_at, updated_at)
+                    . ($hasMax ? 'max_entries, ' : '') . ($hasDrop ? 'drop_unsub, ' : '') . "ends_at, created_at, updated_at)
              VALUES ('draft', :title_ru, :title_en, :image_url, :image_w, :image_h, :body, :prizes,
                     :channels, " . ($hasConds ? ':conds, ' : '') . ($hasTest ? ':test, ' : '') . ($hasMax ? ':max, ' : '')
-                    . ":ends, :now, :now2)"
+                    . ($hasDrop ? ':drop, ' : '') . ":ends, :now, :now2)"
         )->execute($cols + [':now2' => $now]);
         $id = (int)$pdo->lastInsertId();
     }
@@ -954,6 +983,8 @@ function gw_rand_default(): callable {
  * не забанен, бот всё ещё подключён (иначе о победе не сказать) и подписан на
  * все каналы прямо сейчас. Не ответил Telegram хоть раз — розыгрыш не
  * записывается вовсе: «не смог проверить» не должно значить «проиграл».
+ * Отписку не снимающему участие (drop_unsub = 0) подписку не перепроверяют:
+ * её проверили при участии, а дальше она не важна.
  *
  * $rand(n) → число 0..n-1; тесты подставляют предсказуемое.
  */
@@ -965,7 +996,7 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
     if (gw_phase($row, $now) !== 'ended') { return [409, ['ok' => false, 'error' => 'not ended'], []]; }
 
     $prizes   = gw_decode_list($row['prizes_json']);
-    $channels = gw_checked_channels($row);
+    $channels = gw_drops_unsub($row) ? gw_checked_channels($row) : [];
     $banned   = array_flip(site_banned_ids($cfg, $now, $pdo));
 
     $st = $pdo->prepare(
@@ -1082,6 +1113,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'published_at' => (int)$row['published_at'],
         'drawn_at'     => (int)$row['drawn_at'],
         'test'         => gw_is_test($row),
+        'drop_unsub'   => gw_drops_unsub($row),
         'entries'      => $count,
         'max_entries'  => gw_max($row),
         'list'         => $entries,
@@ -1972,7 +2004,7 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
         $st->execute([':u' => $uid]);
         $notes = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            if (!in_array($channel, gw_checked_channels($row), true)) { continue; }
+            if (!gw_drops_unsub($row) || !in_array($channel, gw_checked_channels($row), true)) { continue; }
             $del = $pdo->prepare('DELETE FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :u');
             $del->execute([':g' => (int)$row['id'], ':u' => $uid]);
             if ($del->rowCount() < 1) { continue; }
@@ -2058,7 +2090,7 @@ function gw_report(PDO $pdo, array $row): array {
 function gw_joined_text(array $row, string $lang, bool $last = false): string {
     $title = gw_title($row, $lang);
     $date  = gw_when($row, $lang);
-    $cond  = gw_checked_channels($row) ? true : false;
+    $cond  = gw_checked_channels($row) && gw_drops_unsub($row);
     if ($lang === 'en') {
         return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\n"
             . ($last ? "You took the last spot: " . gw_max($row) . " entries, so entries are closed. Results soon." : 'Results: ' . $date . '.')

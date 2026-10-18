@@ -250,6 +250,9 @@ CREATE TABLE IF NOT EXISTS user_bans (
 -- max_entries — лимит участников, 0 — без лимита. Последний участник
 -- закрывает приём: ends_at становится «сейчас»
 -- (docs/migrations/2026-10-15-giveaway-max-entries.sql).
+-- drop_unsub — 1: отписка от канала условий снимает участие, бот об этом
+-- пишет, на итогах подписку перепроверяют; 0 — подписку проверяют только при
+-- участии (docs/migrations/2026-10-18-giveaway-drop-unsub.sql).
 CREATE TABLE IF NOT EXISTS giveaways (
   id            INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   status        VARCHAR(8)      NOT NULL DEFAULT 'draft',
@@ -263,6 +266,7 @@ CREATE TABLE IF NOT EXISTS giveaways (
   prizes_json   TEXT            NULL,
   channels_json TEXT            NULL,
   conds_json    TEXT            NULL,
+  drop_unsub    TINYINT(1)      NOT NULL DEFAULT 1,
   max_entries   INT UNSIGNED    NOT NULL DEFAULT 0,
   ends_at       BIGINT UNSIGNED NOT NULL DEFAULT 0,
   created_at    BIGINT UNSIGNED NOT NULL,
