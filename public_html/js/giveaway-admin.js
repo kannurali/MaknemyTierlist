@@ -797,7 +797,64 @@
     });
   }
 
+  const PLACES = {
+    tier: "Тирлист, над первой полосой",
+    trade: "Трейды, после второго объявления",
+    calc: "Калькулятор, под итогом",
+    stock: "Сток, над дилерами",
+    news: "Новости, над лентой"
+  };
   const SOURCES = { tg: "Бот", pop: "Окно на сайте", page: "Страница /giveaways" };
+  Object.keys(PLACES).forEach(k => { SOURCES["c-" + k] = "Карточка: " + PLACES[k]; });
+
+  function pct(a, b) {
+    if (!b) return "—";
+    const v = a / b * 100;
+    return (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10).toString().replace(".", ",") + "%";
+  }
+
+  function reportCards(cards) {
+    const box = $("gwCards");
+    box.textContent = "";
+    if (!Array.isArray(cards) || !cards.length) { box.hidden = true; return; }
+    box.hidden = false;
+    const head = document.createElement("p");
+    head.className = "ga-sources";
+    head.textContent = "Карточки на страницах сайта: показ — карточку увидели (половиной площади, от секунды; одно место — раз за просмотр страницы), переход — нажали, участие — перешли с карточки и вступили.";
+    box.appendChild(head);
+    const wrap = document.createElement("div");
+    wrap.className = "ga-table-wrap";
+    const table = document.createElement("table");
+    table.className = "ga-table ga-cards";
+    const thead = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["Место", "Показы", "Переходы", "CTR", "Участия", "Участия / переходы"].forEach(h => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    const tbody = document.createElement("tbody");
+    const total = { views: 0, clicks: 0, entries: 0 };
+    const row = (name, c, cls) => {
+      const tr = document.createElement("tr");
+      if (cls) tr.className = cls;
+      [name, c.views, c.clicks, pct(c.clicks, c.views), c.entries, pct(c.entries, c.clicks)].forEach(v => {
+        const td = document.createElement("td");
+        td.textContent = String(v);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    };
+    cards.forEach(c => {
+      total.views += c.views; total.clicks += c.clicks; total.entries += c.entries;
+      row(PLACES[c.place] || c.place, c);
+    });
+    row("Всего", total, "is-total");
+    table.append(thead, tbody);
+    wrap.appendChild(table);
+    box.appendChild(wrap);
+  }
 
   function fmtFull(ts) {
     if (!ts) return "";
@@ -945,8 +1002,10 @@
       if (!S.cur || S.cur.id !== id || !r || !r.ok) return;
       const rep = r.report;
       const s = rep.sources;
+      const fromCards = Object.keys(PLACES).reduce((n, k) => n + (s["c-" + k] || 0), 0);
       $("gwSources").textContent = "Откуда пришли участники: из бота " + s.tg + " · окно на сайте " + s.pop
-        + " · страница /giveaways " + s.page + (s[""] ? " · неизвестно " + s[""] : "");
+        + " · страница /giveaways " + s.page + " · карточки на сайте " + fromCards + (s[""] ? " · неизвестно " + s[""] : "");
+      reportCards(rep.cards);
       const box = $("gwReportChannels");
       box.textContent = "";
       if (!rep.channels.length) {

@@ -74,6 +74,14 @@
   height: calc(185.75 * var(--u));
 }
 
+.tc-gwc {
+  position: absolute;
+  left: calc(351 * var(--u));
+  top: calc(714 * var(--u));
+  width: calc(743 * var(--u));
+  height: calc(62 * var(--u));
+}
+
 .tc-rail,
 .tc-strip {
   position: relative;
@@ -593,6 +601,12 @@
   height: calc(243 * var(--u));
 }
 .tc-result > * { position: absolute; }
+
+@media (min-width: 901px) {
+  .tc-frame:has(> .tc-gwc:not([hidden])) { height: calc(1329 * var(--u)); }
+  .tc-frame:has(> .tc-gwc:not([hidden])) .tc-strip-slot { top: calc(801 * var(--u)); }
+  .tc-frame:has(> .tc-gwc:not([hidden])) .tc-result { top: calc(1016 * var(--u)); }
+}
 
 .tc-result-badge {
   left: calc(250 * var(--u));
@@ -1195,6 +1209,12 @@
     width: 100%;
     height: auto;
     aspect-ratio: 4 / 1;
+  }
+  .tc-gwc {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 56px;
   }
   .tc-strip,
   .tc-strip img { border-radius: 14px; }

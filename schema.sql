@@ -329,6 +329,17 @@ CREATE TABLE IF NOT EXISTS giveaway_subs (
   KEY idx_member (channel_id, tg_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Показы и переходы карточек розыгрыша по местам сайта (js/gw-card.js →
+-- api/gw_stat.php). Места и смысл колонок — в
+-- docs/migrations/2026-10-18-giveaway-card-stats.sql.
+CREATE TABLE IF NOT EXISTS gw_card_stats (
+  giveaway_id INT UNSIGNED NOT NULL,
+  place       VARCHAR(8)   NOT NULL,
+  views       INT UNSIGNED NOT NULL DEFAULT 0,
+  clicks      INT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (giveaway_id, place)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- --------------------------------------------------------------------------
 --  Каналы, где бот — администратор
 -- --------------------------------------------------------------------------

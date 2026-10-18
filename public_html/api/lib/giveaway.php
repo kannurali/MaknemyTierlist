@@ -1850,10 +1850,107 @@ function gw_after_places(PDO $pdo, array $cfg, array $note, int $now, ?callable 
 // по ней засчитывается розыгрышу, пока он идёт: видимое начало совпало с
 // ссылкой условия (gw_invite_match()).
 
-const GW_SOURCES = ['tg', 'pop', 'page'];
+// Карточки розыгрыша на страницах сайта (js/gw-card.js). Перешёл с
+// карточки и вступил на /giveaways — у участника src «c-» + место, так в
+// отчёте видно, какое место приводит участников. Показы и переходы каждого
+// места копятся в gw_card_stats (api/gw_stat.php).
+const GW_CARD_PLACES = ['tier', 'trade', 'calc', 'stock', 'news'];
+
+const GW_SOURCES = ['tg', 'pop', 'page', 'c-tier', 'c-trade', 'c-calc', 'c-stock', 'c-news'];
 
 function gw_src($v): string {
     return is_string($v) && in_array($v, GW_SOURCES, true) ? $v : '';
+}
+
+// Сколько показов и переходов прибавить месту. Строки нет — вставка; два
+// одновременных первых показа упрутся в ключ, и второй тогда прибавляется
+// повторным UPDATE. Без таблицы (миграция не выполнена) — false.
+function gw_card_add(PDO $pdo, int $id, string $place, int $views, int $clicks): bool {
+    if ($id <= 0 || !in_array($place, GW_CARD_PLACES, true) || ($views <= 0 && $clicks <= 0)) { return false; }
+    $up = function () use ($pdo, $id, $place, $views, $clicks): int {
+        $st = $pdo->prepare('UPDATE gw_card_stats SET views = views + :v, clicks = clicks + :c WHERE giveaway_id = :g AND place = :p');
+        $st->bindValue(':v', $views, PDO::PARAM_INT);
+        $st->bindValue(':c', $clicks, PDO::PARAM_INT);
+        $st->bindValue(':g', $id, PDO::PARAM_INT);
+        $st->bindValue(':p', $place);
+        $st->execute();
+        return $st->rowCount();
+    };
+    try {
+        if ($up() > 0) { return true; }
+        try {
+            $st = $pdo->prepare('INSERT INTO gw_card_stats (giveaway_id, place, views, clicks) VALUES (:g, :p, :v, :c)');
+            $st->bindValue(':g', $id, PDO::PARAM_INT);
+            $st->bindValue(':p', $place);
+            $st->bindValue(':v', $views, PDO::PARAM_INT);
+            $st->bindValue(':c', $clicks, PDO::PARAM_INT);
+            $st->execute();
+        } catch (PDOException $e) {
+            $up();
+        }
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Записать события карточек из js/gw-card.js: [{id, p: место, k: "v"|"c"}].
+ * Считаются только розыгрыши, которые видны на сайте (идут или уже
+ * закончились, не черновики): иначе таблицу забили бы чужими id. Повторы
+ * одного места в пачке складываются. Вернёт, сколько событий принято.
+ */
+function gw_card_track(PDO $pdo, array $events, int $max = 12): int {
+    $sum = [];
+    foreach (array_slice($events, 0, $max) as $e) {
+        if (!is_array($e)) { continue; }
+        $id = $e['id'] ?? null;
+        $id = is_int($id) ? $id : (is_string($id) && ctype_digit($id) ? (int)$id : 0);
+        $place = $e['p'] ?? '';
+        $kind = $e['k'] ?? '';
+        if ($id <= 0 || !is_string($place) || !in_array($place, GW_CARD_PLACES, true) || ($kind !== 'v' && $kind !== 'c')) { continue; }
+        $key = $id . ':' . $place;
+        if (!isset($sum[$key])) { $sum[$key] = ['id' => $id, 'place' => $place, 'v' => 0, 'c' => 0]; }
+        $sum[$key][$kind]++;
+    }
+    if (!$sum) { return 0; }
+    $ids = array_values(array_unique(array_column($sum, 'id')));
+    $ok = [];
+    try {
+        $st = $pdo->query("SELECT id FROM giveaways WHERE status IN ('live', 'drawn') AND id IN (" . implode(',', array_map('intval', $ids)) . ')');
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $gid) { $ok[(int)$gid] = true; }
+    } catch (PDOException $e) {
+        return 0;
+    }
+    $n = 0;
+    foreach ($sum as $row) {
+        if (!isset($ok[$row['id']])) { continue; }
+        if (gw_card_add($pdo, $row['id'], $row['place'], $row['v'], $row['c'])) { $n += $row['v'] + $row['c']; }
+    }
+    return $n;
+}
+
+// Места карточек одного розыгрыша для отчёта: показы, переходы и участия,
+// в порядке GW_CARD_PLACES. Без таблицы показы и переходы нулевые.
+function gw_card_report(PDO $pdo, int $id, array $sources): array {
+    $stats = [];
+    try {
+        $st = $pdo->prepare('SELECT place, views, clicks FROM gw_card_stats WHERE giveaway_id = :g');
+        $st->execute([':g' => $id]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $stats[(string)$r['place']] = $r; }
+    } catch (PDOException $e) {
+        $stats = [];
+    }
+    $out = [];
+    foreach (GW_CARD_PLACES as $place) {
+        $out[] = [
+            'place'   => $place,
+            'views'   => (int)($stats[$place]['views'] ?? 0),
+            'clicks'  => (int)($stats[$place]['clicks'] ?? 0),
+            'entries' => (int)($sources['c-' . $place] ?? 0),
+        ];
+    }
+    return $out;
 }
 
 // Ссылки розыгрышей: [id розыгрыша => [канал => ссылка]].
@@ -2027,7 +2124,7 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
  */
 function gw_report(PDO $pdo, array $row): array {
     $id = (int)$row['id'];
-    $sources = ['tg' => 0, 'pop' => 0, 'page' => 0, '' => 0];
+    $sources = array_fill_keys(GW_SOURCES, 0) + ['' => 0];
     $st = $pdo->prepare('SELECT src, COUNT(*) AS n FROM giveaway_entries WHERE giveaway_id = :g GROUP BY src');
     $st->execute([':g' => $id]);
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
@@ -2083,7 +2180,7 @@ function gw_report(PDO $pdo, array $row): array {
             'list'   => $list,
         ];
     }
-    return ['sources' => $sources, 'channels' => $out];
+    return ['sources' => $sources, 'channels' => $out, 'cards' => gw_card_report($pdo, $id, $sources)];
 }
 
 // $last — человек занял последнее место, и приём уже закрыт.

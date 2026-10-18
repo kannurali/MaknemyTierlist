@@ -8,6 +8,7 @@
   var JOINED_KEY = "nx-gw-joined-v1";
   var RESUME_KEY = "nx-gw-resume-v1";
   var FROM_BOT_KEY = "nx-gw-from-bot-v1";
+  var FROM_CARD_KEY = "nx-gw-from-card-v1";
   var COND_KEY = "nx-gw-cond-v1";
   var TEST_KEY = "nx-gw-test-v1";
   var SESSION_WAIT = 5000;
@@ -133,9 +134,21 @@
     try { sessionStorage.setItem(FROM_BOT_KEY, JSON.stringify(v)); } catch (_) {}
   }
 
+  function readFromCard() {
+    try { return JSON.parse(sessionStorage.getItem(FROM_CARD_KEY)) || {}; } catch (_) { return {}; }
+  }
+
+  function noteFromCard(id, src) {
+    var v = readFromCard();
+    v[String(id)] = src;
+    try { sessionStorage.setItem(FROM_CARD_KEY, JSON.stringify(v)); } catch (_) {}
+  }
+
   function source(id, mode) {
     if (readFromBot()[String(id)]) { return "tg"; }
-    return mode === "page" ? "page" : "pop";
+    if (mode !== "page") { return "pop"; }
+    var c = readFromCard()[String(id)];
+    return typeof c === "string" && /^c-[a-z]{3,6}$/.test(c) ? c : "page";
   }
 
   function post(url, body) {
@@ -862,6 +875,11 @@
     card: card,
     isJoined: isJoined,
     takeResume: takeResume,
+    noteFromCard: noteFromCard,
+    date: date,
+    plural: plural,
+    prizePic: prizePic,
+    giftIcon: giftIcon,
     lang: lang,
     t: t,
     pick: pick

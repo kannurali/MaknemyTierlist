@@ -2241,6 +2241,7 @@
           const url = new URL(hw ? "assets/halloween/stage-export.jpg" : "assets/poster/bg-tile-export.jpg", location.href).href;
           const s = doc.getElementById("stage");
           if (s) {
+            s.classList.add("is-export");
             s.style.backgroundImage = 'url("' + url + '")';
             s.style.backgroundColor = hw ? "#04030a" : "#05091f";
             s.style.backgroundBlendMode = "normal";
