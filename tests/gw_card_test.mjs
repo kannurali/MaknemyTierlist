@@ -70,12 +70,11 @@ test('prizeText: count × name, title when there are no prizes', () => {
 test('i18n: every gwc key exists in both languages', () => {
   const keys = ['gwc.kicker', 'gwc.tierLine', 'gwc.endsAt', 'gwc.endsAtDash', 'gwc.endsCount',
     'gwc.people.one', 'gwc.people.few', 'gwc.people.many', 'gwc.more.one', 'gwc.more.few', 'gwc.more.many',
-    'gwc.see', 'gwc.open', 'gwc.watch', 'gwc.seeAll', 'gwc.tradeHead', 'gwc.tradeText', 'gwc.calcText',
+    'gwc.see', 'gwc.open', 'gwc.watch', 'gwc.seeAll', 'gwc.tradeHead', 'gwc.tradeLead', 'gwc.calcText',
     'gwc.stockText', 'gwc.stockTextOne', 'gwc.count'];
   for (const lang of ['ru', 'en']) {
     for (const k of keys) { assert.notEqual(I18N.t(k, lang), k, `${lang}: ${k}`); }
   }
-  assert.equal(I18N.t('gwc.tradeText', 'ru', { prize: 'Kitsune Fruit', when: 'Итоги — 20 октября' }),
-    'Разыгрываем Kitsune Fruit. Итоги — 20 октября.');
+  assert.equal(I18N.t('gwc.tradeLead', 'ru', { prize: 'Kitsune Fruit' }), 'Разыгрываем Kitsune Fruit.');
   assert.equal(I18N.t('gwc.endsCount', 'ru', { n: I18N.t('gwc.people.many', 'ru', { n: '1 000' }) }), 'Итоги на 1 000 участников');
 });

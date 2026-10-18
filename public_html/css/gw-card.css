@@ -358,6 +358,9 @@
 }
 
 @media (max-width: 640px) {
+  .gwc .gwc-count { display: none; }
+  .gwc-meta:not(:has(> :not(.gwc-count))) { display: none; }
+
   .gwc {
     grid-template-columns: var(--gwc-stub) minmax(0, 1fr);
     grid-template-areas: "pic body" "pic btn";

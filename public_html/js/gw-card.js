@@ -93,8 +93,10 @@
     return n > 0 ? t("gwc.more." + GW.plural(n), { n: n }) : "";
   }
 
+  function byCount(g) { return g.end_by === "entries" && g.max_entries > 0; }
+
   function when(g, dash) {
-    if (g.end_by === "entries" && g.max_entries > 0) {
+    if (byCount(g)) {
       return t("gwc.endsCount", { n: t("gwc.people." + GW.plural(g.max_entries), { n: num(g.max_entries) }) });
     }
     return t(dash ? "gwc.endsAtDash" : "gwc.endsAt", { date: GW.date(g.ends_at) });
@@ -153,8 +155,8 @@
     var box = el("span", "gwc-meta");
     var add = function (cls, text) { if (text) { box.appendChild(el("span", cls, text)); } };
     if (more) { add("gwc-extra", extra(g)); }
-    add("gwc-when", when(g));
-    add("gwc-spots", spots(g));
+    add("gwc-when" + (byCount(g) ? " gwc-count" : ""), when(g));
+    add("gwc-spots gwc-count", spots(g));
     return box;
   }
 
@@ -198,9 +200,11 @@
     trade: function (g) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.tradeHead"));
-      body.appendChild(rich("gwc-text", "gwc.tradeText", { prize: prize(g), when: when(g, true) }));
+      var text = rich("gwc-text", "gwc.tradeLead", { prize: prize(g) });
+      text.appendChild(el("span", "gwc-when" + (byCount(g) ? " gwc-count" : ""), " " + when(g, true) + "."));
+      body.appendChild(text);
       var sp = spots(g);
-      if (sp) { body.appendChild(el("span", "gwc-spots", sp)); }
+      if (sp) { body.appendChild(el("span", "gwc-spots gwc-count", sp)); }
       return [pic(g), body, button("gwc.open")];
     },
     calc: function (g) {
