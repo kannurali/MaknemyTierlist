@@ -210,10 +210,10 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/news.css?v=14" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=29" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=29" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=30" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
@@ -227,6 +227,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
+<link rel="stylesheet" href="css/gw-card.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body class="news-bg">
@@ -332,6 +333,8 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
       <div class="nw-notice" id="newsNotice" role="status" hidden></div>
 
+      <div class="nw-gwc" data-gwc="news"></div>
+
       <div class="nw-feed" id="feed"></div>
       <div class="nw-state" id="newsState" role="status" aria-live="polite" hidden></div>
     </div>
@@ -375,7 +378,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
     </div>
   </div>
 
-  <script src="js/i18n.js?v=80" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=81" fetchpriority="high"></script>
   <script src="js/news.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
 
@@ -389,8 +392,9 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
   <script src="js/news-page.js?v=31" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=10" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
 <?php endif; ?>

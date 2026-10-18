@@ -41,14 +41,14 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=29" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=29" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=30" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=29" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=30" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
@@ -373,7 +373,7 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=80" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=81" fetchpriority="high"></script>
   <script src="js/promo.js?v=28" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
@@ -383,7 +383,7 @@ page_lscache();
   <script src="js/calculator-page.js?v=28" fetchpriority="high"></script>
   <script src="js/trade-new.js?v=2" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=10" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

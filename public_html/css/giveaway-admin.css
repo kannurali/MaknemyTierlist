@@ -214,6 +214,9 @@
 .ga-table th, .ga-table td { padding: 6px 8px; border-bottom: 1px solid rgba(120, 190, 255, .14); text-align: left; vertical-align: middle; }
 .ga-table th { color: var(--muted); font-weight: 600; }
 .ga-table tr.is-win td { background: rgba(255, 210, 87, .08); }
+.ga-cards-wrap { margin: 4px 0 14px; }
+.ga-cards td:not(:first-child), .ga-cards th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.ga-cards tr.is-total td { font-weight: 700; border-top: 1px solid rgba(120, 190, 255, .3); }
 .ga-who { display: inline-flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; }
 .ga-who:hover { text-decoration: underline; }
 .ga-who img { width: 26px; height: 26px; border-radius: 50%; }
