@@ -60,20 +60,20 @@
 // Пометка ставится только у черновика: идущий розыгрыш тестом не станет и
 // тестом быть не перестанет.
 //
-// Отписка (колонка drop_unsub, галочка у каждого розыгрыша, по умолчанию
-// включена). Включена: вышел из канала условий — участие снято, бот пишет
-// «вы отписались и больше не участвуете», а на итогах подписку перепроверяют.
-// Выключена: подписку бот проверяет только при участии, отписаться потом
-// можно без последствий. Учёт подписчиков для рекламодателя (giveaway_subs)
-// ведётся в обоих случаях. До миграции включена у всех, как было.
+// Отписка. Вышел из канала условий — у его строки giveaway_entries ставится
+// left_at, бот пишет ему, и выиграть он уже не может. Строка не удаляется:
+// это доказательство, что человек вступал подписанным. Окно снова зовёт его
+// участвовать — подписался заново и нажал, строка оживает. Узнаёт об отписке
+// бот тремя путями: вебхук chat_member (сразу, но на бою Telegram его не
+// присылал), фоновая перепроверка getChatMember (gw_sweep(), понемногу после
+// ответов /api/giveaways.php) и итоги. Сообщение одно — при отметке.
 //
-// Снятое участие не удаляется: у строки giveaway_entries ставится left_at.
-// Она остаётся доказательством, что человек вступал и был подписан, но
-// выиграть он уже не может, в число участников не входит, а окно снова зовёт
-// его участвовать — подписался заново и нажал, строка оживает. Узнаёт об
-// отписке бот тремя путями: вебхук chat_member (сразу, но на бою Telegram его
-// не присылал), фоновая перепроверка getChatMember (gw_sweep(), понемногу
-// после ответов /api/giveaways.php) и итоги. Сообщение одно — при отметке.
+// Галочка «Гарантия» (колонка drop_unsub, по умолчанию включена) решает
+// только одно — занимает ли отписавшийся место. Включена: он выбывает из
+// участников — не считается и не занимает место в лимите, так что число
+// участников всегда равно числу подписчиков. Выключена: остаётся в числе
+// участников и занимает место, но выиграть всё равно не может. Учёт
+// подписчиков для рекламодателя (giveaway_subs) ведётся в обоих случаях.
 // До миграции 2026-10-18-giveaway-unsub.sql строка удаляется, перепроверки
 // в фоне нет.
 //
@@ -355,7 +355,7 @@ function gw_has_max(PDO $pdo): bool {
 }
 
 // Колонку drop_unsub добавляет миграция 2026-10-18-giveaway-unsub.sql.
-// До неё отписка снимает участие везде, а снять галочку админка не даёт.
+// До неё гарантия у всех, а снять галочку админка не даёт.
 function gw_has_drop(PDO $pdo): bool {
     try {
         $pdo->query('SELECT drop_unsub FROM giveaways LIMIT 1');
@@ -365,7 +365,8 @@ function gw_has_drop(PDO $pdo): bool {
     }
 }
 
-// Снимает ли отписка участие. Нет колонки — снимает, как до галочки.
+// Гарантия: отписавшийся выбывает из участников и освобождает место. Нет
+// колонки — да, как до галочки.
 function gw_drops_unsub(array $row): bool {
     return !array_key_exists('drop_unsub', $row) || !empty($row['drop_unsub']);
 }
@@ -378,6 +379,14 @@ function gw_has_left(PDO $pdo): bool {
     } catch (PDOException $e) {
         return false;
     }
+}
+
+// «Занимает место» — для числа участников и лимита. Отписавшийся занимает,
+// если у розыгрыша нет гарантии. Запросу нужны giveaway_entries e и
+// giveaways g.
+function gw_counted_sql(PDO $pdo): string {
+    if (!gw_has_left($pdo)) { return ''; }
+    return gw_has_drop($pdo) ? ' AND (e.left_at = 0 OR g.drop_unsub = 0)' : ' AND e.left_at = 0';
 }
 
 // «Ещё участвует» в запрос к giveaway_entries под псевдонимом $e. До
@@ -567,13 +576,14 @@ function gw_phase(array $row, int $now): string {
     return (string)$row['status'];
 }
 
-// Сколько участвует. Отписавшиеся (left_at) не считаются — и на карточке, и
-// в лимите участников.
+// Сколько участвует — на карточке и в лимите участников. Отписавшиеся (left_at)
+// считаются только у розыгрыша без гарантии (gw_counted_sql()).
 function gw_entry_counts(PDO $pdo, array $ids): array {
     if (!$ids) { return []; }
     $st = $pdo->query(
-        'SELECT e.giveaway_id, COUNT(*) AS n FROM giveaway_entries e WHERE e.giveaway_id IN ('
-        . implode(',', array_map('intval', $ids)) . ')' . gw_active_sql($pdo) . ' GROUP BY e.giveaway_id'
+        'SELECT e.giveaway_id, COUNT(*) AS n FROM giveaway_entries e JOIN giveaways g ON g.id = e.giveaway_id
+          WHERE e.giveaway_id IN (' . implode(',', array_map('intval', $ids)) . ')' . gw_counted_sql($pdo) . '
+          GROUP BY e.giveaway_id'
     );
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $out[(int)$r['giveaway_id']] = (int)$r['n']; }
@@ -1027,9 +1037,8 @@ function gw_rand_default(): callable {
  * не забанен, бот всё ещё подключён (иначе о победе не сказать) и подписан на
  * все каналы прямо сейчас. Не ответил Telegram хоть раз — розыгрыш не
  * записывается вовсе: «не смог проверить» не должно значить «проиграл».
- * Отписку не снимающему участие (drop_unsub = 0) подписку не перепроверяют:
- * её проверили при участии, а дальше она не важна. Уже отписавшиеся (left_at)
- * в розыгрыш не попадают, а найденные сейчас получают left_at и сообщение.
+ * Уже отписавшиеся (left_at) в розыгрыш не попадают, а найденные сейчас
+ * получают left_at и сообщение — с гарантией и без.
  *
  * $rand(n) → число 0..n-1; тесты подставляют предсказуемое.
  */
@@ -1041,7 +1050,7 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
     if (gw_phase($row, $now) !== 'ended') { return [409, ['ok' => false, 'error' => 'not ended'], [], []]; }
 
     $prizes   = gw_decode_list($row['prizes_json']);
-    $channels = gw_drops_unsub($row) ? gw_checked_channels($row) : [];
+    $channels = gw_checked_channels($row);
     $banned   = array_flip(site_banned_ids($cfg, $now, $pdo));
 
     $hasLeft  = gw_has_left($pdo);
@@ -1184,6 +1193,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'drop_unsub'   => gw_drops_unsub($row),
         'entries'      => $count,
         'left'         => $left,
+        'rows'         => gw_drops_unsub($row) ? $count + $left : $count,
         'max_entries'  => gw_max($row),
         'list'         => $entries,
     ];
@@ -2174,7 +2184,7 @@ function gw_member_update(PDO $pdo, array $update, int $now): array {
         $st->execute([':u' => $uid]);
         $notes = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            if (!gw_drops_unsub($row) || !in_array($channel, gw_checked_channels($row), true)) { continue; }
+            if (!in_array($channel, gw_checked_channels($row), true)) { continue; }
             if (!gw_mark_left($pdo, (int)$row['id'], $uid, $now)) { continue; }
             $notes[] = gw_left_note($pdo, $row, $uid, $channel);
         }
@@ -2237,9 +2247,8 @@ function gw_sweep(PDO $pdo, callable $send, int $now, int $calls = GW_SWEEP_CALL
     if ($calls <= 0 || !gw_has_left($pdo)) { return $out; }
     $st = $pdo->prepare(
         "SELECT e.giveaway_id, e.chat_id FROM giveaway_entries e JOIN giveaways g ON g.id = e.giveaway_id
-          WHERE g.status = 'live' AND g.ends_at > :now AND e.left_at = 0 AND e.checked_at <= :old"
-          . (gw_has_drop($pdo) ? ' AND g.drop_unsub = 1' : '') . '
-          ORDER BY e.checked_at, e.joined_at LIMIT ' . (int)$calls
+          WHERE g.status = 'live' AND g.ends_at > :now AND e.left_at = 0 AND e.checked_at <= :old
+          ORDER BY e.checked_at, e.joined_at LIMIT " . (int)$calls
     );
     $st->bindValue(':now', $now, PDO::PARAM_INT);
     $st->bindValue(':old', $now - GW_SWEEP_RECHECK, PDO::PARAM_INT);
@@ -2383,32 +2392,41 @@ function gw_report(PDO $pdo, array $row): array {
 function gw_joined_text(array $row, string $lang, bool $last = false): string {
     $title = gw_title($row, $lang);
     $date  = gw_when($row, $lang);
-    $cond  = gw_checked_channels($row) && gw_drops_unsub($row);
+    $cond  = gw_checked_channels($row) ? true : false;
+    $drop  = gw_drops_unsub($row);
     if ($lang === 'en') {
         return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\n"
             . ($last ? "You took the last spot: " . gw_max($row) . " entries, so entries are closed. Results soon." : 'Results: ' . $date . '.')
-            . ($cond ? "\n\nDon't unsubscribe from the channels in the conditions: if you do, your entry is removed automatically." : '')
+            . ($cond ? "\n\nDon't unsubscribe from the channels in the conditions: if you do, "
+                . ($drop ? 'your entry is removed automatically.' : "you won't be able to win.") : '')
             . "\n\nIf you win, I'll message you here.";
     }
     return "✅ Вы участвуете в розыгрыше «" . $title . "» на maknemy.com.\n\n"
         . ($last ? 'Вы заняли последнее место: участников ' . gw_max($row) . ', приём закрыт. Итоги — скоро.' : 'Итоги — ' . $date . '.')
-        . ($cond ? "\n\nНе отписывайтесь от каналов из условий: если отпишетесь, участие снимется автоматически." : '')
+        . ($cond ? "\n\nНе отписывайтесь от каналов из условий: если отпишетесь, "
+            . ($drop ? 'участие снимется автоматически.' : 'выиграть уже не получится.') : '')
         . "\n\nО победе я напишу сюда.";
 }
 
+// С гарантией участие снято и место освободилось; без неё место за человеком
+// остаётся, но выиграть он не может. Вернуться — подписаться и нажать
+// «Участвовать», пока приём открыт.
 function gw_left_text(array $row, string $channel, string $lang, int $now): string {
     $title = gw_title($row, $lang);
+    $drop  = gw_drops_unsub($row);
     $open  = gw_phase($row, $now) === 'live';
     $byMax = gw_no_deadline($row);
     $date  = $byMax ? '' : gw_date((int)$row['ends_at'], $lang);
     if ($lang === 'en') {
-        return "❌ You unsubscribed from «" . $channel . "», so your entry in the giveaway «" . $title . "» was removed."
-            . ($open ? "\n\nTo get back in, subscribe again and tap «Enter» on the site "
-                . ($byMax ? 'while spots remain.' : 'before ' . $date . '.') : '');
+        return "❌ You unsubscribed from «" . $channel . "», so "
+            . ($drop ? 'your entry in the giveaway «' . $title . '» was removed.' : "you can't win the giveaway «" . $title . '» anymore.')
+            . ($open ? "\n\n" . ($drop ? 'To get back in' : 'To be in the running again') . ', subscribe again and tap «Enter» on the site '
+                . ($byMax ? ($drop ? 'while spots remain.' : 'while entries are open.') : 'before ' . $date . '.') : '');
     }
-    return "❌ Вы отписались от канала «" . $channel . "», поэтому участие в розыгрыше «" . $title . "» снято."
-        . ($open ? "\n\nЧтобы вернуться, подпишитесь снова и нажмите «Участвовать» на сайте "
-            . ($byMax ? 'пока есть места.' : 'до ' . $date . '.') : '');
+    return "❌ Вы отписались от канала «" . $channel . "», поэтому "
+        . ($drop ? 'участие в розыгрыше «' . $title . '» снято.' : 'выиграть в розыгрыше «' . $title . '» вы уже не сможете.')
+        . ($open ? "\n\n" . ($drop ? 'Чтобы вернуться' : 'Чтобы снова побороться за приз') . ', подпишитесь снова и нажмите «Участвовать» на сайте '
+            . ($byMax ? ($drop ? 'пока есть места.' : 'пока идёт приём.') : 'до ' . $date . '.') : '');
 }
 
 // Только что вступил — бот подтверждает. Ответ сайту уже ушёл.

@@ -52,7 +52,7 @@
     "bad max_entries": "Число участников — целое, от 1 до 1 000 000.",
     "bad end_by": "Выберите, когда итоги: по времени или по числу участников.",
     max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
-    drop_migrate: "Чтобы не снимать участие у отписавшихся, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
+    drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -716,7 +716,7 @@
     const st = STATUS[phase] || STATUS.draft;
     let text = g && g.id ? st[0] : "Новый розыгрыш — ещё не сохранён";
     if (g && g.test) text += " · тестовый";
-    if (g && g.id && g.drop_unsub === false) text += " · отписка участие не снимает";
+    if (g && g.id && g.drop_unsub === false) text += " · без гарантии: отписавшиеся занимают места";
     if (g && g.id && g.status !== "draft" && g.max_entries && g.entries >= g.max_entries) text += " · лимит участников набран";
     if (g && g.published_at) text += " · опубликован " + fmtDate(g.published_at) + " МСК";
     if (g && g.drawn_at) text += " · разыгран " + fmtDate(g.drawn_at) + " МСК";
@@ -745,8 +745,9 @@
     const sec = $("gwPeople");
     sec.hidden = !(g && g.id && g.status !== "draft");
     if (sec.hidden) return;
-    const all = g.entries + (g.left || 0);
-    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + (g.left ? " · отписались: " + g.left : "") + (g.list.length < all ? " (показаны " + g.list.length + ")" : "");
+    const all = g.rows || g.entries;
+    const left = g.left ? (g.drop_unsub === false ? " · из них отписались: " : " · отписались (не считаются): ") + g.left : "";
+    $("gwCount").textContent = g.entries + (g.max_entries ? " из " + g.max_entries : "") + left + (g.list.length < all ? " (показаны " + g.list.length + ")" : "");
     const body = $("gwPeopleBody");
     body.textContent = "";
     if (!g.list.length) {

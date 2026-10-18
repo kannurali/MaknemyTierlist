@@ -1416,35 +1416,50 @@ test('после итогов отписка участие не трогает'
     assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'победитель остался в списке');
 });
 
-test('галочка снята: отписка участие не снимает, бот молчит, итоги без перепроверки', function () {
-    assert_true(gw_validate(gw_draft())['row']['drop_unsub'], 'по умолчанию отписка снимает участие');
-    assert_eq(false, gw_validate(gw_draft(['drop_unsub' => false]))['row']['drop_unsub'], 'галочку можно снять');
+test('без гарантии: отписавшийся занимает место, но бот пишет и выиграть он не может', function () {
+    assert_true(gw_validate(gw_draft())['row']['drop_unsub'], 'по умолчанию гарантия');
+    assert_eq(false, gw_validate(gw_draft(['drop_unsub' => false]))['row']['drop_unsub'], 'гарантию можно снять');
 
     $p = gw_db();
     gw_channel($p, GW_CH_A, 'Канал A');
     gw_user($p, '1', 'ann', 501);
     gw_user($p, '2', 'bob', 502);
-    [$id, $link] = gw_live_links($p, ['drop_unsub' => false]);
+    gw_user($p, '3', 'cat', 503);
+    [$id, $link] = gw_live_links($p, ['drop_unsub' => false, 'max_entries' => 3, 'end_by' => 'entries']);
     assert_eq(false, gw_admin_item($p, gw_load($p, $id), GW_NOW)['drop_unsub'], 'админка видит снятую галочку');
     $log = [];
-    $subs = [GW_CH_A => [501, 502]];
+    $subs = [GW_CH_A => [501, 502, 503]];
     gw_member_update($p, gw_member(GW_CH_A, 501, 'member', $link, 'ann'), GW_NOW);
-    assert_eq(409, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'при участии подписку всё равно проверяют');
+    assert_eq(409, gw_enter($p, gw_cfg(), gw_tg($log), '1', $id, GW_NOW)[0], 'при участии подписку проверяют');
     gw_enter($p, gw_cfg(), gw_tg($log, $subs), '1', $id, GW_NOW);
     gw_enter($p, gw_cfg(), gw_tg($log, $subs), '2', $id, GW_NOW);
-    assert_true(strpos(gw_joined_text(gw_load($p, $id), 'ru'), 'отпишетесь') === false, 'бот не пугает отпиской');
+    $joined = gw_joined_text(gw_load($p, $id), 'ru');
+    assert_true(strpos($joined, 'если отпишетесь, выиграть уже не получится') !== false, 'бот предупреждает: выиграть не получится');
 
-    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 10), 'отписался — бот молчит');
-    assert_eq(2, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries')->fetchColumn(), 'участие осталось');
-    assert_eq(0, gw_report($p, gw_load($p, $id))['channels'][0]['stayed'], 'рекламодатель всё равно видит отписку');
+    $notes = gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 10);
+    assert_eq([501], array_column($notes, 'chat_id'), 'вебхук: отписался — бот пишет');
+    $text = gw_left_text($notes[0]['row'], $notes[0]['channel'], 'ru', GW_NOW + 10);
+    assert_true(strpos($text, 'выиграть в розыгрыше «Розыгрыш Magnet» вы уже не сможете') !== false, 'текст без гарантии');
+    assert_true(strpos($text, 'Чтобы снова побороться за приз') !== false && strpos($text, 'пока идёт приём') !== false, 'как вернуться');
+    assert_eq(2, gw_entry_counts($p, [$id])[$id], 'ann всё ещё в числе участников');
+    $item = gw_admin_item($p, gw_load($p, $id), GW_NOW + 10);
+    assert_eq([2, 1, 2], [$item['entries'], $item['left'], $item['rows']], 'админка: 2 участника, из них отписалась 1');
+    assert_eq([], gw_joined_ids($p, '1', GW_NOW + 10), 'окно снова зовёт ann');
+    assert_eq(0, gw_report($p, gw_load($p, $id))['channels'][0]['stayed'], 'рекламодатель видит отписку');
+
+    gw_enter($p, gw_cfg(), gw_tg($log, $subs), '3', $id, GW_NOW + 20);
+    assert_eq('ended', gw_phase(gw_load($p, $id), GW_NOW + 20), 'cat занял третье место: ann место держит, приём закрыт');
 
     $log = [];
-    [$s, $out] = gw_draw($p, gw_cfg(), gw_tg($log), $id, GW_NOW + 86400);
-    assert_eq([200, 2, 0], [$s, $out['winners'], $out['skipped']], 'отписавшиеся выигрывают');
-    assert_eq([], gw_sent($log, 'getChatMember'), 'на итогах Telegram не спрашивали');
+    $out = gw_sweep($p, gw_tg($log, [GW_CH_A => [503]]), GW_NOW + 700);
+    assert_eq([], $out['left'], 'приём закрыт — в фоне уже не проверяют');
+    [$s, $out, $winners, $gone] = gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => [503]]), $id, GW_NOW + 800);
+    assert_eq([200, 1, 2, 1], [$s, $out['winners'], $out['entries'], $out['skipped']], 'ann не разыгрывается, bob отсеян на итогах');
+    assert_eq([[503]], [array_column($winners, 'chat_id')], 'выиграл только подписанный cat');
+    assert_eq([502], array_column($gone, 'chat_id'), 'bob — бот напишет');
 });
 
-test('галочку меняют у идущего розыгрыша: со следующей отписки снимает', function () {
+test('гарантию меняют у идущего розыгрыша: отписавшиеся сразу освобождают или занимают места', function () {
     $p = gw_db();
     gw_channel($p, GW_CH_A, 'Канал A');
     gw_user($p, '1', 'ann', 501);
@@ -1454,16 +1469,17 @@ test('галочку меняют у идущего розыгрыша: со с�
     $subs = [GW_CH_A => [501, 502]];
     gw_enter($p, gw_cfg(), gw_tg($log, $subs), '1', $id, GW_NOW);
     gw_enter($p, gw_cfg(), gw_tg($log, $subs), '2', $id, GW_NOW);
-    assert_eq([], gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 5), 'без галочки ann осталась');
+    gw_member_update($p, gw_member(GW_CH_A, 501, 'left'), GW_NOW + 5);
+    assert_eq(2, gw_entry_counts($p, [$id])[$id], 'без гарантии ann занимает место');
 
     [$s] = gw_save($p, gw_draft(['id' => $id, 'channels' => [GW_CH_A]]), GW_NOW + 10);
-    assert_eq([200, 'live', true], [$s, gw_load($p, $id)['status'], gw_drops_unsub(gw_load($p, $id))], 'галочку поставили, розыгрыш идёт');
+    assert_eq([200, 'live', true], [$s, gw_load($p, $id)['status'], gw_drops_unsub(gw_load($p, $id))], 'гарантию включили, розыгрыш идёт');
+    assert_eq(1, gw_entry_counts($p, [$id])[$id], 'место ann освободилось');
     $notes = gw_member_update($p, gw_member(GW_CH_A, 502, 'left'), GW_NOW + 20);
-    assert_eq([502], array_column($notes, 'chat_id'), 'теперь отписка снимает, бот пишет');
+    assert_true(strpos(gw_left_text($notes[0]['row'], 'Канал A', 'ru', GW_NOW + 20), 'участие в розыгрыше «Розыгрыш Magnet» снято') !== false, 'текст с гарантией');
 
-    $log = [];
-    [$s, $out] = gw_draw($p, gw_cfg(), gw_tg($log, [GW_CH_A => []]), $id, GW_NOW + 86400);
-    assert_eq([200, 0, 1], [$s, $out['winners'], $out['skipped']], 'на итогах ann уже перепроверяют');
+    [$s] = gw_save($p, gw_draft(['id' => $id, 'channels' => [GW_CH_A], 'drop_unsub' => false]), GW_NOW + 30);
+    assert_eq(2, gw_entry_counts($p, [$id])[$id], 'гарантию сняли — оба снова занимают места');
 });
 
 test('до миграции unsub: отписка удаляет участие, снять галочку нельзя, в фоне не проверяют', function () {
@@ -1587,7 +1603,7 @@ test('итоги: отписавшиеся не разыгрываются, на
     assert_eq([501, 502, 503], $to, 'автоитоги: победителю — поздравление, двоим отписавшимся — «участие снято»');
 });
 
-test('перепроверка: Telegram молчит — трое в конец очереди и проход окончен; без галочки не проверяют', function () {
+test('перепроверка: Telegram молчит — трое в конец очереди и проход окончен; без гарантии тоже проверяют', function () {
     $p = gw_db();
     gw_channel($p, GW_CH_B, 'Канал B');
     $id = gw_three($p);
@@ -1601,10 +1617,11 @@ test('перепроверка: Telegram молчит — трое в конец
     assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_entries WHERE left_at > 0')->fetchColumn(), 'никого не сняли');
 
     $p = gw_db();
-    gw_three($p, ['drop_unsub' => false]);
+    $id = gw_three($p, ['drop_unsub' => false]);
     $log = [];
-    assert_eq(0, gw_sweep($p, gw_tg($log), GW_NOW + 700)['checked'], 'галочка снята — не проверяют');
-    assert_eq([], gw_sent($log, 'getChatMember'));
+    $out = gw_sweep($p, gw_tg($log, [GW_CH_A => [501, 503]]), GW_NOW + 700);
+    assert_eq([3, [502]], [$out['checked'], array_column($out['left'], 'chat_id')], 'без гарантии тоже проверяют и пишут');
+    assert_eq(3, gw_entry_counts($p, [$id])[$id], 'но место bob держит');
 });
 
 test('перепроверка после ответа: не чаще раза в минуту, без бота — ничего', function () {
