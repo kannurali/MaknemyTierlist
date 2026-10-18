@@ -83,10 +83,10 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=29" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=29" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=29" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=30" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
@@ -99,6 +99,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
+<link rel="stylesheet" href="css/gw-card.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body class="tr-body">
@@ -247,7 +248,7 @@ page_lscache();
           <ol class="tr-feed" id="trMine" aria-labelledby="trMineTitle" hidden></ol>
 
           <h2 class="tr-sub" id="trAllTitle" data-i18n="trade.allTitle" hidden>Все объявления</h2>
-          <ol class="tr-feed" id="trFeed" data-i18n-label="trade.feedLabel" aria-label="Объявления"></ol>
+          <ol class="tr-feed" id="trFeed" data-gwc-feed=".tr-card" data-i18n-label="trade.feedLabel" aria-label="Объявления"></ol>
 
           <button class="tr-more" id="trMore" type="button" data-i18n="trade.more" hidden>Показать ещё</button>
         </div>
@@ -296,7 +297,7 @@ page_lscache();
     </div>
   </div>
 
-  <script src="js/i18n.js?v=80" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=81" fetchpriority="high"></script>
   <script src="js/promo.js?v=28" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
@@ -308,7 +309,8 @@ page_lscache();
   <script src="js/trade-cards.js?v=4" fetchpriority="high"></script>
   <script src="js/trading-page.js?v=9" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=10" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
