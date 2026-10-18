@@ -59,8 +59,17 @@
 
   function pagesOf(c) { return c.pages.length ? c.pages : PAGES; }
 
-  function playerokOn(page, slot, now) {
-    return PROMO.eligible(null, slot, now, page)[0] === PROMO.PLAYEROK;
+  function bookedOn(page, slot, now) {
+    return PROMO.bookedOn(slot, now, page);
+  }
+
+  function bookedNames(pages, slot, now) {
+    var names = [];
+    pages.forEach(function (p) {
+      var b = bookedOn(p, slot, now);
+      if (b && names.indexOf(b.advertiser) < 0) names.push(b.advertiser);
+    });
+    return names.join(", ");
   }
 
   function markDirty() { dirty = true; hint("есть несохранённые правки"); }
@@ -151,8 +160,8 @@
     var now = Date.now();
     var slot = c.slots[0];
     if (!slot) return "";
-    var free = pagesOf(c).filter(function (p) { return !playerokOn(p, slot, now); });
-    if (!free.length) return "(на этих страницах сейчас Playerok)";
+    var free = pagesOf(c).filter(function (p) { return !bookedOn(p, slot, now); });
+    if (!free.length) return "(на этих страницах сейчас " + bookedNames(pagesOf(c), slot, now) + ")";
     var page = free[0];
     var pool = PROMO.eligible(doc, slot, now, page);
     var total = pool.reduce(function (s, x) { return s + x.weight; }, 0);
@@ -230,9 +239,10 @@
     });
 
     var now = Date.now();
-    var busy = on.filter(function (p) { return playerokOn(p, "strip", now); });
+    var busy = on.filter(function (p) { return bookedOn(p, "strip", now); });
     pagesNote(busy.length
-      ? "Сейчас там стоит Playerok и перебивает кампании из панели: " + busy.map(pageLabel).join(", ") + "."
+      ? "Сейчас там стоят рекламодатели из кода и перебивают кампании из панели: "
+        + busy.map(function (p) { return pageLabel(p) + " — " + bookedOn(p, "strip", now).advertiser; }).join(", ") + "."
       : "");
   }
 

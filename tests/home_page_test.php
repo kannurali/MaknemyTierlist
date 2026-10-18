@@ -725,16 +725,23 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true(is_file($PUB . $path), "promo.js ссылается на $path, а файла нет");
     }
 
-    // Playerok — платное размещение, и живёт оно там же, где свои кампании:
-    // в коде с макетами в репозитории. Отличие одно — список страниц: с
-    // 13 октября это тирлист ("tierlist") и калькулятор ("calc"), трейдинг
-    // отдан каналу и кампаниям из админки.
+    // Playerok и Starvell — платные размещения, и живут они там же, где свои
+    // кампании: в коде с макетами в репозитории. Отличие одно — список
+    // страниц: Playerok — трейдинг ("trading") и калькулятор ("calc"),
+    // Starvell с 18 октября — тирлист ("tierlist").
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
-    assert_true(strpos($promo, 'pages: ["tierlist", "calc"]') !== false,
-        'Playerok привязан к тирлисту и калькулятору, иначе он разольётся по всему сайту');
+    assert_true(strpos($promo, 'pages: ["trading", "calc"]') !== false,
+        'Playerok привязан к трейдингу и калькулятору, иначе он разольётся по всему сайту');
     foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/playerok-' . $slot . '.webp'),
             "макет Playerok для слота $slot должен лежать в репозитории");
+    }
+    assert_true(strpos($promo, 'var STARVELL') !== false, 'Starvell объявлен в js/promo.js');
+    assert_true(strpos($promo, 'pages: ["tierlist"]') !== false,
+        'Starvell привязан к тирлисту, иначе он разольётся по всему сайту');
+    foreach (['strip', 'rail', 'dock', 'dock-mini', 'popup'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/starvell-' . $slot . '.webp'),
+            "макет Starvell для $slot должен лежать в репозитории");
     }
 
     // Страница обязана представиться: без неё houseFor() и eligible() не

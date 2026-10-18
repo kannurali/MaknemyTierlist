@@ -532,7 +532,7 @@ page_lscache();
       <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
     </p>
   </footer>
-  <script src="js/i18n.js?v=81" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=82" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>

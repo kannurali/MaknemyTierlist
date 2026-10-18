@@ -15,7 +15,7 @@ const {
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, PLAYEROK, houseFor, popupPick
+    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, PLAYEROK, STARVELL, houseFor, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -680,8 +680,8 @@ test('a paid campaign still beats the giveaway in the popup', () => {
 // ------------------------------------------------ houseFor / HOUSE_CHANNEL
 
 // Телеграм-канал «BLOX FRUITS: Новости, Обновления, Находки» стоит во всех
-// свободных местах, где нет Playerok. Списка страниц у него нет: страницу
-// с Playerok тот забирает раньше, чем очередь доходит до канала.
+// свободных местах, где нет Playerok и Starvell. Списка страниц у него нет:
+// свои страницы рекламодатели забирают раньше, чем очередь доходит до канала.
 
 test('HOUSE_CHANNEL ships a creative for every slot', () => {
     assert.deepEqual(HOUSE_CHANNEL.slots, ['strip', 'rail', 'dock', 'popup']);
@@ -702,13 +702,13 @@ test('HOUSE_CHANNEL ships a creative for every slot', () => {
     assert.equal(HOUSE_CHANNEL.popup.capHours, 24);
     assert.ok(HOUSE_CHANNEL.popup.maxPerWeek >= 7);
     assert.equal(HOUSE_CHANNEL.erid, '');
-    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, PLAYEROK]) {
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, PLAYEROK, STARVELL]) {
         assert.notEqual(HOUSE_CHANNEL.id, other.id);
     }
 });
 
-test('houseFor gives the channel every free slot on every page without Playerok', () => {
-    for (const page of [undefined, 'trading', 'news', 'stock']) {
+test('houseFor gives the channel every free slot on every page without an advertiser', () => {
+    for (const page of [undefined, 'news', 'stock']) {
         for (const slot of SLOTS) {
             assert.equal(houseFor(slot, CHANNEL_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
         }
@@ -811,7 +811,7 @@ test('eligible отсекает купленную кампанию на чуж�
         }]
     };
     assert.deepEqual(eligible(doc, 'rail', now, 'news').map(c => c.id), ['paid-news']);
-    assert.deepEqual(eligible(doc, 'rail', now, 'trading'), []);
+    assert.deepEqual(eligible(doc, 'rail', now, 'stock'), []);
     // Без страницы кампания с таргетингом тоже не выбирается.
     assert.deepEqual(eligible(doc, 'rail', now), []);
 });
@@ -835,10 +835,12 @@ test('у каждой страницы своя кампания из админ
     assert.deepEqual(ids('stock'), ['nw', 'all']);
     assert.deepEqual(ids('trading'), ['tr', 'all']);
     assert.deepEqual(ids('calc'), ['all']);
-    // С 3 октября калькулятор и тирлист у Playerok, остальные страницы как были.
-    const run = Date.parse('2026-10-05T12:00:00Z');
-    assert.deepEqual(eligible(doc, 'rail', run, 'tierlist'), [PLAYEROK]);
-    assert.deepEqual(eligible(doc, 'rail', run, 'trading').map(c => c.id), ['tr', 'all']);
+    // С 18 октября калькулятор и трейдинг у Playerok, тирлист у Starvell,
+    // остальные страницы как были.
+    const run = Date.parse('2026-10-20T12:00:00Z');
+    assert.deepEqual(eligible(doc, 'rail', run, 'tierlist'), [STARVELL]);
+    assert.deepEqual(eligible(doc, 'rail', run, 'trading'), [PLAYEROK]);
+    assert.deepEqual(eligible(doc, 'rail', run, 'calc'), [PLAYEROK]);
     assert.deepEqual(eligible(doc, 'rail', run, 'news').map(c => c.id), ['nw', 'all']);
 });
 
@@ -847,9 +849,9 @@ test('у каждой страницы своя кампания из админ
 // ============================================================================
 
 // Второе размещение Playerok идёт с 3 октября 2026 года, без даты конца. Оно
-// занимает калькулятор ("calc") и тирлист ("tierlist"). С 13 октября тирлист
-// и трейдинг поменялись рекламой: лента трейдов и создание объявления
-// ("trading") ушли кампаниям из админки и каналу. Сток объявляет свою
+// занимает калькулятор ("calc"), ленту трейдов и создание объявления
+// ("trading"). С 13 по 18 октября трейдинг менялся с тирлистом, теперь
+// Playerok снова на трейдинге, а тирлист у Starvell. Сток объявляет свою
 // страницу и сюда не входит.
 const PLAYEROK_RUN = Date.parse('2026-10-05T12:00:00Z');
 
@@ -867,9 +869,9 @@ const PAID_EVERYWHERE = {
     }]
 };
 
-test('PLAYEROK занимает все четыре места калькулятора и тирлиста', () => {
+test('PLAYEROK занимает все четыре места калькулятора и трейдинга', () => {
     assert.deepEqual(PLAYEROK.slots, ['strip', 'rail', 'dock', 'popup']);
-    assert.deepEqual(PLAYEROK.pages, ['tierlist', 'calc']);
+    assert.deepEqual(PLAYEROK.pages, ['trading', 'calc']);
     assert.equal(PLAYEROK.enabled, true);
     assert.equal(PLAYEROK.start, '2026-10-03');
     assert.equal(PLAYEROK.end, '');
@@ -888,13 +890,13 @@ test('PLAYEROK занимает все четыре места калькуля�
     // Новое размещение — новый id: свой счётчик показов окна и своя цель
     // promo_click в Метрике, сентябрьские цифры с октябрьскими не смешиваются.
     assert.notEqual(PLAYEROK.id, 'playerok-2026-09');
-    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL]) {
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, STARVELL]) {
         assert.notEqual(PLAYEROK.id, other.id);
     }
 });
 
-test('houseFor отдаёт Playerok все места калькулятора и тирлиста', () => {
-    for (const page of ['calc', 'tierlist']) {
+test('houseFor отдаёт Playerok все места калькулятора и трейдинга', () => {
+    for (const page of ['calc', 'trading']) {
         for (const slot of SLOTS) {
             assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, PLAYEROK.id, `${page} / ${slot}`);
         }
@@ -902,8 +904,8 @@ test('houseFor отдаёт Playerok все места калькулятора 
     }
 });
 
-test('трейдинг, новости и сток остаются без Playerok', () => {
-    for (const page of ['trading', 'news', 'stock']) {
+test('тирлист, новости и сток остаются без Playerok', () => {
+    for (const page of ['tierlist', 'news', 'stock']) {
         for (const slot of SLOTS) {
             assert.equal(houseFor(slot, PLAYEROK_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
             assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page).map(c => c.id), ['paid'],
@@ -922,14 +924,14 @@ test('Playerok начинается 3 октября по Москве', () => {
 });
 
 test('на своих страницах Playerok перебивает кампанию из админки', () => {
-    for (const page of ['calc', 'tierlist']) {
+    for (const page of ['calc', 'trading']) {
         for (const slot of SLOTS) {
             assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PLAYEROK_RUN, page), [PLAYEROK], `${page} / ${slot}`);
         }
     }
     assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'calc').id, PLAYEROK.id);
-    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'tierlist').id, PLAYEROK.id);
-    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'trading').id, 'paid');
+    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'trading').id, PLAYEROK.id);
+    assert.equal(popupPick(PAID_EVERYWHERE, {}, PLAYEROK_RUN, 0, 'tierlist').id, 'paid');
 });
 
 // Исчерпанный лимит окна Playerok не открывает место чужому окну: на его
@@ -952,6 +954,96 @@ test('выключенный Playerok возвращает место кампа
         assert.equal(houseFor('rail', PLAYEROK_RUN, 'calc').id, HOUSE_CHANNEL.id);
     } finally {
         PLAYEROK.enabled = true;
+    }
+});
+
+// ============================================================================
+//  Starvell
+// ============================================================================
+
+// Starvell с 18 октября 2026 года, без даты конца, занимает тирлист
+// ("tierlist") — место, с которого Playerok вернулся на трейдинг.
+const STARVELL_RUN = Date.parse('2026-10-20T12:00:00Z');
+
+test('STARVELL занимает все четыре места тирлиста', () => {
+    assert.deepEqual(STARVELL.slots, ['strip', 'rail', 'dock', 'popup']);
+    assert.deepEqual(STARVELL.pages, ['tierlist']);
+    assert.equal(STARVELL.enabled, true);
+    assert.equal(STARVELL.start, '2026-10-18');
+    assert.equal(STARVELL.end, '');
+    assert.equal(safeHref(STARVELL.href), 'https://starvell.com/lead/045fa3/roblox/blox-fruits');
+    assert.equal(STARVELL.advertiser, 'Starvell');
+    // Борт 300×1200 как прислали: бокс борта сам берёт пропорции (fitBox).
+    const size = { strip: [1200, 300], rail: [300, 1200], dock: [640, 200], dockMini: [810, 224], popup: [800, 800] };
+    for (const key of PROMO.CREATIVE_KEYS) {
+        const cre = PROMO.creativeFor(STARVELL, key);
+        assert.ok(cre, `у ${key} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/starvell-'),
+            'макеты лежат в репозитории рядом с остальными');
+        assert.deepEqual([cre.w, cre.h], size[key], `размер макета ${key}`);
+    }
+    assert.ok(STARVELL.textKey && STARVELL.ctaKey);
+    assert.equal(STARVELL.popup.maxPerWeek, 3);
+    assert.equal(STARVELL.erid, '');
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL]) {
+        assert.notEqual(STARVELL.id, other.id);
+    }
+});
+
+test('текст окна Starvell переведён на оба языка', () => {
+    const I18N = require('../public_html/js/i18n.js');
+    for (const lang of ['ru', 'en']) {
+        for (const key of [STARVELL.textKey, STARVELL.ctaKey]) {
+            const s = I18N.t(key, lang);
+            assert.ok(s && s !== key, `${lang}: ${key}`);
+        }
+    }
+});
+
+test('houseFor отдаёт Starvell все места тирлиста', () => {
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, STARVELL_RUN, 'tierlist').id, STARVELL.id, slot);
+    }
+    assert.equal(popupPick({}, {}, STARVELL_RUN, 0, 'tierlist').id, STARVELL.id);
+});
+
+test('Starvell не выходит за тирлист', () => {
+    for (const slot of SLOTS) {
+        for (const page of ['calc', 'trading']) {
+            assert.equal(houseFor(slot, STARVELL_RUN, page).id, PLAYEROK.id, `${page} / ${slot}`);
+        }
+        for (const page of [undefined, 'news', 'stock']) {
+            assert.equal(houseFor(slot, STARVELL_RUN, page).id, HOUSE_CHANNEL.id, `${page} / ${slot}`);
+        }
+    }
+    assert.deepEqual(eligible(PAID_EVERYWHERE, 'rail', STARVELL_RUN).map(c => c.id), ['paid'], 'без страницы');
+});
+
+test('Starvell начинается 18 октября по Москве', () => {
+    const first = dayBoundsMsk('2026-10-18');
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, first.startMs - 1, 'tierlist').id, HOUSE_CHANNEL.id, `17 октября ещё канал: ${slot}`);
+        assert.equal(houseFor(slot, first.startMs, 'tierlist').id, STARVELL.id, `18 октября уже Starvell: ${slot}`);
+    }
+});
+
+test('на тирлисте Starvell перебивает кампанию из админки', () => {
+    for (const slot of SLOTS) {
+        assert.deepEqual(eligible(PAID_EVERYWHERE, slot, STARVELL_RUN, 'tierlist'), [STARVELL], slot);
+    }
+    assert.equal(popupPick(PAID_EVERYWHERE, {}, STARVELL_RUN, 0, 'tierlist').id, STARVELL.id);
+    assert.equal(PROMO.bookedOn('strip', STARVELL_RUN, 'news'), null);
+    assert.equal(PROMO.bookedOn('strip', STARVELL_RUN, 'tierlist'), STARVELL);
+    assert.equal(PROMO.bookedOn('strip', STARVELL_RUN, 'trading'), PLAYEROK);
+});
+
+test('выключенный Starvell возвращает место кампании из админки', () => {
+    STARVELL.enabled = false;
+    try {
+        assert.deepEqual(eligible(PAID_EVERYWHERE, 'rail', STARVELL_RUN, 'tierlist').map(c => c.id), ['paid']);
+        assert.equal(houseFor('rail', STARVELL_RUN, 'tierlist').id, HOUSE_CHANNEL.id);
+    } finally {
+        STARVELL.enabled = true;
     }
 });
 
