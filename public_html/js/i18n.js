@@ -5,6 +5,7 @@
   var DEFAULT_LANG = "ru";
   var COOKIE = "nx_lang";
   var LEGACY_KEY = "nexus-lang-v1";
+  var MIGRATED_KEY = "nx-lang-migrated";
 
   function dicts() { return root.I18N_DICTS || {}; }
 
@@ -70,7 +71,11 @@
 
   function migrate() {
     var legacy = null;
-    try { legacy = root.localStorage.getItem(LEGACY_KEY); } catch (_) { return; }
+    try {
+      if (root.localStorage.getItem(MIGRATED_KEY)) { return; }
+      root.localStorage.setItem(MIGRATED_KEY, "1");
+      legacy = root.localStorage.getItem(LEGACY_KEY);
+    } catch (_) { return; }
     if (legacy === null) { return; }
     try { root.localStorage.removeItem(LEGACY_KEY); } catch (_) {}
     if (chosen() || LANGS.indexOf(legacy) < 0) { return; }
