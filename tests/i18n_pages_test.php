@@ -15,7 +15,7 @@ const IP_PAGES = [
     '/trading'               => ['trading.php',    [],                       true,  'trading',    true],
     '/stock'                 => ['stock.php',      [],                       true,  'stock',      true],
     '/giveaways'             => ['giveaways.php',  [],                       true,  'giveaways',  false],
-    '/ads'                   => ['promote.php',    [],                       false, 'promote',    false],
+    '/ads'                   => ['promote.php',    [],                       true,  'promote',    false],
     '/trading/new'           => ['trade-new.php',  [],                       false, 'tradeNew',   false],
     '/chat'                  => ['chat.php',       [],                       false, 'chat',       false],
     '/support'               => ['support.php',    [],                       false, 'support',    false],
@@ -87,7 +87,7 @@ test('профиль: заголовок и canonical на своём языке
 test('sitemap: все языковые версии и hreflang', function () use ($PUB) {
     $map = (string)file_get_contents("$PUB/sitemap.xml");
     assert_true(strpos($map, 'xmlns:xhtml="http://www.w3.org/1999/xhtml"') !== false, 'пространство xhtml');
-    foreach (['/', '/tierlist', '/news', '/calculator', '/trading', '/stock', '/giveaways'] as $p) {
+    foreach (['/', '/tierlist', '/news', '/calculator', '/trading', '/stock', '/giveaways', '/ads'] as $p) {
         foreach (I18N_LANGS as $l) {
             assert_true(strpos($map, '<loc>' . i18n_url($p, $l) . '</loc>') !== false, "$l $p");
         }
@@ -95,15 +95,14 @@ test('sitemap: все языковые версии и hreflang', function () us
     }
     assert_true(strpos($map, '<loc>https://maknemy.com/privacy</loc>') !== false, '/privacy');
     assert_eq(false, strpos($map, '/en/privacy'), 'правовые без языковых версий');
-    assert_true(strpos($map, '<loc>https://maknemy.com/ads</loc>') !== false, '/ads');
-    assert_eq(false, strpos($map, '/en/ads'), '/ads пока только по-русски');
 });
 
-test('/ads: по-английски закрыт от индексации до перевода', function () {
-    $ru = nx_render_page('promote.php', '/ads');
+test('/ads переведена: на английской нет русского текста и noindex', function () {
     $en = nx_render_page('promote.php', '/en/ads');
-    assert_eq(false, strpos($ru, 'noindex'), 'русская индексируется');
-    assert_true(strpos($en, '<meta name="robots" content="noindex, follow" />') !== false, 'английская — noindex');
+    $body = preg_replace('~<script\b[^>]*>.*?</script>~s', '', $en);
+    assert_eq(0, preg_match('~[А-Яа-яЁё]~u', $body), 'русского текста нет');
+    assert_eq(false, strpos($en, 'noindex'), 'индексируется');
+    assert_true(strpos($en, 'Advertising on maknemy.com and in Telegram') !== false, 'заголовок по-английски');
 });
 
 test('шапка подписана на языке страницы', function () {

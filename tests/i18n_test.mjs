@@ -50,6 +50,19 @@ test('every language declares the same placeholders for a key', () => {
 const SERVER_ONLY = ['meta.', 'ld.', 'og.', 'ads.'];
 const serverOnly = key => SERVER_ONLY.some(p => key.startsWith(p));
 
+test('markup inside a string is the same in every language and limited to inline tags', () => {
+    const tags = s => (String(s).match(/<[^>]+>/g) || []);
+    for (const [key, value] of Object.entries(SRC.ru)) {
+        const ref = tags(value);
+        for (const t of ref) {
+            assert.match(t, /^<\/?(b|strong|i|em|a|br|span|small|sup|sub)\b/, `ru.${key}: unexpected tag ${t}`);
+        }
+        for (const lang of supported()) {
+            assert.deepEqual(tags(SRC[lang][key]), ref, `${lang}.${key}: tags differ from Russian`);
+        }
+    }
+});
+
 test('built dictionaries carry the sources, minus server-only keys', () => {
     for (const lang of supported()) {
         for (const key of Object.keys(SRC[lang]).filter(serverOnly)) {

@@ -114,6 +114,17 @@
   </url>
   <url>
     <loc>https://maknemy.com/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/en/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
