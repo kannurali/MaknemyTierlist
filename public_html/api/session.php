@@ -4,6 +4,7 @@ require_once __DIR__ . '/lib/roblox_oauth.php';
 require_once __DIR__ . '/lib/chat.php';
 require_once __DIR__ . '/lib/likes.php';
 require_once __DIR__ . '/lib/giveaway.php';
+require_once __DIR__ . '/lib/hunt.php';
 
 /**
  * Кто сейчас на сайте. Одна ручка на всё состояние входа:
@@ -24,6 +25,10 @@ require_once __DIR__ . '/lib/giveaway.php';
  *            показывают «Зарегистрироваться».
  *   giveaways — в каких идущих розыгрышах я уже участвую (id). По нему
  *            окно розыгрыша (js/giveaway-pop.js) не зовёт туда повторно.
+ *   hunt   — ивент «Тыквенная охота»: {balance, earned, tickets, next} или
+ *            null (сезона нет, гость, забанен). По нему индикатор на каждой
+ *            странице рисует баланс и ближайшее действие без своего запроса
+ *            (hunt_session_field() в api/lib/hunt.php).
  *
  * База открывается через $pdo() и только когда в сессии есть вошедший.
  * Ручку теперь дёргает шапка на каждой странице сайта, а не одна админка,
@@ -49,6 +54,7 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
     $unread = 0;
     $liked  = null;
     $joined = [];
+    $hunt   = null;
     $uid    = (string)($session['user_id'] ?? '');
     if ($uid !== '') {
         try {
@@ -59,6 +65,7 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
                 $unread = count(chat_unread($conn, $uid));
                 $liked  = like_mine($conn, $uid);
                 $joined = gw_joined_ids($conn, $uid, $now ?? time());
+                $hunt   = hunt_session_field($conn, $cfg, $uid, $now ?? time());
             }
         } catch (PDOException $e) {
             // Таблицы users нет (не выполнен schema.sql) — считаем, что никто
@@ -81,6 +88,7 @@ function handle_session(callable $pdo, array $session, array $cfg, ?int $now = n
         'unread'        => $unread,
         'liked'         => $liked,
         'giveaways'     => $joined,
+        'hunt'          => $hunt,
     ];
 }
 
