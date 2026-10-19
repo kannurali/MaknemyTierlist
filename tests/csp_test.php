@@ -63,9 +63,9 @@ test('заголовок один, ставится always и одной стр�
     assert_true($block !== false && $line > $block, 'внутри <IfModule mod_headers.c>');
 });
 
-test('скрипты — только свои, Метрика и GA, без unsafe-inline и eval', function () use ($POLICY) {
+test('скрипты — только свои и GA, без unsafe-inline и eval', function () use ($POLICY) {
     $s = $POLICY['script-src'] ?? [];
-    assert_eq(["'self'", 'https://mc.yandex.ru', 'https://yastatic.net', 'https://www.googletagmanager.com'], $s, 'script-src');
+    assert_eq(["'self'", 'https://www.googletagmanager.com'], $s, 'script-src');
     foreach (["'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", '*', 'data:', 'blob:', 'https:', 'http:'] as $bad) {
         assert_eq(false, in_array($bad, $s, true), "script-src без $bad");
     }
@@ -96,19 +96,17 @@ test('картинки: свои, data/blob для экспорта и кроп�
     assert_eq(false, in_array('https:', $img, true), 'img-src без https:');
 });
 
-test('адреса Метрики и Вебвизора — по её инструкции', function () use ($POLICY) {
-    $tlds = ['ru', 'az', 'by', 'co.il', 'com', 'com.am', 'com.ge', 'com.tr', 'ee', 'fr',
-             'kg', 'kz', 'lt', 'lv', 'md', 'tj', 'tm', 'uz'];
-    $https = array_merge(array_map(function ($t) { return 'https://mc.yandex.' . $t; }, $tlds),
-        ['https://mc.webvisor.com', 'https://mc.webvisor.org']);
-    foreach ($https as $h) {
-        assert_true(in_array($h, $POLICY['connect-src'] ?? [], true), "connect-src: $h");
-        assert_true(in_array(str_replace('https://', 'wss://', $h), $POLICY['connect-src'] ?? [], true), "connect-src: wss для $h");
-        assert_true(in_array($h, $POLICY['img-src'] ?? [], true), "img-src: $h");
+// Яндекс Метрику сняли 2026-10-20 (api/lib/metrika.php). Её адреса в
+// политике — лишние открытые двери: скрипт с mc.yandex.ru исполнился бы, даже
+// когда сайт его не ставит.
+test('адресов Метрики и Вебвизора в политике нет', function () use ($POLICY) {
+    foreach ($POLICY as $d => $list) {
+        foreach ($list as $src) {
+            assert_eq(0, preg_match('~yandex|webvisor|yastatic~i', $src), "$d: $src");
+        }
     }
     foreach (['frame-src', 'child-src'] as $d) {
-        assert_true(in_array('blob:', $POLICY[$d] ?? [], true), "$d: blob:");
-        assert_true(in_array('https://mc.yandex.ru', $POLICY[$d] ?? [], true), "$d: https://mc.yandex.ru");
+        assert_eq(["'self'", 'blob:'], $POLICY[$d] ?? [], $d);
     }
 });
 
@@ -165,14 +163,6 @@ test('в своих скриптах нет eval и new Function', function () u
         assert_eq(0, preg_match('~\beval\s*\(|\bnew\s+Function\s*\(|set(Timeout|Interval)\s*\(\s*["\']~', $src),
             basename($f) . ': eval/new Function/таймер со строкой');
     }
-});
-
-test('Метрика подключается внешним файлом, асинхронно', function () use ($PUB) {
-    $html = metrika_counter_html();
-    assert_true((bool)preg_match('~<script src="/js/metrika\.js\?v=\d+" async></script>~', $html), 'тег js/metrika.js');
-    $js = csp_read($PUB . '/js/metrika.js');
-    assert_true(strpos($js, "'https://mc.yandex.ru/metrika/tag.js?id=" . METRIKA_ID . "'") !== false, 'tag.js с номером счётчика');
-    assert_true(strpos($js, 'ym(' . METRIKA_ID . ", 'init'") !== false, 'инициализация');
 });
 
 test('GA подключается внешним файлом, асинхронно, и сам ставит gtag.js', function () use ($PUB) {

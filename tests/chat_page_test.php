@@ -149,7 +149,7 @@ test('чат использует общие шапку, подвал, фон и
     }
     assert_true(strpos($s, '<header class="mk-top">') !== false, 'общая шапка');
     assert_true(strpos($s, '<footer class="mk-foot">') !== false, 'общий подвал');
-    assert_true(strpos($s, 'metrika_counter_html()') !== false, 'счётчик Метрики');
+    assert_true(strpos($s, 'metrika_counter_html()') !== false, 'счётчик статистики');
 });
 
 // Словарь один на весь сайт: разные номера версий означают, что часть
@@ -284,7 +284,7 @@ test('в отдаваемых файлах чата нет пояснитель�
     assert_eq(0, preg_match('~^\s*//~m', $js), 'и без строчных');
 
     // В разметке остаётся только то, что политика оставила намеренно:
-    // маркеры счётчика Метрики, по которым metrika_strip() вырезает его из
+    // маркеры счётчика статистики, по которым metrika_strip() вырезает его из
     // админки. Их печатает metrika_counter_html(), в исходнике страницы их нет.
     $page = cp_read($PUB . '/chat.php');
     assert_eq(0, substr_count($page, '<!--'), 'chat.php без HTML-комментариев');

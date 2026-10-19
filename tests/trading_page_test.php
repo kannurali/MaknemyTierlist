@@ -106,7 +106,7 @@ test('общие файлы подключены теми же версиями,
     foreach ($NEW as $f) {
         $s = tp_read($PUB . '/' . $f);
         assert_true(strpos($s, 'css/trading.css?v=') !== false, "$f: свои стили");
-        assert_true(strpos($s, '<?php echo metrika_counter_html(); ?>') !== false, "$f: счётчик Метрики");
+        assert_true(strpos($s, '<?php echo metrika_counter_html(); ?>') !== false, "$f: счётчик статистики");
         assert_true(strpos($s, 'page_lscache();') !== false, "$f: разметка без сессии — в кеше LiteSpeed");
     }
     assert_true(strpos($chat, 'js/auth.js') < strpos($chat, 'js/topbar.js'), 'auth.js раньше topbar.js');
