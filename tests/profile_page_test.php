@@ -585,9 +585,9 @@ test('прямой /profile.php уводится на /profile, и только 
 // остаётся то, что от данных не зависит.
 test('профиль объявляет себя на /profile', function () use ($PUB) {
     $s = pf_read($PUB . '/profile.php');
-    assert_true(strpos($s, "'https://maknemy.com/profile'") !== false,
+    assert_true(strpos($s, "i18n_url('/profile')") !== false,
         'канонический адрес своего профиля');
-    assert_true(strpos($s, "'https://maknemy.com/profile?id=' . \$pfWho") !== false,
+    assert_true(strpos($s, "i18n_url('/profile?id=' . \$pfWho)") !== false,
         'и чужого — с ?id=');
 });
 

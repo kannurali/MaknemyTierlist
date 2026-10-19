@@ -21,8 +21,8 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // случаев. Так это уже сделано в index.php — см. tierlist_og_fallback() там.
 function news_og_fallback(): array {
     return og_brand_card() + [
-        'title'       => 'Новости Blox Fruits и обновления тирлиста',
-        'description' => 'Апдейты игры, изменения трейд-ценностей и анонсы проекта.',
+        'title'       => t('meta.news.ogTitle'),
+        'description' => t('meta.news.ogDesc'),
     ];
 }
 
@@ -164,7 +164,8 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 // бы двумя URL с формально разным содержимым og:*, но одним и тем же
 // canonical, что путает краулеров). У 404-случая свой персональный адрес
 // невалиден — канонизируем на общую ленту, туда же указывает и og:url.
-$canonicalUrl = 'https://maknemy.com/news' . ($linkedPostId !== null ? '/' . $linkedPostId : '');
+$canonicalPath = '/news' . ($linkedPostId !== null ? '/' . $linkedPostId : '');
+$canonicalUrl = i18n_url($canonicalPath);
 // noindex на 404: сама лента ниже всё равно рисуется (см. комментарий выше),
 // но индексировать битый адрес как рабочую страницу незачем — 404 в статусе
 // это уже даёт понять большинству краулеров, noindex просто не оставляет
@@ -173,7 +174,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 ?>
 <?php if (!defined('TESTING')): ?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= i18n_lang() ?>">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -181,18 +182,19 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <meta name="nx-post" content="<?= (int)$linkedPostId ?>" />
 <?php endif; ?>
 
-<base href="<?= u('/') ?>" />
+<base href="/" />
 
 <meta name="color-scheme" content="dark" />
 
-<title>Новости Blox Fruits и обновления тирлиста | Maknemy Tier List</title>
-<meta name="description" content="Новости Blox Fruits, изменения трейд-ценностей в тирлисте Maknemy и анонсы проекта: апдейты, ребалансы, розыгрыши." />
+<title><?= te('meta.news.title') ?></title>
+<meta name="description" content="<?= ta('meta.news.desc') ?>" />
 <link rel="canonical" href="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>" />
+<?= i18n_alternates($canonicalPath) ?>
 <meta name="robots" content="<?= htmlspecialchars($robots, ENT_QUOTES, 'UTF-8') ?>" />
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Maknemy Tier List" />
-<meta property="og:locale" content="ru_RU" />
+<meta property="og:locale" content="<?= i18n_og_locale() ?>" />
 <meta property="og:url" content="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') ?>" />
 <meta property="og:title" content="<?= htmlspecialchars($og['title'], ENT_QUOTES, 'UTF-8') ?>" />
 
@@ -243,7 +245,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
       <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false"><?= te('lang.en') ?></button>
     </div>
 
-    <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
+    <nav class="mk-top-bar" id="mkTopBar" aria-label="<?= ta('topbar.sections') ?>">
       <ul class="mk-nav">
         <li>
           <a class="mk-pill" href="<?= u('/') ?>">
@@ -301,7 +303,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </a>
 
-      <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="<?= ta('topbar.soon') ?>">
+      <button class="mk-avatar" type="button" aria-label="<?= ta('topbar.profile') ?>" data-soon data-i18n-title="topbar.soon" title="<?= ta('topbar.soon') ?>">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
       </button>
     </nav>
