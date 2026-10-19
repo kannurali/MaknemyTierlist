@@ -98,8 +98,10 @@ function deploy_log_line(string $file, string $msg): void {
 // name.js?v=N and .htaccess lets browsers keep such an address for a year, so
 // a page that went live first could send a visitor for a new ?v= address while
 // the old file was still on disk — and the old bytes would stay cached under
-// the new address.
-const DEPLOY_FIRST_DIRS = ['assets', 'css', 'js'];
+// the new address. lang/ goes right after them: templates read their texts
+// from lang/*.json, and a page published before the dictionary would show
+// bare keys instead of new texts.
+const DEPLOY_FIRST_DIRS = ['assets', 'css', 'js', 'lang'];
 
 function deploy_publish_order(array $entries): array {
     $entries = array_values(array_diff($entries, ['.', '..']));

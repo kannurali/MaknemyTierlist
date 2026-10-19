@@ -184,6 +184,13 @@ test('publish order puts static directories before pages', function () {
         'static first, then the rest by name');
 });
 
+// Шаблоны берут тексты из lang/*.json через t(): страница, выложенная раньше
+// словаря с её новыми ключами, показала бы ключи вместо текста.
+test('dictionaries go live before the pages that read them', function () {
+    $order = deploy_publish_order(['home.php', 'lang', 'api', 'js', 'index.php']);
+    assert_eq(['js', 'lang', 'api', 'home.php', 'index.php'], $order, 'lang right after static');
+});
+
 test('publish order tolerates a missing static directory', function () {
     assert_eq(['js', 'index.php'], deploy_publish_order(['index.php', 'js']), 'no phantom css/assets');
 });
