@@ -119,3 +119,23 @@ function i18n_dict_tag(?string $lang = null, bool $absolute = false): string {
     return '<script src="' . ($absolute ? '/' : '') . 'js/i18n/' . $lang . '.js?v=' . $ver
         . '" fetchpriority="high"></script>' . "\n";
 }
+
+// Ключи, которые нужны только серверу: заголовки и описания страниц, JSON-LD,
+// превью ссылок и тексты /ads. В словари для JS (js/i18n/*.js) они не идут —
+// скриптам не нужны, а каждый язык тяжелел бы на десятки килобайт.
+const I18N_SERVER_ONLY = ['meta.', 'ld.', 'og.', 'ads.'];
+
+// Строка для подстановки внутрь JSON-литерала (JSON-LD в шаблоне): то, что
+// json_encode кладёт между кавычками. JSON_HEX_TAG — чтобы перевод с «</»
+// не закрыл тег script с JSON-LD раньше времени.
+function tj(string $key, array $vars = []): string {
+    $json = json_encode(t($key, $vars), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
+    return substr((string)$json, 1, -1);
+}
+
+// Разметка из словаря как есть — только для ключей ads.*, где в тексте есть
+// <b>, ссылки и неразрывные пробелы. Словари пишем мы сами, а набор тегов в
+// каждом языке сверяет tests/i18n_test.mjs с русским.
+function th(string $key, array $vars = []): string {
+    return t($key, $vars);
+}

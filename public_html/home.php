@@ -68,16 +68,15 @@ page_lscache();
 <meta property="og:image:type" content="<?= htmlspecialchars($ogImage['imageType'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:card" content="summary_large_image" />
 
-<?php if (i18n_lang() === 'ru'): ?>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "Maknemy Tier List",
   "alternateName": ["Макнеми тирлист", "Maknemy Tierlist", "Maknemy tier list Blox Fruits"],
-  "url": "https://maknemy.com/",
-  "inLanguage": "ru",
-  "description": "Blox Fruits Market & Database: актуальные трейд-ценности, тир-листы, калькулятор обменов, сток, новости и инструменты для игроков.",
+  "url": "<?= i18n_url('/') ?>",
+  "inLanguage": "<?= i18n_lang() ?>",
+  "description": "<?= tj('meta.home.ogDesc') ?>",
   "author": {
     "@type": "Person",
     "name": "Maknemy",
@@ -85,7 +84,6 @@ page_lscache();
   }
 }
 </script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />

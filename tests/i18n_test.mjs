@@ -47,9 +47,15 @@ test('every language declares the same placeholders for a key', () => {
     }
 });
 
-test('built dictionaries carry the sources', () => {
+const SERVER_ONLY = ['meta.', 'ld.', 'og.', 'ads.'];
+const serverOnly = key => SERVER_ONLY.some(p => key.startsWith(p));
+
+test('built dictionaries carry the sources, minus server-only keys', () => {
     for (const lang of supported()) {
-        for (const [key, value] of Object.entries(SRC[lang])) {
+        for (const key of Object.keys(SRC[lang]).filter(serverOnly)) {
+            assert.equal(globalThis.I18N_DICTS[lang][key], undefined, `js/i18n/${lang}.js ships server-only ${key}`);
+        }
+        for (const [key, value] of Object.entries(SRC[lang]).filter(([k]) => !serverOnly(k))) {
             assert.equal(globalThis.I18N_DICTS[lang][key], value, `js/i18n/${lang}.js is stale at ${key}`);
         }
     }

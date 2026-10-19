@@ -878,5 +878,17 @@
     "meta.promote.title": "Advertising on maknemy.com and in Telegram | Maknemy",
     "meta.promote.desc": "Advertise to Blox Fruits players on maknemy.com and in Telegram: banners, giveaway cards, giveaway participants, pay per click. From $2.",
     "topbar.sections": "Site sections",
-    "topbar.profile": "Profile"
+    "topbar.profile": "Profile",
+    "og.tierlist.title": "Maknemy Tier List — Blox Fruits trade values",
+    "og.tierlist.desc": "An up-to-date tier list of Blox Fruits trade values: fruits, permanent fruits, gamepasses, skins and mutations. Demand and price trends.",
+    "og.tierlist.tierTitle": "Maknemy Tier List — {tier} tier{date}",
+    "og.tierlist.onDate": " on {date}",
+    "ld.tierlist.desc": "The Maknemy tier list of Blox Fruits trade values: fruits, permanent fruits, gamepasses, skins and mutations.",
+    "ld.calculator.desc": "The Blox Fruits trade calculator from Maknemy: both sides of a trade are valued at Maknemy tier list prices.",
+    "ld.calculator.crumb": "Trade calculator",
+    "ld.stock.name": "Blox Fruits stock",
+    "ld.stock.desc": "The current Blox Fruits stock: the normal dealer and the Mirage dealer, prices and restock time.",
+    "ld.stock.crumb": "Stock",
+    "ld.trading.desc": "Blox Fruits player listings for trading items at Maknemy tier list values.",
+    "ld.trading.crumb": "Trading"
 }

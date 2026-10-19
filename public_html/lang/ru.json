@@ -878,5 +878,17 @@
     "meta.promote.title": "Реклама на maknemy.com и в Telegram | Maknemy",
     "meta.promote.desc": "Реклама среди игроков Blox Fruits на maknemy.com и в Telegram: баннеры, карточки конкурсов, участники конкурса, оплата за переходы. От $2.",
     "topbar.sections": "Разделы сайта",
-    "topbar.profile": "Профиль"
+    "topbar.profile": "Профиль",
+    "og.tierlist.title": "Maknemy Tier List — трейд-ценности Blox Fruits",
+    "og.tierlist.desc": "Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос и тренды цен.",
+    "og.tierlist.tierTitle": "Maknemy Tier List — {tier}-тир{date}",
+    "og.tierlist.onDate": " на {date}",
+    "ld.tierlist.desc": "Тирлист трейд-ценностей Blox Fruits от Maknemy: фрукты, перманенты, геймпассы, скины и мутации.",
+    "ld.calculator.desc": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
+    "ld.calculator.crumb": "Калькулятор трейдов",
+    "ld.stock.name": "Сток Blox Fruits",
+    "ld.stock.desc": "Текущий сток фруктов Blox Fruits: обычный дилер и дилер Mirage, цены и время смены.",
+    "ld.stock.crumb": "Сток",
+    "ld.trading.desc": "Объявления игроков Blox Fruits об обмене предметов по ценам тирлиста Maknemy.",
+    "ld.trading.crumb": "Трейдинг"
 }

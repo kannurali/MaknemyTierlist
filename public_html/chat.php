@@ -32,58 +32,6 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
 
-<?php if (i18n_lang() === 'ru'): ?>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "name": "Калькулятор трейдов Blox Fruits",
-      "alternateName": ["Макнеми калькулятор", "Maknemy calculator", "Калькулятор трейдов Maknemy"],
-      "url": "https://maknemy.com/calculator",
-      "inLanguage": "ru",
-      "applicationCategory": "UtilityApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Requires JavaScript",
-      "description": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
-      "isPartOf": {
-        "@type": "WebSite",
-        "name": "Maknemy Tier List",
-        "url": "https://maknemy.com/"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "RUB"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Maknemy",
-        "url": "https://t.me/mksvtnc"
-      }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Maknemy",
-          "item": "https://maknemy.com/"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Калькулятор трейдов",
-          "item": "https://maknemy.com/calculator"
-        }
-      ]
-    }
-  ]
-}
-</script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />

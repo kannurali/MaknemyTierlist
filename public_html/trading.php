@@ -41,21 +41,20 @@ page_lscache();
 <meta property="og:description" content="<?= ta('meta.trading.ogDesc') ?>" />
 <meta name="twitter:card" content="summary" />
 
-<?php if (i18n_lang() === 'ru'): ?>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "CollectionPage",
-      "name": "Трейдинг Blox Fruits",
-      "url": "https://maknemy.com/trading",
-      "inLanguage": "ru",
-      "description": "Объявления игроков Blox Fruits об обмене предметов по ценам тирлиста Maknemy.",
+      "name": "<?= tj('meta.trading.ogTitle') ?>",
+      "url": "<?= i18n_url('/trading') ?>",
+      "inLanguage": "<?= i18n_lang() ?>",
+      "description": "<?= tj('ld.trading.desc') ?>",
       "isPartOf": {
         "@type": "WebSite",
         "name": "Maknemy Tier List",
-        "url": "https://maknemy.com/"
+        "url": "<?= i18n_url('/') ?>"
       }
     },
     {
@@ -65,20 +64,19 @@ page_lscache();
           "@type": "ListItem",
           "position": 1,
           "name": "Maknemy",
-          "item": "https://maknemy.com/"
+          "item": "<?= i18n_url('/') ?>"
         },
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "Трейдинг",
-          "item": "https://maknemy.com/trading"
+          "name": "<?= tj('ld.trading.crumb') ?>",
+          "item": "<?= i18n_url('/trading') ?>"
         }
       ]
     }
   ]
 }
 </script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />

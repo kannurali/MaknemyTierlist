@@ -29,8 +29,8 @@ require_once __DIR__ . '/api/lib/metrika.php';
 // текстом рядом с ней, и дата с топом предметов там к месту.
 function tierlist_og_fallback(): array {
     return og_brand_card() + [
-        'title'       => 'Maknemy Tier List — трейд-ценности Blox Fruits',
-        'description' => 'Актуальный тирлист трейд-ценностей Blox Fruits: фрукты, перманенты, геймпассы, скины и мутации. Спрос и тренды цен.',
+        'title'       => t('og.tierlist.title'),
+        'description' => t('og.tierlist.desc'),
     ];
 }
 
@@ -123,16 +123,15 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <meta name="twitter:description" content="<?= htmlspecialchars($og['description'], ENT_QUOTES, 'UTF-8') ?>" />
 <meta name="twitter:image" content="<?= htmlspecialchars($og['image'], ENT_QUOTES, 'UTF-8') ?>" />
 
-<?php if (i18n_lang() === 'ru'): ?>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "Maknemy Tier List",
   "alternateName": ["Макнеми тирлист", "Maknemy Tierlist", "Maknemy tier list Blox Fruits"],
-  "url": "https://maknemy.com/",
-  "inLanguage": "ru",
-  "description": "Тирлист трейд-ценностей Blox Fruits от Maknemy: фрукты, перманенты, геймпассы, скины и мутации.",
+  "url": "<?= i18n_url('/') ?>",
+  "inLanguage": "<?= i18n_lang() ?>",
+  "description": "<?= tj('ld.tierlist.desc') ?>",
   "author": {
     "@type": "Person",
     "name": "Maknemy",
@@ -140,7 +139,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   }
 }
 </script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
@@ -293,7 +291,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     </div>
 
     <div class="tb-group" id="tbPublish" hidden>
-      <button class="btn save-btn clean" id="btnSave" data-i18n-title="admin.saveTitle" title="<?= ta('admin.saveTitle') ?>">✓ Сохранено</button>
+      <button class="btn save-btn clean" id="btnSave" data-i18n-title="admin.saveTitle" title="<?= ta('admin.saveTitle') ?>"><?= te('admin.saved') ?></button>
     </div>
 
     <div class="tb-group" id="tbPng" hidden>

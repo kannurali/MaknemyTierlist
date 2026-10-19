@@ -38,21 +38,20 @@ page_lscache();
 <meta property="og:description" content="<?= ta('meta.stock.ogDesc') ?>" />
 <meta name="twitter:card" content="summary" />
 
-<?php if (i18n_lang() === 'ru'): ?>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "WebPage",
-      "name": "Сток Blox Fruits",
-      "url": "https://maknemy.com/stock",
-      "inLanguage": "ru",
-      "description": "Текущий сток фруктов Blox Fruits: обычный дилер и дилер Mirage, цены и время смены.",
+      "name": "<?= tj('ld.stock.name') ?>",
+      "url": "<?= i18n_url('/stock') ?>",
+      "inLanguage": "<?= i18n_lang() ?>",
+      "description": "<?= tj('ld.stock.desc') ?>",
       "isPartOf": {
         "@type": "WebSite",
         "name": "Maknemy Tier List",
-        "url": "https://maknemy.com/"
+        "url": "<?= i18n_url('/') ?>"
       }
     },
     {
@@ -62,20 +61,19 @@ page_lscache();
           "@type": "ListItem",
           "position": 1,
           "name": "Maknemy",
-          "item": "https://maknemy.com/"
+          "item": "<?= i18n_url('/') ?>"
         },
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "Сток",
-          "item": "https://maknemy.com/stock"
+          "name": "<?= tj('ld.stock.crumb') ?>",
+          "item": "<?= i18n_url('/stock') ?>"
         }
       ]
     }
   ]
 }
 </script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />

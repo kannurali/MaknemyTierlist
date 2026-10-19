@@ -163,7 +163,7 @@ page_lscache();
           </span>
           <div class="gw-nt-body">
             <div class="gw-nt-text" aria-live="polite">
-              <p class="gw-nt-title" id="gwNtTitle">Хотите первыми узнавать о новых розыгрышах?</p>
+              <p class="gw-nt-title" id="gwNtTitle"><?= te('gw.notify.ask') ?></p>
               <p class="gw-nt-note" id="gwNtNote"></p>
             </div>
             <div class="gw-nt-actions">
@@ -200,9 +200,9 @@ page_lscache();
                     <input class="gw-nt-num" id="gwNtTimeN" type="number" inputmode="numeric" min="1" step="1" aria-labelledby="gwNtTimeL" />
                     <span class="gw-nt-sel">
                       <select id="gwNtTimeU" data-i18n-label="gw.notify.unit" aria-label="<?= ta('gw.notify.unit') ?>">
-                        <option value="60">минут</option>
-                        <option value="3600">часов</option>
-                        <option value="86400">дней</option>
+                        <option value="60"><?= te('gw.notify.min.many') ?></option>
+                        <option value="3600"><?= te('gw.notify.hour.many') ?></option>
+                        <option value="86400"><?= te('gw.notify.day.many') ?></option>
                       </select>
                     </span>
                   </span>
@@ -212,7 +212,7 @@ page_lscache();
                   <label class="gw-nt-label" id="gwNtPlacesL" for="gwNtPlaces" data-i18n="gw.notify.placesLabel"><?= te('gw.notify.placesLabel') ?></label>
                   <span class="gw-nt-ctl">
                     <input class="gw-nt-num" id="gwNtPlacesN" type="number" inputmode="numeric" min="1" max="100000" step="1" aria-labelledby="gwNtPlacesL gwNtPlacesU" />
-                    <span class="gw-nt-unit" id="gwNtPlacesU">мест</span>
+                    <span class="gw-nt-unit" id="gwNtPlacesU"><?= te('gw.notify.place.many') ?></span>
                   </span>
                   <span class="gw-nt-hint" id="gwNtPlacesH" data-i18n="gw.notify.placesHint"><?= te('gw.notify.placesHint') ?></span>
                 </div>

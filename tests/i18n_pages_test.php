@@ -17,7 +17,7 @@ const IP_PAGES = [
     '/giveaways'             => ['giveaways.php',  [],                       true,  'giveaways',  false],
     '/ads'                   => ['promote.php',    [],                       false, 'promote',    false],
     '/trading/new'           => ['trade-new.php',  [],                       false, 'tradeNew',   false],
-    '/chat'                  => ['chat.php',       [],                       false, 'chat',       true],
+    '/chat'                  => ['chat.php',       [],                       false, 'chat',       false],
     '/support'               => ['support.php',    [],                       false, 'support',    false],
     '/profile?id=2841062255' => ['profile.php',    ['id' => '2841062255'],   false, 'profile',    false],
 ];
@@ -48,7 +48,14 @@ foreach (I18N_LANGS as $lang) {
                     "$tag: title");
             }
             assert_eq($indexable, strpos($html, 'hreflang="x-default"') !== false, "$tag: hreflang");
-            assert_eq($ld && $lang === 'ru', strpos($html, 'application/ld+json') !== false, "$tag: JSON-LD только по-русски");
+            assert_eq($ld, strpos($html, 'application/ld+json') !== false, "$tag: JSON-LD на всех языках");
+            if ($ld) {
+                preg_match('~<script type="application/ld\+json">(.*?)</script>~s', $html, $m);
+                $data = json_decode($m[1] ?? '', true);
+                assert_true(is_array($data), "$tag: JSON-LD разбирается");
+                $node = isset($data['@graph']) ? $data['@graph'][0] : $data;
+                assert_eq($lang, $node['inLanguage'] ?? null, "$tag: inLanguage");
+            }
         }
     });
 }

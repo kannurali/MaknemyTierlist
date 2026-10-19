@@ -271,7 +271,7 @@ $pfTitle = $pfNick !== ''
 
   <?= halloween_decor('profile', 'hw-decor hw-decor--column') ?>
   <main class="pf-page">
-    <p class="pf-gate" id="pfGate" data-i18n="profile.login"<?php if ($pfState !== 'gate'): ?> hidden<?php endif; ?>>Войдите через Roblox — кнопка входа в шапке справа</p>
+    <p class="pf-gate" id="pfGate" data-i18n="profile.login"<?php if ($pfState !== 'gate'): ?> hidden<?php endif; ?>><?= te('profile.login') ?></p>
 
 <?php if ($pfState === 'missing'): ?>
     <p class="pf-gate" data-i18n="profile.missing"><?= te('profile.missing') ?></p>
