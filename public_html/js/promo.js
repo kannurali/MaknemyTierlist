@@ -703,7 +703,7 @@
     textKey: "promo.playerokText",
     ctaKey: "promo.playerokCta",
     erid: "",
-    pages: ["trading", "calc"],
+    pages: ["tierlist", "calc"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip: { src: "/assets/promo/playerok-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
@@ -729,7 +729,7 @@
     textKey: "promo.starvellText",
     ctaKey: "promo.starvellCta",
     erid: "",
-    pages: ["tierlist"],
+    pages: ["trading"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
       strip:    { src: "/assets/promo/starvell-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
