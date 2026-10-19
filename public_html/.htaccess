@@ -84,9 +84,11 @@ RewriteRule \.php/ - [F,L]
 # ---------------------------------- Языки ----------------------------------
 # Русский живёт на адресах без приставки, остальные языки — под /<код>
 # (список совпадает с I18N_LANGS в api/lib/i18n.php, проверяет
-# tests/i18n_routes_test.php). Приставку снимает ВНУТРЕННИЙ рероут на
-# обычный адрес раздела: дальше срабатывают правила разделов ниже, а PHP
-# узнаёт язык по REQUEST_URI, который после рероута остаётся исходным.
+# tests/i18n_routes_test.php). Адрес с приставкой рероутится СРАЗУ на PHP-файл
+# раздела, а PHP узнаёт язык по REQUEST_URI, который после рероута остаётся
+# исходным. Рероут на адрес раздела (/en/tierlist → /tierlist) работал бы
+# только на Apache: тот прогоняет .htaccess после рероута ещё раз, а LiteSpeed
+# на бою — нет, и /tierlist без второго прохода отдавал 404 (2026-10-19).
 # Приставка снимается только у известных разделов — /en/api, /en/admin и
 # прочее отдают 404. Правовые страницы двуязычные на одном адресе, поэтому
 # /en/privacy уводится на /privacy: этот адрес вписан в карточку
@@ -129,7 +131,18 @@ RewriteRule ^(en)/$ /$1 [L,R=301]
 RewriteRule ^(en)/(.+)/$ /$1/$2 [L,R=301]
 RewriteRule ^(en)/(privacy|terms)$ /$2 [L,R=301]
 RewriteRule ^(en)$ /home.php [L]
-RewriteRule ^(en)/(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+)$ /$2 [L]
+RewriteRule ^(en)/tierlist$ /index.php [L]
+RewriteRule ^(en)/calculator$ /calculator.php [L]
+RewriteRule ^(en)/profile$ /profile.php [L]
+RewriteRule ^(en)/chat$ /chat.php [L]
+RewriteRule ^(en)/trading$ /trading.php [L]
+RewriteRule ^(en)/trading/new$ /trade-new.php [L]
+RewriteRule ^(en)/stock$ /stock.php [L]
+RewriteRule ^(en)/support$ /support.php [L]
+RewriteRule ^(en)/giveaways$ /giveaways.php [L]
+RewriteRule ^(en)/ads$ /promote.php [L]
+RewriteRule ^(en)/news$ /news.php [L]
+RewriteRule ^(en)/news/([0-9]+)$ /news.php?id=$2 [L]
 
 # "/" отдаёт главную (home.php), а не тирлист: по макету это два разных
 # раздела, и в шапке они стоят отдельными пунктами. Явная директива, а не

@@ -6,10 +6,29 @@ require_once dirname(__DIR__) . '/public_html/api/lib/i18n.php';
 $HT = str_replace("\r\n", "\n", (string)file_get_contents(dirname(__DIR__) . '/public_html/.htaccess'));
 $EXTRA = implode('|', array_values(array_diff(I18N_LANGS, [I18N_DEFAULT])));
 const RT_SECTIONS = 'tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+';
+const RT_FILES = [
+    'tierlist'       => '/index.php',
+    'calculator'     => '/calculator.php',
+    'profile'        => '/profile.php',
+    'chat'           => '/chat.php',
+    'trading'        => '/trading.php',
+    'trading/new'    => '/trade-new.php',
+    'stock'          => '/stock.php',
+    'support'        => '/support.php',
+    'giveaways'      => '/giveaways.php',
+    'ads'            => '/promote.php',
+    'news'           => '/news.php',
+    'news/([0-9]+)'  => '/news.php?id=$2',
+];
 
 test('приставки всех языков снимаются рероутом', function () use ($HT, $EXTRA) {
     assert_true(strpos($HT, "RewriteRule ^($EXTRA)$ /home.php [L]") !== false, 'главная');
-    assert_true(strpos($HT, "RewriteRule ^($EXTRA)/(" . RT_SECTIONS . ')$ /$2 [L]') !== false, 'разделы');
+    // Сразу на PHP-файл: LiteSpeed не прогоняет .htaccess второй раз после
+    // рероута, и /en/tierlist → /tierlist там отдавал 404.
+    foreach (RT_FILES as $section => $target) {
+        assert_true(strpos($HT, "RewriteRule ^($EXTRA)/$section$ $target [L]\n") !== false, "раздел $section → $target");
+    }
+    assert_eq(false, strpos($HT, '$ /$2 [L]'), 'нет рероута на адрес раздела');
     assert_true(strpos($HT, "RewriteRule ^($EXTRA)/(privacy|terms)$ /$2 [L,R=301]") !== false, 'правовые — на адрес без приставки');
     assert_true(strpos($HT, "RewriteRule ^($EXTRA)/$ /$1 [L,R=301]") !== false, 'слэш у главной');
     assert_true(strpos($HT, "RewriteRule ^($EXTRA)/(.+)/$ /$1/$2 [L,R=301]") !== false, 'слэш у разделов');
