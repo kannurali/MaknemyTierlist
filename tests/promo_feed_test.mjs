@@ -120,16 +120,17 @@ test('with nothing sold the feed shows the house banner of that page', () => {
     }
 });
 
-// From 13 to 18 October the tier list and trading swapped ads; now Playerok
-// is back on the trading feed and the tier list belongs to Starvell.
-test('Playerok owns the trading feed, the news feed stays without it', () => {
+// Since 19 October the tier list and trading swapped ads again: Playerok
+// moved to the tier list and the trading feed belongs to Starvell.
+test('Starvell owns the trading feed, the news feed stays without it', () => {
     const run = Date.UTC(2026, 9, 20, 12);
-    assert.notEqual(campaigns(null, 'news', run)[0].id, PROMO.PLAYEROK.id, 'news');
-    assert.notEqual(campaigns(doc({}), 'news', run)[0].id, PROMO.PLAYEROK.id, 'news, with a sold banner');
-    assert.deepEqual(campaigns(null, 'trading', run).map(c => c.id), [PROMO.PLAYEROK.id], 'trading');
-    assert.deepEqual(campaigns(doc({}), 'trading', run).map(c => c.id), [PROMO.PLAYEROK.id],
-        'trading: Playerok outranks a banner sold through the admin panel');
-    assert.notEqual(campaigns(null, 'trading', NOW)[0].id, PROMO.PLAYEROK.id, 'trading before 3 October');
+    assert.notEqual(campaigns(null, 'news', run)[0].id, PROMO.STARVELL.id, 'news');
+    assert.notEqual(campaigns(doc({}), 'news', run)[0].id, PROMO.STARVELL.id, 'news, with a sold banner');
+    assert.deepEqual(campaigns(null, 'trading', run).map(c => c.id), [PROMO.STARVELL.id], 'trading');
+    assert.deepEqual(campaigns(doc({}), 'trading', run).map(c => c.id), [PROMO.STARVELL.id],
+        'trading: Starvell outranks a banner sold through the admin panel');
+    assert.notEqual(campaigns(null, 'trading', NOW)[0].id, PROMO.STARVELL.id, 'trading before 18 October');
+    assert.notEqual(campaigns(null, 'trading', run)[0].id, PROMO.PLAYEROK.id, 'Playerok left the trading feed');
 });
 
 test('a sold strip banner takes every feed slot away from the house banner', () => {
