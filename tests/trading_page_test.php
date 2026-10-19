@@ -15,7 +15,7 @@ $NEW  = ['trading.php', 'trade-new.php', 'support.php'];
 function tp_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return str_replace("\r\n", "\n", $s);
+    return i18n_flatten(str_replace("\r\n", "\n", $s));
 }
 
 function tp_header(string $s): string {

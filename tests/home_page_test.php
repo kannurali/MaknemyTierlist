@@ -14,7 +14,7 @@ $PUB  = $ROOT . '/public_html';
 function read_file_or_fail(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // --------------------------------------------------------------------------

@@ -17,7 +17,7 @@ $PAGES = ['home.php', 'index.php', 'news.php', 'calculator.php', 'chat.php'];
 function cp_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // Разметка без комментариев. Комментарии в этих файлах ОБЪЯСНЯЮТ решения и

@@ -77,7 +77,7 @@ function mt_render_admin(string $absPath): ?string {
 function mt_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // --------------------------------------------------------------------------

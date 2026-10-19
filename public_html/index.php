@@ -160,96 +160,96 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 </head>
 <body>
 
-  <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="Поставить лайк" aria-pressed="false">
+  <button class="like-fab" id="likeBtn" type="button" data-i18n-title="like.title" title="<?= ta('like.title') ?>" aria-pressed="false">
     <svg class="like-heart" viewBox="0 0 26 25" aria-hidden="true"><path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/></svg>
     <span class="like-count" id="likeCount">0</span>
-    <span class="like-join" id="likeJoin" data-i18n="like.join" hidden>Зарегистрироваться</span>
+    <span class="like-join" id="likeJoin" data-i18n="like.join" hidden><?= te('like.join') ?></span>
   </button>
 
-  <button class="donate-fab" id="donateBtn" type="button" data-i18n-title="donate.title" title="Поддержать проект" hidden>
+  <button class="donate-fab" id="donateBtn" type="button" data-i18n-title="donate.title" title="<?= ta('donate.title') ?>" hidden>
     <svg class="donate-heart" viewBox="0 0 26 25" aria-hidden="true"><path d="M8.51699 1.50605e-10C7.71473 1.50605e-10 6.80749 0.0847873 5.9409 0.380955C0.716337 2.09147 -0.963377 7.68627 0.513224 12.2976L0.519428 12.3169L0.526232 12.3361C1.33984 14.6286 2.6507 16.709 4.35587 18.4202L4.36569 18.4301L4.37571 18.4397C6.80673 20.7773 9.45302 22.8156 12.3183 24.5843L12.9917 25L13.6696 24.5918C16.5412 22.8628 19.2383 20.7683 21.6402 18.4496L21.6477 18.4424L21.6551 18.435C23.375 16.7205 24.6859 14.6247 25.4876 12.33L25.4943 12.3109L25.5004 12.2915C26.949 7.69022 25.2777 2.08871 20.0892 0.403435C19.2398 0.120096 18.3633 1.50605e-10 17.5064 1.50605e-10C15.579 -1.27474e-05 14.1523 0.809219 13.0008 1.63401C11.8582 0.815494 10.422 1.50605e-10 8.51699 1.50605e-10Z" fill="currentColor"/></svg>
-    <span class="donate-label" data-i18n="donate.button">Поддержать</span>
+    <span class="donate-label" data-i18n="donate.button"><?= te('donate.button') ?></span>
   </button>
 
   <header class="mk-top">
-    <a class="mk-top-brand" href="/">
+    <a class="mk-top-brand" href="<?= u('/') ?>">
       <img class="mk-top-mark" src="assets/design/logo-mk-square.png" alt="" aria-hidden="true" />
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
     <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
-         data-i18n-label="lang.switch" aria-label="Язык интерфейса">
-      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false">RU</button>
-      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false">EN</button>
+         data-i18n-label="lang.switch" aria-label="<?= ta('lang.switch') ?>">
+      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false"><?= te('lang.ru') ?></button>
+      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false"><?= te('lang.en') ?></button>
     </div>
 
     <nav class="mk-top-bar" id="mkTopBar" aria-label="Разделы сайта">
       <ul class="mk-nav">
         <li>
-          <a class="mk-pill" href="/">
+          <a class="mk-pill" href="<?= u('/') ?>">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 16.0302V8.423C18.05 7.48807 17.644 6.60551 16.9498 6.03152L11.833 1.80094C10.4608 0.666372 8.53926 0.666371 7.16704 1.80094L2.05028 6.03152C1.35606 6.60551 0.950013 7.48807 0.950013 8.423V16.0302C0.950013 17.1457 1.80067 18.05 2.85001 18.05H4.75001C5.79936 18.05 6.65001 17.1994 6.65001 16.15V13.0006C6.65001 11.8851 7.50067 10.9808 8.55002 10.9808H10.45C11.4994 10.9808 12.35 11.8851 12.35 13.0006V16.15C12.35 17.1994 13.2007 18.05 14.25 18.05H16.15C17.1994 18.05 18.05 17.1457 18.05 16.0302Z" stroke="currentColor" stroke-width="1.81101"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.home">Главная</span>
+            <span class="mk-pill-text" data-i18n="nav.home"><?= te('nav.home') ?></span>
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/tierlist" aria-current="page">
+          <a class="mk-pill" href="<?= u('/tierlist') ?>" aria-current="page">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M8.57627 3.7533C8.57627 3.22702 8.14799 2.79425 7.62582 2.85987C6.45486 3.00701 5.32947 3.42467 4.341 4.08515C3.08735 4.9228 2.11026 6.1134 1.53327 7.50637C0.95628 8.89935 0.805314 10.4321 1.09946 11.9109C1.39361 13.3897 2.11965 14.748 3.18579 15.8142C4.25193 16.8803 5.61027 17.6063 7.08904 17.9005C8.56781 18.1946 10.1006 18.0437 11.4936 17.4667C12.8866 16.8897 14.0771 15.9126 14.9148 14.659C15.5753 13.6705 15.9929 12.5451 16.1401 11.3741C16.2057 10.852 15.7729 10.4237 15.2466 10.4237H9.52918C9.0029 10.4237 8.57627 9.99705 8.57627 9.47077V3.7533Z" stroke="currentColor" stroke-width="1.82067"/><path d="M11.435 1.84748C11.435 1.3212 11.8638 0.887589 12.3847 0.962518C12.934 1.04153 13.4726 1.18898 13.9876 1.40232C14.7969 1.73754 15.5323 2.22887 16.1517 2.84828C16.7711 3.46768 17.2624 4.20302 17.5976 5.0123C17.811 5.52735 17.9584 6.06592 18.0374 6.61527C18.1124 7.13618 17.6787 7.56495 17.1525 7.56495L11.5303 7.56495C11.4777 7.56495 11.435 7.52228 11.435 7.46965V1.84748Z" stroke="currentColor" stroke-width="1.82067"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.tierlist">Тирлист</span>
+            <span class="mk-pill-text" data-i18n="nav.tierlist"><?= te('nav.tierlist') ?></span>
           </a>
         </li>
         <li>
 
-          <a class="mk-pill" href="/trading">
+          <a class="mk-pill" href="<?= u('/trading') ?>">
             <svg viewBox="0 0 18 19" fill="none" aria-hidden="true"><path d="M6.17037 0.943433L4.48309 4.31799M11.8297 0.943433L13.517 4.31799M11.8297 9.4324L8.29262 13.2053L6.17037 11.4903M5.6697 17.9214H12.3304C14.2079 17.9214 15.7998 16.5408 16.0653 14.6821L17.0276 7.94613C17.2711 6.24146 15.9484 4.71631 14.2264 4.71631H3.77368C2.0517 4.71631 0.728943 6.24145 0.972468 7.94613L1.93474 14.6821C2.20027 16.5408 3.79212 17.9214 5.6697 17.9214Z" stroke="currentColor" stroke-width="1.88644" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.trading">Трейдинг</span>
+            <span class="mk-pill-text" data-i18n="nav.trading"><?= te('nav.trading') ?></span>
           </a>
         </li>
         <li>
 
-          <a class="mk-pill" href="/calculator">
+          <a class="mk-pill" href="<?= u('/calculator') ?>">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.70001 8.55001V13.3M13.3 10.45V13.3M9.5 5.70001V13.3M4.75001 18.05H14.25C16.3487 18.05 18.05 16.3487 18.05 14.25V4.75001C18.05 2.65134 16.3487 0.950022 14.25 0.950022H4.75001C2.65134 0.950022 0.950022 2.65134 0.950022 4.75001V14.25C0.950022 16.3487 2.65134 18.05 4.75001 18.05Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.calculator">Калькулятор</span>
+            <span class="mk-pill-text" data-i18n="nav.calculator"><?= te('nav.calculator') ?></span>
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/stock">
+          <a class="mk-pill" href="<?= u('/stock') ?>">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M2.4 7.6V16.1C2.4 17.15 3.25 18.05 4.3 18.05H14.7C15.75 18.05 16.6 17.15 16.6 16.1V7.6M7.15 18.05V13.3C7.15 12.25 8 11.4 9.05 11.4H9.95C11 11.4 11.85 12.25 11.85 13.3V18.05M0.95 5.7L2.6 1.9C2.85 1.3 3.45 0.95 4.1 0.95H14.9C15.55 0.95 16.15 1.3 16.4 1.9L18.05 5.7C18.05 7 16.95 8.1 15.65 8.1C14.3 8.1 13.25 7 13.25 5.7C13.25 7 12.15 8.1 10.85 8.1H8.15C6.85 8.1 5.75 7 5.75 5.7C5.75 7 4.7 8.1 3.35 8.1C2.05 8.1 0.95 7 0.95 5.7Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.stock">Сток</span>
+            <span class="mk-pill-text" data-i18n="nav.stock"><?= te('nav.stock') ?></span>
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/news">
+          <a class="mk-pill" href="<?= u('/news') ?>">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M18.05 9.50002C18.05 14.2221 14.222 18.05 9.49995 18.05M18.05 9.50002C18.05 4.77798 14.222 0.950013 9.49995 0.950013M18.05 9.50002C18.05 7.92601 14.222 6.65002 9.49995 6.65002C4.77792 6.65002 0.949949 7.92601 0.949949 9.50002M18.05 9.50002C18.05 11.074 14.222 12.35 9.49995 12.35C4.77792 12.35 0.949949 11.074 0.949949 9.50002M9.49995 18.05C4.77792 18.05 0.949949 14.2221 0.949949 9.50002M9.49995 18.05C11.074 18.05 12.35 14.2221 12.35 9.50002C12.35 4.77798 11.074 0.950013 9.49995 0.950013M9.49995 18.05C7.92594 18.05 6.64995 14.2221 6.64995 9.50002C6.64995 4.77798 7.92594 0.950013 9.49995 0.950013M0.949949 9.50002C0.949949 4.77798 4.77792 0.950013 9.49995 0.950013" stroke="currentColor" stroke-width="1.9"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.news">Новости</span>
+            <span class="mk-pill-text" data-i18n="nav.news"><?= te('nav.news') ?></span>
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="/ads">
+          <a class="mk-pill" href="<?= u('/ads') ?>">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.6 6.9V12.1M5.6 12.1L6.75 16.55C6.98 17.43 7.77 18.05 8.68 18.05C9.98 18.05 10.93 16.82 10.6 15.56L10.1 13.65M2.95 6.9H5.6L12.85 3.05C13.88 2.5 15.1 3.25 15.1 4.4V14.6C15.1 15.75 13.88 16.5 12.85 15.95L5.6 12.1H2.95C1.85 12.1 0.95 11.2 0.95 10.1V8.9C0.95 7.8 1.85 6.9 2.95 6.9ZM17.45 7.3C18.18 8.65 18.18 10.35 17.45 11.7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="mk-pill-text" data-i18n="nav.promote">Реклама</span>
+            <span class="mk-pill-text" data-i18n="nav.promote"><?= te('nav.promote') ?></span>
           </a>
         </li>
       </ul>
 
-      <a class="mk-promote" href="/giveaways" data-i18n="nav.giveaways">Розыгрыши</a>
+      <a class="mk-promote" href="<?= u('/giveaways') ?>" data-i18n="nav.giveaways"><?= te('nav.giveaways') ?></a>
 
       <a class="mk-tg" href="https://t.me/theMaknemy" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
       </a>
 
-      <a class="mk-chat" href="/chat" data-i18n-label="nav.chat" aria-label="Чат">
+      <a class="mk-chat" href="<?= u('/chat') ?>" data-i18n-label="nav.chat" aria-label="<?= ta('nav.chat') ?>">
         <svg viewBox="0 0 25 25" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.0833 0C5.40989 0 0 5.40989 0 12.0833C0 14.2768 0.585445 16.3362 1.60861 18.1109C1.817 18.4723 1.85274 18.9124 1.67689 19.2907L0.645317 21.5102C0.0119158 22.7086 0.878898 24.1667 2.24942 24.1667H12.0833C18.7568 24.1667 24.1667 18.7568 24.1667 12.0833C24.1667 5.40989 18.7568 0 12.0833 0ZM8.45833 8.45833C7.79099 8.45833 7.25 8.99932 7.25 9.66667C7.25 10.334 7.79099 10.875 8.45833 10.875H10.875C11.5423 10.875 12.0833 10.334 12.0833 9.66667C12.0833 8.99932 11.5423 8.45833 10.875 8.45833H8.45833ZM8.45833 13.2917C7.79099 13.2917 7.25 13.8327 7.25 14.5C7.25 15.1673 7.79099 15.7083 8.45833 15.7083H15.7083C16.3757 15.7083 16.9167 15.1673 16.9167 14.5C16.9167 13.8327 16.3757 13.2917 15.7083 13.2917H8.45833Z" fill="currentColor"/></svg>
       </a>
 
-      <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="В активной разработке">
+      <button class="mk-avatar" type="button" aria-label="Профиль" data-soon data-i18n-title="topbar.soon" title="<?= ta('topbar.soon') ?>">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
       </button>
     </nav>
 
     <button class="mk-top-toggle" type="button" id="mkTopToggle"
             aria-expanded="false" aria-controls="mkTopBar"
-            data-i18n-label="topbar.showNav" aria-label="Показать разделы"
-            data-i18n-title="topbar.showNav" title="Показать разделы">
+            data-i18n-label="topbar.showNav" aria-label="<?= ta('topbar.showNav') ?>"
+            data-i18n-title="topbar.showNav" title="<?= ta('topbar.showNav') ?>">
     </button>
   </header>
 
@@ -257,48 +257,48 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     <div class="tb-brand">MAKNEMY<span>EDITOR</span></div>
 
     <nav class="nav-seg" aria-label="Разделы сайта">
-      <a href="/tierlist" aria-current="page" data-i18n="news.navTierlist">Тирлист</a>
-      <a href="/news" data-i18n="news.navNews">Новости</a>
+      <a href="<?= u('/tierlist') ?>" aria-current="page" data-i18n="news.navTierlist"><?= te('news.navTierlist') ?></a>
+      <a href="<?= u('/news') ?>" data-i18n="news.navNews"><?= te('news.navNews') ?></a>
     </nav>
 
     <div class="tb-group" id="tbEdit" hidden>
-      <button class="btn" id="btnAddTier" data-i18n="admin.addTier" data-i18n-title="admin.addTierTitle" title="Добавить новый тир">＋ Тир</button>
-      <button class="btn" id="btnAddItem" data-i18n="admin.addItem" data-i18n-title="admin.addItemTitle" title="Добавить предмет в первый тир">＋ Предмет</button>
-      <button class="btn" id="btnSort" data-i18n="admin.sort" data-i18n-title="admin.sortTitle" title="Отсортировать все предметы по цене (по убыванию)">⇅ Сортировать</button>
+      <button class="btn" id="btnAddTier" data-i18n="admin.addTier" data-i18n-title="admin.addTierTitle" title="<?= ta('admin.addTierTitle') ?>"><?= te('admin.addTier') ?></button>
+      <button class="btn" id="btnAddItem" data-i18n="admin.addItem" data-i18n-title="admin.addItemTitle" title="<?= ta('admin.addItemTitle') ?>"><?= te('admin.addItem') ?></button>
+      <button class="btn" id="btnSort" data-i18n="admin.sort" data-i18n-title="admin.sortTitle" title="<?= ta('admin.sortTitle') ?>"><?= te('admin.sort') ?></button>
     </div>
 
     <div class="tb-group filters" id="filters">
-      <button class="chip" data-f="configurators" data-i18n="filters.configurators" data-i18n-title="filters.configuratorsTitle" title="Скины, хроматики и мутации">Конфигураторы</button>
-      <button class="chip" data-f="fruits" data-i18n="filters.fruits" data-i18n-title="filters.fruitsTitle" title="Обычные фрукты">Фрукты</button>
-      <button class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="Перманентные фрукты">Пермы</button>
-      <button class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="Геймпассы и воучеры">Пассы</button>
-      <button class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="Показать всё">Все</button>
+      <button class="chip" data-f="configurators" data-i18n="filters.configurators" data-i18n-title="filters.configuratorsTitle" title="<?= ta('filters.configuratorsTitle') ?>"><?= te('filters.configurators') ?></button>
+      <button class="chip" data-f="fruits" data-i18n="filters.fruits" data-i18n-title="filters.fruitsTitle" title="<?= ta('filters.fruitsTitle') ?>"><?= te('filters.fruits') ?></button>
+      <button class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="<?= ta('filters.permsTitle') ?>"><?= te('filters.perms') ?></button>
+      <button class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="<?= ta('filters.passesTitle') ?>"><?= te('filters.passes') ?></button>
+      <button class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="<?= ta('filters.allTitle') ?>"><?= te('filters.all') ?></button>
     </div>
 
     <div class="tb-group" id="tbToggles" hidden>
-      <label class="switch" data-i18n-title="admin.autoSortTitle" title="Автоматически переставлять предмет по цене при её изменении">
+      <label class="switch" data-i18n-title="admin.autoSortTitle" title="<?= ta('admin.autoSortTitle') ?>">
         <input type="checkbox" id="autoSortToggle" checked />
         <span class="track"><span class="thumb"></span></span>
-        <span class="switch-label" data-i18n="admin.autoSort">Автосорт</span>
+        <span class="switch-label" data-i18n="admin.autoSort"><?= te('admin.autoSort') ?></span>
       </label>
-      <label class="switch" id="editToggleWrap" data-i18n-title="admin.editingTitle" title="Режим редактирования">
+      <label class="switch" id="editToggleWrap" data-i18n-title="admin.editingTitle" title="<?= ta('admin.editingTitle') ?>">
         <input type="checkbox" id="editToggle" />
         <span class="track"><span class="thumb"></span></span>
-        <span class="switch-label" data-i18n="admin.editing">Редактирование</span>
+        <span class="switch-label" data-i18n="admin.editing"><?= te('admin.editing') ?></span>
       </label>
     </div>
 
     <div class="tb-group" id="tbPublish" hidden>
-      <button class="btn save-btn clean" id="btnSave" data-i18n-title="admin.saveTitle" title="Опубликовать изменения для всех">✓ Сохранено</button>
+      <button class="btn save-btn clean" id="btnSave" data-i18n-title="admin.saveTitle" title="<?= ta('admin.saveTitle') ?>">✓ Сохранено</button>
     </div>
 
     <div class="tb-group" id="tbPng" hidden>
-      <button class="btn primary" id="btnPng" data-i18n="admin.png" data-i18n-title="admin.pngTitle" title="Скачать тирлист как PNG">⬇ Скачать PNG</button>
+      <button class="btn primary" id="btnPng" data-i18n="admin.png" data-i18n-title="admin.pngTitle" title="<?= ta('admin.pngTitle') ?>"><?= te('admin.png') ?></button>
     </div>
     <div class="tb-group" id="tbAdminActions" hidden>
-      <button class="btn" id="btnExport" data-i18n="admin.export" data-i18n-title="admin.exportTitle" title="Сохранить как JSON">Экспорт</button>
-      <button class="btn" id="btnImport" data-i18n="admin.import" data-i18n-title="admin.importTitle" title="Загрузить JSON">Импорт</button>
-      <button class="btn danger" id="btnReset" data-i18n="admin.reset" data-i18n-title="admin.resetTitle" title="Сбросить к шаблону">Сброс</button>
+      <button class="btn" id="btnExport" data-i18n="admin.export" data-i18n-title="admin.exportTitle" title="<?= ta('admin.exportTitle') ?>"><?= te('admin.export') ?></button>
+      <button class="btn" id="btnImport" data-i18n="admin.import" data-i18n-title="admin.importTitle" title="<?= ta('admin.importTitle') ?>"><?= te('admin.import') ?></button>
+      <button class="btn danger" id="btnReset" data-i18n="admin.reset" data-i18n-title="admin.resetTitle" title="<?= ta('admin.resetTitle') ?>"><?= te('admin.reset') ?></button>
     </div>
 
     <input type="file" id="importFile" accept="application/json" hidden />
@@ -314,43 +314,43 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
       <header class="tl-header">
         <img class="bf-logo" src="assets/poster/logo-bf.png" alt="Blox Fruits" />
         <div class="title-block">
-          <div class="date" id="tlDate" spellcheck="false" data-i18n-title="stage.dateTitle" title="Кликните, чтобы изменить дату">17.02.2026</div>
+          <div class="date" id="tlDate" spellcheck="false" data-i18n-title="stage.dateTitle" title="<?= ta('stage.dateTitle') ?>">17.02.2026</div>
           <h1 class="tl-title" id="tlTitle">MAKNEMY<br/>TIER LIST</h1>
         </div>
-        <img class="brand-logo" src="assets/poster/marks.png" data-i18n-alt="stage.brandAlt" alt="Логотип" />
+        <img class="brand-logo" src="assets/poster/marks.png" data-i18n-alt="stage.brandAlt" alt="<?= ta('stage.brandAlt') ?>" />
       </header>
 
       <main class="tiers" id="tiers" data-gwc-tiers></main>
 
       <section class="legend">
-        <h2 class="legend-title" data-i18n="legend.title">ПОМОЩЬ НОВИЧКАМ</h2>
+        <h2 class="legend-title" data-i18n="legend.title"><?= te('legend.title') ?></h2>
         <div class="legend-grid">
           <div class="legend-col lc-types">
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-fr.svg" alt="FR" /><span class="lgl" data-i18n="legend.fv">Фрукт</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cs.svg" alt="CS" /><span class="lgl" data-i18n="legend.cs">Конфигурация скин</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cm.svg" alt="CM" /><span class="lgl" data-i18n="legend.cm">Конфигурация мутация</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-ms.svg" alt="MS" /><span class="lgl" data-i18n="legend.ms">Скины мутации</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-pm.svg" alt="PM" /><span class="lgl" data-i18n="legend.pm">Перманент</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-gp.svg" alt="GP" /><span class="lgl" data-i18n="legend.gp">Геймпасс</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cr.svg" alt="CR" /><span class="lgl" data-i18n="legend.cr">Хроматик</span></div>
-            <div class="lg"><img class="lgb" src="assets/design/legend/badge-vh.svg" alt="VH" /><span class="lgl" data-i18n="legend.vh">Ваучер</span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-fr.svg" alt="FR" /><span class="lgl" data-i18n="legend.fv"><?= te('legend.fv') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cs.svg" alt="CS" /><span class="lgl" data-i18n="legend.cs"><?= te('legend.cs') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cm.svg" alt="CM" /><span class="lgl" data-i18n="legend.cm"><?= te('legend.cm') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-ms.svg" alt="MS" /><span class="lgl" data-i18n="legend.ms"><?= te('legend.ms') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-pm.svg" alt="PM" /><span class="lgl" data-i18n="legend.pm"><?= te('legend.pm') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-gp.svg" alt="GP" /><span class="lgl" data-i18n="legend.gp"><?= te('legend.gp') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cr.svg" alt="CR" /><span class="lgl" data-i18n="legend.cr"><?= te('legend.cr') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-vh.svg" alt="VH" /><span class="lgl" data-i18n="legend.vh"><?= te('legend.vh') ?></span></div>
           </div>
 
           <div class="legend-col lc-demand">
 
-            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon">Оверпрайс</span></div>
-            <div class="lg"><span class="lgd d-green"></span><span class="lgl" data-i18n="legend.good">Хорошо</span></div>
-            <div class="lg"><span class="lgd d-yellow"></span><span class="lgl" data-i18n="legend.mid">Средне</span></div>
-            <div class="lg"><span class="lgd d-orange"></span><span class="lgl" data-i18n="legend.low">Ниже среднего</span></div>
-            <div class="lg"><span class="lgd d-red"></span><span class="lgl" data-i18n="legend.bad">Плохо</span></div>
+            <div class="lg"><span class="lgd d-neon"></span><span class="lgl" data-i18n="legend.neon"><?= te('legend.neon') ?></span></div>
+            <div class="lg"><span class="lgd d-green"></span><span class="lgl" data-i18n="legend.good"><?= te('legend.good') ?></span></div>
+            <div class="lg"><span class="lgd d-yellow"></span><span class="lgl" data-i18n="legend.mid"><?= te('legend.mid') ?></span></div>
+            <div class="lg"><span class="lgd d-orange"></span><span class="lgl" data-i18n="legend.low"><?= te('legend.low') ?></span></div>
+            <div class="lg"><span class="lgd d-red"></span><span class="lgl" data-i18n="legend.bad"><?= te('legend.bad') ?></span></div>
           </div>
 
           <div class="legend-col lc-trends">
-            <div class="lg"><img class="trend tr-wip" src="assets/design/legend/trend-wip.svg" alt="" /><span class="lgl" data-i18n="legend.wip">Под вопросом</span></div>
-            <div class="lg"><img class="trend tr-up" src="assets/design/legend/trend-up.svg" alt="" /><span class="lgl" data-i18n="legend.up">Рост цены</span></div>
-            <div class="lg"><img class="trend tr-swap" src="assets/design/legend/trend-swap.svg" alt="" /><span class="lgl" data-i18n="legend.swap">Перерассмотр цены</span></div>
-            <div class="lg"><img class="trend tr-down" src="assets/design/legend/trend-down.svg" alt="" /><span class="lgl" data-i18n="legend.down">Падение цены</span></div>
-            <div class="lg"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="" /><span class="lgl" data-i18n="legend.new">Новый</span></div>
+            <div class="lg"><img class="trend tr-wip" src="assets/design/legend/trend-wip.svg" alt="" /><span class="lgl" data-i18n="legend.wip"><?= te('legend.wip') ?></span></div>
+            <div class="lg"><img class="trend tr-up" src="assets/design/legend/trend-up.svg" alt="" /><span class="lgl" data-i18n="legend.up"><?= te('legend.up') ?></span></div>
+            <div class="lg"><img class="trend tr-swap" src="assets/design/legend/trend-swap.svg" alt="" /><span class="lgl" data-i18n="legend.swap"><?= te('legend.swap') ?></span></div>
+            <div class="lg"><img class="trend tr-down" src="assets/design/legend/trend-down.svg" alt="" /><span class="lgl" data-i18n="legend.down"><?= te('legend.down') ?></span></div>
+            <div class="lg"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="" /><span class="lgl" data-i18n="legend.new"><?= te('legend.new') ?></span></div>
           </div>
         </div>
       </section>
@@ -363,102 +363,102 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <footer class="mk-foot">
     <img class="mk-foot-mark" src="assets/design/logo-mk-square.png" alt="MAKNEMY" />
     <ul class="mk-foot-roles">
-      <li><span data-i18n="site.footAuthor">автор</span><span class="mk-foot-nick">MKSVTN</span></li>
-      <li><span data-i18n="site.footDesigner">дизайнер</span><span class="mk-foot-nick">DANIKTOR</span></li>
-      <li><span data-i18n="site.footAnalyst">аналитик</span><span class="mk-foot-nick">GLH</span></li>
-      <li><span data-i18n="site.footAnalystAide">помощник аналитика</span><span class="mk-foot-nick" data-i18n="site.footHiring">активно ищем</span></li>
-      <li><span data-i18n="site.footCoder">разработчик</span><span class="mk-foot-nick">The Fool</span></li>
+      <li><span data-i18n="site.footAuthor"><?= te('site.footAuthor') ?></span><span class="mk-foot-nick">MKSVTN</span></li>
+      <li><span data-i18n="site.footDesigner"><?= te('site.footDesigner') ?></span><span class="mk-foot-nick">DANIKTOR</span></li>
+      <li><span data-i18n="site.footAnalyst"><?= te('site.footAnalyst') ?></span><span class="mk-foot-nick">GLH</span></li>
+      <li><span data-i18n="site.footAnalystAide"><?= te('site.footAnalystAide') ?></span><span class="mk-foot-nick" data-i18n="site.footHiring"><?= te('site.footHiring') ?></span></li>
+      <li><span data-i18n="site.footCoder"><?= te('site.footCoder') ?></span><span class="mk-foot-nick">The Fool</span></li>
     </ul>
-    <p class="mk-foot-tagline" data-i18n="site.footTagline">макнеми тирлист - гарантия успешных трейдов</p>
+    <p class="mk-foot-tagline" data-i18n="site.footTagline"><?= te('site.footTagline') ?></p>
 
     <p class="mk-foot-legal">
-      <a href="/privacy" data-i18n="site.footPrivacy">Политика конфиденциальности</a>
-      <a href="/terms" data-i18n="site.footTerms">Условия использования</a>
+      <a href="/privacy" data-i18n="site.footPrivacy"><?= te('site.footPrivacy') ?></a>
+      <a href="/terms" data-i18n="site.footTerms"><?= te('site.footTerms') ?></a>
     </p>
   </footer>
 
   <aside class="ptn-rail ptn-rail-l" id="promoRailL" hidden
-         data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+         data-i18n-label="promo.rail" aria-label="<?= ta('promo.rail') ?>"></aside>
   <aside class="ptn-rail ptn-rail-r" id="promoRailR" hidden
-         data-i18n-label="promo.rail" aria-label="Реклама сбоку"></aside>
+         data-i18n-label="promo.rail" aria-label="<?= ta('promo.rail') ?>"></aside>
 
   <div class="ptn-dock" id="promoDock" hidden
-       data-i18n-label="promo.region" aria-label="Рекламные баннеры"></div>
+       data-i18n-label="promo.region" aria-label="<?= ta('promo.region') ?>"></div>
 
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal">
       <div class="modal-head">
-        <h3 id="modalTitle" data-i18n="modal.itemTitle">Предмет</h3>
-        <button class="icon-btn" id="modalClose" data-i18n-title="modal.close" title="Закрыть">✕</button>
+        <h3 id="modalTitle" data-i18n="modal.itemTitle"><?= te('modal.itemTitle') ?></h3>
+        <button class="icon-btn" id="modalClose" data-i18n-title="modal.close" title="<?= ta('modal.close') ?>">✕</button>
       </div>
       <div class="modal-body">
         <div class="field icon-field">
           <div class="icon-preview"><img id="mIconPreview" alt="" /></div>
           <div class="icon-actions">
-            <label class="btn small"><span data-i18n="modal.iconUpload">Загрузить иконку</span><input type="file" id="mIconFile" accept="image/*" hidden /></label>
-            <button class="btn small ghost" id="mIconReset" data-i18n="modal.iconReset">Стандартная</button>
+            <label class="btn small"><span data-i18n="modal.iconUpload"><?= te('modal.iconUpload') ?></span><input type="file" id="mIconFile" accept="image/*" hidden /></label>
+            <button class="btn small ghost" id="mIconReset" data-i18n="modal.iconReset"><?= te('modal.iconReset') ?></button>
           </div>
         </div>
         <div class="field">
-          <label data-i18n="modal.name">Название</label>
-          <input type="text" id="mName" data-i18n-placeholder="modal.namePlaceholder" placeholder="Напр. Dragon" />
+          <label data-i18n="modal.name"><?= te('modal.name') ?></label>
+          <input type="text" id="mName" data-i18n-placeholder="modal.namePlaceholder" placeholder="<?= ta('modal.namePlaceholder') ?>" />
         </div>
         <div class="field">
-          <label data-i18n="modal.value">Значение</label>
-          <input type="text" id="mValue" inputmode="numeric" data-i18n-placeholder="modal.valuePlaceholder" placeholder="Напр. 60000" />
+          <label data-i18n="modal.value"><?= te('modal.value') ?></label>
+          <input type="text" id="mValue" inputmode="numeric" data-i18n-placeholder="modal.valuePlaceholder" placeholder="<?= ta('modal.valuePlaceholder') ?>" />
         </div>
         <div class="field">
-          <label data-i18n="modal.desc">Описание · RU</label>
-          <textarea id="mDesc" rows="3" data-i18n-placeholder="modal.descPlaceholder" placeholder="Кратко о фрукте — показывается при просмотре"></textarea>
+          <label data-i18n="modal.desc"><?= te('modal.desc') ?></label>
+          <textarea id="mDesc" rows="3" data-i18n-placeholder="modal.descPlaceholder" placeholder="<?= ta('modal.descPlaceholder') ?>"></textarea>
         </div>
         <div class="field">
-          <label data-i18n="modal.descEn">Описание · EN (необязательно)</label>
-          <textarea id="mDescEn" rows="3" data-i18n-placeholder="modal.descEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
-        </div>
-
-        <div class="field">
-          <label data-i18n="modal.terms">Условия · RU (необязательно)</label>
-          <textarea id="mTerms" rows="3" data-i18n-placeholder="modal.termsPlaceholder" placeholder="Что нужно, чтобы предмет вообще можно было передать"></textarea>
-        </div>
-        <div class="field">
-          <label data-i18n="modal.termsEn">Условия · EN (необязательно)</label>
-          <textarea id="mTermsEn" rows="3" data-i18n-placeholder="modal.termsEnPlaceholder" placeholder="Английская версия — для англоязычного интерфейса. Пусто — покажется русское."></textarea>
+          <label data-i18n="modal.descEn"><?= te('modal.descEn') ?></label>
+          <textarea id="mDescEn" rows="3" data-i18n-placeholder="modal.descEnPlaceholder" placeholder="<?= ta('modal.descEnPlaceholder') ?>"></textarea>
         </div>
 
         <div class="field">
-          <label data-i18n="modal.tag">Метка · RU (необязательно)</label>
-          <input type="text" id="mTag" maxlength="24" data-i18n-placeholder="modal.tagPlaceholder" placeholder="Напр. LIMITED" />
+          <label data-i18n="modal.terms"><?= te('modal.terms') ?></label>
+          <textarea id="mTerms" rows="3" data-i18n-placeholder="modal.termsPlaceholder" placeholder="<?= ta('modal.termsPlaceholder') ?>"></textarea>
         </div>
         <div class="field">
-          <label data-i18n="modal.tagEn">Метка · EN (необязательно)</label>
-          <input type="text" id="mTagEn" maxlength="24" data-i18n-placeholder="modal.tagEnPlaceholder" placeholder="Английская версия. Пусто — покажется русская." />
+          <label data-i18n="modal.termsEn"><?= te('modal.termsEn') ?></label>
+          <textarea id="mTermsEn" rows="3" data-i18n-placeholder="modal.termsEnPlaceholder" placeholder="<?= ta('modal.termsEnPlaceholder') ?>"></textarea>
+        </div>
+
+        <div class="field">
+          <label data-i18n="modal.tag"><?= te('modal.tag') ?></label>
+          <input type="text" id="mTag" maxlength="24" data-i18n-placeholder="modal.tagPlaceholder" placeholder="<?= ta('modal.tagPlaceholder') ?>" />
         </div>
         <div class="field">
-          <label data-i18n="modal.fruitType">Тип фрукта</label>
+          <label data-i18n="modal.tagEn"><?= te('modal.tagEn') ?></label>
+          <input type="text" id="mTagEn" maxlength="24" data-i18n-placeholder="modal.tagEnPlaceholder" placeholder="<?= ta('modal.tagEnPlaceholder') ?>" />
+        </div>
+        <div class="field">
+          <label data-i18n="modal.fruitType"><?= te('modal.fruitType') ?></label>
           <div class="seg seg-toggle" id="mFruit">
-            <button data-v="f" class="active"><span data-i18n="modal.fruitPlain">Обычный</span> <small>FR</small></button>
-            <button data-v="p"><span data-i18n="modal.fruitPerm">Перманент</span> <small>PM</small></button>
+            <button data-v="f" class="active"><span data-i18n="modal.fruitPlain"><?= te('modal.fruitPlain') ?></span> <small>FR</small></button>
+            <button data-v="p"><span data-i18n="modal.fruitPerm"><?= te('modal.fruitPerm') ?></span> <small>PM</small></button>
           </div>
         </div>
         <div class="field">
-          <label data-i18n="modal.category">Категория (необязательно)</label>
+          <label data-i18n="modal.category"><?= te('modal.category') ?></label>
 
           <div class="seg" id="mType2">
             <button data-v="" class="active">—</button>
-            <button data-v="cs" class="t-cs" data-i18n="modal.catConfigSkin">CS · Конфигурация скин</button>
-            <button data-v="cm" class="t-cm" data-i18n="modal.catConfigMutation">CM · Конфигурация мутация</button>
-            <button data-v="ms" class="t-ms" data-i18n="modal.catMutationSkin">MS · Скины мутации</button>
-            <button data-v="cr" class="t-cr" data-i18n="modal.catChromatic">CR · Хроматик</button>
-            <button data-v="gp" class="t-gp" data-i18n="modal.catPass">GP · Геймпасс</button>
-            <button data-v="vh" class="t-vh" data-i18n="modal.catVoucher">VH · Ваучер</button>
+            <button data-v="cs" class="t-cs" data-i18n="modal.catConfigSkin"><?= te('modal.catConfigSkin') ?></button>
+            <button data-v="cm" class="t-cm" data-i18n="modal.catConfigMutation"><?= te('modal.catConfigMutation') ?></button>
+            <button data-v="ms" class="t-ms" data-i18n="modal.catMutationSkin"><?= te('modal.catMutationSkin') ?></button>
+            <button data-v="cr" class="t-cr" data-i18n="modal.catChromatic"><?= te('modal.catChromatic') ?></button>
+            <button data-v="gp" class="t-gp" data-i18n="modal.catPass"><?= te('modal.catPass') ?></button>
+            <button data-v="vh" class="t-vh" data-i18n="modal.catVoucher"><?= te('modal.catVoucher') ?></button>
           </div>
         </div>
         <div class="field">
-          <label data-i18n="modal.demand">Спрос</label>
+          <label data-i18n="modal.demand"><?= te('modal.demand') ?></label>
 
           <div class="seg" id="mDemand">
             <button data-v="" class="active">—</button>
-            <button data-v="neon" data-i18n-title="legend.neon" title="Оверпрайс"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
+            <button data-v="neon" data-i18n-title="legend.neon" title="<?= ta('legend.neon') ?>"><img class="dot" src="assets/dot-neon.png" alt="" /></button>
             <button data-v="green"><img class="dot" src="assets/dot-green.png" alt="" /></button>
             <button data-v="yellow"><img class="dot" src="assets/dot-yellow.png" alt="" /></button>
             <button data-v="orange"><img class="dot" src="assets/dot-orange.png" alt="" /></button>
@@ -466,30 +466,30 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           </div>
         </div>
         <div class="field">
-          <label data-i18n="modal.trend">Тренд</label>
+          <label data-i18n="modal.trend"><?= te('modal.trend') ?></label>
 
           <div class="seg" id="mTrend">
             <button data-v="" class="active">—</button>
-            <button data-flag="wip" data-i18n-title="modal.wipTitle" title="Показать значок «?» на предмете (цена под вопросом). Работает вместе с NEW"><img class="trend tr-wip" src="assets/design/legend/trend-wip.svg" alt="?" /></button>
-            <button data-v="up" data-i18n-title="legend.up" title="Рост цены"><img class="trend" src="assets/design/legend/trend-up.svg" alt="" /></button>
-            <button data-v="swap" data-i18n-title="legend.swap" title="Перерассмотр цены"><img class="trend tr-swap" src="assets/design/legend/trend-swap.svg" alt="" /></button>
-            <button data-v="down" data-i18n-title="legend.down" title="Падение цены"><img class="trend" src="assets/design/legend/trend-down.svg" alt="" /></button>
-            <button data-flag="flag" data-i18n-title="modal.newTitle" title="Показать значок NEW на предмете (новый или изменённый)"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="NEW" /></button>
+            <button data-flag="wip" data-i18n-title="modal.wipTitle" title="<?= ta('modal.wipTitle') ?>"><img class="trend tr-wip" src="assets/design/legend/trend-wip.svg" alt="?" /></button>
+            <button data-v="up" data-i18n-title="legend.up" title="<?= ta('legend.up') ?>"><img class="trend" src="assets/design/legend/trend-up.svg" alt="" /></button>
+            <button data-v="swap" data-i18n-title="legend.swap" title="<?= ta('legend.swap') ?>"><img class="trend tr-swap" src="assets/design/legend/trend-swap.svg" alt="" /></button>
+            <button data-v="down" data-i18n-title="legend.down" title="<?= ta('legend.down') ?>"><img class="trend" src="assets/design/legend/trend-down.svg" alt="" /></button>
+            <button data-flag="flag" data-i18n-title="modal.newTitle" title="<?= ta('modal.newTitle') ?>"><img class="trend tr-new" src="assets/design/legend/trend-new.png" alt="NEW" /></button>
           </div>
         </div>
         <div class="field">
-          <label data-i18n="modal.glow">Выделение</label>
+          <label data-i18n="modal.glow"><?= te('modal.glow') ?></label>
           <div class="seg" id="mGlow">
             <button data-v="" class="active">—</button>
-            <button data-v="gold" class="seg-glow glow-gold" data-i18n="modal.glowGold" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Золотое</button>
-            <button data-v="green" class="seg-glow glow-green" data-i18n="modal.glowGreen" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Зелёное</button>
-            <button data-v="red" class="seg-glow glow-red" data-i18n="modal.glowRed" data-i18n-title="modal.glowTitle" title="Свечение вокруг предмета на тирлисте. В PNG не попадает">✦ Красное</button>
+            <button data-v="gold" class="seg-glow glow-gold" data-i18n="modal.glowGold" data-i18n-title="modal.glowTitle" title="<?= ta('modal.glowTitle') ?>"><?= te('modal.glowGold') ?></button>
+            <button data-v="green" class="seg-glow glow-green" data-i18n="modal.glowGreen" data-i18n-title="modal.glowTitle" title="<?= ta('modal.glowTitle') ?>"><?= te('modal.glowGreen') ?></button>
+            <button data-v="red" class="seg-glow glow-red" data-i18n="modal.glowRed" data-i18n-title="modal.glowTitle" title="<?= ta('modal.glowTitle') ?>"><?= te('modal.glowRed') ?></button>
           </div>
         </div>
       </div>
       <div class="modal-foot">
-        <button class="btn danger" id="mDelete" data-i18n="modal.delete">Удалить</button>
-        <button class="btn primary" id="mSave" data-i18n="modal.done">Готово</button>
+        <button class="btn danger" id="mDelete" data-i18n="modal.delete"><?= te('modal.delete') ?></button>
+        <button class="btn primary" id="mSave" data-i18n="modal.done"><?= te('modal.done') ?></button>
       </div>
     </div>
   </div>
@@ -498,7 +498,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     <div class="modal vmodal">
       <div class="vmodal-head">
         <div class="vmodal-name" id="vName"></div>
-        <button class="icon-btn vmodal-close" id="viewClose" data-i18n-title="modal.close" title="Закрыть">✕</button>
+        <button class="icon-btn vmodal-close" id="viewClose" data-i18n-title="modal.close" title="<?= ta('modal.close') ?>">✕</button>
       </div>
       <div class="vmodal-body">
         <div class="vmodal-icon"><img id="vIcon" alt="" /></div>
@@ -512,7 +512,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
           <div class="vmodal-pill" id="vTagPill" hidden><span class="vmodal-pill-main" id="vTag"></span></div>
         </div>
         <section class="vmodal-panel">
-          <div class="vmodal-panel-title" data-i18n="view.descTitle">ОПИСАНИЕ</div>
+          <div class="vmodal-panel-title" data-i18n="view.descTitle"><?= te('view.descTitle') ?></div>
           <div class="vmodal-panel-text" id="vDesc"></div>
         </section>
         <section class="vmodal-panel" id="vTermsPanel" hidden>
@@ -526,7 +526,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
             <path d="M34.5 6 L63.5 55.5 L5.5 55.5 Z" fill="currentColor" stroke="currentColor"
                   stroke-width="7" stroke-linejoin="round" mask="url(#vTermsWarn)" />
           </svg>
-          <div class="vmodal-panel-title" data-i18n="view.termsTitle">УСЛОВИЯ</div>
+          <div class="vmodal-panel-title" data-i18n="view.termsTitle"><?= te('view.termsTitle') ?></div>
           <div class="vmodal-panel-text" id="vTerms"></div>
         </section>
       </div>
@@ -535,37 +535,37 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 
   <div class="modal-backdrop" id="donateModal" hidden>
     <div class="modal dmodal">
-      <button class="icon-btn dmodal-close" id="donateClose" data-i18n-title="modal.close" title="Закрыть">✕</button>
+      <button class="icon-btn dmodal-close" id="donateClose" data-i18n-title="modal.close" title="<?= ta('modal.close') ?>">✕</button>
       <div class="dmodal-body">
-        <div class="dmodal-title" data-i18n="donate.modalTitle">💜 Поддержать проект</div>
-        <div class="dmodal-sub" data-i18n="donate.modalSub">Спасибо, что помогаешь держать тирлист живым!</div>
+        <div class="dmodal-title" data-i18n="donate.modalTitle"><?= te('donate.modalTitle') ?></div>
+        <div class="dmodal-sub" data-i18n="donate.modalSub"><?= te('donate.modalSub') ?></div>
         <div class="dmodal-links">
           <a class="btn primary dmodal-link" id="donateLinkDA" href="#" target="_blank" rel="noopener">DonationAlerts</a>
-          <a class="btn dmodal-link" id="donateLinkHub" href="#" target="_blank" rel="noopener" data-i18n="donate.linkHub">Все способы (dalink)</a>
+          <a class="btn dmodal-link" id="donateLinkHub" href="#" target="_blank" rel="noopener" data-i18n="donate.linkHub"><?= te('donate.linkHub') ?></a>
         </div>
 
         <div class="dmodal-tools edit-only">
-          <button class="btn small" id="donateEditDA" data-i18n="donate.editDA" data-i18n-title="donate.editDATitle" title="Изменить ссылку DonationAlerts">🔗 DonationAlerts</button>
-          <button class="btn small" id="donateEditHub" data-i18n="donate.editHub" data-i18n-title="donate.editHubTitle" title="Изменить ссылку на хаб (dalink)">🔗 Все способы</button>
-          <label class="btn small" data-i18n-title="donate.qrUploadTitle" title="Загрузить новый QR-код"><span data-i18n="donate.qrUpload">🖼 QR</span><input type="file" id="donateQrFile" accept="image/*" hidden /></label>
-          <button class="btn small ghost" id="donateQrReset" data-i18n="donate.qrReset" data-i18n-title="donate.qrResetTitle" title="Вернуть стандартный QR">Стандартный QR</button>
+          <button class="btn small" id="donateEditDA" data-i18n="donate.editDA" data-i18n-title="donate.editDATitle" title="<?= ta('donate.editDATitle') ?>"><?= te('donate.editDA') ?></button>
+          <button class="btn small" id="donateEditHub" data-i18n="donate.editHub" data-i18n-title="donate.editHubTitle" title="<?= ta('donate.editHubTitle') ?>"><?= te('donate.editHub') ?></button>
+          <label class="btn small" data-i18n-title="donate.qrUploadTitle" title="<?= ta('donate.qrUploadTitle') ?>"><span data-i18n="donate.qrUpload"><?= te('donate.qrUpload') ?></span><input type="file" id="donateQrFile" accept="image/*" hidden /></label>
+          <button class="btn small ghost" id="donateQrReset" data-i18n="donate.qrReset" data-i18n-title="donate.qrResetTitle" title="<?= ta('donate.qrResetTitle') ?>"><?= te('donate.qrReset') ?></button>
         </div>
         <div class="dmodal-qr">
-          <img id="donateQr" src="assets/qr-donate.png?v=1" data-i18n-alt="donate.qrAlt" alt="QR для доната" />
-          <div class="dmodal-qr-cap" data-i18n="donate.qrCaption">Наведи камеру телефона</div>
+          <img id="donateQr" src="assets/qr-donate.png?v=1" data-i18n-alt="donate.qrAlt" alt="<?= ta('donate.qrAlt') ?>" />
+          <div class="dmodal-qr-cap" data-i18n="donate.qrCaption"><?= te('donate.qrCaption') ?></div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="ptn-pop" id="promoPop" hidden role="dialog" aria-modal="true"
-       data-i18n-label="promo.popLabel" aria-label="Рекламное сообщение"
+       data-i18n-label="promo.popLabel" aria-label="<?= ta('promo.popLabel') ?>"
        aria-labelledby="promoPopTitle">
     <div class="ptn-pop-card">
       <button class="ptn-pop-close" id="promoPopClose" type="button"
               data-i18n-label="promo.close" data-i18n-title="promo.close"
-              aria-label="Закрыть рекламу" title="Закрыть рекламу">✕</button>
-      <span class="ptn-chip" data-i18n="ad.chip">РЕКЛАМА</span>
+              aria-label="<?= ta('promo.close') ?>" title="<?= ta('promo.close') ?>">✕</button>
+      <span class="ptn-chip" data-i18n="ad.chip"><?= te('ad.chip') ?></span>
       <div class="ptn-pop-media"><img class="ptn-pop-img" id="promoPopImg" alt="" data-i18n-alt="ad.imageAlt" /></div>
 
       <div class="ptn-pop-title" id="promoPopTitle"></div>

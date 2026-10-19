@@ -15,7 +15,7 @@ $PUB  = $ROOT . '/public_html';
 function tag_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // Все значки — вектор из набора легенды. Имя файла не всегда равно коду

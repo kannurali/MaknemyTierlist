@@ -18,7 +18,7 @@ $PAGES = ['home.php', 'index.php', 'news.php', 'calculator.php', 'profile.php'];
 function pf_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // Ключ обязан лежать в ОБОИХ языковых блоках по одному разу.
