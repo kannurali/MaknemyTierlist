@@ -635,7 +635,7 @@ test('в меню пользователя есть пункт «Мой проф
 
     assert_true(strpos($js, 'var PROFILE_PATH = "/profile";') !== false,
         'адрес профиля объявлен один раз');
-    assert_true(strpos($js, 'mine.href = PROFILE_PATH;') !== false, 'пункт ведёт на /profile');
+    assert_true(strpos($js, 'mine.href = siteUrl(PROFILE_PATH);') !== false, 'пункт ведёт на /profile');
     assert_true(strpos($js, 'mine.setAttribute("data-i18n", "user.mine");') !== false,
         'подпись пункта переводится');
     assert_true(strpos($js, 'menu.insertBefore(mine, first);') !== false, 'пункт попадает в меню');
@@ -670,7 +670,7 @@ test('в меню пользователя есть пункт «Мой проф
 // местоположении, хотя pathname у обеих страниц один.
 test('пункт профиля помечен aria-current только на СВОЁМ профиле', function () use ($PUB) {
     $js = pf_read($PUB . '/js/topbar.js');
-    assert_true(strpos($js, 'location.pathname === PROFILE_PATH && !/[?&]id=/.test(location.search)') !== false,
+    assert_true(strpos($js, 'location.pathname === siteUrl(PROFILE_PATH) && !/[?&]id=/.test(location.search)') !== false,
         'чужой профиль под метку не попадает');
     assert_true(strpos($js, 'if (onMine) mine.setAttribute("aria-current", "page");') !== false,
         'и метка ставится по этому условию');
@@ -869,7 +869,7 @@ test('в меню профиля работает то, что работает,
 
     assert_true(strpos($js, "auth.logout(function () { location.assign('/'); });") !== false,
         'выход зовёт общий модуль и уводит с профиля');
-    assert_true(strpos($js, "auth.switchAccount('/profile');") !== false,
+    assert_true(strpos($js, "auth.switchAccount(siteUrl('/profile'));") !== false,
         'смена аккаунта возвращает на профиль');
 });
 

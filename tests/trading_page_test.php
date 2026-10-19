@@ -260,7 +260,7 @@ test('скрипт панели умеет жить без вердикта и �
     $tn = tp_read($PUB . '/js/trade-new.js');
     assert_true(strpos($tn, '"/api/trade_create.php"') !== false, 'публикация');
     assert_true(strpos($tn, 'document.addEventListener("tc:change"') !== false, 'кнопка следит за панелью');
-    assert_true(strpos($tn, 'location.assign("/trading?posted="') !== false, 'после публикации — в ленту');
+    assert_true(strpos($tn, 'location.assign(I18N.url("/trading?posted="') !== false, 'после публикации — в ленту');
     assert_true(strpos($tn, 'window.MKAuth.startUrl()') !== false, 'вход возвращает сюда же с черновиком');
 });
 

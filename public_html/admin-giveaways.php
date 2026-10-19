@@ -208,7 +208,7 @@ echo <<<HTML
 
 {$i18nDictTag}<script src="/js/i18n.js?v=83"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=11"></script>
+<script src="/js/giveaway.js?v=12"></script>
 <script src="/js/giveaway-admin.js?v=11"></script>
 </body>
 </html>

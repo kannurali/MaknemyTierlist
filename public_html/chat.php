@@ -92,7 +92,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=30" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
@@ -390,11 +390,11 @@ header('Cache-Control: no-cache, must-revalidate');
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=83" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=18" defer></script>
+  <script src="js/chat-page.js?v=19" defer></script>
 
 
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

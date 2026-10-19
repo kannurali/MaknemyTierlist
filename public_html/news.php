@@ -213,7 +213,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=30" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
@@ -392,10 +392,10 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=31" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=32" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
-  <script src="js/gw-card.js?v=1" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=2" fetchpriority="high"></script>
 </body>
 </html>
 <?php endif; ?>

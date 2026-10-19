@@ -86,7 +86,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=30" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
@@ -307,11 +307,11 @@ page_lscache();
 
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/trade-cards.js?v=4" fetchpriority="high"></script>
+  <script src="js/trade-cards.js?v=5" fetchpriority="high"></script>
   <script src="js/trading-page.js?v=9" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=11" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
-  <script src="js/gw-card.js?v=1" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=2" fetchpriority="high"></script>
 </body>
 </html>

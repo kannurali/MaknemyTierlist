@@ -306,7 +306,7 @@ test('имя собеседника ведёт на его профиль, ес�
     $js   = cp_read($PUB . '/js/chat-page.js');
     $i18n = i18n_source();
 
-    assert_true(strpos($js, "a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);") !== false,
+    assert_true(strpos($js, "a.href = siteUrl(PROFILE_PATH + '?id=' + encodeURIComponent(peer.id));") !== false,
         'ссылка ведёт на профиль собеседника');
     assert_true(strpos($js, "var PROFILE_PATH = '/profile';") !== false, 'адрес объявлен один раз');
     assert_true(strpos($page, 'id="ctRoomTitle"') !== false, 'заголовок комнаты на месте');

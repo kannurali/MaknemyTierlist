@@ -4,6 +4,7 @@
 
   var LANG_KEY = 'nexus-lang-v1';
   var i18n = window.I18N;
+  function siteUrl(path) { return i18n && i18n.url ? i18n.url(path) : path; }
 
   var $ = function (id) { return document.getElementById(id); };
   var list      = $('ctList');
@@ -180,7 +181,7 @@
 
     var a = document.createElement('a');
     a.className = 'ct-peer-link';
-    a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);
+    a.href = siteUrl(PROFILE_PATH + '?id=' + encodeURIComponent(peer.id));
     a.textContent = peer.nick;
     var logo = nickLogo(peer);
     if (logo) { a.appendChild(logo); }

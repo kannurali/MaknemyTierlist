@@ -252,6 +252,7 @@
   }, { passive: true });
 
   var PROFILE_PATH = "/profile";
+  function siteUrl(path) { return window.I18N && window.I18N.url ? window.I18N.url(path) : path; }
 
   var AUTH_STATE = "/api/session.php";
 
@@ -365,10 +366,10 @@
     var mine = document.createElement("a");
     mine.className = "mk-user-item";
     mine.setAttribute("role", "menuitem");
-    mine.href = PROFILE_PATH;
+    mine.href = siteUrl(PROFILE_PATH);
     mine.textContent = tx("user.mine");
     mine.setAttribute("data-i18n", "user.mine");
-    var onMine = location.pathname === PROFILE_PATH && !/[?&]id=/.test(location.search);
+    var onMine = location.pathname === siteUrl(PROFILE_PATH) && !/[?&]id=/.test(location.search);
     if (onMine) mine.setAttribute("aria-current", "page");
 
     var prof = document.createElement("a");
@@ -540,7 +541,7 @@
     setUnread(e.detail);
   });
 
-  var gwLink = head ? head.querySelector(".mk-promote[href='/giveaways']") : null;
+  var gwLink = head ? head.querySelector(".mk-promote[href='" + siteUrl("/giveaways") + "']") : null;
   var gwBadge = null;
   var gwAt = 0;
   var GW_COUNT_MS = 5 * 60000;
