@@ -14,7 +14,7 @@ $PUB  = $ROOT . '/public_html';
 function top_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 /** Разметка шапки без комментариев: в комментариях рядом с кнопками разобрано,
@@ -152,7 +152,7 @@ test('профиль — кнопка data-soon внутри плашки нав
 // js/topbar.js по ответу /api/session.php превращает во вход через Roblox
 // или в меню пользователя.
 test('у каждой кнопки data-soon есть подпись и ключ перевода', function () use ($PUB, $PAGES) {
-    $i18n = top_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true(strpos($i18n, '"topbar.soon"') !== false, 'ключ topbar.soon в словаре');
     foreach ($PAGES as $f) {
         $s = top_header($PUB, $f);
@@ -210,7 +210,7 @@ test('шапка липкая, и её высота живёт одним зна
 // 2026-10-10, компьютер — 2026-10-14). Язычок — единственная дорога к
 // разделам, поэтому проверяем и кнопку, и связку с плашкой.
 test('у шапки есть язычок, связанный с плашкой разделов', function () use ($PUB, $PAGES) {
-    $i18n = top_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['topbar.showNav', 'topbar.hideNav'] as $key) {
         assert_true(strpos($i18n, '"' . $key . '"') !== false, "ключ $key в словаре");
     }
@@ -360,7 +360,7 @@ test('кнопка перед Telegram ведёт на /giveaways, «Рекла�
         assert_true(strpos($s, '<span class="mk-pill-text" data-i18n="nav.promote">Реклама</span>') !== false,
             "$f: подпись раздела переводится");
     }
-    $i18n = top_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_eq(2, preg_match_all('/"nav\.promote":\s+"[^"]+"/', $i18n), '«Реклама» на обоих языках');
     assert_eq(2, preg_match_all('/"nav\.giveaways":\s+"[^"]+"/', $i18n), '«Розыгрыши» на обоих языках');
 

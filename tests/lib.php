@@ -103,3 +103,39 @@ function test_db(): PDO {
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
     return $pdo;
 }
+
+// Тесты читают исходники страниц и ищут в них готовую русскую разметку.
+// После перевода шаблонов на te()/ta()/u() в исходнике стоят вызовы вместо
+// текста; здесь они заменяются тем, что дают по-русски, — так проверки видят
+// ту же разметку, что и раньше. Остальной PHP не трогается.
+function i18n_flatten(string $src): string {
+    static $ru = null;
+    if ($ru === null) {
+        $raw = @file_get_contents(dirname(__DIR__) . '/public_html/lang/ru.json');
+        $ru = is_string($raw) ? (json_decode($raw, true) ?: []) : [];
+    }
+    $src = preg_replace_callback("~<\\?= (te|ta)\\('([^']+)'\\) \\?>~", function ($m) use ($ru) {
+        $s = array_key_exists($m[2], $ru) ? (string)$ru[$m[2]] : $m[2];
+        return htmlspecialchars($s, ($m[1] === 'te' ? ENT_NOQUOTES : ENT_QUOTES) | ENT_SUBSTITUTE, 'UTF-8');
+    }, $src);
+    $src = preg_replace("~<\\?= u\\('([^']*)'\\) \\?>~", '$1', $src);
+    $src = preg_replace("~<\\?= i18n_url\\('([^']*)'\\) \\?>~", 'https://maknemy.com$1', $src);
+    $src = str_replace(['<?= i18n_lang() ?>', '<?= i18n_og_locale() ?>'], ['ru', 'ru_RU'], $src);
+    $src = preg_replace("~<\\?= i18n_alternates\\([^\\n]*?\\) \\?>\\n?~", '', $src);
+    $src = str_replace("<?php if (i18n_lang() === 'ru'): ?>\n<script type=\"application/ld+json\">",
+        '<script type="application/ld+json">', $src);
+    $src = preg_replace('~(<script type="application/ld\+json">.*?</script>\n)<\?php endif; \?>\n~s', '$1', $src);
+    return $src;
+}
+
+// Словарь интерфейса раньше лежал прямо в js/i18n.js, и тесты искали ключи в
+// его тексте, отделяя русский блок от английского по строке "\n    en: {".
+// Теперь словари в lang/*.json; здесь они склеиваются в тот же вид.
+function i18n_source(): string {
+    $dir = dirname(__DIR__) . '/public_html/lang';
+    $out = '';
+    foreach (['ru', 'en'] as $lang) {
+        $out .= "\n    $lang: {\n" . (string)file_get_contents("$dir/$lang.json") . "\n";
+    }
+    return $out;
+}

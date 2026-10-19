@@ -241,7 +241,7 @@ test('кнопка бана в чате и страница /admin/bans', functi
     assert_true(strpos($js, "'/api/ban.php?id=' + encodeURIComponent(peer.id)") !== false, 'состояние спрашивается');
     assert_true(strpos($js, "post('/api/ban.php', payload)") !== false, 'бан отправляется');
 
-    $i18n = file_get_contents("$pub/js/i18n.js");
+    $i18n = i18n_source();
     foreach (['chat.ban', 'chat.banAsk', 'chat.banGo', 'chat.unban', 'chat.bannedUntil', 'chat.bannedForever',
               'chat.banConfig', 'chat.banNo', 'chat.banNotReady', 'chat.banFailed', 'chat.banLoading'] as $k) {
         assert_eq(2, substr_count($i18n, "\"$k\":"), "$k: ru и en");

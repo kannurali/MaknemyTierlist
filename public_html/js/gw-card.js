@@ -220,8 +220,10 @@
     }
   };
 
+  function siteUrl(path) { return root.I18N && root.I18N.url ? root.I18N.url(path) : path; }
+
   function hrefFor(place, g) {
-    return place === "stock" ? "/giveaways" : "/giveaways#g" + g.id;
+    return siteUrl(place === "stock" ? "/giveaways" : "/giveaways#g" + g.id);
   }
 
   function shellFor(place) {

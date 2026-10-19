@@ -81,6 +81,56 @@ RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]
 # тот же state.php под новым ключом кеша. Ни одна ссылка сайта так не выглядит.
 RewriteRule \.php/ - [F,L]
 
+# ---------------------------------- Языки ----------------------------------
+# Русский живёт на адресах без приставки, остальные языки — под /<код>
+# (список совпадает с I18N_LANGS в api/lib/i18n.php, проверяет
+# tests/i18n_routes_test.php). Приставку снимает ВНУТРЕННИЙ рероут на
+# обычный адрес раздела: дальше срабатывают правила разделов ниже, а PHP
+# узнаёт язык по REQUEST_URI, который после рероута остаётся исходным.
+# Приставка снимается только у известных разделов — /en/api, /en/admin и
+# прочее отдают 404. Правовые страницы двуязычные на одном адресе, поэтому
+# /en/privacy уводится на /privacy: этот адрес вписан в карточку
+# OAuth-приложения Roblox.
+#
+# Автоопределение — только на адресах без приставки и только для внешнего
+# запроса: у внутреннего рероута /en/x → /x REDIRECT_STATUS уже выставлен, и
+# без этого условия он сам попал бы под редирект и зациклился. Выбор в меню
+# (кука nx_lang) важнее языка браузера; языки СНГ остаются на русском;
+# остальные получают английский. Боты не перенаправляются: Googlebot языка
+# не присылает и должен видеть каждую версию на её адресе. 302, а не 301:
+# браузер не должен запоминать перенаправление.
+#
+# Решение принимается здесь, а не в PHP: CacheLookup выше отдаёт страницу из
+# кеша LiteSpeed, не запуская PHP, а рероуты .htaccess исполняются раньше.
+RewriteCond %{HTTP_COOKIE} (^|;\s*)nx_lang=(ru|en)(;|$)
+RewriteRule ^ - [E=NX_PICK:%2]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*(ru|kk|uz|ky|be|az|hy|ka|tg|tk)([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:ru]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*[a-z]{2,3}([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:en]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
+RewriteCond %{ENV:NX_PICK} ^(en)$
+RewriteRule ^$ /%1 [R=302,L]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
+RewriteCond %{ENV:NX_PICK} ^(en)$
+RewriteRule ^(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+)$ /%1/$1 [R=302,L]
+
+RewriteRule ^(en)/$ /$1 [L,R=301]
+RewriteRule ^(en)/(.+)/$ /$1/$2 [L,R=301]
+RewriteRule ^(en)/(privacy|terms)$ /$2 [L,R=301]
+RewriteRule ^(en)$ /home.php [L]
+RewriteRule ^(en)/(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+)$ /$2 [L]
+
 # "/" отдаёт главную (home.php), а не тирлист: по макету это два разных
 # раздела, и в шапке они стоят отдельными пунктами. Явная директива, а не
 # дефолт хостинга: порядок в дефолтном DirectoryIndex шаред-хостинга —

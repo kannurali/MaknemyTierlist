@@ -6,6 +6,7 @@
   var LINK = "/api/tg_link.php";
   var LANG_KEY = "nexus-lang-v1";
   var JOINED_KEY = "nx-gw-joined-v1";
+  function siteUrl(path) { return root.I18N && root.I18N.url ? root.I18N.url(path) : path; }
   var RESUME_KEY = "nx-gw-resume-v1";
   var FROM_BOT_KEY = "nx-gw-from-bot-v1";
   var FROM_CARD_KEY = "nx-gw-from-card-v1";
@@ -443,7 +444,7 @@
   function winnerItem(w) {
     var li = el("li", "gw-win");
     var a = el("a", "gw-win-user");
-    a.href = "/profile?id=" + encodeURIComponent(w.id);
+    a.href = siteUrl("/profile?id=" + encodeURIComponent(w.id));
     var label = w.display || (w.name ? "@" + w.name : "#" + w.id);
     if (w.avatar) {
       var img = el("img", "gw-win-ava");
@@ -645,7 +646,7 @@
       actions.appendChild(ui.cta);
       if (opts.mode !== "page") {
         var all = el("a", "gw-all", t("gw.all"));
-        all.href = "/giveaways#g" + g.id;
+        all.href = siteUrl("/giveaways#g" + g.id);
         actions.appendChild(all);
       }
       foot.appendChild(actions);

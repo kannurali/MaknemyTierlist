@@ -4,6 +4,7 @@
   const SVG_NS = "http://www.w3.org/2000/svg";
   const API_STATE = "/api/state.php";
   const API_TIERLIST = "/api/tierlist.php";
+  const siteUrl = path => (root.I18N && root.I18N.url ? root.I18N.url(path) : path);
   const API_CLOSE = "/api/trade_close.php";
 
   function el(tag, cls, text) {
@@ -87,9 +88,9 @@
     }
 
     function chatHref(offer) {
-      return "/chat?to=" + encodeURIComponent(offer.author.id)
+      return siteUrl("/chat?to=" + encodeURIComponent(offer.author.id)
         + "&offer=" + encodeURIComponent(offer.id)
-        + "&draft=" + encodeURIComponent(draftFor(offer));
+        + "&draft=" + encodeURIComponent(draftFor(offer)));
     }
 
     function repostHref(offer) {
@@ -97,7 +98,7 @@
       const q = [];
       if (offer.give.length) { q.push("l=" + encodeURIComponent(side(offer.give))); }
       if (offer.want.length) { q.push("r=" + encodeURIComponent(side(offer.want))); }
-      return "/trading/new" + (q.length ? "?" + q.join("&") : "");
+      return siteUrl("/trading/new" + (q.length ? "?" + q.join("&") : ""));
     }
 
     function buildItem(id) {
@@ -195,7 +196,7 @@
       let nick;
       if (st.authed && !offer.mine && env.linkNick !== false) {
         nick = el("a", "tr-nick", offer.author.nick);
-        nick.href = "/profile?id=" + encodeURIComponent(offer.author.id);
+        nick.href = siteUrl("/profile?id=" + encodeURIComponent(offer.author.id));
         nick.title = tx("trade.profile");
       } else {
         nick = el("span", "tr-nick", offer.author.nick);

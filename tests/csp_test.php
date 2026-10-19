@@ -18,7 +18,7 @@ $PUB = dirname(__DIR__) . '/public_html';
 function csp_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) { throw new RuntimeException("не читается: $path"); }
-    return str_replace("\r\n", "\n", $s);
+    return i18n_flatten(str_replace("\r\n", "\n", $s));
 }
 
 // Директивы политики: ['script-src' => ["'self'", ...], ...].

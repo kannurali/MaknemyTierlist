@@ -7,6 +7,7 @@
 
   var i18n = window.I18N;
   var auth = window.MKAuth;
+  function siteUrl(path) { return i18n && i18n.url ? i18n.url(path) : path; }
 
   function $(id) { return document.getElementById(id); }
 
@@ -140,7 +141,7 @@
     if (swap) {
       swap.addEventListener('click', function () {
         leaving();
-        auth.switchAccount('/profile');
+        auth.switchAccount(siteUrl('/profile'));
       });
     }
   } else {

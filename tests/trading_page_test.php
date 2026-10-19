@@ -15,7 +15,7 @@ $NEW  = ['trading.php', 'trade-new.php', 'support.php'];
 function tp_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return str_replace("\r\n", "\n", $s);
+    return i18n_flatten(str_replace("\r\n", "\n", $s));
 }
 
 function tp_header(string $s): string {
@@ -260,7 +260,7 @@ test('скрипт панели умеет жить без вердикта и �
     $tn = tp_read($PUB . '/js/trade-new.js');
     assert_true(strpos($tn, '"/api/trade_create.php"') !== false, 'публикация');
     assert_true(strpos($tn, 'document.addEventListener("tc:change"') !== false, 'кнопка следит за панелью');
-    assert_true(strpos($tn, 'location.assign("/trading?posted="') !== false, 'после публикации — в ленту');
+    assert_true(strpos($tn, 'location.assign(I18N.url("/trading?posted="') !== false, 'после публикации — в ленту');
     assert_true(strpos($tn, 'window.MKAuth.startUrl()') !== false, 'вход возвращает сюда же с черновиком');
 });
 
@@ -300,7 +300,7 @@ test('обращения видны в админке отдельной вкл�
 // --------------------------------------------------------------------------
 
 test('все ключи словаря с новых страниц есть в обоих языках', function () use ($PUB, $NEW) {
-    $i18n = tp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $ru = substr($i18n, 0, strpos($i18n, "\n    en: {"));
     $en = substr($i18n, strpos($i18n, "\n    en: {"));
     $keys = [];
@@ -377,7 +377,7 @@ test('в чужом профиле — живые объявления игро�
     $cards = tp_read($PUB . '/js/trade-cards.js');
     assert_true(strpos($cards, 'env.linkNick !== false') !== false, 'модуль карточек это умеет');
 
-    $i18n = tp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $enAt = strpos($i18n, "\n    en: {");
     foreach (['profile.tradesPeerTitle', 'profile.tradesPeerEmpty'] as $k) {
         assert_eq(1, substr_count(substr($i18n, 0, $enAt), '"' . $k . '":'), "ru: $k");

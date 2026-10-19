@@ -11,7 +11,7 @@ $PUB = realpath(__DIR__ . '/../public_html');
 function dg_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) { throw new RuntimeException("cannot read $path"); }
-    return str_replace("\r\n", "\n", $s);
+    return i18n_flatten(str_replace("\r\n", "\n", $s));
 }
 
 // Последнее условие на строку запроса перед правилом. Шаблон дальше

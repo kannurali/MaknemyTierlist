@@ -11,6 +11,7 @@ if (!defined('CONFIG_PATH')) {
 require_once __DIR__ . '/lib/remember.php';
 require_once __DIR__ . '/lib/halloween.php';
 require_once __DIR__ . '/lib/ban.php';
+require_once __DIR__ . '/lib/i18n.php';
 
 function app_config(): array {
     static $cfg = null;

@@ -13,6 +13,7 @@ admin_page_guard();
 
 header('Content-Type: text/html; charset=utf-8');
 $nav = admin_nav('giveaways');
+$i18nDictTag = i18n_dict_tag('ru', true);
 echo <<<HTML
 <!DOCTYPE html>
 <html lang="ru">
@@ -205,9 +206,9 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/i18n.js?v=82"></script>
+{$i18nDictTag}<script src="/js/i18n.js?v=83"></script>
 <script src="/js/news-blocks.js?v=3"></script>
-<script src="/js/giveaway.js?v=11"></script>
+<script src="/js/giveaway.js?v=12"></script>
 <script src="/js/giveaway-admin.js?v=11"></script>
 </body>
 </html>
