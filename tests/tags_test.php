@@ -48,7 +48,7 @@ test('каждая категория подписана ключом слова
     $s = tag_read($PUB . '/index.php');
     $from = strpos($s, '<div class="seg" id="mType2">');
     $seg  = substr($s, $from, strpos($s, '</div>', $from) - $from);
-    $i18n = tag_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
 
     preg_match_all('/data-i18n="(modal\.cat[A-Za-z]+)"/', $seg, $m);
     assert_eq(6, count($m[1]), 'подписаны все категории, кроме пустой');
@@ -254,7 +254,7 @@ test('точка «оверпрайс» есть в легенде, в мода�
             . preg_quote($img, '/') . '/', $calc) === 1,
             "точка $d в калькуляторе должна брать ту же картинку, что и карточка");
     }
-    $i18n = tag_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_eq(2, preg_match_all('/"legend\.neon":/', $i18n), 'подпись нужна на обоих языках');
 });
 
@@ -306,7 +306,7 @@ test('выделение: цвета в модалке, словаре и app.js
     assert_eq(['', 'gold', 'green', 'red'], $v[1], 'выключено и три цвета');
     assert_true(strpos($s, '<label data-i18n="modal.glow">') !== false, 'поле подписано');
 
-    $i18n = tag_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['gold', 'green', 'red'] as $c) {
         $key = 'modal.glow' . ucfirst($c);
         assert_true(strpos($seg, 'data-v="' . $c . '" class="seg-glow glow-' . $c . '" data-i18n="' . $key . '" data-i18n-title="modal.glowTitle"') !== false,

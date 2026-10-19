@@ -212,7 +212,7 @@ test('лента сообщений объявляется вежливо', func
 
 test('под каждым data-i18n страницы чата есть строка в ru и en', function () use ($PUB) {
     $s    = cp_read($PUB . '/chat.php');
-    $i18n = cp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     preg_match_all('/data-i18n(?:-title|-label|-placeholder)?="([^"]+)"/', $s, $m);
     $keys = array_values(array_unique($m[1]));
     assert_true(count($keys) > 0, 'ключи в разметке нашлись');
@@ -222,7 +222,7 @@ test('под каждым data-i18n страницы чата есть стро�
 // Ключи, которые ставит скрипт: общий проход по разметке их не покрывает,
 // потому что узлов с ними в HTML нет.
 test('строки, которые ставит скрипт, тоже переведены', function () use ($PUB) {
-    $i18n = cp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['chat.with', 'chat.you', 'chat.pick', 'chat.noThreads', 'chat.noMessages',
               'chat.notReady', 'chat.error', 'chat.sendFailed', 'chat.tooFast',
               'chat.reviewSaved', 'chat.reviewFailed', 'chat.pickStars', 'chat.hideList',
@@ -234,7 +234,7 @@ test('строки, которые ставит скрипт, тоже пере�
 // Колокольчик уведомлений в Telegram (api/lib/telegram.php). Его тексты пишет
 // скрипт по состоянию из /api/chat.php, в разметке их нет.
 test('колокольчик: подписи, которые ставит скрипт, переведены', function () use ($PUB) {
-    $i18n = cp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $js   = cp_code(cp_read($PUB . '/js/chat-page.js'));
     foreach (['chat.notifyIntro', 'chat.notifyWait', 'chat.notifyLinked',
               'chat.notifyMod', 'chat.notifyFailed'] as $k) {
@@ -304,7 +304,7 @@ test('в отдаваемых файлах чата нет пояснитель�
 test('имя собеседника ведёт на его профиль, если тот уже есть на сайте', function () use ($PUB) {
     $page = cp_read($PUB . '/chat.php');
     $js   = cp_read($PUB . '/js/chat-page.js');
-    $i18n = cp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
 
     assert_true(strpos($js, "a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);") !== false,
         'ссылка ведёт на профиль собеседника');
@@ -354,7 +354,7 @@ test('панель смайликов подключена к кнопке и о
     assert_true($form !== false && $panel !== false && $form < $panel && $panel < $end,
         'панель внутри формы отправки');
 
-    cp_assert_key(cp_read($PUB . '/js/i18n.js'), 'chat.emoji');
+    cp_assert_key(i18n_source(), 'chat.emoji');
 });
 
 test('набор смайликов без повторов и без пустых мест', function () use ($PUB) {
@@ -799,7 +799,7 @@ test('стикеры подряд от одного человека идут в
 });
 
 test('стикеры: подписи, которые ставит скрипт, переведены', function () use ($PUB) {
-    $i18n = cp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $js   = cp_code(cp_read($PUB . '/js/chat-page.js'));
     foreach (['chat.sticker', 'chat.stickerSend', 'chat.stickerLoading',
               'chat.stickerNone', 'chat.stickerError'] as $k) {
@@ -840,7 +840,7 @@ test('кнопка «удалить чат» стоит в шапке комна
     assert_true(strpos($js, "delBtn.hidden = !peer;") !== false, 'кнопка — только у открытого диалога');
     assert_true(strpos($js, "state.thread = 0;") !== false, 'после удаления фоновая перечитка не открывает удалённое');
 
-    $i18n = cp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['chat.delete', 'chat.deleteConfirm', 'chat.deleteFailed'] as $k) {
         cp_assert_key($i18n, $k);
         assert_true(strpos($js, "'" . $k . "'") !== false || $k === 'chat.delete', "скрипт ставит $k");

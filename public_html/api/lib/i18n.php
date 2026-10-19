@@ -105,3 +105,17 @@ function i18n_alternates(string $path): string {
     }
     return $out;
 }
+
+// Тег словаря интерфейса для js/i18n.js. Номер версии — по содержимому
+// файла: словарь меняется вместе с lang/*.json, и ручной номер легко забыть,
+// а js отдаётся с кешем на год. Перевод строки в конце — вызов стоит в
+// шаблоне отдельной строкой, а PHP съедает перевод строки после закрывающего
+// тега.
+function i18n_dict_tag(?string $lang = null, bool $absolute = false): string {
+    $lang = $lang === null ? i18n_lang() : $lang;
+    if (!in_array($lang, I18N_LANGS, true)) { $lang = I18N_DEFAULT; }
+    $file = __DIR__ . '/../../js/i18n/' . $lang . '.js';
+    $ver = is_file($file) ? substr((string)md5_file($file), 0, 10) : '0';
+    return '<script src="' . ($absolute ? '/' : '') . 'js/i18n/' . $lang . '.js?v=' . $ver
+        . '" fetchpriority="high"></script>' . "\n";
+}

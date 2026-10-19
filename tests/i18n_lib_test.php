@@ -98,4 +98,36 @@ test('bootstrap подключает i18n', function () use ($PUB) {
         "require_once __DIR__ . '/lib/i18n.php';") !== false);
 });
 
+test('тег словаря: язык страницы и номер по содержимому', function () use ($PUB) {
+    $ver = substr(md5_file("$PUB/js/i18n/en.js"), 0, 10);
+    assert_eq('<script src="js/i18n/en.js?v=' . $ver . '" fetchpriority="high"></script>' . "\n", i18n_dict_tag('en'));
+    assert_eq(0, strpos(i18n_dict_tag('ru', true), '<script src="/js/i18n/ru.js?v='), 'абсолютный путь для админки');
+    assert_true(strpos(i18n_dict_tag('xx'), 'js/i18n/ru.js') !== false, 'неизвестный язык — русский');
+    assert_true(strpos(with_uri('/en/stock', 'i18n_dict_tag'), 'js/i18n/en.js') !== false, 'по умолчанию — язык адреса');
+});
+
+test('собранные словари свежие', function () {
+    $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__) . '/tools/i18n_build.php') . ' --check';
+    exec($cmd, $out, $code);
+    assert_eq(0, $code, 'php tools/i18n_build.php --check: ' . implode(' ', $out));
+});
+
+test('список языков в js/i18n.js совпадает с I18N_LANGS', function () use ($PUB) {
+    preg_match('~var LANGS = \[([^\]]*)\];~', (string)file_get_contents("$PUB/js/i18n.js"), $m);
+    assert_true(!empty($m), 'var LANGS найден');
+    $js = array_map(function ($s) { return trim($s, " \"'"); }, explode(',', $m[1] ?? ''));
+    assert_eq(I18N_LANGS, $js);
+});
+
+test('каждая страница с i18n.js подключает словарь прямо перед ним', function () use ($PUB) {
+    foreach (['home', 'index', 'calculator', 'news', 'trading', 'trade-new', 'stock', 'giveaways',
+              'profile', 'chat', 'support', 'promote'] as $p) {
+        $s = str_replace("\r\n", "\n", (string)file_get_contents("$PUB/$p.php"));
+        assert_true((bool)preg_match('~<\?= i18n_dict_tag\(\) \?>\n\s*<script src="js/i18n\.js\?v=~', $s), "$p.php");
+    }
+    $adm = (string)file_get_contents("$PUB/admin-giveaways.php");
+    assert_true(strpos($adm, '{$i18nDictTag}<script src="/js/i18n.js?v=') !== false, 'admin-giveaways.php');
+    assert_true(strpos($adm, "\$i18nDictTag = i18n_dict_tag('ru', true);") !== false, 'admin-giveaways.php: тег собран');
+});
+
 run_tests();

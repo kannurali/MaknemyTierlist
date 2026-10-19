@@ -300,7 +300,7 @@ test('обращения видны в админке отдельной вкл�
 // --------------------------------------------------------------------------
 
 test('все ключи словаря с новых страниц есть в обоих языках', function () use ($PUB, $NEW) {
-    $i18n = tp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $ru = substr($i18n, 0, strpos($i18n, "\n    en: {"));
     $en = substr($i18n, strpos($i18n, "\n    en: {"));
     $keys = [];
@@ -377,7 +377,7 @@ test('в чужом профиле — живые объявления игро�
     $cards = tp_read($PUB . '/js/trade-cards.js');
     assert_true(strpos($cards, 'env.linkNick !== false') !== false, 'модуль карточек это умеет');
 
-    $i18n = tp_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $enAt = strpos($i18n, "\n    en: {");
     foreach (['profile.tradesPeerTitle', 'profile.tradesPeerEmpty'] as $k) {
         assert_eq(1, substr_count(substr($i18n, 0, $enAt), '"' . $k . '":'), "ru: $k");

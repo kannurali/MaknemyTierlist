@@ -401,7 +401,8 @@ page_lscache();
     </p>
 </footer>
 
-<script src="js/i18n.js?v=82" fetchpriority="high"></script>
+<?= i18n_dict_tag() ?>
+<script src="js/i18n.js?v=83" fetchpriority="high"></script>
 <script src="js/home.js?v=7" fetchpriority="high"></script>
 </body>
 </html>

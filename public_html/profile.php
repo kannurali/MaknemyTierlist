@@ -595,7 +595,8 @@ $pfTitle = $pfNick !== ''
     <p class="mk-foot-tagline" data-i18n="site.footTagline"><?= te('site.footTagline') ?></p>
   </footer>
 
-  <script src="js/i18n.js?v=82" fetchpriority="high"></script>
+  <?= i18n_dict_tag() ?>
+  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=5" defer></script>
   <script src="js/profile-chart.js?v=4" defer></script>
 <?php if ($pfTg !== null): ?>

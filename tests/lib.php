@@ -127,3 +127,15 @@ function i18n_flatten(string $src): string {
     $src = preg_replace('~(<script type="application/ld\+json">.*?</script>\n)<\?php endif; \?>\n~s', '$1', $src);
     return $src;
 }
+
+// Словарь интерфейса раньше лежал прямо в js/i18n.js, и тесты искали ключи в
+// его тексте, отделяя русский блок от английского по строке "\n    en: {".
+// Теперь словари в lang/*.json; здесь они склеиваются в тот же вид.
+function i18n_source(): string {
+    $dir = dirname(__DIR__) . '/public_html/lang';
+    $out = '';
+    foreach (['ru', 'en'] as $lang) {
+        $out .= "\n    $lang: {\n" . (string)file_get_contents("$dir/$lang.json") . "\n";
+    }
+    return $out;
+}

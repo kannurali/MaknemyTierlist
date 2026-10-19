@@ -438,7 +438,7 @@ test('полосу оборота печатает только свой про�
     // этой проверки его удаление или опечатка при следующей правке словаря
     // прошли бы незамеченными: сама разметка использует его только на своём
     // профиле, а тест выше это уже проверяет отдельно от словаря.
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     pf_assert_key($i18n, 'profile.chartSum');
 });
 
@@ -513,7 +513,7 @@ test('подписи на чужом профиле не обращаются к
     assert_true(strpos($mine['html'], 'data-i18n="profile.statsNote"') !== false, 'своя подпись под счётчиками');
     assert_true(strpos($peer['html'], 'data-i18n="profile.statsNotePeer"') !== false, 'и чужая');
 
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['profile.aboutTitlePeer', 'profile.statsNotePeer'] as $k) { pf_assert_key($i18n, $k); }
 });
 
@@ -631,7 +631,7 @@ test('аватар в шапке — кнопка меню, одна и та ж�
 // Пункт появляется только у вошедшего — невошедшему показывать нечего.
 test('в меню пользователя есть пункт «Мой профиль» на /profile', function () use ($PUB) {
     $js   = pf_read($PUB . '/js/topbar.js');
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
 
     assert_true(strpos($js, 'var PROFILE_PATH = "/profile";') !== false,
         'адрес профиля объявлен один раз');
@@ -770,7 +770,7 @@ test('словарь подключён одной версией на всех 
 // нужно здесь.
 test('под каждым data-i18n профиля есть строка в ru и en', function () use ($PUB) {
     $s    = pf_read($PUB . '/profile.php');
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
 
     preg_match_all('/data-i18n(?:-title|-label|-placeholder)?="([^"]+)"/', $s, $m);
     // Значение может быть подставлено PHP — например ключ статуса, который
@@ -800,7 +800,7 @@ test('под каждым data-i18n профиля есть строка в ru �
 // тогда, когда нажатие развернёт.
 test('у бургера меню обе подписи состояния переведены', function () use ($PUB) {
     $js   = pf_read($PUB . '/js/profile-page.js');
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['profile.menuCollapse', 'profile.menuExpand'] as $k) {
         assert_true(strpos($js, $k) !== false, "$k используется в скрипте");
         pf_assert_key($i18n, $k);
@@ -974,7 +974,7 @@ test('данные графика продублированы таблицей 
 // Пустое состояние обязано отличать «сделок ещё не было» от «в этом месяце не
 // было»: это разные ответы, и общий на оба вводил бы в заблуждение.
 test('у пустого графика два разных объяснения', function () use ($PUB) {
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['profile.chartNoData', 'profile.chartNoMonth', 'profile.chartError'] as $k) {
         pf_assert_key($i18n, $k);
     }
@@ -1033,7 +1033,7 @@ test('счётчики размечены списком определений'
 test('«о себе» — настоящее поле со счётчиком и сохранением', function () use ($PUB) {
     $s    = pf_read($PUB . '/profile.php');
     $js   = pf_read($PUB . '/js/profile-page.js');
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
 
     assert_true((bool)preg_match('/<textarea class="pf-about-input" id="pfAboutInput"/', $s),
         'поле ввода на месте');
@@ -1104,7 +1104,7 @@ test('невошедшему страница отдаёт предложени�
         'исходное значение берётся из разметки');
     assert_eq(0, substr_count($js, 'loadAbout'),
         'заливки поля по приходу данных больше нет вовсе');
-    pf_assert_key(pf_read($PUB . '/js/i18n.js'), 'profile.login');
+    pf_assert_key(i18n_source(), 'profile.login');
 });
 
 // Единица макета: вся геометрия страницы построена на --u, той же, что у
@@ -1189,7 +1189,7 @@ test('без аватара остаётся силуэт, с аватаром �
 // чисел не было вовсе.
 test('у сердец есть числа и подписи', function () use ($PUB) {
     $s    = pf_read($PUB . '/profile.php');
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true((bool)preg_match('/<b id="pfLikes">/', $s), 'счётчик лайков');
     assert_true((bool)preg_match('/<b id="pfDislikes">/', $s), 'счётчик дизлайков');
     assert_eq(0, substr_count($s, '<div class="pf-react" aria-hidden="true">'),
@@ -1299,7 +1299,7 @@ test('с чужого профиля можно написать человек�
         'кнопка только на чужом профиле');
     assert_true(strpos($page, 'href="/chat?to=<?= htmlspecialchars($pfWho, ENT_QUOTES, \'UTF-8\') ?>"') !== false,
         'ведёт в переписку именно с этим человеком, и номер экранирован');
-    pf_assert_key(pf_read($PUB . '/js/i18n.js'), 'profile.write');
+    pf_assert_key(i18n_source(), 'profile.write');
     assert_true(strpos(pf_read($PUB . '/css/profile.css'), '.pf-write-link') !== false,
         'и у неё есть свой вид');
 
@@ -1314,7 +1314,7 @@ test('с чужого профиля можно написать человек�
 // Он принадлежит человеку, а не странице: его видно и самому Maknemy, и любому
 // вошедшему, кто открыл его профиль, и больше нигде.
 test('«Обо мне и проекте Maknemy» стоит только в профиле владельца', function () use ($PUB) {
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['profile.ownerTitle', 'profile.ownerP1', 'profile.ownerP5', 'profile.ownerList6',
               'profile.ownerSocial', 'profile.ownerTg1', 'profile.ownerTgChat'] as $key) {
         pf_assert_key($i18n, $key);
@@ -1416,16 +1416,16 @@ test('знак у ника рисуют трейдинг, чат и шапка',
 // Нажатие на знак внутри ссылки на профиль не уводит со страницы.
 test('знак у ника подписан: Владелец и Разработчик', function () use ($PUB) {
     require_once $PUB . '/api/lib/nick_logo.php';
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (NICK_LOGOS as $logo) {
         pf_assert_key($i18n, 'nick.' . $logo['role']);
     }
-    assert_true(strpos($i18n, '"nick.owner":             "Владелец"') !== false, 'Maknemy — Владелец');
-    assert_true(strpos($i18n, '"nick.developer":         "Разработчик"') !== false, 'The Fool — Разработчик');
-    assert_true(strpos($i18n, '"nick.owner":             "Owner"') !== false, 'по-английски Owner');
-    assert_true(strpos($i18n, '"nick.developer":         "Developer"') !== false, 'по-английски Developer');
-    assert_true(strpos($i18n, '"nick.designer":          "Дизайнер"') !== false, 'дизайнер — Дизайнер');
-    assert_true(strpos($i18n, '"nick.designer":          "Designer"') !== false, 'по-английски Designer');
+    assert_true((bool)preg_match('~"nick\.owner":\s*"Владелец"~u', $i18n), 'Maknemy — Владелец');
+    assert_true((bool)preg_match('~"nick\.developer":\s*"Разработчик"~u', $i18n), 'The Fool — Разработчик');
+    assert_true((bool)preg_match('~"nick\.owner":\s*"Owner"~', $i18n), 'по-английски Owner');
+    assert_true((bool)preg_match('~"nick\.developer":\s*"Developer"~', $i18n), 'по-английски Developer');
+    assert_true((bool)preg_match('~"nick\.designer":\s*"Дизайнер"~u', $i18n), 'дизайнер — Дизайнер');
+    assert_true((bool)preg_match('~"nick\.designer":\s*"Designer"~', $i18n), 'по-английски Designer');
     assert_eq(['src' => '/assets/design/logo-bolt.png', 'role' => 'designer'], nick_logo('3964875859'),
         'у дизайнера (DANIKtyda) — молния');
 
@@ -1518,7 +1518,7 @@ test('колокольчик профиля: подключённый челов
 });
 
 test('колокольчик профиля: ключи словаря и телефонная раскладка', function () use ($PUB) {
-    $i18n = pf_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['profile.notifyIntro', 'profile.notifyTopics', 'profile.notifyPrices', 'profile.notifyNews',
               'profile.notifySaveError', 'chat.notify', 'chat.notifyConnect', 'chat.notifyOff',
               'chat.notifyLinked', 'chat.notifyMod', 'chat.notifyWait', 'chat.notifyFailed'] as $key) {

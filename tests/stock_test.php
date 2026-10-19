@@ -557,7 +557,7 @@ test('на /stock стоят все рекламные места', function () 
 });
 
 test('подписи страницы есть в обоих языках словаря', function () {
-    $i18n = file_get_contents(__DIR__ . '/../public_html/js/i18n.js');
+    $i18n = i18n_source();
     $page = file_get_contents(__DIR__ . '/../public_html/stock.php') . file_get_contents(__DIR__ . '/../public_html/js/stock-page.js');
     preg_match_all('~(?:data-i18n(?:-label)?="|\bt\("|fmt\(")((?:stock|nav)\.[A-Za-z]+)(?=")~', $page, $m);
     $keys = array_unique($m[1]);

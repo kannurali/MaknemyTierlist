@@ -817,7 +817,7 @@ test('полосу внизу можно свернуть в мини-строк
     assert_true(strpos($css, '@media (max-width: 640px)') !== false, 'тот же порог телефона');
     assert_true(strpos($css, 'prefers-reduced-motion') !== false, 'без анимации для тех, кто её отключил');
 
-    $i18n = read_file_or_fail($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['promo.dockCollapse', 'promo.dockExpand'] as $key) {
         assert_true(substr_count($i18n, '"' . $key . '"') === 2, "$key: подпись на двух языках");
     }

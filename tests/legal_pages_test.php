@@ -245,7 +245,7 @@ test('все публичные страницы ведут в подвале н
 });
 
 test('подписи ссылок переведены на оба языка', function () use ($PUB) {
-    $i18n = legal_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['site.footPrivacy', 'site.footTerms'] as $key) {
         assert_eq(2, substr_count($i18n, '"' . $key . '"'), "$key: ru и en");
     }

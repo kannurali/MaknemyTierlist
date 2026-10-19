@@ -217,7 +217,7 @@ test('все локальные ассеты калькулятора сущес
 
 test('все calc.* ключи, использованные в разметке, определены в i18n.js', function () use ($PUB) {
     $calc = calc_read($PUB . '/calculator.php');
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     preg_match_all('/data-i18n(?:-title|-label|-placeholder)?="(calc\.[a-zA-Z]+)"/', $calc, $m);
     assert_true(count($m[1]) > 5, 'на странице должно быть больше пяти calc.* ключей в разметке');
     foreach (array_unique($m[1]) as $key) {
@@ -265,7 +265,7 @@ test('на доске нет органов управления, которых
 test('пустой слот при наведении показывает рамку и «Выбрать» из словаря', function () use ($PUB) {
     $css  = calc_read($PUB . '/css/calculator.css');
     $js   = calc_read($PUB . '/js/calculator-page.js');
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true(strpos($css, 'content: attr(data-pick)') !== false, 'надпись слота берётся из data-pick');
     assert_true(strpos($css, '.tc-slot.is-empty:hover::after') !== false, 'надпись видна при наведении');
     assert_true(strpos($js, 'btn.dataset.pick = tx("calc.slotPick")') !== false, 'JS кладёт надпись из словаря');
@@ -328,7 +328,7 @@ test('у значка вердикта своё лицо на каждое со�
 });
 
 test('заголовок карточки вердикта переведён на оба языка', function () use ($PUB) {
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $js   = calc_read($PUB . '/js/calculator-page.js');
     foreach (['calc.verdictWinTitle', 'calc.verdictFairTitle', 'calc.verdictLoseTitle'] as $key) {
         assert_eq(2, substr_count($i18n, '"' . $key . '"'), "ключ $key должен быть и в ru, и в en");
@@ -595,7 +595,7 @@ test('в каталоге фильтр тирлиста: пять кнопок �
 
 test('подписи фильтра каталога есть в словаре на обоих языках', function () use ($PUB) {
     $calc = calc_read($PUB . '/calculator.php');
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true((bool)preg_match('/<div class="tc-cat-filters".*?<\/div>/s', $calc, $m), 'группа кнопок фильтра');
     preg_match_all('/data-i18n(?:-title|-label)?="([a-zA-Z.]+)"/', $m[0], $keys);
     assert_eq(11, count(array_unique($keys[1])), 'подпись и подсказка у каждой из пяти кнопок и название группы');
