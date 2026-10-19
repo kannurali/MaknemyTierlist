@@ -74,7 +74,7 @@
   }
 
   function num(n) {
-    try { return Number(n).toLocaleString(GW.lang() === "en" ? "en-US" : "ru-RU"); }
+    try { return Number(n).toLocaleString(root.I18N ? root.I18N.locale(GW.lang()) : "ru-RU"); }
     catch (_) { return String(n); }
   }
 

@@ -116,3 +116,17 @@ test('stripPrefix removes only a known prefix', () => {
     assert.equal(stripPrefix('/de/x'), '/de/x');
     assert.equal(stripPrefix(''), '/');
 });
+
+test('locale maps languages to formatting locales', () => {
+    assert.equal(I18N.locale('ru'), 'ru-RU');
+    assert.equal(I18N.locale('en'), 'en-GB');
+    assert.equal(I18N.locale('xx'), 'ru-RU');
+    assert.equal(I18N.locale(), 'ru-RU');
+});
+
+test('plural follows the language rules and keeps the three dictionary slots', () => {
+    const ru = [1, 2, 5, 11, 21, 22, 25].map(n => I18N.plural(n, 'ru'));
+    assert.deepEqual(ru, ['one', 'few', 'many', 'many', 'one', 'few', 'many']);
+    const en = [1, 2, 5, 21].map(n => I18N.plural(n, 'en'));
+    assert.deepEqual(en, ['one', 'many', 'many', 'many']);
+});

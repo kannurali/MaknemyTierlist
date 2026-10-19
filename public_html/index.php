@@ -151,7 +151,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
@@ -580,18 +580,18 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   </div>
 
   <?= i18n_dict_tag() ?>
-  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
-  <script src="js/content.js?v=3" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/content.js?v=4" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=30" fetchpriority="high"></script>
+  <script src="js/promo.js?v=32" fetchpriority="high"></script>
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=99" fetchpriority="high"></script>
-  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
+  <script src="js/app.js?v=100" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=13" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
-  <script src="js/gw-card.js?v=2" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
 </body>
 </html>

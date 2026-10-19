@@ -42,9 +42,12 @@ test('descFor trims surrounding whitespace', () => {
     assert.equal(descFor({ desc: '  padded  ', descEn: '' }, 'ru'), 'padded');
 });
 
-test('descFor treats an unknown language like the primary (Russian)', () => {
+test('descFor shows English to every non-Russian language, Russian when none is given', () => {
+    // Описания есть только ru/en: немцу или поляку английский понятнее русского.
     const item = { desc: 'основной', descEn: 'secondary' };
-    assert.equal(descFor(item, 'de'), 'основной');
+    assert.equal(descFor(item, 'de'), 'secondary');
+    assert.equal(descFor(item, 'pl'), 'secondary');
+    assert.equal(descFor({ desc: 'основной', descEn: '' }, 'de'), 'основной');
     assert.equal(descFor(item, undefined), 'основной');
 });
 

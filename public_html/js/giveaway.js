@@ -4,7 +4,6 @@
   var API = "/api/giveaways.php";
   var ENTER = "/api/giveaway_enter.php";
   var LINK = "/api/tg_link.php";
-  var LANG_KEY = "nexus-lang-v1";
   var JOINED_KEY = "nx-gw-joined-v1";
   function siteUrl(path) { return root.I18N && root.I18N.url ? root.I18N.url(path) : path; }
   var RESUME_KEY = "nx-gw-resume-v1";
@@ -22,12 +21,7 @@
   var ticker = 0;
 
   function lang() {
-    var i18n = root.I18N;
-    var stored = null;
-    try { stored = localStorage.getItem(LANG_KEY); } catch (_) {}
-    var doc = document.documentElement.lang;
-    if (doc === "ru" || doc === "en") { return doc; }
-    return i18n ? i18n.pickLang(stored, navigator.language) : "ru";
+    return root.I18N ? root.I18N.pageLang() : "ru";
   }
 
   function t(key, vars) {
@@ -44,7 +38,7 @@
   function pick(obj) {
     if (!obj) { return ""; }
     var l = lang();
-    return (l === "en" ? obj.en || obj.ru : obj.ru || obj.en) || "";
+    return (l === "ru" ? obj.ru || obj.en : obj.en || obj.ru) || "";
   }
 
   function testMode() {
@@ -205,7 +199,7 @@
   function date(ts) {
     var opts = { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
     var s;
-    try { s = new Date(ts * 1000).toLocaleString(lang() === "en" ? "en-GB" : "ru-RU", opts); }
+    try { s = new Date(ts * 1000).toLocaleString(root.I18N ? root.I18N.locale() : "ru-RU", opts); }
     catch (_) { s = new Date(ts * 1000).toLocaleString(); }
     return s + " " + t("gw.msk");
   }
@@ -300,11 +294,7 @@
   }
 
   function plural(n) {
-    if (lang() === "en") { return n === 1 ? "one" : "many"; }
-    var a = n % 10, b = n % 100;
-    if (a === 1 && b !== 11) { return "one"; }
-    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
-    return "many";
+    return root.I18N ? root.I18N.plural(n) : "many";
   }
 
   function winnersLabel(n) {

@@ -154,7 +154,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=12" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
@@ -596,19 +596,19 @@ $pfTitle = $pfNick !== ''
   </footer>
 
   <?= i18n_dict_tag() ?>
-  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
-  <script src="js/profile-page.js?v=6" defer></script>
-  <script src="js/profile-chart.js?v=4" defer></script>
+  <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/profile-page.js?v=7" defer></script>
+  <script src="js/profile-chart.js?v=5" defer></script>
 <?php if ($pfTg !== null): ?>
-  <script src="js/profile-notify.js?v=1" defer></script>
+  <script src="js/profile-notify.js?v=2" defer></script>
 <?php endif; ?>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
   <script src="js/trade-cards.js?v=5" defer></script>
   <script src="js/profile-trades.js?v=4" defer></script>
 <?php endif; ?>
-  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=13" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

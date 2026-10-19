@@ -271,7 +271,7 @@
     var d = new Date(sec * 1000);
     var opts = { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
     if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
-    try { return d.toLocaleString(uiLang() === "en" ? "en-GB" : "ru-RU", opts); }
+    try { return d.toLocaleString(window.I18N ? window.I18N.locale() : "ru-RU", opts); }
     catch (_) { return d.toLocaleString(); }
   }
 
