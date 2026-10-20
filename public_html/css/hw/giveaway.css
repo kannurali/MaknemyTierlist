@@ -235,6 +235,8 @@
   align-items: center;
   width: calc(727 * var(--k));
   max-width: 100%;
+  flex-wrap: wrap;
+  row-gap: calc(8 * var(--k));
   min-height: calc(52 * var(--k));
   margin-top: calc(16 * var(--k));
   font-family: var(--gw-poiret);
@@ -258,13 +260,12 @@
   height: calc(38 * var(--k));
   fill: #fff;
 }
-.gw-stat-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0 0 0 calc(19 * var(--k));
+.gw-stat-label {
+  margin-left: calc(19 * var(--k));
+  white-space: nowrap;
 }
-.gw-stat-label { margin-right: calc(16 * var(--k)); }
 .gw-stat-val {
+  margin-left: calc(16 * var(--k));
   color: #bb00ff;
   white-space: nowrap;
 }
@@ -276,7 +277,7 @@
   min-width: calc(168 * var(--k));
   height: calc(52 * var(--k));
   box-sizing: border-box;
-  margin-left: calc(19 * var(--k));
+  margin-left: calc(16 * var(--k));
   padding: 0 calc(20 * var(--k));
   border-radius: calc(32 * var(--k));
   background: #0d0613;
@@ -709,11 +710,15 @@ button.gw-step-label:disabled { cursor: default; }
   .gw-stat,
   .gw-bar { width: 100%; }
   .gw-media { border-radius: 18px; }
-  .gw-stat { margin-top: 14px; }
-  .gw-stat-text { margin-left: calc(14 * var(--k)); }
-  .gw-stat-label { margin-right: calc(10 * var(--k)); }
+  .gw-stat {
+    margin-top: 14px;
+    font-size: calc(24 * var(--k));
+  }
+  .gw-stat-label { margin-left: calc(14 * var(--k)); }
+  .gw-stat-val { margin-left: calc(10 * var(--k)); }
   .gw-stat-pill {
     min-width: 0;
+    margin-left: calc(10 * var(--k));
     padding: 0 calc(18 * var(--k));
   }
   .gw-bar { margin-top: 22px; }

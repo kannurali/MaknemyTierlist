@@ -393,10 +393,8 @@
     var ico = el("span", "gw-stat-ico");
     ico.appendChild(userIcon());
     row.appendChild(ico);
+    row.appendChild(el("span", "gw-stat-label", t("gw.stat")));
     row.appendChild(el("span", "gw-stat-pill", t("gw.statPill")));
-    var text = el("span", "gw-stat-text");
-    text.appendChild(el("span", "gw-stat-label", t("gw.stat")));
-    text.appendChild(document.createTextNode(" "));
     var val = el("span", "gw-stat-val");
     if (g.end_by === "entries" || (!live && g.max_entries)) {
       var need = live ? Math.max(0, (g.max_entries || 0) - (g.entries || 0)) : 0;
@@ -407,8 +405,7 @@
     } else {
       val.textContent = clockText(0);
     }
-    text.appendChild(val);
-    row.appendChild(text);
+    row.appendChild(val);
     return row;
   }
 
