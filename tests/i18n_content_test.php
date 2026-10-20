@@ -336,6 +336,14 @@ test('the deadline stops the job between languages', function () {
     assert_eq([], $calls);
 });
 
+test('the job after a save gets the time budget and never throws', function () {
+    $got = null;
+    i18n_after_save(function (float $deadline) use (&$got) { $got = $deadline; });
+    assert_true($got !== null && abs($got - (microtime(true) + I18N_BG_BUDGET)) < 5, 'deadline is now + budget');
+    i18n_after_save(function (float $deadline) { throw new RuntimeException('Google down'); });
+    assert_true(true, 'the exception stayed inside');
+});
+
 test('forgetting a post removes all its translations', function () {
     $pdo = test_db();
     $id = ic_news($pdo, 'Заголовок', [ic_p('Абзац')]);
