@@ -9,7 +9,8 @@
 
   function install(isAdminFn, doc) {
     var d = doc || (typeof document !== "undefined" ? document : null);
-    if (!d) { return; }
+    if (!d || d.nxProtected) { return; }
+    d.nxProtected = true;
 
     d.addEventListener("contextmenu", function (e) {
       if (isAdminFn() || inEditable(e.target)) { return; }
@@ -40,8 +41,18 @@
     d.body.classList.toggle("protected", !isAdmin);
   }
 
+  function auto() {
+    if (typeof document === "undefined" || !root.location) { return; }
+    if (/^\/admin(\/|$)/.test(root.location.pathname)) { return; }
+    var isAdmin = function () { return !!root.NX_ADMIN_PAGE; };
+    install(isAdmin);
+    var mark = function () { applyClass(isAdmin()); };
+    if (document.body) { mark(); } else { document.addEventListener("DOMContentLoaded", mark); }
+  }
+
   var api = { inEditable: inEditable, install: install, applyClass: applyClass };
 
   if (typeof module === "object" && module.exports) { module.exports = api; }
   root.NX_PROTECT = api;
+  auto();
 })(typeof globalThis !== "undefined" ? globalThis : this);
