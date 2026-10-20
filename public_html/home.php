@@ -288,50 +288,22 @@ page_lscache();
     <svg class="hm-glass-defs" width="0" height="0" aria-hidden="true" focusable="false">
       <filter id="hmGlassCircle" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
         <feImage href="assets/design/home/glass-circle.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2014" xChannelSelector="R" yChannelSelector="G" result="dr" />
-        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.1966" xChannelSelector="R" yChannelSelector="G" result="dg" />
-        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.1918" xChannelSelector="R" yChannelSelector="G" result="db" />
-        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
-        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
-        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
-        <feGaussianBlur in="rgb" stdDeviation="0.0092" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2014" xChannelSelector="R" yChannelSelector="G" result="lens" />
+        <feGaussianBlur in="lens" stdDeviation="0.0092" />
       </filter>
       <filter id="hmGlassSquareLg" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
         <feImage href="assets/design/home/glass-square-lg.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2196" xChannelSelector="R" yChannelSelector="G" result="dr" />
-        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.214" xChannelSelector="R" yChannelSelector="G" result="dg" />
-        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2084" xChannelSelector="R" yChannelSelector="G" result="db" />
-        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
-        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
-        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
-        <feGaussianBlur in="rgb" stdDeviation="0.0243" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2196" xChannelSelector="R" yChannelSelector="G" result="lens" />
+        <feGaussianBlur in="lens" stdDeviation="0.0243" />
       </filter>
       <filter id="hmGlassSquareSm" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
         <feImage href="assets/design/home/glass-square-sm.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3514" xChannelSelector="R" yChannelSelector="G" result="dr" />
-        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3425" xChannelSelector="R" yChannelSelector="G" result="dg" />
-        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3335" xChannelSelector="R" yChannelSelector="G" result="db" />
-        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
-        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
-        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3514" xChannelSelector="R" yChannelSelector="G" />
       </filter>
       <filter id="hmGlassTri" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
         <feImage href="assets/design/home/glass-tri.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0986" xChannelSelector="R" yChannelSelector="G" result="dr" />
-        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0977" xChannelSelector="R" yChannelSelector="G" result="dg" />
-        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0967" xChannelSelector="R" yChannelSelector="G" result="db" />
-        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
-        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
-        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
-        <feGaussianBlur in="rgb" stdDeviation="0.0037" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0986" xChannelSelector="R" yChannelSelector="G" result="lens" />
+        <feGaussianBlur in="lens" stdDeviation="0.0037" />
       </filter>
     </svg>
     <div class="hm-fig hm-fig-square-lg hm-deco hm-anim" aria-hidden="true"></div>
