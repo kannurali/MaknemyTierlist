@@ -37,7 +37,7 @@ page_lscache();
 <script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promote.css?v=1" /><?php else: ?><link rel="stylesheet" href="css/promote.css?v=1" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promote.css?v=2" /><?php else: ?><link rel="stylesheet" href="css/promote.css?v=2" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
@@ -509,7 +509,6 @@ page_lscache();
         <div class="pm-order-copy">
           <h2 class="pm-h2" id="pm-order-h">Заказать рекламу</h2>
           <p>Напишите <a href="https://t.me/mksvtn" target="_blank" rel="noopener">@mksvtn</a> и отправьте ссылку на проект, цель рекламы, бюджет и желаемые даты. Подберём формат и подтвердим свободные места.</p>
-          <p class="pm-order-all">Все рекламные предложения: <a href="https://t.me/mksvtn_ads" target="_blank" rel="noopener">@mksvtn_ads</a>.</p>
         </div>
         <a class="pm-btn" href="https://t.me/mksvtn" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M21.4 3.7 2.9 10.9c-.9.4-.9 1.5 0 1.8l4.5 1.4 1.7 5.4c.2.6 1 .8 1.5.3l2.5-2.4 4.5 3.3c.6.4 1.4.1 1.6-.6l3.2-15.4c.2-.8-.4-1.3-1-1Zm-4.2 3.9-7.9 7 .5 3 .6-2.4 6.8-7.6Z"/></svg>
