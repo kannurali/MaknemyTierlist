@@ -125,6 +125,7 @@ function legal_page_close(): void {
     </p>
   </footer>
 
+  <script src="/js/protect.js?v=3" fetchpriority="high"></script>
 </body>
 </html>
 
