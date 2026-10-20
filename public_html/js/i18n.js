@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
 
-  var LANGS = ["ru", "en"];
+  var LANGS = ["ru", "en", "de", "fr", "es", "it", "pt", "pl", "tr", "uk"];
   var DEFAULT_LANG = "ru";
   var COOKIE = "nx_lang";
   var LEGACY_KEY = "nexus-lang-v1";
@@ -109,11 +109,11 @@
 
   if (root.document && root.document.addEventListener) {
     root.document.addEventListener("click", function (e) {
-      var el = e.target && e.target.closest ? e.target.closest("#langSwitch [data-lang]") : null;
+      var el = e.target && e.target.closest ? e.target.closest("#langSwitch [data-lang-go]") : null;
       if (!el) { return; }
       e.preventDefault();
       e.stopImmediatePropagation();
-      go(el.getAttribute("data-lang"));
+      go(el.getAttribute("data-lang-go"));
     }, true);
     migrate();
   }

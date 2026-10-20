@@ -1,5 +1,6 @@
 {
     "lang.switch": "Interface language",
+    "lang.menu": "Language",
     "lang.ru": "RU",
     "lang.en": "EN",
     "topbar.soon": "In active development",
@@ -816,7 +817,7 @@
     "home.faqTitle": "About Maknemy",
     "home.faqSub": "An independent fan site for Blox Fruits: handy tools, news and reference material.",
     "home.faqQ1": "Who is behind the project?",
-    "home.faqA1p1": "My name is Maxim, and online I go by Maknemy. I am a Roblox creator, blogger and designer: I make news, reviews, guides and other material about Blox Fruits.",
+    "home.faqA1p1": "My name is Maksim, and online I go by Maknemy. I am a Roblox creator, blogger and designer: I make news, reviews, guides and other material about Blox Fruits.",
     "home.faqA1p2": "Maknemy.com is an independent fan project made first and foremost for the Russian-speaking community. It is not an official site of Roblox or of the Blox Fruits developers.",
     "home.faqQ2": "Why is the site called Maknemy?",
     "home.faqA2p1": "Maknemy is my nickname and the name of my own brand, which brings the site, the content and the community together. We are building a recognisable author's project through useful material and handy tools, without loud names that promise easy profit.",

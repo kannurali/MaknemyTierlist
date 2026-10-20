@@ -100,6 +100,7 @@ test('sitemap: все языковые версии и hreflang', function () us
 test('/ads переведена: на английской нет русского текста и noindex', function () {
     $en = nx_render_page('promote.php', '/en/ads');
     $body = preg_replace('~<script\b[^>]*>.*?</script>~s', '', $en);
+    $body = preg_replace('~<ul class="mk-lang-list".*?</ul>~s', '', $body);
     assert_eq(0, preg_match('~[А-Яа-яЁё]~u', $body), 'русского текста нет');
     assert_eq(false, strpos($en, 'noindex'), 'индексируется');
     assert_true(strpos($en, 'Advertising on maknemy.com and in Telegram') !== false, 'заголовок по-английски');

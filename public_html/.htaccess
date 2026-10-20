@@ -98,18 +98,52 @@ RewriteRule \.php/ - [F,L]
 # запроса: у внутреннего рероута /en/x → /x REDIRECT_STATUS уже выставлен, и
 # без этого условия он сам попал бы под редирект и зациклился. Выбор в меню
 # (кука nx_lang) важнее языка браузера; языки СНГ остаются на русском;
-# остальные получают английский. Боты не перенаправляются: Googlebot языка
+# у каждого из языков сайта — своя версия (значение — константа, а не захват:
+# регистр заголовка Accept-Language бывает любым); остальные получают
+# английский. Боты не перенаправляются: Googlebot языка
 # не присылает и должен видеть каждую версию на её адресе. 302, а не 301:
 # браузер не должен запоминать перенаправление.
 #
 # Решение принимается здесь, а не в PHP: CacheLookup выше отдаёт страницу из
 # кеша LiteSpeed, не запуская PHP, а рероуты .htaccess исполняются раньше.
-RewriteCond %{HTTP_COOKIE} (^|;\s*)nx_lang=(ru|en)(;|$)
+RewriteCond %{HTTP_COOKIE} (^|;\s*)nx_lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)(;|$)
 RewriteRule ^ - [E=NX_PICK:%2]
 
 RewriteCond %{ENV:NX_PICK} ^$
 RewriteCond %{HTTP:Accept-Language} ^\s*(ru|kk|uz|ky|be|az|hy|ka|tg|tk)([-_,;\s]|$) [NC]
 RewriteRule ^ - [E=NX_PICK:ru]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*de([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:de]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*fr([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:fr]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*es([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:es]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*it([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:it]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*pt([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:pt]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*pl([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:pl]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*tr([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:tr]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*uk([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:uk]
 
 RewriteCond %{ENV:NX_PICK} ^$
 RewriteCond %{HTTP:Accept-Language} ^\s*[a-z]{2,3}([-_,;\s]|$) [NC]
@@ -118,31 +152,31 @@ RewriteRule ^ - [E=NX_PICK:en]
 RewriteCond %{ENV:REDIRECT_STATUS} ^$
 RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
 RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
-RewriteCond %{ENV:NX_PICK} ^(en)$
+RewriteCond %{ENV:NX_PICK} ^(en|de|fr|es|it|pt|pl|tr|uk)$
 RewriteRule ^$ /%1 [R=302,L]
 
 RewriteCond %{ENV:REDIRECT_STATUS} ^$
 RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
 RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
-RewriteCond %{ENV:NX_PICK} ^(en)$
+RewriteCond %{ENV:NX_PICK} ^(en|de|fr|es|it|pt|pl|tr|uk)$
 RewriteRule ^(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+)$ /%1/$1 [R=302,L]
 
-RewriteRule ^(en)/$ /$1 [L,R=301]
-RewriteRule ^(en)/(.+)/$ /$1/$2 [L,R=301]
-RewriteRule ^(en)/(privacy|terms)$ /$2 [L,R=301]
-RewriteRule ^(en)$ /home.php [L]
-RewriteRule ^(en)/tierlist$ /index.php [L]
-RewriteRule ^(en)/calculator$ /calculator.php [L]
-RewriteRule ^(en)/profile$ /profile.php [L]
-RewriteRule ^(en)/chat$ /chat.php [L]
-RewriteRule ^(en)/trading$ /trading.php [L]
-RewriteRule ^(en)/trading/new$ /trade-new.php [L]
-RewriteRule ^(en)/stock$ /stock.php [L]
-RewriteRule ^(en)/support$ /support.php [L]
-RewriteRule ^(en)/giveaways$ /giveaways.php [L]
-RewriteRule ^(en)/ads$ /promote.php [L]
-RewriteRule ^(en)/news$ /news.php [L]
-RewriteRule ^(en)/news/([0-9]+)$ /news.php?id=$2 [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/$ /$1 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(.+)/$ /$1/$2 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(privacy|terms)$ /$2 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)$ /home.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/tierlist$ /index.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/calculator$ /calculator.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/profile$ /profile.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/chat$ /chat.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/trading$ /trading.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/trading/new$ /trade-new.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/stock$ /stock.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/support$ /support.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/giveaways$ /giveaways.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/ads$ /promote.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news$ /news.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news/([0-9]+)$ /news.php?id=$2 [L]
 
 # "/" отдаёт главную (home.php), а не тирлист: по макету это два разных
 # раздела, и в шапке они стоят отдельными пунктами. Явная директива, а не

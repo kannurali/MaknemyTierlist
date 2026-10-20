@@ -80,7 +80,7 @@ test('t returns the requested language', () => {
 });
 
 test('t falls back to the page language (Russian outside a browser)', () => {
-    assert.equal(t('filters.all', 'de'), SRC.ru['filters.all']);
+    assert.equal(t('filters.all', 'xx'), SRC.ru['filters.all']);
     assert.equal(t('filters.all', undefined), SRC.ru['filters.all']);
 });
 
@@ -132,7 +132,9 @@ test('stripPrefix removes only a known prefix', () => {
     assert.equal(stripPrefix('/en'), '/');
     assert.equal(stripPrefix('/tierlist'), '/tierlist');
     assert.equal(stripPrefix('/ru/x'), '/ru/x');
-    assert.equal(stripPrefix('/de/x'), '/de/x');
+    assert.equal(stripPrefix('/de/x'), '/x');
+    assert.equal(stripPrefix('/uk'), '/');
+    assert.equal(stripPrefix('/xx/x'), '/xx/x');
     assert.equal(stripPrefix(''), '/');
 });
 
@@ -148,4 +150,20 @@ test('plural follows the language rules and keeps the three dictionary slots', (
     assert.deepEqual(ru, ['one', 'few', 'many', 'many', 'one', 'few', 'many']);
     const en = [1, 2, 5, 21].map(n => I18N.plural(n, 'en'));
     assert.deepEqual(en, ['one', 'many', 'many', 'many']);
+});
+
+test('Latin-script languages carry no Cyrillic the English does not have', () => {
+    for (const lang of ['de', 'fr', 'es', 'it', 'pt', 'pl', 'tr']) {
+        for (const [key, value] of Object.entries(SRC[lang])) {
+            if (/[А-Яа-яЁё]/.test(SRC.en[key])) continue;
+            assert.ok(!/[А-Яа-яЁё]/.test(value), `${lang}.${key} contains Cyrillic: ${value}`);
+        }
+    }
+});
+
+test('Ukrainian is a translation, not a copy of Russian', () => {
+    const keys = Object.keys(SRC.ru).filter(k => /[А-Яа-яЁё]{4,}/.test(SRC.ru[k]));
+    const same = keys.filter(k => SRC.uk[k] === SRC.ru[k]);
+    assert.ok(same.length <= keys.length * 0.06, `${same.length} of ${keys.length} uk strings equal ru`);
+    assert.ok(!Object.values(SRC.uk).some(v => /[ыэъё]/i.test(v)), 'uk uses letters that only Russian has');
 });
