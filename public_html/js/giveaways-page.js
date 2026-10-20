@@ -76,8 +76,6 @@
     $("gwPastWrap").hidden = !data.past.length;
     data.past.forEach(function (g) { past.appendChild(GW.card(g, { mode: "page" })); });
 
-    fitView();
-
     if (!focused) {
       focused = true;
       var m = /^#g(\d+)(?:-tg)?$/.exec(location.hash);
@@ -92,38 +90,6 @@
       }
     }
   }
-
-  var WIDE = window.matchMedia ? window.matchMedia("(min-width: 901px)") : null;
-  var fitQueued = 0;
-
-  function fitView() {
-    var wrap = document.querySelector(".gw-wrap");
-    if (!wrap) return;
-    var cards = wrap.querySelectorAll(".gw-card");
-    if (!WIDE || !WIDE.matches || !cards.length) {
-      wrap.style.removeProperty("--gw-view");
-      wrap.style.removeProperty("--gw-card-w");
-      return;
-    }
-    var box = Math.floor(window.innerHeight - 84 * Math.min(1, window.innerWidth / 1443) - 12);
-    var ratio = 0;
-    cards.forEach(function (c) { if (c.offsetWidth) ratio = Math.max(ratio, c.offsetHeight / c.offsetWidth); });
-    var cs = getComputedStyle(wrap);
-    var room = box - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    wrap.style.setProperty("--gw-view", box + "px");
-    if (ratio) wrap.style.setProperty("--gw-card-w", Math.max(560, Math.min(850, Math.floor(room / ratio))) + "px");
-  }
-
-  function queueFit() {
-    if (fitQueued) return;
-    fitQueued = requestAnimationFrame(function () { fitQueued = 0; fitView(); });
-  }
-
-  if (window.ResizeObserver) {
-    var watchSize = new ResizeObserver(queueFit);
-    ["gwLive", "gwPast"].forEach(function (id) { if ($(id)) watchSize.observe($(id)); });
-  }
-  window.addEventListener("resize", queueFit);
 
   function apply(next) {
     if (!i18n) return;
