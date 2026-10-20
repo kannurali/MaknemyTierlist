@@ -819,7 +819,7 @@
       mark(ui.cTg, "ok");
       Object.keys(ui.cChannels || {}).forEach(function (k) { mark(ui.cChannels[k], "ok"); });
       (ui.cOwn || []).forEach(function (li) { mark(li, "ok"); });
-      setCta("gw.congrats", true);
+      setCta("gw.joined", true);
       say(g.end_by === "entries" ? "gw.joinedNoteCount" : g.max_entries ? "gw.joinedNoteMax" : "gw.joinedNote",
         { date: date(g.ends_at), max: g.max_entries });
       if (opts.onJoined) { opts.onJoined(g); }

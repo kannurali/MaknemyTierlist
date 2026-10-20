@@ -605,7 +605,7 @@ $pfTitle = $pfNick !== ''
   <script src="js/profile-trades.js?v=4" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=15" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=16" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
