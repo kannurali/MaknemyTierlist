@@ -531,7 +531,7 @@
   background: var(--gw-off);
   color: var(--gw-off-ink);
   font-family: var(--gw-inter);
-  font-size: calc(12 * var(--k));
+  font-size: max(9px, calc(12 * var(--k)));
   font-weight: 800;
   line-height: 1.21;
   text-align: center;
@@ -692,7 +692,7 @@ button.gw-step-label:disabled { cursor: default; }
   .gw-in { --k: calc(100cqw / 850); }
 }
 
-@container gwc (max-width: 639.98px) {
+@container gwc (max-width: 559.98px) {
   .gw-in {
     --k: min(1px, calc((100cqw - 32px) / 486));
     padding: 16px 16px 20px;
@@ -1109,21 +1109,6 @@ body:has(> .gw-page) {
   min-height: 100dvh;
 }
 body > .gw-page { flex: 1 0 auto; }
-.gw-body {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-}
-.gw-body > .mk-top { flex: 0 0 auto; }
-.gw-body > .mk-foot { display: none; }
-.gw-body > .gw-page {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 0;
-}
-.gw-body .gw-head { flex: 0 0 auto; }
 
 .gw-head {
   position: relative;
@@ -1241,10 +1226,6 @@ body > .gw-page { flex: 1 0 auto; }
 .gw-lid {
   --u: min(1px, calc(100vw / 1443));
   position: relative;
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 0;
   overflow: hidden;
 }
 
@@ -1347,9 +1328,8 @@ body > .gw-page { flex: 1 0 auto; }
 .gw-wrap {
   position: relative;
   z-index: 2;
-  flex: 1 1 0;
   width: calc(896 * var(--u));
-  min-height: 0;
+  height: var(--gw-view, auto);
   box-sizing: border-box;
   margin: 0 auto;
   padding: calc(17 * var(--u)) calc(23 * var(--u)) calc(56 * var(--u));
@@ -1366,6 +1346,7 @@ body > .gw-page { flex: 1 0 auto; }
     mask: linear-gradient(transparent, #000 calc(17 * var(--u)), #000 calc(100% - 28 * var(--u)), transparent);
   }
 }
+.gw-wrap .gw-card { max-width: var(--gw-card-w, 850px); }
 .gw-state {
   margin: 0 0 22px;
   padding: 18px 22px;
@@ -1415,7 +1396,9 @@ body > .gw-page { flex: 1 0 auto; }
   .gw-deco { display: none; }
   .gw-wrap {
     width: 100%;
+    height: auto;
     padding: 8px 12px 24px;
+    overflow: visible;
     scrollbar-gutter: auto;
   }
   .gw-live,

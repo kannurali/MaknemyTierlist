@@ -56,7 +56,7 @@ page_lscache();
 
 <?php echo metrika_counter_html(); ?>
 </head>
-<body class="gw-body">
+<body>
 
   <header class="mk-top">
     <a class="mk-top-brand" href="<?= u('/') ?>">
