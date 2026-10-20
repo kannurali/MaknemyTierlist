@@ -323,15 +323,15 @@ page_lscache();
       </filter>
       <filter id="hmGlassTri" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
         <feImage href="assets/design/home/glass-tri.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3523" xChannelSelector="R" yChannelSelector="G" result="dr" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0986" xChannelSelector="R" yChannelSelector="G" result="dr" />
         <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3171" xChannelSelector="R" yChannelSelector="G" result="dg" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0947" xChannelSelector="R" yChannelSelector="G" result="dg" />
         <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
-        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2818" xChannelSelector="R" yChannelSelector="G" result="db" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0908" xChannelSelector="R" yChannelSelector="G" result="db" />
         <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
         <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
         <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
-        <feGaussianBlur in="rgb" stdDeviation="0.0183" />
+        <feGaussianBlur in="rgb" stdDeviation="0.0037" />
       </filter>
     </svg>
     <div class="hm-fig hm-fig-square-lg hm-deco hm-anim" aria-hidden="true"></div>

@@ -671,7 +671,7 @@
 }
 
 .hm-fig-tri {
-  --hm-fig-blur: calc(2.4 * var(--u));
+  --hm-fig-blur: calc(0.6 * var(--u));
   left: calc(432.15 * var(--u));
   top: calc(536 * var(--u));
   width: calc(109 * var(--u));
