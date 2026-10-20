@@ -4,6 +4,8 @@
   var LANG_KEY = "nexus-lang-v1";
   var POLL_MS = 15000;
   var POLL_TRIES = 12;
+  var PROMO_API = "/api/promo.php";
+  var PROMO_PAGE = "giveaways";
 
   var i18n = window.I18N;
   var GW = window.NX_GW;
@@ -50,7 +52,7 @@
     watch();
   }
 
-  function t(key) { return i18n ? i18n.t(key, lang) : key; }
+  function t(key, vars) { return i18n ? i18n.t(key, lang, vars) : key; }
 
   function render() {
     var live = $("gwLive");
@@ -127,6 +129,63 @@
     }
     apply();
   }
+
+  function fillRail(node, camp) {
+    var promo = window.PROMO;
+    var cre = promo && camp ? promo.creativeFor(camp, "rail") : null;
+    if (!node || !cre || !cre.src) return;
+    node.textContent = "";
+    node.classList.add("has-ad");
+    promo.fitBox(node, cre);
+    var img = document.createElement("img");
+    img.src = promo.srcFor(cre);
+    img.alt = t("ad.imageAlt");
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.draggable = false;
+    node.appendChild(img);
+    promo.stampOn(img, camp, "rail", t);
+    var chip = document.createElement("span");
+    chip.className = "ptn-chip";
+    chip.textContent = t("ad.chip");
+    node.appendChild(chip);
+    if (camp.erid) {
+      var erid = document.createElement("span");
+      erid.className = "ptn-erid";
+      erid.textContent = "erid: " + camp.erid;
+      node.appendChild(erid);
+    }
+    var url = promo.safeHref(camp.href);
+    node.classList.toggle("has-link", !!url);
+    if (url) {
+      var open = function () { window.open(url, "_blank", "noopener"); };
+      node.onclick = open;
+      node.tabIndex = 0;
+      node.setAttribute("role", "link");
+      node.onkeydown = function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      };
+    }
+  }
+
+  function renderRails() {
+    var promo = window.PROMO;
+    if (!promo || !$("gwRailL")) return;
+    fetch(PROMO_API, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+      .then(function (doc) {
+        var now = Date.now();
+        var paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", now, PROMO_PAGE) : [];
+        var house = promo.houseFor("rail", now, PROMO_PAGE);
+        var rails = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+        if (!rails.length) return;
+        fillRail($("gwRailL"), rails[0]);
+        fillRail($("gwRailR"), rails[1] || rails[0]);
+      });
+  }
+
+  renderRails();
 
   if (GW) {
     resume = GW.takeResume();

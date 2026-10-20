@@ -101,7 +101,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=7" /><?php endif; ?>
 <link rel="stylesheet" href="css/gw-card.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -313,7 +313,7 @@ page_lscache();
   <script src="js/trade-cards.js?v=5" fetchpriority="high"></script>
   <script src="js/trading-page.js?v=9" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=2" fetchpriority="high"></script>
 </body>

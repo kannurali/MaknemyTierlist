@@ -15,11 +15,14 @@
   var SESSION_WAIT = 5000;
   var LINK_POLL_MS = 3000;
   var LINK_POLL_FOR = 10 * 60 * 1000;
+  var CROWN = "/assets/design/giveaways/crown.webp";
+  var MEDAL = "/assets/design/giveaways/medal.webp";
 
   var dataPromise = null;
   var sessionPromise = null;
   var tgPromise = null;
   var ticker = 0;
+  var uid = 0;
 
   function lang() {
     var i18n = root.I18N;
@@ -187,19 +190,18 @@
 
   function pad(n) { return n < 10 ? "0" + n : String(n); }
 
-  function clock(node, sec) {
+  function num(n) {
+    try { return n.toLocaleString(lang() === "en" ? "en-US" : "ru-RU"); } catch (_) { return String(n); }
+  }
+
+  function clockText(sec) {
     sec = Math.max(0, Math.floor(sec));
     var d = Math.floor(sec / 86400);
     var h = Math.floor((sec % 86400) / 3600);
     var m = Math.floor((sec % 3600) / 60);
     var s = sec % 60;
-    node.textContent = "";
-    if (d) {
-      node.appendChild(el("span", "gw-clock-n", String(d)));
-      node.appendChild(el("span", "gw-clock-u", t("gw.days", { n: "" }).trim()));
-    }
-    node.appendChild(el("span", null, pad(h) + ":" + pad(m) + ":" + pad(s)));
-    return node;
+    var hms = pad(h) + ":" + pad(m) + ":" + pad(s);
+    return d ? t("gw.days", { n: d }) + " " + hms : hms;
   }
 
   function date(ts) {
@@ -210,16 +212,25 @@
     return s + " " + t("gw.msk");
   }
 
+  function timeShare(from, to, now) {
+    if (!(from > 0) || !(to > from)) { return 0; }
+    return Math.min(1, Math.max(0, (now - from) / (to - from)));
+  }
+
   function tick() {
     var now = Date.now() / 1000;
+    document.querySelectorAll(".gw-bar-fill[data-gw-to]").forEach(function (n) {
+      var share = timeShare(+n.getAttribute("data-gw-from"), +n.getAttribute("data-gw-to"), now);
+      n.style.width = (share * 100).toFixed(2) + "%";
+    });
     document.querySelectorAll("[data-gw-ends]").forEach(function (n) {
       var left = +n.getAttribute("data-gw-ends") - now;
-      var time = n.querySelector(".gw-clock-time");
       if (left > 0) {
-        if (time) { clock(time, left); }
+        n.textContent = clockText(left);
         return;
       }
       n.removeAttribute("data-gw-ends");
+      n.textContent = clockText(0);
       var card = n.closest(".gw-card");
       if (card && card.gwEnded) { card.gwEnded(); }
       document.dispatchEvent(new CustomEvent("mk:gw-ended"));
@@ -231,34 +242,11 @@
     ticker = setInterval(tick, 1000);
   }
 
-  function bindSpoilers(box) {
-    var open = function (e) {
-      var sp = e.target.closest ? e.target.closest(".nw-spoiler") : null;
-      if (!sp || sp.classList.contains("is-open")) { return; }
-      if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") { return; }
-      e.preventDefault();
-      sp.classList.add("is-open");
-      sp.removeAttribute("role");
-      sp.removeAttribute("tabindex");
-    };
-    box.addEventListener("click", open);
-    box.addEventListener("keydown", open);
-  }
-
-  function renderBody(g) {
-    var box = el("div", "gw-body");
-    if (root.NEWSBLOCKS && g.body && g.body.length) {
-      box.appendChild(root.NEWSBLOCKS.renderBlocks(document, g.body, lang()));
-      bindSpoilers(box);
-    }
-    return box;
-  }
-
   var SVG_NS = "http://www.w3.org/2000/svg";
 
   function svg(box, parts, cls) {
     var s = document.createElementNS(SVG_NS, "svg");
-    s.setAttribute("viewBox", box);
+    if (box) { s.setAttribute("viewBox", box); }
     s.setAttribute("aria-hidden", "true");
     s.setAttribute("focusable", "false");
     if (cls) { s.setAttribute("class", cls); }
@@ -281,22 +269,52 @@
     ], "gw-gift" + (cls ? " " + cls : ""));
   }
 
-  function clockIcon() {
-    return svg("0 0 24 24", [
-      ["circle", { cx: "12", cy: "13.5", r: "7.5" }],
-      ["path", { d: "M12 9.5v4l2.6 1.6" }],
-      ["path", { d: "M9.5 2.8h5" }],
-      ["path", { d: "M18.4 6.2l1.5-1.5" }]
-    ], "gw-clock-ico");
+  function userIcon() {
+    return svg("0 0 38 38", [
+      ["path", { d: "M19.0632 3.16699C14.6909 3.16699 11.1465 6.71141 11.1465 11.0837C11.1465 15.4559 14.6909 19.0003 19.0632 19.0003C23.4354 19.0003 26.9798 15.4559 26.9798 11.0837C26.9798 6.71141 23.4354 3.16699 19.0632 3.16699Z" }],
+      ["path", { d: "M14.3134 20.583C11.6807 20.583 9.14896 21.784 7.66525 23.592C6.91222 24.5097 6.38285 25.6451 6.33675 26.9036C6.28968 28.1887 6.75357 29.4431 7.71026 30.5375C10.0418 33.2048 13.7644 34.833 19.0634 34.833C24.3624 34.833 28.085 33.2048 30.4166 30.5375C31.3733 29.4431 31.8372 28.1887 31.7901 26.9036C31.744 25.6451 31.2146 24.5097 30.4616 23.592C28.9779 21.784 26.4461 20.583 23.8134 20.583H14.3134Z" }]
+    ], "gw-stat-svg");
   }
 
-  function peopleIcon(cls) {
-    return svg("0 0 24 24", [
-      ["circle", { cx: "9", cy: "8", r: "3.6" }],
-      ["path", { d: "M2.6 19.5c.7-3.7 3.2-5.7 6.4-5.7s5.7 2 6.4 5.7" }],
-      ["path", { d: "M15.2 4.6a3.6 3.6 0 0 1 0 6.8" }],
-      ["path", { d: "M17.6 14.2c2 .8 3.4 2.6 3.8 5.3" }]
-    ], cls || "gw-ico");
+  function overBadge() {
+    var b = el("span", "gw-over");
+    b.setAttribute("role", "img");
+    b.setAttribute("aria-label", t("gw.over"));
+    b.appendChild(svg("0 0 70 70", [
+      ["path", { "fill-rule": "evenodd", d: "M49.0852 20.2112C41.112 12.238 28.1849 12.238 20.2117 20.2112C12.2385 28.1844 12.2385 41.1115 20.2117 49.0847C28.1849 57.0579 41.112 57.0579 49.0852 49.0847C57.0584 41.1115 57.0584 28.1844 49.0852 20.2112ZM41.8668 27.4296C42.6641 28.2269 42.6641 29.5196 41.8668 30.3169L37.5358 34.6479L41.8668 38.979C42.6641 39.7763 42.6641 41.069 41.8668 41.8663C41.0695 42.6636 39.7768 42.6636 38.9795 41.8663L34.6484 37.5353L30.3174 41.8663C29.5201 42.6636 28.2274 42.6636 27.4301 41.8663C26.6327 41.069 26.6327 39.7763 27.4301 38.979L31.7611 34.6479L27.4301 30.3169C26.6327 29.5196 26.6327 28.2269 27.4301 27.4296C28.2274 26.6322 29.5201 26.6322 30.3174 27.4296L34.6484 31.7606L38.9795 27.4296C39.7768 26.6322 41.0695 26.6322 41.8668 27.4296Z" }]
+    ], "gw-over-svg"));
+    return b;
+  }
+
+  function gradient(id) {
+    var defs = document.createElementNS(SVG_NS, "defs");
+    var g = document.createElementNS(SVG_NS, "linearGradient");
+    g.setAttribute("id", id);
+    g.setAttribute("x1", "0");
+    g.setAttribute("y1", "0");
+    g.setAttribute("x2", "0");
+    g.setAttribute("y2", "1");
+    [["0", "#8400ff"], ["1", "#bb00ff"]].forEach(function (s) {
+      var stop = document.createElementNS(SVG_NS, "stop");
+      stop.setAttribute("offset", s[0]);
+      stop.setAttribute("stop-color", s[1]);
+      g.appendChild(stop);
+    });
+    defs.appendChild(g);
+    return defs;
+  }
+
+  function frame(cls, rx) {
+    var id = "gwGrad" + (++uid);
+    var s = svg("", [], cls);
+    s.appendChild(gradient(id));
+    var r = document.createElementNS(SVG_NS, "rect");
+    r.setAttribute("width", "100%");
+    r.setAttribute("height", "100%");
+    r.setAttribute("rx", rx);
+    r.setAttribute("stroke", "url(#" + id + ")");
+    s.appendChild(r);
+    return s;
   }
 
   function plural(n) {
@@ -305,39 +323,6 @@
     if (a === 1 && b !== 11) { return "one"; }
     if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
     return "many";
-  }
-
-  function winnersLabel(n) {
-    return t("gw.winnersN." + plural(n), { n: n });
-  }
-
-  function renderTally(g) {
-    var n = g.entries || 0;
-    var max = g.max_entries || 0;
-    var line = el("p", "gw-entries");
-    line.appendChild(peopleIcon());
-    line.appendChild(el("span", null, max ? t("gw.entriesOf", { n: n, max: max }) : t("gw.entries", { n: n })));
-    if (!max) { return line; }
-
-    var box = el("div", "gw-tally");
-    var left = Math.max(0, max - n);
-    if (g.phase === "live") {
-      line.appendChild(el("span", "gw-left", left ? t("gw.spotsLeft." + plural(left), { n: left }) : t("gw.spotsNone")));
-    }
-    box.appendChild(line);
-
-    var meter = el("div", "gw-meter");
-    meter.setAttribute("role", "progressbar");
-    meter.setAttribute("aria-valuemin", "0");
-    meter.setAttribute("aria-valuemax", String(max));
-    meter.setAttribute("aria-valuenow", String(Math.min(n, max)));
-    meter.setAttribute("aria-label", t("gw.entriesOf", { n: n, max: max }));
-    var fill = el("span", "gw-meter-fill");
-    fill.style.width = Math.min(100, n / max * 100) + "%";
-    meter.appendChild(fill);
-    box.appendChild(meter);
-    if (left === 0) { box.classList.add("is-full"); }
-    return box;
   }
 
   function prizeCount(p) {
@@ -410,247 +395,309 @@
     return media;
   }
 
+  function renderStat(g) {
+    var live = g.phase === "live";
+    var row = el("div", "gw-stat");
+    var ico = el("span", "gw-stat-ico");
+    ico.appendChild(userIcon());
+    row.appendChild(ico);
+    var text = el("span", "gw-stat-text");
+    text.appendChild(el("span", "gw-stat-label", t("gw.stat")));
+    text.appendChild(document.createTextNode(" "));
+    var val = el("span", "gw-stat-val");
+    if (g.end_by === "entries" || (!live && g.max_entries)) {
+      var need = live ? Math.max(0, (g.max_entries || 0) - (g.entries || 0)) : 0;
+      val.textContent = t("gw.peopleLeft." + plural(need), { n: num(need) });
+    } else if (live) {
+      val.setAttribute("data-gw-ends", String(g.ends_at));
+      val.textContent = clockText(g.ends_at - Date.now() / 1000);
+    } else {
+      val.textContent = clockText(0);
+    }
+    text.appendChild(val);
+    row.appendChild(text);
+    row.appendChild(el("span", "gw-stat-pill", t("gw.statPill")));
+    return row;
+  }
+
+  function renderBar(g) {
+    var n = g.entries || 0;
+    var max = g.max_entries || 0;
+    var bar = el("div", "gw-bar");
+    var fill = el("span", "gw-bar-fill");
+    var share = 1;
+    if (g.phase === "live" && max) {
+      share = Math.min(1, n / max);
+      bar.setAttribute("role", "progressbar");
+      bar.setAttribute("aria-valuemin", "0");
+      bar.setAttribute("aria-valuemax", String(max));
+      bar.setAttribute("aria-valuenow", String(Math.min(n, max)));
+      bar.setAttribute("aria-label", t("gw.entriesOf", { n: n, max: max }));
+    } else if (g.phase === "live") {
+      share = timeShare(g.published_at, g.ends_at, Date.now() / 1000);
+      fill.setAttribute("data-gw-from", String(g.published_at || 0));
+      fill.setAttribute("data-gw-to", String(g.ends_at));
+      bar.setAttribute("aria-hidden", "true");
+    } else {
+      bar.setAttribute("aria-hidden", "true");
+    }
+    fill.style.width = (share * 100).toFixed(2) + "%";
+    bar.appendChild(fill);
+    return bar;
+  }
+
+  function winnerLabel(w) {
+    return w.display || (w.name ? "@" + w.name : "#" + w.id);
+  }
+
+  function renderWins(list) {
+    var many = list.length > 1;
+    var box = el("div", "gw-wins" + (many ? " is-many" : ""));
+    if (!list.length) {
+      box.appendChild(el("span", "gw-win-none", t("gw.noWinner")));
+      return box;
+    }
+    var faces = many ? el("div", "gw-win-faces") : box;
+    var shown = list.length > 6 ? list.slice(0, 5) : list;
+    shown.forEach(function (w) {
+      var label = winnerLabel(w);
+      var a = el("a", "gw-win");
+      a.href = siteUrl("/profile?id=" + encodeURIComponent(w.id));
+      if (w.avatar) {
+        var img = el("img", "gw-win-ava");
+        img.src = w.avatar;
+        img.alt = "";
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        a.appendChild(img);
+      } else {
+        a.appendChild(el("span", "gw-win-ava is-empty", label.replace(/^[@#]/, "").charAt(0).toUpperCase()));
+      }
+      if (many) {
+        a.title = label;
+        a.setAttribute("aria-label", label);
+      } else {
+        a.appendChild(el("span", "gw-win-name", label));
+      }
+      faces.appendChild(a);
+    });
+    if (shown.length < list.length) {
+      var rest = list.slice(shown.length).map(winnerLabel).join(", ");
+      var more = el("span", "gw-win-ava gw-win-more", "+" + (list.length - shown.length));
+      more.title = rest;
+      more.setAttribute("aria-label", rest);
+      faces.appendChild(more);
+    }
+    if (many) { box.appendChild(faces); }
+    box.appendChild(el("span", "gw-win-line"));
+    return box;
+  }
+
   function renderPrizes(g) {
     var prizes = g.prizes || [];
-    var sec = el("section", "gw-prize-sec");
-    var head = el("div", "gw-h-row");
-    head.appendChild(el("h3", "gw-h", t("gw.prizes")));
-    if (prizes.length > 1) {
-      var total = prizes.reduce(function (s, p) { return s + prizeCount(p); }, 0);
-      head.appendChild(el("span", "gw-h-aside", winnersLabel(total)));
+    var drawn = g.phase === "drawn" && g.winners && g.winners.length;
+    var groups = prizes.map(function () { return []; });
+    if (drawn) {
+      g.winners.forEach(function (w) { if (groups[w.prize]) { groups[w.prize].push(w); } });
     }
-    sec.appendChild(head);
-    var kind = prizes.length === 1 ? " is-solo" : prizes.length > 6 ? " is-many" : "";
-    var list = el("ul", "gw-prizes" + kind);
-    prizes.forEach(function (p) {
+    var list = el("ul", "gw-prizes");
+    list.setAttribute("aria-label", t(drawn ? "gw.winners" : "gw.prizes"));
+    prizes.forEach(function (p, i) {
       var li = el("li", "gw-prize");
+      var place = el("img", "gw-place" + (i ? "" : " is-first"));
+      place.src = i ? MEDAL : CROWN;
+      place.alt = "";
+      place.width = i ? 33 : 40;
+      place.height = 38;
+      place.decoding = "async";
+      li.appendChild(place);
+      if (drawn) { li.appendChild(renderWins(groups[i])); }
+      var tile = el("div", "gw-prize-tile");
+      tile.appendChild(prizePic(p, "gw-prize-pic"));
       var n = prizeCount(p);
-      li.appendChild(prizePic(p, "gw-prize-pic"));
-      if (n > 1) {
-        var badge = el("span", "gw-prize-count", String.fromCharCode(215) + n);
-        badge.setAttribute("aria-hidden", "true");
-        li.appendChild(badge);
-      }
-      var text = el("span", "gw-prize-text");
-      text.appendChild(el("span", "gw-prize-name", p.name));
-      text.appendChild(el("span", "gw-prize-win", winnersLabel(n)));
-      li.appendChild(text);
+      tile.appendChild(el("span", "gw-prize-name", p.name + (n > 1 ? " " + String.fromCharCode(215) + n : "")));
+      li.appendChild(tile);
       list.appendChild(li);
     });
-    sec.appendChild(list);
-    return sec;
-  }
-
-  function winnerItem(w) {
-    var li = el("li", "gw-win");
-    var a = el("a", "gw-win-user");
-    a.href = siteUrl("/profile?id=" + encodeURIComponent(w.id));
-    var label = w.display || (w.name ? "@" + w.name : "#" + w.id);
-    if (w.avatar) {
-      var img = el("img", "gw-win-ava");
-      img.src = w.avatar;
-      img.alt = "";
-      img.loading = "lazy";
-      img.referrerPolicy = "no-referrer";
-      a.appendChild(img);
-    } else {
-      a.appendChild(el("span", "gw-win-ava is-empty", label.replace(/^[@#]/, "").charAt(0).toUpperCase()));
-    }
-    var names = el("span", "gw-win-names");
-    names.appendChild(el("span", "gw-win-name", label));
-    if (w.display && w.name && w.display !== w.name) {
-      names.appendChild(el("span", "gw-win-handle", "@" + w.name));
-    }
-    a.appendChild(names);
-    li.appendChild(a);
-    return li;
-  }
-
-  function renderWinners(g) {
-    var sec = el("section", "gw-winners");
-    sec.appendChild(el("h3", "gw-h", t("gw.winners")));
-    var prizes = g.prizes || [];
-    var groups = prizes.map(function (p) { return { p: p, list: [] }; });
-    var loose = [];
-    (g.winners || []).forEach(function (w) {
-      var gr = groups[w.prize];
-      (gr ? gr.list : loose).push(w);
-    });
-    if (loose.length) { groups.push({ p: null, list: loose }); }
-    var box = el("ul", "gw-win-groups");
-    groups.forEach(function (gr) {
-      var li = el("li", "gw-win-group");
-      if (gr.p) {
-        var head = el("div", "gw-win-prize");
-        head.appendChild(prizePic(gr.p, "gw-win-pic"));
-        head.appendChild(el("span", "gw-win-prize-name", gr.p.name));
-        if (prizeCount(gr.p) > 1) {
-          head.appendChild(el("span", "gw-win-prize-n", String.fromCharCode(215) + prizeCount(gr.p)));
-        }
-        li.appendChild(head);
-      }
-      if (gr.list.length) {
-        var ul = el("ul", "gw-win-list");
-        gr.list.forEach(function (w) { ul.appendChild(winnerItem(w)); });
-        li.appendChild(ul);
-      } else {
-        li.appendChild(el("p", "gw-win-none", t("gw.noWinner")));
-      }
-      box.appendChild(li);
-    });
-    sec.appendChild(box);
-    return sec;
+    if (!drawn) { return list; }
+    var box = el("div", "gw-wins-box");
+    box.appendChild(frame("gw-wins-frame", "26"));
+    box.appendChild(list);
+    return box;
   }
 
   function safeUrl(u) {
     return typeof u === "string" && /^https?:\/\/\S+$/i.test(u) ? u : "";
   }
 
-  function condItem(key, label, url, btn) {
-    var li = el("li", "gw-cond-item");
-    li.setAttribute("data-k", key);
-    li.appendChild(el("span", "gw-cond-mark"));
-    url = safeUrl(url);
-    if (!url) {
-      li.appendChild(el("span", "gw-cond-text", label));
-      return li;
+  var PATH_L = "M0 0C6.339 44.187 95.354 19.611 108 52";
+  var PATH_R = "M108 0C101.661 44.187 12.646 19.611 0 52";
+
+  function pathSvg(d) {
+    var id = "gwGrad" + (++uid);
+    var s = svg("0 0 108 52", [
+      ["path", { "class": "gw-path-base", d: d }],
+      ["path", { "class": "gw-path-fill", d: d, pathLength: "100", stroke: "url(#" + id + ")" }]
+    ], "gw-path");
+    s.insertBefore(gradient(id), s.firstChild);
+    return s;
+  }
+
+  function paint(list) {
+    if (!list) { return; }
+    var items = list.children;
+    for (var i = 0; i < items.length - 1; i++) {
+      var s = items[i].querySelector(".gw-path");
+      if (!s) { continue; }
+      var hi = items[i].classList.contains("is-ok");
+      var lo = items[i + 1].classList.contains("is-ok");
+      var fill = s.querySelector(".gw-path-fill");
+      s.setAttribute("data-fill", hi && lo ? "both" : lo ? "low" : hi ? "high" : "none");
+      fill.setAttribute("stroke-dasharray", "50 100");
+      fill.setAttribute("stroke-dashoffset", lo && !hi ? "-50" : "0");
     }
-    li.classList.add("has-link");
-    var a = el("a", "gw-cond-text", label);
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    li.appendChild(a);
-    var b = el("span", "gw-sub", btn);
-    b.setAttribute("aria-hidden", "true");
-    li.appendChild(b);
-    return li;
-  }
-
-  function renderConditions(g, ui) {
-    var sec = el("section", "gw-cond");
-    sec.appendChild(el("h3", "gw-h", t("gw.conditions")));
-    var list = el("ul", "gw-cond-list");
-    ui.cLogin = condItem("login", t("gw.condLogin"));
-    ui.cTg = condItem("tg", t("gw.condTg"));
-    list.appendChild(ui.cLogin);
-    list.appendChild(ui.cTg);
-    ui.cChannels = {};
-    (g.channels || []).forEach(function (c) {
-      var li = condItem("ch", t("gw.condChannel", { title: c.title }), c.url, t("gw.subscribe"));
-      ui.cChannels[c.id] = li;
-      list.appendChild(li);
-    });
-    ui.cOwn = [];
-    var seen = readConds();
-    (g.conds || []).forEach(function (c, i) {
-      var li = condItem("own", pick(c.text), c.url, pick(c.btn) || t("gw.subscribe"));
-      if (c.chat) { li.setAttribute("data-chat", c.chat); }
-      var key = g.id + ":" + i;
-      if (g.id && seen.indexOf(key) >= 0) { mark(li, "ok"); }
-      var a = li.querySelector("a");
-      if (a) {
-        a.addEventListener("click", function () {
-          mark(li, "ok");
-          if (g.id) { markCond(key); }
-        });
-      }
-      ui.cOwn.push(li);
-      list.appendChild(li);
-    });
-    sec.appendChild(list);
-    return sec;
-  }
-
-  function condAction(li, label, onClick) {
-    var b = el("button", "gw-sub gw-sub-btn", label);
-    b.type = "button";
-    b.hidden = true;
-    b.addEventListener("click", onClick);
-    li.classList.add("has-btn");
-    li.appendChild(b);
-    return b;
   }
 
   function mark(li, state) {
     if (!li) { return; }
     li.classList.toggle("is-ok", state === "ok");
     li.classList.toggle("is-bad", state === "bad");
+    paint(li.parentNode);
+  }
+
+  function stepList(g) {
+    var out = [{ k: "login", label: t("gw.condLogin") }, { k: "tg", label: t("gw.condTg") }];
+    (g.channels || []).forEach(function (c) { out.push({ k: "ch", id: c.id, label: c.title, url: c.url }); });
+    (g.conds || []).forEach(function (c, i) { out.push({ k: "own", i: i, label: pick(c.text), url: c.url, chat: c.chat }); });
+    return out;
+  }
+
+  function renderSteps(g, ui) {
+    var live = g.phase === "live";
+    var steps = stepList(g);
+    var n = steps.length;
+    var list = el("ol", "gw-steps");
+    list.setAttribute("aria-label", t("gw.conditions"));
+    ui.cChannels = {};
+    ui.cOwn = [];
+    var seen = readConds();
+    steps.forEach(function (s, idx) {
+      var no = n - idx;
+      var li = el("li", "gw-step " + (no % 2 ? "is-l" : "is-r"));
+      li.setAttribute("data-k", s.k);
+      var circle = el("span", "gw-step-n", String(no));
+      circle.setAttribute("aria-hidden", "true");
+      li.appendChild(circle);
+      var url = live ? safeUrl(s.url) : "";
+      var lab;
+      if (url) {
+        lab = el("a", "gw-step-label", s.label);
+        lab.href = url;
+        lab.target = "_blank";
+        lab.rel = "noopener noreferrer";
+      } else if (live && (s.k === "login" || s.k === "tg")) {
+        lab = el("button", "gw-step-label", s.label);
+        lab.type = "button";
+        lab.disabled = true;
+      } else {
+        lab = el("span", "gw-step-label", s.label);
+      }
+      li.appendChild(lab);
+      if (idx < n - 1) { li.appendChild(pathSvg(no % 2 ? PATH_L : PATH_R)); }
+      if (s.k === "login") { ui.cLogin = li; }
+      if (s.k === "tg") { ui.cTg = li; }
+      if (s.k === "ch") { ui.cChannels[s.id] = li; }
+      if (s.k === "own") {
+        if (s.chat) { li.setAttribute("data-chat", s.chat); }
+        var key = g.id + ":" + s.i;
+        if (live && g.id && seen.indexOf(key) >= 0) { li.classList.add("is-ok"); }
+        if (url) {
+          lab.addEventListener("click", function () {
+            mark(li, "ok");
+            if (g.id) { markCond(key); }
+          });
+        }
+        ui.cOwn.push(li);
+      }
+      list.appendChild(li);
+    });
+    paint(list);
+    fitLabels(list);
+    return list;
+  }
+
+  function fitLabels(list) {
+    var run = function () {
+      if (!list.isConnected) { return; }
+      list.querySelectorAll(".gw-step-label").forEach(function (lab) {
+        lab.style.width = "";
+        var range = document.createRange();
+        range.selectNodeContents(lab);
+        var rects = range.getClientRects();
+        if (rects.length < 2) { return; }
+        var wide = 0;
+        for (var i = 0; i < rects.length; i++) { wide = Math.max(wide, rects[i].width); }
+        var fs = parseFloat(getComputedStyle(lab).fontSize) || 12;
+        lab.style.width = (wide / fs + 10 / 12 + 0.05).toFixed(3) + "em";
+      });
+    };
+    requestAnimationFrame(function () {
+      (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(run);
+    });
   }
 
   function card(g, opts) {
     opts = opts || {};
     var ui = {};
     var live = g.phase === "live";
-    var root_ = el("article", "gw-card " + (opts.mode === "page" ? "is-page" : "is-pop") + (live ? " has-foot" : ""));
+    var page = opts.mode === "page";
+    var root_ = el("article", "gw-card " + (page ? "is-page" : "is-pop"));
     root_.id = "g" + g.id;
     root_.setAttribute("data-phase", g.phase);
 
-    var aside = el("div", "gw-aside");
-    aside.appendChild(renderMedia(g));
-    root_.appendChild(aside);
-
-    var content = el("div", "gw-content");
-    var main = el("div", "gw-main");
-    var head = el("div", "gw-head-block");
+    var box = el("div", "gw-in");
     var title = el("h2", "gw-title", pick(g.title));
     title.id = "gwTitle" + g.id;
-    head.appendChild(title);
+    box.appendChild(title);
 
-    if (live && g.end_by === "entries") {
-      var need = Math.max(0, (g.max_entries || 0) - (g.entries || 0));
-      var cnt = el("div", "gw-clock is-count");
-      cnt.appendChild(peopleIcon("gw-clock-ico"));
-      cnt.appendChild(el("span", "gw-clock-label", t("gw.endsIn")));
-      cnt.appendChild(el("span", "gw-clock-time", t("gw.peopleLeft." + plural(need), { n: need })));
-      head.appendChild(cnt);
-    } else if (live) {
-      var clk = el("div", "gw-clock");
-      clk.setAttribute("data-gw-ends", String(g.ends_at));
-      clk.appendChild(clockIcon());
-      clk.appendChild(el("span", "gw-clock-label", t("gw.endsIn")));
-      clk.appendChild(clock(el("span", "gw-clock-time"), g.ends_at - Date.now() / 1000));
-      head.appendChild(clk);
-      ui.clock = clk;
-    } else {
-      head.appendChild(el("p", "gw-when", t("gw.endedAt", { date: date(g.ends_at) })));
+    var media = renderMedia(g);
+    if (!live) { media.appendChild(overBadge()); }
+    box.appendChild(media);
+    box.appendChild(renderStat(g));
+    box.appendChild(renderBar(g));
+
+    var grid = el("div", "gw-grid");
+    var left = el("div", "gw-left");
+    if (g.prizes && g.prizes.length) { left.appendChild(renderPrizes(g)); }
+    grid.appendChild(left);
+    grid.appendChild(renderSteps(g, ui));
+
+    var foot = el("div", "gw-foot");
+    ui.msg = el("p", "gw-msg");
+    ui.msg.setAttribute("role", "status");
+    ui.msg.setAttribute("aria-live", "polite");
+    if (live) {
+      ui.cta = el("button", "gw-cta");
+      ui.cta.type = "button";
+      ui.cta.appendChild(frame("gw-cta-frame", "999"));
+      ui.ctaText = el("span", "gw-cta-text", t("gw.join"));
+      ui.cta.appendChild(ui.ctaText);
+      ui.cta.setAttribute("data-key", "gw.join");
+      foot.appendChild(ui.cta);
     }
-    aside.appendChild(head);
-
-    var page = opts.mode === "page";
-    var drawn = g.phase === "drawn" && g.winners && g.winners.length;
-    if (drawn) {
-      main.appendChild(renderWinners(g));
-      main.appendChild(renderBody(g));
-    } else {
-      if (g.prizes && g.prizes.length) { main.appendChild(renderPrizes(g)); }
-      main.appendChild(renderBody(g));
-      if (live) { main.appendChild(renderConditions(g, ui)); }
-      if (g.phase === "drawn") { main.appendChild(el("p", "gw-note", t("gw.noWinners"))); }
-      if (g.phase === "ended") { main.appendChild(el("p", "gw-note", t("gw.waitDraw"))); }
+    foot.appendChild(ui.msg);
+    if (live && !page) {
+      var all = el("a", "gw-all", t("gw.all"));
+      all.href = siteUrl("/giveaways#g" + g.id);
+      foot.appendChild(all);
     }
-
-    (page && live ? aside : main).appendChild(renderTally(g));
-    content.appendChild(main);
-    root_.appendChild(content);
+    if (g.phase === "drawn" && !(g.winners && g.winners.length)) { ui.msg.textContent = t("gw.noWinners"); }
+    if (g.phase === "ended") { ui.msg.textContent = t("gw.waitDraw"); }
+    if (live || ui.msg.textContent) { left.appendChild(foot); }
+    box.appendChild(grid);
+    root_.appendChild(box);
 
     if (live) {
-      var foot = el("footer", "gw-foot");
-      ui.msg = el("p", "gw-msg");
-      ui.msg.setAttribute("role", "status");
-      ui.msg.setAttribute("aria-live", "polite");
-      ui.cta = el("button", "gw-cta", t("gw.join"));
-      ui.cta.type = "button";
-      foot.appendChild(ui.msg);
-      var actions = el("div", "gw-actions");
-      actions.appendChild(ui.cta);
-      if (opts.mode !== "page") {
-        var all = el("a", "gw-all", t("gw.all"));
-        all.href = siteUrl("/giveaways#g" + g.id);
-        actions.appendChild(all);
-      }
-      foot.appendChild(actions);
-      (page ? aside : content).appendChild(foot);
       if (opts.preview) { ui.cta.disabled = true; }
       else { wire(root_, g, ui, opts); }
     }
@@ -660,8 +707,10 @@
 
   function wire(cardEl, g, ui, opts) {
     var st = { joined: false, busy: false, tgUrl: "", poll: 0, pollUntil: 0, user: null };
-    ui.bLogin = condAction(ui.cLogin, t("gw.condLoginBtn"), goLogin);
-    ui.bTg = condAction(ui.cTg, t("gw.condTgBtn"), openTg);
+    ui.bLogin = ui.cLogin.querySelector("button");
+    ui.bTg = ui.cTg.querySelector("button");
+    ui.bLogin.addEventListener("click", goLogin);
+    ui.bTg.addEventListener("click", openTg);
 
     function say(key, vars) {
       ui.msg.textContent = key ? t(key, vars) : "";
@@ -669,7 +718,7 @@
     }
 
     function setCta(key, disabled) {
-      ui.cta.textContent = t(key);
+      ui.ctaText.textContent = t(key);
       ui.cta.disabled = !!disabled;
       ui.cta.setAttribute("data-key", key);
     }
@@ -677,11 +726,13 @@
     function showJoined() {
       st.joined = true;
       cardEl.classList.add("is-joined");
+      ui.bLogin.disabled = true;
+      ui.bTg.disabled = true;
       mark(ui.cLogin, "ok");
       mark(ui.cTg, "ok");
       Object.keys(ui.cChannels || {}).forEach(function (k) { mark(ui.cChannels[k], "ok"); });
       (ui.cOwn || []).forEach(function (li) { mark(li, "ok"); });
-      setCta("gw.joined", true);
+      setCta("gw.congrats", true);
       say(g.end_by === "entries" ? "gw.joinedNoteCount" : g.max_entries ? "gw.joinedNoteMax" : "gw.joinedNote",
         { date: date(g.ends_at), max: g.max_entries });
       if (opts.onJoined) { opts.onJoined(g); }
@@ -708,7 +759,7 @@
 
     function onTgLinked() {
       mark(ui.cTg, "ok");
-      ui.bTg.hidden = true;
+      ui.bTg.disabled = true;
       st.tgUrl = "";
       if (ui.cta.getAttribute("data-key") === "gw.connectTg") {
         setCta("gw.join");
@@ -724,8 +775,9 @@
 
     function askTg() {
       mark(ui.cLogin, "ok");
+      ui.bLogin.disabled = true;
       mark(ui.cTg, "bad");
-      ui.bTg.hidden = false;
+      ui.bTg.disabled = false;
       post(LINK, { action: "link", lang: lang() }).then(function (r) {
         if (r && r.ok && r.url) {
           st.tgUrl = r.url;
@@ -800,8 +852,10 @@
         if (err === "login") { goLogin(); return; }
         if (err === "tg") { askTg(); return; }
         mark(ui.cLogin, "ok");
+        ui.bLogin.disabled = true;
         if (err === "channels") {
           mark(ui.cTg, "ok");
+          ui.bTg.disabled = true;
           var missing = r.missing || [];
           Object.keys(ui.cChannels || {}).forEach(function (k) {
             mark(ui.cChannels[k], missing.indexOf(k) >= 0 ? "bad" : "ok");
@@ -839,6 +893,8 @@
       stopPoll();
       if (st.joined) { return; }
       cardEl.setAttribute("data-phase", "ended");
+      ui.bLogin.disabled = true;
+      ui.bTg.disabled = true;
       setCta("gw.ended", true);
       say("");
     };
@@ -854,14 +910,13 @@
       if (s && s.user) { mark(ui.cLogin, "ok"); }
       if (isJoined(g.id, s)) { showJoined(); return; }
       if (st.user === false) {
-        setCta("gw.joinLogin");
-        ui.bLogin.hidden = false;
+        ui.bLogin.disabled = false;
         return;
       }
       if (!st.user) { return; }
       tgStatus().then(function (tg) {
         if (st.joined || !tg) { return; }
-        if (tg.linked) { onTgLinked(); } else { ui.bTg.hidden = false; }
+        if (tg.linked) { onTgLinked(); } else { ui.bTg.disabled = false; }
       });
     });
   }
