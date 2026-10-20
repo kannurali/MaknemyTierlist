@@ -26,7 +26,7 @@ echo <<<HTML
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
-<link rel="stylesheet" href="/css/giveaway.css?v=6" />
+<link rel="stylesheet" href="/css/giveaway.css?v=7" />
 <link rel="stylesheet" href="/css/giveaway-admin.css?v=8" />
 </head>
 <body>
@@ -70,7 +70,7 @@ echo <<<HTML
         </label>
       </div>
 
-      <div class="f">Баннер <span class="muted">(свой у каждого розыгрыша: 1280×720, 16:9; важный текст — не ближе ~60 px к углам, они скругляются; показывается целиком, без обрезки)</span>
+      <div class="f">Баннер <span class="muted">(свой у каждого розыгрыша: 1280×655, почти 2:1 — в такой рамке он стоит на сайте; картинку другой формы сайт обрежет по краям от центра, поэтому важный текст держите ближе к середине)</span>
         <div class="ga-image">
           <img class="ga-image-prev" id="fImgPrev" alt="" hidden />
           <div class="slot-row">
@@ -208,7 +208,7 @@ echo <<<HTML
 
 {$i18nDictTag}<script src="/js/i18n.js?v=84"></script>
 <script src="/js/news-blocks.js?v=4"></script>
-<script src="/js/giveaway.js?v=14"></script>
+<script src="/js/giveaway.js?v=15"></script>
 <script src="/js/giveaway-admin.js?v=11"></script>
 </body>
 </html>

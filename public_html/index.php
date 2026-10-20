@@ -156,7 +156,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=7" /><?php endif; ?>
 <link rel="stylesheet" href="css/gw-card.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -584,7 +584,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
   <script src="js/app.js?v=101" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=15" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
 </body>

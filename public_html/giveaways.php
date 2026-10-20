@@ -50,12 +50,13 @@ page_lscache();
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=6" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=6" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=7" /><?php endif; ?>
+<link rel="stylesheet" href="css/promo-stamp.css?v=3" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
 </head>
-<body>
+<body class="gw-bg">
 
   <header class="mk-top">
     <a class="mk-top-brand" href="<?= u('/') ?>">
@@ -136,7 +137,7 @@ page_lscache();
   </header>
 
   <main class="gw-page">
-    <?= halloween_decor('giveaways', 'hw-decor hw-decor--column') ?>
+    <?= halloween_decor('giveaways', 'hw-decor hw-decor--fill hw-decor--column') ?>
     <header class="gw-head">
       <div class="gw-head-in">
         <img class="gw-head-branch<?= HALLOWEEN ? ' is-flip' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
@@ -225,15 +226,25 @@ page_lscache();
       </div>
     </header>
 
-    <div class="gw-wrap">
+    <div class="gw-lid">
+      <div class="gw-rail-slot gw-rail-l" aria-hidden="true">
+        <aside class="gw-rail" id="gwRailL" data-i18n-label="promo.rail" aria-label="<?= ta('promo.rail') ?>"></aside>
+      </div>
+      <div class="gw-rail-slot gw-rail-r" aria-hidden="true">
+        <aside class="gw-rail" id="gwRailR" data-i18n-label="promo.rail" aria-label="<?= ta('promo.rail') ?>"></aside>
+      </div>
+      <img class="gw-deco gw-branch-l" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
+      <img class="gw-deco gw-branch-r<?= HALLOWEEN ? ' is-hw' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/gw-branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
 
-      <p class="gw-state" id="gwState" role="status" aria-live="polite" data-i18n="gw.loading"><?= te('gw.loading') ?></p>
-      <div class="gw-live" id="gwLive"></div>
+      <div class="gw-wrap">
+        <p class="gw-state" id="gwState" role="status" aria-live="polite" data-i18n="gw.loading"><?= te('gw.loading') ?></p>
+        <div class="gw-live" id="gwLive"></div>
 
-      <section id="gwPastWrap" hidden>
-        <h2 class="gw-section-title" data-i18n="gw.past"><?= te('gw.past') ?></h2>
-        <div class="gw-past" id="gwPast"></div>
-      </section>
+        <section id="gwPastWrap" hidden>
+          <h2 class="gw-section-title" data-i18n="gw.past"><?= te('gw.past') ?></h2>
+          <div class="gw-past" id="gwPast"></div>
+        </section>
+      </div>
     </div>
   </main>
 
@@ -256,9 +267,9 @@ page_lscache();
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-  <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
-  <script src="js/giveaways-page.js?v=2" fetchpriority="high"></script>
+  <script src="js/promo.js?v=32" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=15" fetchpriority="high"></script>
+  <script src="js/giveaways-page.js?v=3" fetchpriority="high"></script>
   <script src="js/gw-notify.js?v=2" fetchpriority="high"></script>
 </body>
 </html>
