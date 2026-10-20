@@ -301,7 +301,7 @@ page_lscache();
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
 
-  <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
+  <script src="js/promo-dock.js?v=12" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
