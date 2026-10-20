@@ -56,7 +56,7 @@
 
   function load(fresh) {
     if (!dataPromise || fresh) {
-      dataPromise = fetch(TEST ? API + "?test=1" : API, { cache: fresh ? "no-store" : "default" })
+      dataPromise = fetch(API + "?" + (TEST ? "test=1&" : "") + "lang=" + lang(), { cache: fresh ? "no-store" : "default" })
         .then(function (r) { return r.ok ? r.json() : { live: [], past: [] }; })
         .catch(function () { return { live: [], past: [] }; });
     }
@@ -197,11 +197,13 @@
   }
 
   function date(ts) {
-    var opts = { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+    var msk = lang() === "ru";
+    var opts = { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+    if (msk) { opts.timeZone = "Europe/Moscow"; } else { opts.timeZoneName = "short"; }
     var s;
     try { s = new Date(ts * 1000).toLocaleString(root.I18N ? root.I18N.locale() : "ru-RU", opts); }
     catch (_) { s = new Date(ts * 1000).toLocaleString(); }
-    return s + " " + t("gw.msk");
+    return msk ? s + " " + t("gw.msk") : s;
   }
 
   function tick() {

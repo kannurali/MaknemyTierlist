@@ -2,8 +2,14 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "nexus-tierlist-v1";
+  const ADMIN_PAGE = window.NX_ADMIN_PAGE === true;
+  const PAGE_LANG = (typeof I18N !== "undefined" && I18N.pageLang) ? I18N.pageLang() : "ru";
+  const ADMIN_STORAGE_KEY = "nexus-tierlist-v1";
+  const STORAGE_KEY = ADMIN_PAGE ? ADMIN_STORAGE_KEY : ADMIN_STORAGE_KEY + "-" + PAGE_LANG;
   const DIRTY_KEY = "nexus-tierlist-dirty-v1";
+  if (!ADMIN_PAGE) {
+    try { if (localStorage.getItem(DIRTY_KEY) !== "1") localStorage.removeItem(ADMIN_STORAGE_KEY); } catch (e) {}
+  }
   const DEFAULT_ICON = "assets/icon-sample.png";
 
   const tierMarks = (typeof TIERS !== "undefined") ? TIERS : null;
@@ -2666,7 +2672,10 @@
   }
 
   async function fetchFull(rev) {
-    const q = (rev !== null && rev !== undefined && rev !== "") ? ("?rev=" + encodeURIComponent(rev)) : "";
+    const params = [];
+    if (rev !== null && rev !== undefined && rev !== "") params.push("rev=" + encodeURIComponent(rev));
+    if (!ADMIN_PAGE) params.push("lang=" + PAGE_LANG);
+    const q = params.length ? "?" + params.join("&") : "";
     try {
       const r = await fetch(API_TIERLIST + q, { cache: "default" });
       if (r.ok) {
