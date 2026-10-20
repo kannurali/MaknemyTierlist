@@ -269,10 +269,7 @@
 }
 .gw-stat-pill {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  column-gap: calc(12 * var(--k));
-  row-gap: calc(2 * var(--k));
   min-height: calc(52 * var(--k));
   box-sizing: border-box;
   margin-left: calc(19 * var(--k));
@@ -280,8 +277,6 @@
   border-radius: calc(32 * var(--k));
   background: #0d0613;
 }
-.gw-stat-label,
-.gw-stat-word { white-space: nowrap; }
 .gw-stat-val {
   color: #bb00ff;
   white-space: nowrap;
@@ -718,7 +713,6 @@ button.gw-step-label:disabled { cursor: default; }
     font-size: calc(24 * var(--k));
   }
   .gw-stat-pill {
-    column-gap: calc(9 * var(--k));
     margin-left: calc(12 * var(--k));
     padding: calc(6 * var(--k)) calc(18 * var(--k));
   }

@@ -403,8 +403,7 @@
     ico.appendChild(byCount ? userIcon() : clockIcon());
     row.appendChild(ico);
     var pill = el("span", "gw-stat-pill");
-    pill.appendChild(el("span", "gw-stat-label", t("gw.stat")));
-    pill.appendChild(el("span", "gw-stat-word", t("gw.statPill")));
+    var text = el("span", "gw-stat-text", t("gw.stat") + " " + t("gw.statPill") + " ");
     var val = el("span", "gw-stat-val");
     if (byCount) {
       var need = live ? Math.max(0, (g.max_entries || 0) - (g.entries || 0)) : 0;
@@ -415,7 +414,8 @@
     } else {
       val.textContent = clockText(0);
     }
-    pill.appendChild(val);
+    text.appendChild(val);
+    pill.appendChild(text);
     row.appendChild(pill);
     return row;
   }
