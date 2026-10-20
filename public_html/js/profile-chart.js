@@ -33,11 +33,16 @@
   const MONTHS_EN = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
-  const lang = () => (document.documentElement.lang === 'en' ? 'en' : 'ru');
+  const lang = () => {
+    const l = document.documentElement.lang;
+    return window.I18N && window.I18N.supported().indexOf(l) >= 0 ? l : 'ru';
+  };
+  const intlDate = (y, m, opts) => new Intl.DateTimeFormat(window.I18N.locale(), opts).format(new Date(y, m, 15));
   const tx   = (key, fallback) => (window.I18N ? window.I18N.t(key, lang()) : fallback);
 
   function monthLabel(ym) {
     const [y, m] = ym.split('-').map(Number);
+    if (lang() !== 'ru' && lang() !== 'en') { return intlDate(y, m - 1, { month: 'long', year: 'numeric' }); }
     const names = lang() === 'en' ? MONTHS_EN : MONTHS_RU;
     return names[m - 1] + ' ' + y;
   }
@@ -247,7 +252,9 @@
     }
     readout.hidden = false;
     const mi = Number(state.month.split('-')[1]) - 1;
-    const dayMonth = lang() === 'en' ? MONTHS_EN[mi] + ' ' + d.day : d.day + ' ' + MONTHS_RU_GEN[mi];
+    const dayMonth = lang() === 'ru' ? d.day + ' ' + MONTHS_RU_GEN[mi]
+      : lang() === 'en' ? MONTHS_EN[mi] + ' ' + d.day
+      : new Intl.DateTimeFormat(window.I18N.locale(), { day: 'numeric', month: 'long' }).format(new Date(2000, mi, d.day));
     const parts = [dayMonth,
       `${tx('profile.chartOk', 'Успешно')} ${d.ok}`,
       `${tx('profile.chartFail', 'Отказ')} ${d.declined}`];

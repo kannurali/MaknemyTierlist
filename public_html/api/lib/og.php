@@ -1,4 +1,7 @@
 <?php
+// Подписи превью тирлиста берутся из словаря (og.tierlist.*).
+require_once __DIR__ . '/i18n.php';
+
 // Общие чистые хелперы для превью-картинок og-tierlist.php / og-news.php и
 // для мета-тегов index.php / news.php: валидация версии, путь кэша на диске,
 // обрезка длинного текста и «выжимка» живых данных в то немногое, что нужно
@@ -201,9 +204,11 @@ function og_tierlist_meta(array $summary): array {
         return $it['value'] !== '' ? "{$it['name']} ({$it['value']})" : $it['name'];
     }, $summary['items']);
     $title = $summary['tierLabel'] !== ''
-        ? 'Maknemy Tier List — ' . $summary['tierLabel'] . '-тир'
-            . ($summary['date'] !== '' ? ' на ' . $summary['date'] : '')
-        : 'Maknemy Tier List — трейд-ценности Blox Fruits';
+        ? t('og.tierlist.tierTitle', [
+            'tier' => $summary['tierLabel'],
+            'date' => $summary['date'] !== '' ? t('og.tierlist.onDate', ['date' => $summary['date']]) : '',
+        ])
+        : t('og.tierlist.title');
     return [
         'title'       => $title,
         'description' => og_truncate(implode(', ', $names), 200),

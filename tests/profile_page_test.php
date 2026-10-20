@@ -709,17 +709,11 @@ test('профиль использует общие шапку, подвал и
 // Переключатель языка живёт в самой шапке и обязан быть на профиле такой же,
 // как на остальных страницах: шапка общая, и страница без переключателя
 // становится тупиком — сменить язык на ней нечем.
-test('в шапке профиля есть переключатель языка той же формы, что у всех', function () use ($PUB, $PAGES) {
+test('в шапке профиля есть меню языка той же формы, что у всех', function () use ($PUB, $PAGES) {
     foreach ($PAGES as $f) {
         $s = pf_read($PUB . '/' . $f);
         $head = substr($s, 0, strpos($s, '</header>') ?: strlen($s));
-        assert_true((bool)preg_match(
-            '/<div class="mk-top-lang lang-switch" id="langSwitch" role="group"/', $head),
-            "$f: переключатель языка в шапке");
-        assert_eq(1, preg_match_all('/<button class="chip" type="button" data-lang="ru"/', $head),
-            "$f: кнопка RU");
-        assert_eq(1, preg_match_all('/<button class="chip" type="button" data-lang="en"/', $head),
-            "$f: кнопка EN");
+        assert_eq(1, substr_count($head, '<li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>'), "$f: меню языка в шапке");
     }
 });
 

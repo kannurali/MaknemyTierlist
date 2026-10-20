@@ -32,69 +32,17 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
 
-<?php if (i18n_lang() === 'ru'): ?>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "name": "Калькулятор трейдов Blox Fruits",
-      "alternateName": ["Макнеми калькулятор", "Maknemy calculator", "Калькулятор трейдов Maknemy"],
-      "url": "https://maknemy.com/calculator",
-      "inLanguage": "ru",
-      "applicationCategory": "UtilityApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Requires JavaScript",
-      "description": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
-      "isPartOf": {
-        "@type": "WebSite",
-        "name": "Maknemy Tier List",
-        "url": "https://maknemy.com/"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "RUB"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Maknemy",
-        "url": "https://t.me/mksvtnc"
-      }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Maknemy",
-          "item": "https://maknemy.com/"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Калькулятор трейдов",
-          "item": "https://maknemy.com/calculator"
-        }
-      ]
-    }
-  ]
-}
-</script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
@@ -113,11 +61,6 @@ header('Cache-Control: no-cache, must-revalidate');
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
-         data-i18n-label="lang.switch" aria-label="<?= ta('lang.switch') ?>">
-      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false"><?= te('lang.ru') ?></button>
-      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false"><?= te('lang.en') ?></button>
-    </div>
 
     <nav class="mk-top-bar" id="mkTopBar" aria-label="<?= ta('topbar.sections') ?>">
       <ul class="mk-nav">
@@ -165,6 +108,7 @@ header('Cache-Control: no-cache, must-revalidate');
             <span class="mk-pill-text" data-i18n="nav.promote"><?= te('nav.promote') ?></span>
           </a>
         </li>
+        <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
       </ul>
 
       <a class="mk-promote" href="<?= u('/giveaways') ?>" data-i18n="nav.giveaways"><?= te('nav.giveaways') ?></a>
@@ -390,12 +334,12 @@ header('Cache-Control: no-cache, must-revalidate');
   </div>
 
   <?= i18n_dict_tag() ?>
-  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=19" defer></script>
+  <script src="js/chat-page.js?v=20" defer></script>
 
 
-  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>

@@ -41,25 +41,24 @@ page_lscache();
 <meta property="og:image:alt" content="<?= ta('meta.calculator.ogTitle') ?>" />
 <meta name="twitter:card" content="summary_large_image" />
 
-<?php if (i18n_lang() === 'ru'): ?>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "WebApplication",
-      "name": "Калькулятор трейдов Blox Fruits",
+      "name": "<?= tj('meta.calculator.ogTitle') ?>",
       "alternateName": ["Макнеми калькулятор", "Maknemy calculator", "Калькулятор трейдов Maknemy"],
-      "url": "https://maknemy.com/calculator",
-      "inLanguage": "ru",
+      "url": "<?= i18n_url('/calculator') ?>",
+      "inLanguage": "<?= i18n_lang() ?>",
       "applicationCategory": "UtilityApplication",
       "operatingSystem": "Any",
       "browserRequirements": "Requires JavaScript",
-      "description": "Калькулятор трейдов Blox Fruits от Maknemy: обе стороны сделки считаются по ценам тирлиста Maknemy.",
+      "description": "<?= tj('ld.calculator.desc') ?>",
       "isPartOf": {
         "@type": "WebSite",
         "name": "Maknemy Tier List",
-        "url": "https://maknemy.com/"
+        "url": "<?= i18n_url('/') ?>"
       },
       "offers": {
         "@type": "Offer",
@@ -79,31 +78,30 @@ page_lscache();
           "@type": "ListItem",
           "position": 1,
           "name": "Maknemy",
-          "item": "https://maknemy.com/"
+          "item": "<?= i18n_url('/') ?>"
         },
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "Калькулятор трейдов",
-          "item": "https://maknemy.com/calculator"
+          "name": "<?= tj('ld.calculator.crumb') ?>",
+          "item": "<?= i18n_url('/calculator') ?>"
         }
       ]
     }
   ]
 }
 </script>
-<?php endif; ?>
 
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
@@ -127,11 +125,6 @@ page_lscache();
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
-         data-i18n-label="lang.switch" aria-label="<?= ta('lang.switch') ?>">
-      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false"><?= te('lang.ru') ?></button>
-      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false"><?= te('lang.en') ?></button>
-    </div>
 
     <nav class="mk-top-bar" id="mkTopBar" aria-label="<?= ta('topbar.sections') ?>">
       <ul class="mk-nav">
@@ -179,6 +172,7 @@ page_lscache();
             <span class="mk-pill-text" data-i18n="nav.promote"><?= te('nav.promote') ?></span>
           </a>
         </li>
+        <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
       </ul>
 
       <a class="mk-promote" href="<?= u('/giveaways') ?>" data-i18n="nav.giveaways"><?= te('nav.giveaways') ?></a>
@@ -371,7 +365,7 @@ page_lscache();
 
       <p class="tc-demand-note" id="tcDemandNote" role="status" aria-live="polite" hidden></p>
 
-      <p class="tc-threshold" id="tcThreshold">Сделка считается честной, если разница в пределах ±5%</p>
+      <p class="tc-threshold" id="tcThreshold"><?= te('calc.thresholdNote', ['pct' => '5']) ?></p>
       <p class="tc-disclaimer" data-i18n="calc.disclaimer"><?= te('calc.disclaimer') ?></p>
 
       <div class="tc-actions">
@@ -456,17 +450,17 @@ page_lscache();
   </div>
 
   <?= i18n_dict_tag() ?>
-  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
-  <script src="js/promo.js?v=31" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/promo.js?v=32" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=11" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/calculator-page.js?v=28" fetchpriority="high"></script>
-  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=29" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
-  <script src="js/gw-card.js?v=2" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
 </body>
 </html>

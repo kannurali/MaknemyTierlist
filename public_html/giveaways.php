@@ -42,12 +42,12 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=7" /><?php endif; ?>
@@ -64,11 +64,6 @@ page_lscache();
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
-         data-i18n-label="lang.switch" aria-label="<?= ta('lang.switch') ?>">
-      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false"><?= te('lang.ru') ?></button>
-      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false"><?= te('lang.en') ?></button>
-    </div>
 
     <nav class="mk-top-bar" id="mkTopBar" aria-label="<?= ta('topbar.sections') ?>">
       <ul class="mk-nav">
@@ -116,6 +111,7 @@ page_lscache();
             <span class="mk-pill-text" data-i18n="nav.promote"><?= te('nav.promote') ?></span>
           </a>
         </li>
+        <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
       </ul>
 
       <a class="mk-promote" href="<?= u('/giveaways') ?>" aria-current="page" data-i18n="nav.giveaways"><?= te('nav.giveaways') ?></a>
@@ -164,7 +160,7 @@ page_lscache();
           </span>
           <div class="gw-nt-body">
             <div class="gw-nt-text" aria-live="polite">
-              <p class="gw-nt-title" id="gwNtTitle">Хотите первыми узнавать о новых розыгрышах?</p>
+              <p class="gw-nt-title" id="gwNtTitle"><?= te('gw.notify.ask') ?></p>
               <p class="gw-nt-note" id="gwNtNote"></p>
             </div>
             <div class="gw-nt-actions">
@@ -201,9 +197,9 @@ page_lscache();
                     <input class="gw-nt-num" id="gwNtTimeN" type="number" inputmode="numeric" min="1" step="1" aria-labelledby="gwNtTimeL" />
                     <span class="gw-nt-sel">
                       <select id="gwNtTimeU" data-i18n-label="gw.notify.unit" aria-label="<?= ta('gw.notify.unit') ?>">
-                        <option value="60">минут</option>
-                        <option value="3600">часов</option>
-                        <option value="86400">дней</option>
+                        <option value="60"><?= te('gw.notify.min.many') ?></option>
+                        <option value="3600"><?= te('gw.notify.hour.many') ?></option>
+                        <option value="86400"><?= te('gw.notify.day.many') ?></option>
                       </select>
                     </span>
                   </span>
@@ -213,7 +209,7 @@ page_lscache();
                   <label class="gw-nt-label" id="gwNtPlacesL" for="gwNtPlaces" data-i18n="gw.notify.placesLabel"><?= te('gw.notify.placesLabel') ?></label>
                   <span class="gw-nt-ctl">
                     <input class="gw-nt-num" id="gwNtPlacesN" type="number" inputmode="numeric" min="1" max="100000" step="1" aria-labelledby="gwNtPlacesL gwNtPlacesU" />
-                    <span class="gw-nt-unit" id="gwNtPlacesU">мест</span>
+                    <span class="gw-nt-unit" id="gwNtPlacesU"><?= te('gw.notify.place.many') ?></span>
                   </span>
                   <span class="gw-nt-hint" id="gwNtPlacesH" data-i18n="gw.notify.placesHint"><?= te('gw.notify.placesHint') ?></span>
                 </div>
@@ -270,10 +266,10 @@ page_lscache();
   </footer>
 
   <?= i18n_dict_tag() ?>
-  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
-  <script src="js/promo.js?v=31" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/promo.js?v=32" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
   <script src="js/giveaways-page.js?v=3" fetchpriority="high"></script>
-  <script src="js/gw-notify.js?v=1" fetchpriority="high"></script>
+  <script src="js/gw-notify.js?v=2" fetchpriority="high"></script>
 </body>
 </html>

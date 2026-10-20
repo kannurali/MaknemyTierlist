@@ -85,6 +85,7 @@
       openedAt = scrollY();
       if (open) place();
       head.classList.toggle("is-nav-open", open);
+      if (!open) setLangOpen(false);
       syncToggle();
     }
 
@@ -251,6 +252,32 @@
     document.addEventListener("pointermove", move, { passive: true });
   }, { passive: true });
 
+  var langMenu = document.getElementById("langSwitch");
+  var langBtn = langMenu ? langMenu.querySelector(".mk-lang-btn") : null;
+  var langList = langMenu ? langMenu.querySelector(".mk-lang-list") : null;
+
+  function setLangOpen(on) {
+    if (!langBtn || !langList) return;
+    langList.hidden = !on;
+    langBtn.setAttribute("aria-expanded", String(on));
+    langMenu.classList.toggle("is-open", on);
+  }
+
+  if (langBtn && langList) {
+    langBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      setLangOpen(langList.hidden);
+    });
+    document.addEventListener("click", function (e) {
+      if (!langList.hidden && !langMenu.contains(e.target)) setLangOpen(false);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" || langList.hidden) return;
+      setLangOpen(false);
+      langBtn.focus();
+    });
+  }
+
   var PROFILE_PATH = "/profile";
   function siteUrl(path) { return window.I18N && window.I18N.url ? window.I18N.url(path) : path; }
 
@@ -271,7 +298,7 @@
     var d = new Date(sec * 1000);
     var opts = { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
     if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
-    try { return d.toLocaleString(uiLang() === "en" ? "en-GB" : "ru-RU", opts); }
+    try { return d.toLocaleString(window.I18N ? window.I18N.locale() : "ru-RU", opts); }
     catch (_) { return d.toLocaleString(); }
   }
 
@@ -315,25 +342,11 @@
     support: { href: "/admin/support", key: "user.support" }
   };
 
-  var langBox = document.getElementById("langSwitch");
-
   function buildMenu() {
     var menu = document.createElement("div");
     menu.className = "mk-user-menu";
     menu.setAttribute("role", "menu");
     menu.hidden = true;
-
-    if (langBox) {
-      var lang = document.createElement("div");
-      lang.className = "mk-user-lang";
-      var label = document.createElement("span");
-      label.className = "mk-user-lang-label";
-      label.textContent = tx("lang.switch");
-      label.setAttribute("data-i18n", "lang.switch");
-      lang.appendChild(label);
-      lang.appendChild(langBox);
-      menu.appendChild(lang);
-    }
 
     document.body.appendChild(menu);
     return menu;

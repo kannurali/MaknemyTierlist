@@ -10,8 +10,11 @@
 // PHP 7.4: без match, str_contains, str_starts_with и именованных аргументов.
 
 const I18N_DEFAULT = 'ru';
-const I18N_LANGS = ['ru', 'en'];
-const I18N_OG_LOCALES = ['ru' => 'ru_RU', 'en' => 'en_US'];
+const I18N_LANGS = ['ru', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'tr', 'uk'];
+const I18N_OG_LOCALES = [
+    'ru' => 'ru_RU', 'en' => 'en_US', 'de' => 'de_DE', 'fr' => 'fr_FR', 'es' => 'es_ES',
+    'it' => 'it_IT', 'pt' => 'pt_BR', 'pl' => 'pl_PL', 'tr' => 'tr_TR', 'uk' => 'uk_UA',
+];
 const I18N_ORIGIN = 'https://maknemy.com';
 
 function i18n_lang_from_uri(string $uri): string {
@@ -118,4 +121,69 @@ function i18n_dict_tag(?string $lang = null, bool $absolute = false): string {
     $ver = is_file($file) ? substr((string)md5_file($file), 0, 10) : '0';
     return '<script src="' . ($absolute ? '/' : '') . 'js/i18n/' . $lang . '.js?v=' . $ver
         . '" fetchpriority="high"></script>' . "\n";
+}
+
+// Ключи, которые нужны только серверу: заголовки и описания страниц, JSON-LD,
+// превью ссылок и тексты /ads. В словари для JS (js/i18n/*.js) они не идут —
+// скриптам не нужны, а каждый язык тяжелел бы на десятки килобайт.
+const I18N_SERVER_ONLY = ['meta.', 'ld.', 'og.', 'ads.'];
+
+// Строка для подстановки внутрь JSON-литерала (JSON-LD в шаблоне): то, что
+// json_encode кладёт между кавычками. JSON_HEX_TAG — чтобы перевод с «</»
+// не закрыл тег script с JSON-LD раньше времени.
+function tj(string $key, array $vars = []): string {
+    $json = json_encode(t($key, $vars), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
+    return substr((string)$json, 1, -1);
+}
+
+// Разметка из словаря как есть — только для ключей ads.*, где в тексте есть
+// <b>, ссылки и неразрывные пробелы. Словари пишем мы сами, а набор тегов в
+// каждом языке сверяет tests/i18n_test.mjs с русским.
+function th(string $key, array $vars = []): string {
+    return t($key, $vars);
+}
+
+// Названия языков в меню — на самих языках: человек ищет свой язык, а не
+// перевод его названия на язык страницы.
+const I18N_NAMES = [
+    'ru' => 'Русский', 'en' => 'English', 'de' => 'Deutsch', 'fr' => 'Français', 'es' => 'Español',
+    'it' => 'Italiano', 'pt' => 'Português', 'pl' => 'Polski', 'tr' => 'Türkçe', 'uk' => 'Українська',
+];
+
+// Текущий адрес без языковой приставки, с query: /en/news/92?x=1 → /news/92?x=1.
+function i18n_path(): string {
+    $uri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+    $path = parse_url($uri, PHP_URL_PATH);
+    $query = parse_url($uri, PHP_URL_QUERY);
+    $path = is_string($path) && $path !== '' ? $path : '/';
+    $lang = i18n_lang_from_uri($path);
+    if ($lang !== I18N_DEFAULT) {
+        $path = (string)substr($path, strlen('/' . $lang));
+        if ($path === '') { $path = '/'; }
+    }
+    return $path . (is_string($query) && $query !== '' ? '?' . $query : '');
+}
+
+// Меню «Язык ▾» в листе разделов шапки. Пункты — настоящие ссылки на ту же
+// страницу на другом языке: работают без JS и видны поисковику. js/i18n.js
+// перехватывает нажатие по data-lang-go, ставит куку выбора и переходит;
+// открывает и закрывает список js/topbar.js. Атрибут не data-lang, чтобы
+// прежний код страниц (он ищет #langSwitch [data-lang]) не трогал ссылки.
+function i18n_lang_menu(): string {
+    $self = i18n_lang();
+    $path = i18n_path();
+    $items = '';
+    foreach (I18N_LANGS as $l) {
+        $items .= '<li><a class="mk-lang-item" href="' . htmlspecialchars(u($path, $l), ENT_QUOTES, 'UTF-8')
+            . '" hreflang="' . $l . '" lang="' . $l . '" data-lang-go="' . $l . '"'
+            . ($l === $self ? ' aria-current="true"' : '') . '>'
+            . htmlspecialchars(I18N_NAMES[$l], ENT_QUOTES, 'UTF-8') . '</a></li>';
+    }
+    return '<div class="mk-lang" id="langSwitch">'
+        . '<button class="mk-lang-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="mkLangList">'
+        . '<span class="mk-lang-label" data-i18n="lang.menu">' . te('lang.menu') . '</span>'
+        . '<svg class="mk-lang-chev" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5 6 6.5 11 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        . '</button>'
+        . '<ul class="mk-lang-list" id="mkLangList" hidden>' . $items . '</ul>'
+        . '</div>';
 }

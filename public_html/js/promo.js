@@ -187,17 +187,15 @@
     var g = root.NX_GW;
     if (g && g.t) { return g.t(key, vars); }
     var i18n = root.I18N;
-    var lang = root.document && root.document.documentElement.lang === "en" ? "en" : "ru";
+    var lang = i18n ? i18n.pageLang() : "ru";
     return i18n ? i18n.t(key, lang, vars) : key;
   }
 
   function gwcPlural(n) {
     var g = root.NX_GW;
-    if ((g && g.lang ? g.lang() : root.document.documentElement.lang) === "en") { return n === 1 ? "one" : "many"; }
-    var a = n % 10, b = n % 100;
-    if (a === 1 && b !== 11) { return "one"; }
-    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
-    return "many";
+    var i18n = root.I18N;
+    if (!i18n) { return "many"; }
+    return i18n.plural(n, g && g.lang ? g.lang() : undefined);
   }
 
   function gwcFind(id) {

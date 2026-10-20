@@ -1,7 +1,8 @@
 <?php
 // Собирает из public_html/lang/*.json то, что сайт отдаёт статикой:
 //   public_html/js/i18n/<язык>.js — словарь страницы для js/i18n.js
-//     (с откатом язык → en → ru, как у t() в PHP);
+//     (с откатом язык → en → ru, как у t() в PHP; без серверных ключей
+//     I18N_SERVER_ONLY);
 //   public_html/sitemap.xml        — разделы на всех языках с hreflang.
 // Запускать после любой правки словарей: php tools/i18n_build.php
 // С --check ничего не пишет и выходит с кодом 1, если файлы устарели —
@@ -18,17 +19,23 @@ const SITEMAP_PAGES = [
     ['/trading',    'daily',   '0.7'],
     ['/stock',      'hourly',  '0.7'],
     ['/giveaways',  'daily',   '0.6'],
+    ['/ads',        'monthly', '0.4'],
 ];
-// Без языковых версий: правовые страницы двуязычные на одном адресе, а
-// /ads пока есть только по-русски (/en/ads закрыт noindex до перевода).
+// Правовые страницы двуязычные на одном адресе — языковых версий у них нет.
 const SITEMAP_SINGLE = [
-    ['/ads',     'monthly', '0.4'],
     ['/privacy', 'yearly',  '0.2'],
     ['/terms',   'yearly',  '0.2'],
 ];
 
 function build_dict_js(string $lang): string {
-    $json = json_encode(i18n_dict($lang), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $dict = [];
+    foreach (i18n_dict($lang) as $key => $value) {
+        foreach (I18N_SERVER_ONLY as $prefix) {
+            if (strpos($key, $prefix) === 0) { continue 2; }
+        }
+        $dict[$key] = $value;
+    }
+    $json = json_encode($dict, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     return '(function(r){(r.I18N_DICTS=r.I18N_DICTS||{})["' . $lang . '"]=' . $json
         . ';})(typeof globalThis!=="undefined"?globalThis:this);' . "\n";
 }

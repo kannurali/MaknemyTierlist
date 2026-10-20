@@ -40,6 +40,15 @@ test('выбор языка: кука, языки СНГ, остальные —
     assert_true(strpos($HT, 'RewriteRule ^ - [E=NX_PICK:en]') !== false, 'остальные — en');
 });
 
+test('у каждого языка сайта своё правило по Accept-Language', function () use ($HT) {
+    foreach (array_diff(I18N_LANGS, ['ru', 'en']) as $l) {
+        $rule = "RewriteCond %{ENV:NX_PICK} ^$\nRewriteCond %{HTTP:Accept-Language} ^\\s*$l([-_,;\\s]|$) [NC]\nRewriteRule ^ - [E=NX_PICK:$l]";
+        assert_true(strpos($HT, $rule) !== false, "правило $l");
+        assert_true(strpos($HT, $rule) < strpos($HT, 'RewriteRule ^ - [E=NX_PICK:en]'), "$l раньше общего en");
+    }
+    assert_eq(false, strpos($HT, '|uk|be|'), 'украинский больше не в списке СНГ');
+});
+
 test('перенаправление: только внешний GET/HEAD без ботов, 302, на главную и разделы', function () use ($HT, $EXTRA) {
     $guard = "RewriteCond %{ENV:REDIRECT_STATUS} ^$\n"
            . "RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$\n"

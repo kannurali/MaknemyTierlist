@@ -322,21 +322,14 @@ test('на телефоне фон прибит к экрану и не раст
 // Раньше на телефоне вторая кнопка пряталась через :has(), и на ленте это
 // делало переключатель мёртвым: её обработчик (news-page.js) про схлопывание
 // не знал и включал тот же язык, который уже выбран.
-test('на телефоне язык переключается двумя кнопками, как на компьютере', function () use ($PUB) {
-    $css = read_file_or_fail($PUB . '/css/design-page.css');
-    assert_eq(0, preg_match('/\.lang-switch[^{]*\{[^}]*display: none;/s', $css),
-        'ни одна кнопка языка не прячется');
-    assert_eq(0, substr_count($css, '.lang-switch:has('), 'схлопывания пары быть не должно');
-    // Обе кнопки есть в разметке обеих страниц с переключателем.
+test('меню языков есть на тирлисте и ленте и не прячется на телефоне', function () use ($PUB) {
+    $css = read_file_or_fail($PUB . '/css/topbar.css');
+    // [hidden] у списка — это закрытое состояние, а не спрятанное меню.
+    assert_eq(0, preg_match('/\.mk-lang(?![^{,]*\[hidden\])[^{,]*\{[^}]*display: none;/s', $css), 'меню языка не прячется');
     foreach (['/index.php', '/news.php'] as $page) {
         $html = read_file_or_fail($PUB . $page);
-        assert_eq(1, substr_count($html, 'data-lang="ru"'), $page . ' — кнопка RU');
-        assert_eq(1, substr_count($html, 'data-lang="en"'), $page . ' — кнопка EN');
+        assert_eq(1, substr_count($html, '<?= i18n_lang_menu() ?>'), $page . ' — меню языка');
     }
-    // На ленте клик по кнопке обязан ставить её собственный язык.
-    $np = read_file_or_fail($PUB . '/js/news-page.js');
-    assert_true(strpos($np, 'b.addEventListener("click", () => applyLang(b.dataset.lang));') !== false,
-        'обработчик ленты на месте');
 });
 
 // --------------------------------------------------------------------------

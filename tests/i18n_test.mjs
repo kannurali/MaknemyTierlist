@@ -47,9 +47,28 @@ test('every language declares the same placeholders for a key', () => {
     }
 });
 
-test('built dictionaries carry the sources', () => {
+const SERVER_ONLY = ['meta.', 'ld.', 'og.', 'ads.'];
+const serverOnly = key => SERVER_ONLY.some(p => key.startsWith(p));
+
+test('markup inside a string is the same in every language and limited to inline tags', () => {
+    const tags = s => (String(s).match(/<[^>]+>/g) || []);
+    for (const [key, value] of Object.entries(SRC.ru)) {
+        const ref = tags(value);
+        for (const t of ref) {
+            assert.match(t, /^<\/?(b|strong|i|em|a|br|span|small|sup|sub)\b/, `ru.${key}: unexpected tag ${t}`);
+        }
+        for (const lang of supported()) {
+            assert.deepEqual(tags(SRC[lang][key]), ref, `${lang}.${key}: tags differ from Russian`);
+        }
+    }
+});
+
+test('built dictionaries carry the sources, minus server-only keys', () => {
     for (const lang of supported()) {
-        for (const [key, value] of Object.entries(SRC[lang])) {
+        for (const key of Object.keys(SRC[lang]).filter(serverOnly)) {
+            assert.equal(globalThis.I18N_DICTS[lang][key], undefined, `js/i18n/${lang}.js ships server-only ${key}`);
+        }
+        for (const [key, value] of Object.entries(SRC[lang]).filter(([k]) => !serverOnly(k))) {
             assert.equal(globalThis.I18N_DICTS[lang][key], value, `js/i18n/${lang}.js is stale at ${key}`);
         }
     }
@@ -61,7 +80,7 @@ test('t returns the requested language', () => {
 });
 
 test('t falls back to the page language (Russian outside a browser)', () => {
-    assert.equal(t('filters.all', 'de'), SRC.ru['filters.all']);
+    assert.equal(t('filters.all', 'xx'), SRC.ru['filters.all']);
     assert.equal(t('filters.all', undefined), SRC.ru['filters.all']);
 });
 
@@ -113,6 +132,38 @@ test('stripPrefix removes only a known prefix', () => {
     assert.equal(stripPrefix('/en'), '/');
     assert.equal(stripPrefix('/tierlist'), '/tierlist');
     assert.equal(stripPrefix('/ru/x'), '/ru/x');
-    assert.equal(stripPrefix('/de/x'), '/de/x');
+    assert.equal(stripPrefix('/de/x'), '/x');
+    assert.equal(stripPrefix('/uk'), '/');
+    assert.equal(stripPrefix('/xx/x'), '/xx/x');
     assert.equal(stripPrefix(''), '/');
+});
+
+test('locale maps languages to formatting locales', () => {
+    assert.equal(I18N.locale('ru'), 'ru-RU');
+    assert.equal(I18N.locale('en'), 'en-GB');
+    assert.equal(I18N.locale('xx'), 'ru-RU');
+    assert.equal(I18N.locale(), 'ru-RU');
+});
+
+test('plural follows the language rules and keeps the three dictionary slots', () => {
+    const ru = [1, 2, 5, 11, 21, 22, 25].map(n => I18N.plural(n, 'ru'));
+    assert.deepEqual(ru, ['one', 'few', 'many', 'many', 'one', 'few', 'many']);
+    const en = [1, 2, 5, 21].map(n => I18N.plural(n, 'en'));
+    assert.deepEqual(en, ['one', 'many', 'many', 'many']);
+});
+
+test('Latin-script languages carry no Cyrillic the English does not have', () => {
+    for (const lang of ['de', 'fr', 'es', 'it', 'pt', 'pl', 'tr']) {
+        for (const [key, value] of Object.entries(SRC[lang])) {
+            if (/[А-Яа-яЁё]/.test(SRC.en[key])) continue;
+            assert.ok(!/[А-Яа-яЁё]/.test(value), `${lang}.${key} contains Cyrillic: ${value}`);
+        }
+    }
+});
+
+test('Ukrainian is a translation, not a copy of Russian', () => {
+    const keys = Object.keys(SRC.ru).filter(k => /[А-Яа-яЁё]{4,}/.test(SRC.ru[k]));
+    const same = keys.filter(k => SRC.uk[k] === SRC.ru[k]);
+    assert.ok(same.length <= keys.length * 0.06, `${same.length} of ${keys.length} uk strings equal ru`);
+    assert.ok(!Object.values(SRC.uk).some(v => /[ыэъё]/i.test(v)), 'uk uses letters that only Russian has');
 });

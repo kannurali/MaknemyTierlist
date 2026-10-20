@@ -2349,7 +2349,7 @@
     likeBtn.dataset.i18nTitle = join ? "like.joinTitle" : on ? "like.remove" : "like.title";
     likeBtn.title = tx(likeBtn.dataset.i18nTitle);
     if (likeCountEl) {
-      likeCountEl.textContent = likeCount.toLocaleString("ru-RU");
+      likeCountEl.textContent = likeCount.toLocaleString(I18N.locale());
       likeCountEl.hidden = join;
     }
     if (likeJoinEl) likeJoinEl.hidden = !join;
