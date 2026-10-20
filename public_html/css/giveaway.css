@@ -1110,6 +1110,27 @@ body:has(> .gw-page) {
 }
 body > .gw-page { flex: 1 0 auto; }
 
+@media (min-width: 761px) {
+  body.gw-bg { background: none; }
+  body.gw-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: #05070d;
+    background-image: url("../assets/design/page-bg.webp");
+    background-repeat: no-repeat;
+    background-size: calc(1983 * var(--pu)) auto;
+    background-position: calc(-272 * var(--pu)) calc(-533 * var(--pu));
+  }
+}
+@media (min-width: 761px) and (max-aspect-ratio: 1443/2703) {
+  body.gw-bg::before {
+    background-size: cover;
+    background-position: center top;
+  }
+}
+
 .gw-head {
   position: relative;
   overflow: hidden;
