@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/lib/i18n_content.php';
 
 function handle_news_delete(PDO $pdo, array $body): array {
     $id = read_row_id($body);
@@ -15,6 +16,7 @@ function handle_news_delete(PDO $pdo, array $body): array {
     }
 
     $pdo->prepare("DELETE FROM news WHERE id = :id")->execute([':id' => $id]);
+    i18n_forget($pdo, 'news', (string)$id);
     return [200, ['ok' => true]];
 }
 

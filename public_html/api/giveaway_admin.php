@@ -83,6 +83,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'delete') {
         [$s, $p] = gw_delete($pdo, $id);
+        if ($s === 200) { i18n_forget($pdo, 'gw', (string)$id); }
         return [$s, $p, null];
     }
     return [400, ['ok' => false, 'error' => 'bad action'], null];
