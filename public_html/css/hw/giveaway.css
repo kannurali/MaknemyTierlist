@@ -269,7 +269,11 @@
 }
 .gw-stat-pill {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
+  justify-content: space-between;
+  gap: calc(16 * var(--k));
+  min-width: 0;
   min-height: calc(52 * var(--k));
   box-sizing: border-box;
   margin-left: calc(19 * var(--k));
@@ -277,6 +281,7 @@
   border-radius: calc(32 * var(--k));
   background: #0d0613;
 }
+.gw-stat-text { white-space: nowrap; }
 .gw-stat-val {
   color: #bb00ff;
   white-space: nowrap;
