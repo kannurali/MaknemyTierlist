@@ -12,10 +12,11 @@ require_once __DIR__ . '/lib/giveaway.php';
 // чем на GW_PUBLIC_CACHE секунд. Где участвует сам человек, окно узнаёт из
 // api/session.php — тот не кешируется.
 //
-// Параметр один — ?test=1: вместе с тестовыми розыгрышами, для браузера,
-// открывшего /giveaways?test. Это второй адрес в кеше, и только. Любой
-// другой хвост .htaccess отбивает 403, иначе флуд случайными адресами шёл
-// бы мимо кеша.
+// Параметры: ?test=1 — вместе с тестовыми розыгрышами, для браузера,
+// открывшего /giveaways?test; ?lang=<язык> — тексты на одном языке страницы
+// (api/lib/i18n_content.php), всегда последним: test=1&lang=de. Без lang —
+// прежний ответ на двух языках. Любой другой хвост .htaccess отбивает 403,
+// иначе флуд случайными адресами шёл бы мимо кеша.
 //
 // Этот же запрос подводит итоги: есть закончившийся розыгрыш без итогов —
 // ответ уходит некешированным (иначе победители появились бы на полминуты
@@ -28,11 +29,12 @@ require_once __DIR__ . '/lib/giveaway.php';
 
 const GW_PUBLIC_CACHE = 30;
 
-function handle_giveaways(callable $pdo, int $now, bool $withTest = false): array {
+function handle_giveaways(callable $pdo, int $now, bool $withTest = false, ?string $lang = null): array {
     try {
         $conn = $pdo();
         if (!gw_ready($conn)) { return ['live' => [], 'past' => []]; }
-        return gw_public_list($conn, $now, $withTest);
+        $list = gw_public_list($conn, $now, $withTest);
+        return $lang === null ? $list : gw_localize_list($conn, $list, $lang);
     } catch (Throwable $e) {
         error_log('giveaways: ' . $e->getMessage());
         return ['live' => [], 'past' => []];
@@ -46,7 +48,7 @@ if (!defined('TESTING')) {
     $due = false;
     try { $due = gw_has_due(db(), $now); } catch (Throwable $e) { $due = false; }
     if ($due) { lscache_off(); } else { lscache_public(GW_PUBLIC_CACHE); }
-    json_out(handle_giveaways('db', $now, ($_GET['test'] ?? '') === '1'));
+    json_out(handle_giveaways('db', $now, ($_GET['test'] ?? '') === '1', i18n_api_lang($_GET['lang'] ?? null)));
     if ($due) { gw_after_due(db(), app_config(), $now); }
     try { $remind = gw_has_remind(db(), time()); } catch (Throwable $e) { $remind = false; }
     if ($remind) { gw_after_remind(db(), app_config(), time()); }

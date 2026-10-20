@@ -114,4 +114,43 @@ test('news_post_og_data falls back to the generic banner when the row cannot pro
     assert_eq(news_og_fallback()['title'], $data['title']);
 });
 
+// --------------------------------------------------------------------------
+//  Превью поста на языке страницы.
+// --------------------------------------------------------------------------
+
+function og_post_row(PDO $pdo): array {
+    $blocks = [['t' => 'p', 'ru' => [['s' => 'Текст поста']], 'en' => [['s' => 'Post text']]]];
+    $pdo->prepare(
+        "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, body_json, image_url, published_at)
+         VALUES ('game', 'Заголовок', 'Title', 'Текст поста', 'Post text', :j, '', 1000)"
+    )->execute([':j' => json_encode(['v' => 1, 'blocks' => $blocks], JSON_UNESCAPED_UNICODE)]);
+    return news_post_by_id($pdo, (int)$pdo->lastInsertId());
+}
+
+test('the preview of a post on a German page uses the translation, then EN', function () {
+    $pdo = test_db();
+    $row = og_post_row($pdo);
+    i18n_put($pdo, 'news', (string)$row['id'], 'title', 'de', i18n_hash('Заголовок'), 'Überschrift', 1);
+    $og = news_post_og_data(news_og_localize($pdo, $row, 'de'));
+    assert_eq('Überschrift', $og['title']);
+    assert_eq('Post text', $og['description'], 'no German body yet — EN');
+});
+
+test('the Russian preview is the row as it was', function () {
+    $pdo = test_db();
+    $row = og_post_row($pdo);
+    assert_eq($row, news_og_localize($pdo, $row, 'ru'));
+    assert_eq('Заголовок', news_post_og_data($row)['title']);
+});
+
+test('the English preview takes the EN columns, before the migration too', function () {
+    $pdo = test_db();
+    $pdo->exec('DROP TABLE i18n_texts');
+    $row = og_post_row($pdo);
+    $og = news_post_og_data(news_og_localize($pdo, $row, 'en'));
+    assert_eq(['Title', 'Post text'], [$og['title'], $og['description']]);
+    $og = news_post_og_data(news_og_localize($pdo, $row, 'it'));
+    assert_eq('Title', $og['title']);
+});
+
 run_tests();

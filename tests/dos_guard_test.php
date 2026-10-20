@@ -39,29 +39,61 @@ test('state.php and stock.php take no query string at all', function () use ($PU
     assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]'), 'any query string is refused');
 });
 
-test('giveaways.php takes nothing but ?test=1', function () use ($PUB) {
+// Язык в адресе — только из списка сайта и только последним параметром:
+// каждый лишний вариант адреса — лишний промах мимо кеша.
+const DG_BAD_LANGS = ['lang=', 'lang=xx', 'lang=DE', 'lang=de&x=1', 'lang=de&lang=fr', 'lang=dee'];
+
+test('giveaways.php takes nothing but ?test=1 and the page language', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
     $cond = dg_cond_before($ht, 'RewriteRule ^api/giveaways\.php$ - [F,L]');
     assert_true($cond !== null && $cond[0] === '!', 'negated condition in front of the rule');
     $re = '~' . substr((string)$cond, 1) . '~';
-    foreach (['', 'test=1'] as $ok) {
+    foreach (['', 'test=1', 'lang=de', 'lang=ru', 'lang=uk', 'test=1&lang=en'] as $ok) {
         assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
     }
-    foreach (['test', 'test=0', 'test=2', 'test=1&x=1', 'x=1&test=1', 'test=11', 'rev=1'] as $bad) {
-        assert_eq(0, preg_match($re, $bad), "refused: '$bad'");
+    $bad = ['test', 'test=0', 'test=2', 'test=1&x=1', 'x=1&test=1', 'test=11', 'rev=1', 'lang=de&test=1', 'test=1&lang=xx'];
+    foreach (array_merge($bad, DG_BAD_LANGS) as $b) {
+        assert_eq(0, preg_match($re, $b), "refused: '$b'");
     }
 });
 
-test('tierlist.php and promo.php take nothing but ?rev=<digits>', function () use ($PUB) {
+test('tierlist.php takes nothing but ?rev=<digits> and the page language', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
-    $cond = dg_cond_before($ht, 'RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]');
+    $cond = dg_cond_before($ht, 'RewriteRule ^api/tierlist\.php$ - [F,L]');
+    assert_true($cond !== null && $cond[0] === '!', 'negated condition in front of the rule');
+    $re = '~' . substr((string)$cond, 1) . '~';
+    foreach (['', 'rev=0', 'rev=1726000000000', 'rev=1726000000000&lang=de', 'lang=pt'] as $ok) {
+        assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
+    }
+    $bad = ['rev=', 'rev=1&x=2', 'x=1&rev=1', 'rev=abc', 'rev=-1', 'rev=1x', 'rev=' . str_repeat('9', 19), 't=123',
+            'lang=de&rev=1', 'rev=1&lang=xx'];
+    foreach (array_merge($bad, DG_BAD_LANGS) as $b) {
+        assert_eq(0, preg_match($re, $b), "refused: '$b'");
+    }
+});
+
+test('promo.php takes nothing but ?rev=<digits>', function () use ($PUB) {
+    $ht = dg_read("$PUB/.htaccess");
+    $cond = dg_cond_before($ht, 'RewriteRule ^api/promo\.php$ - [F,L]');
     assert_true($cond !== null && $cond[0] === '!', 'negated condition in front of the rule');
     $re = '~' . substr((string)$cond, 1) . '~';
     foreach (['', 'rev=0', 'rev=1726000000000'] as $ok) {
         assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
     }
-    foreach (['rev=', 'rev=1&x=2', 'x=1&rev=1', 'rev=abc', 'rev=-1', 'rev=1x', 'rev=' . str_repeat('9', 19), 't=123'] as $bad) {
+    foreach (['rev=', 'rev=1&x=2', 'x=1&rev=1', 'rev=abc', 'rev=1x', 'rev=1&lang=de', 'lang=de'] as $bad) {
         assert_eq(0, preg_match($re, $bad), "refused: '$bad'");
+    }
+});
+
+// Список языков в правилах — тот же, что у сайта: новый язык в I18N_LANGS
+// без правки .htaccess получал бы 403 на данные.
+test('the language lists in the rules match the site languages', function () use ($PUB) {
+    require_once __DIR__ . '/../public_html/api/lib/i18n.php';
+    $ht = dg_read("$PUB/.htaccess");
+    preg_match_all('~^RewriteCond %\{QUERY_STRING\} \S*lang=\(([a-z|]+)\)~m', $ht, $m);
+    assert_eq(2, count($m[1]), 'two rules with a language');
+    foreach ($m[1] as $list) {
+        assert_eq(implode('|', I18N_LANGS), $list);
     }
 });
 

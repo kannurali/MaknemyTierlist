@@ -375,3 +375,18 @@ CREATE TABLE IF NOT EXISTS like_votes (
   created_at BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (user_id, target)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Переводы новостей, розыгрышей и описаний предметов на языки сайта (кроме
+-- EN новостей и розыгрышей — тот в своих колонках). Поля и смысл колонок —
+-- в docs/migrations/2026-10-20-i18n-texts.sql, логика —
+-- public_html/api/lib/i18n_content.php.
+CREATE TABLE IF NOT EXISTS i18n_texts (
+  kind       VARCHAR(8)      NOT NULL,
+  ref_id     VARCHAR(40)     NOT NULL,
+  field      VARCHAR(16)     NOT NULL,
+  lang       CHAR(2)         NOT NULL,
+  src_hash   CHAR(40)        NOT NULL,
+  text       MEDIUMTEXT      NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (kind, ref_id, field, lang)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
