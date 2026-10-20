@@ -1,4 +1,5 @@
 
+
 .hm {
   --u: min(1px, calc(100vw / 1443));
   --hm-bleed: max(0px, (100vw - 1443 * var(--u)) / 2);
@@ -348,20 +349,25 @@
 
 .hm-ticker-list li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: calc(15 * var(--u));
-  font-size: calc(40 * var(--u));
-  line-height: 1.1;
+  padding-top: 0.2em;
+  font-family: var(--display);
+  font-size: calc(66.74 * var(--u));
+  line-height: 1;
   font-weight: 400;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .hm-ticker-list li::before {
   content: "";
+  flex: none;
   width: calc(17 * var(--u));
   height: calc(17 * var(--u));
+  margin-top: 0.05em;
   border-radius: 50%;
-  background: #fff;
+  background: conic-gradient(#fff 0 90deg, transparent 90deg 180deg, #fff 180deg);
 }
 
 @keyframes hm-ticker {
@@ -923,8 +929,14 @@
     margin: 24px 0 0 -16px;
   }
 
+  .hm-ticker-list {
+    gap: 10px;
+    padding-left: 10px;
+  }
+
   .hm-ticker-list li {
-    font-size: 22px;
+    gap: 10px;
+    font-size: 37px;
   }
 
   .hm-ticker-list li::before {
