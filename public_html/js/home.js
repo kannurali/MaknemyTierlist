@@ -3,6 +3,12 @@
   'use strict';
 
   var LANG_KEY = 'nexus-lang-v1';
+
+  var engine = navigator.userAgentData;
+  if (engine && engine.brands && engine.brands.some(function (b) { return /Chromium/.test(b.brand); })) {
+    document.documentElement.classList.add('hm-lg');
+  }
+
   var i18n = window.I18N;
   if (!i18n) return;
 

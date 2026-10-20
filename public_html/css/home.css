@@ -614,6 +614,13 @@
   pointer-events: none;
 }
 
+.hm-glass-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
 .hm-fig {
   --hm-fig-blur: 0px;
   --hm-fig-shadow: 0 calc(4 * var(--u)) calc(7 * var(--u)) rgba(0, 0, 0, 0.25);
@@ -782,6 +789,10 @@
     backdrop-filter: blur(var(--hm-fig-blur)) saturate(1.15);
     -webkit-backdrop-filter: blur(var(--hm-fig-blur)) saturate(1.15);
   }
+  .hm-lg .hm-fig-circle    { backdrop-filter: url(#hmGlassCircle); -webkit-backdrop-filter: url(#hmGlassCircle); }
+  .hm-lg .hm-fig-square-lg { backdrop-filter: url(#hmGlassSquareLg); -webkit-backdrop-filter: url(#hmGlassSquareLg); }
+  .hm-lg .hm-fig-square-sm { backdrop-filter: url(#hmGlassSquareSm); -webkit-backdrop-filter: url(#hmGlassSquareSm); }
+  .hm-lg .hm-fig-tri       { backdrop-filter: url(#hmGlassTri); -webkit-backdrop-filter: url(#hmGlassTri); }
 }
 
 @media (max-width: 900px) {

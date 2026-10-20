@@ -285,6 +285,55 @@ page_lscache();
     <div class="hm-ghost hm-ghost-a hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-ghost hm-ghost-b hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-phone hm-deco hm-anim" aria-hidden="true"></div>
+    <svg class="hm-glass-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <filter id="hmGlassCircle" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-circle.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2014" xChannelSelector="R" yChannelSelector="G" result="dr" />
+        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.1821" xChannelSelector="R" yChannelSelector="G" result="dg" />
+        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.1628" xChannelSelector="R" yChannelSelector="G" result="db" />
+        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
+        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
+        <feGaussianBlur in="rgb" stdDeviation="0.0092" />
+      </filter>
+      <filter id="hmGlassSquareLg" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-square-lg.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2196" xChannelSelector="R" yChannelSelector="G" result="dr" />
+        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.1972" xChannelSelector="R" yChannelSelector="G" result="dg" />
+        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.1748" xChannelSelector="R" yChannelSelector="G" result="db" />
+        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
+        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
+        <feGaussianBlur in="rgb" stdDeviation="0.0243" />
+      </filter>
+      <filter id="hmGlassSquareSm" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-square-sm.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3514" xChannelSelector="R" yChannelSelector="G" result="dr" />
+        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3156" xChannelSelector="R" yChannelSelector="G" result="dg" />
+        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2797" xChannelSelector="R" yChannelSelector="G" result="db" />
+        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
+        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" />
+      </filter>
+      <filter id="hmGlassTri" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-tri.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3523" xChannelSelector="R" yChannelSelector="G" result="dr" />
+        <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3171" xChannelSelector="R" yChannelSelector="G" result="dg" />
+        <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2818" xChannelSelector="R" yChannelSelector="G" result="db" />
+        <feColorMatrix in="db" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
+        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
+        <feGaussianBlur in="rgb" stdDeviation="0.0183" />
+      </filter>
+    </svg>
     <div class="hm-fig hm-fig-square-lg hm-deco hm-anim" aria-hidden="true"></div>
     <img class="hm-sakura hm-sakura-l hm-deco hm-anim" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
     <img class="hm-sakura hm-sakura-r hm-deco hm-anim" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
@@ -400,6 +449,6 @@ page_lscache();
 
 <?= i18n_dict_tag() ?>
 <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-<script src="js/home.js?v=7" fetchpriority="high"></script>
+<script src="js/home.js?v=8" fetchpriority="high"></script>
 </body>
 </html>
