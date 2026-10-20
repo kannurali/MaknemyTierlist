@@ -532,7 +532,7 @@ page_lscache();
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=15" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=16" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>
