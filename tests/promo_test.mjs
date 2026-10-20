@@ -887,7 +887,7 @@ test('PLAYEROK занимает все четыре места калькуля�
     // Чужую кампанию ограничиваем сильнее своей: три показа в неделю, не семь.
     assert.equal(PLAYEROK.popup.maxPerWeek, 3);
     // Новое размещение — новый id: свой счётчик показов окна и своя цель
-    // promo_click в Метрике, сентябрьские цифры с октябрьскими не смешиваются.
+    // promo_click в статистике, сентябрьские цифры с октябрьскими не смешиваются.
     assert.notEqual(PLAYEROK.id, 'playerok-2026-09');
     for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, STARVELL]) {
         assert.notEqual(PLAYEROK.id, other.id);
@@ -1124,7 +1124,7 @@ test('у TG-канала в свёрнутой полосе свой текст,
     assert.equal(PROMO.dockTextKey(null), '');
 });
 
-test('goal() шлёт цель и в Метрику, и в GA (id → promo_id), без счётчиков молчит', () => {
+test('goal() шлёт цель в GA (id → promo_id), Метрику не зовёт, без счётчика молчит', () => {
     const saved = { ym: globalThis.ym, gtag: globalThis.gtag };
     try {
         delete globalThis.ym; delete globalThis.gtag;
@@ -1135,14 +1135,11 @@ test('goal() шлёт цель и в Метрику, и в GA (id → promo_id),
         globalThis.gtag = (...a) => calls.push(['gtag', ...a]);
         PROMO.goal('promo_click', { id: 'c1', slot: 'popup', page: 'calc' });
         assert.deepEqual(calls, [
-            ['ym', 111127188, 'reachGoal', 'promo_click', { id: 'c1', slot: 'popup', page: 'calc' }],
             ['gtag', 'event', 'promo_click', { promo_id: 'c1', slot: 'popup', page: 'calc' }]
         ]);
 
-        globalThis.ym = () => { throw new Error('boom'); };
-        calls.length = 0;
+        globalThis.gtag = () => { throw new Error('boom'); };
         PROMO.goal('promo_dock_mini', { id: 'c2' });
-        assert.deepEqual(calls, [['gtag', 'event', 'promo_dock_mini', { promo_id: 'c2' }]], 'сбой Метрики не глушит GA');
     } finally {
         globalThis.ym = saved.ym; globalThis.gtag = saved.gtag;
         if (saved.ym === undefined) delete globalThis.ym;
