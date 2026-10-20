@@ -52,6 +52,13 @@
   --dur-slow: 1.25s;
 }
 
+:root:lang(de), :root:lang(fr), :root:lang(es), :root:lang(it), :root:lang(pt), :root:lang(pl), :root:lang(tr) {
+  --proto: "Bootshaus", "Arial Narrow", Impact, sans-serif;
+}
+:root:lang(tr) {
+  --display: "Bootshaus", "Oswald", "Proto Sans", "Arial Narrow", Impact, sans-serif;
+}
+
 @property --rep-split {
   syntax: "<number>";
   inherits: true;
