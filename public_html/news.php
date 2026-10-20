@@ -210,7 +210,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news.css?v=14" /><?php else: ?><link rel="stylesheet" href="css/news.css?v=14" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/news.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/news.css?v=15" /><?php endif; ?>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
 

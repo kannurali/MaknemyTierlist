@@ -263,6 +263,8 @@ html { -webkit-tap-highlight-color: transparent; }
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-block: .14em;
+  margin-block: -.14em;
 }
 .mk-pill:hover,
 .mk-pill:active,
@@ -744,6 +746,8 @@ a.mk-avatar { text-decoration: none; }
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-block: .14em;
+  margin-block: -.14em;
 }
 .mk-lang-chev {
   flex: 0 0 auto;
