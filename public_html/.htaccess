@@ -67,12 +67,16 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 #
 # state.php и stock.php клиент зовёт без параметров вовсе, giveaways.php —
 # без них или с ?test=1 (тестовые розыгрыши), tierlist.php и promo.php — без
-# них или с ?rev=<число>.
+# них или с ?rev=<число>, hunt.php — без них или с ?page=<ключ страницы>
+# (секретки этой страницы, ключи — HUNT_SPOTS в api/lib/hunt.php).
 RewriteCond %{QUERY_STRING} .
 RewriteRule ^api/(state|stock)\.php$ - [F,L]
 
 RewriteCond %{QUERY_STRING} !^(test=1)?$
 RewriteRule ^api/giveaways\.php$ - [F,L]
+
+RewriteCond %{QUERY_STRING} !^(page=[a-z]{1,16})?$
+RewriteRule ^api/hunt\.php$ - [F,L]
 
 RewriteCond %{QUERY_STRING} !^(rev=[0-9]{1,18})?$
 RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]

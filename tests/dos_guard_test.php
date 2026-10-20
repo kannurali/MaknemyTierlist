@@ -5,6 +5,9 @@
 // Run: php tests/dos_guard_test.php
 define('TESTING', 1);
 require __DIR__ . '/lib.php';
+// HUNT_SPOTS — ключи страниц, которые .htaccess пускает к api/hunt.php.
+require __DIR__ . '/../public_html/api/_bootstrap.php';
+require __DIR__ . '/../public_html/api/lib/hunt.php';
 
 $PUB = realpath(__DIR__ . '/../public_html');
 
@@ -48,6 +51,19 @@ test('giveaways.php takes nothing but ?test=1', function () use ($PUB) {
         assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
     }
     foreach (['test', 'test=0', 'test=2', 'test=1&x=1', 'x=1&test=1', 'test=11', 'rev=1'] as $bad) {
+        assert_eq(0, preg_match($re, $bad), "refused: '$bad'");
+    }
+});
+
+test('hunt.php takes nothing but ?page=<page key>', function () use ($PUB) {
+    $ht = dg_read("$PUB/.htaccess");
+    $cond = dg_cond_before($ht, 'RewriteRule ^api/hunt\.php$ - [F,L]');
+    assert_true($cond !== null && $cond[0] === '!', 'negated condition in front of the rule');
+    $re = '~' . substr((string)$cond, 1) . '~';
+    foreach (array_merge([''], array_map(function ($k) { return "page=$k"; }, array_keys(HUNT_SPOTS))) as $ok) {
+        assert_eq(1, preg_match($re, $ok), "allowed: '$ok'");
+    }
+    foreach (['page', 'page=', 'page=calc&x=1', 'x=1', 'page=Calc', 'page=a1', 'page=' . str_repeat('a', 17)] as $bad) {
         assert_eq(0, preg_match($re, $bad), "refused: '$bad'");
     }
 });
@@ -99,7 +115,8 @@ test('session-bound and writing endpoints never ask for the cache', function () 
               'api/news_save.php', 'api/news_delete.php', 'api/like.php', 'api/news_like.php',
               'api/roblox_start.php', 'api/roblox_callback.php',
               'api/tg_link.php', 'api/tg_webhook.php', 'api/tg_setup.php',
-              'admin-giveaways.php', 'api/giveaway_enter.php', 'api/giveaway_admin.php'] as $f) {
+              'admin-giveaways.php', 'api/giveaway_enter.php', 'api/giveaway_admin.php',
+              'api/hunt_me.php', 'api/hunt_act.php', 'api/hunt_stat.php'] as $f) {
         $src = dg_read("$PUB/$f");
         assert_eq(false, strpos($src, 'page_lscache('), "$f: page_lscache");
         assert_eq(false, strpos($src, 'lscache_public('), "$f: lscache_public");
@@ -121,6 +138,7 @@ test('a successful deploy purges the LiteSpeed cache', function () use ($PUB) {
 test('the polled endpoints are cacheable', function () use ($PUB) {
     assert_true(strpos(dg_read("$PUB/api/state.php"), 'lscache_public(5)') !== false, 'state.php for 5 s');
     assert_true(strpos(dg_read("$PUB/api/giveaways.php"), 'lscache_public(GW_PUBLIC_CACHE)') !== false, 'giveaways.php');
+    assert_true(strpos(dg_read("$PUB/api/hunt.php"), 'lscache_public(HUNT_PUBLIC_CACHE)') !== false, 'hunt.php');
     foreach (['tierlist.php', 'promo.php', 'og-tierlist.php', 'og-news.php'] as $f) {
         assert_true(strpos(dg_read("$PUB/api/$f"), 'lscache_public(86400)') !== false, $f);
     }
