@@ -26,7 +26,7 @@ echo <<<HTML
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
-<link rel="stylesheet" href="/css/giveaway.css?v=7" />
+<link rel="stylesheet" href="/css/giveaway.css?v=8" />
 <link rel="stylesheet" href="/css/giveaway-admin.css?v=8" />
 </head>
 <body>
