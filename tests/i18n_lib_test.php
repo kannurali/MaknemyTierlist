@@ -20,7 +20,9 @@ test('язык берётся из приставки адреса', function ()
     assert_eq('en', i18n_lang_from_uri('/en/tierlist?x=1'));
     assert_eq('en', i18n_lang_from_uri('/en/news/12'));
     assert_eq('ru', i18n_lang_from_uri('/ru/tierlist'), 'у русского приставки нет');
-    assert_eq('ru', i18n_lang_from_uri('/de/tierlist'), 'неизвестный язык');
+    assert_eq('de', i18n_lang_from_uri('/de/tierlist'));
+    assert_eq('uk', i18n_lang_from_uri('/uk/news/3'));
+    assert_eq('ru', i18n_lang_from_uri('/xx/tierlist'), 'неизвестный язык');
     assert_eq('ru', i18n_lang_from_uri('/english'), 'en только целым сегментом');
     assert_eq('ru', i18n_lang_from_uri('/api/news.php'));
     assert_eq('ru', i18n_lang_from_uri('//'), 'мусор в адресе');
@@ -128,6 +130,39 @@ test('каждая страница с i18n.js подключает словар
     $adm = (string)file_get_contents("$PUB/admin-giveaways.php");
     assert_true(strpos($adm, '{$i18nDictTag}<script src="/js/i18n.js?v=') !== false, 'admin-giveaways.php');
     assert_true(strpos($adm, "\$i18nDictTag = i18n_dict_tag('ru', true);") !== false, 'admin-giveaways.php: тег собран');
+});
+
+test('i18n_path снимает приставку и сохраняет query', function () {
+    assert_eq('/news/92?x=1', with_uri('/en/news/92?x=1', 'i18n_path'));
+    assert_eq('/', with_uri('/en', 'i18n_path'));
+    assert_eq('/?x', with_uri('/en?x', 'i18n_path'));
+    assert_eq('/tierlist', with_uri('/tierlist', 'i18n_path'));
+    assert_eq('/', with_uri(null, 'i18n_path'));
+});
+
+test('меню «Язык»: все языки, ссылки на ту же страницу, текущий отмечен', function () {
+    $m = with_uri('/en/news/92', 'i18n_lang_menu');
+    assert_eq(count(I18N_LANGS), substr_count($m, 'class="mk-lang-item"'), 'пункт на каждый язык');
+    assert_true(strpos($m, 'href="/news/92" hreflang="ru" lang="ru" data-lang-go="ru">Русский</a>') !== false, 'русский без приставки');
+    assert_true(strpos($m, 'href="/en/news/92" hreflang="en" lang="en" data-lang-go="en" aria-current="true">English</a>') !== false, 'текущий');
+    assert_eq(1, substr_count($m, 'aria-current'), 'текущий один');
+    assert_true(strpos($m, '<span class="mk-lang-label" data-i18n="lang.menu">Language</span>') !== false, 'подпись на языке страницы');
+    assert_true(strpos($m, 'aria-expanded="false" aria-controls="mkLangList"') !== false, 'кнопка списка');
+    assert_true(strpos($m, '<ul class="mk-lang-list" id="mkLangList" hidden>') !== false, 'список закрыт');
+    assert_eq(false, strpos($m, 'data-lang="'), 'старый атрибут не используется');
+    foreach (I18N_LANGS as $l) { assert_true(isset(I18N_NAMES[$l]), "название $l"); }
+});
+
+test('меню стоит в листе разделов каждой страницы, старых чипов нет', function () use ($PUB) {
+    foreach (['home', 'index', 'calculator', 'news', 'trading', 'trade-new', 'stock', 'giveaways',
+              'profile', 'chat', 'support', 'promote'] as $p) {
+        $s = str_replace("\r\n", "\n", (string)file_get_contents("$PUB/$p.php"));
+        $nav = strpos($s, '<ul class="mk-nav">');
+        $menu = strpos($s, '<li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>');
+        $end = $nav === false ? false : strpos($s, '</ul>', $nav);
+        assert_true($nav !== false && $menu !== false && $menu > $nav && $menu < $end, "$p.php: меню в ul.mk-nav");
+        assert_eq(false, strpos($s, 'class="mk-top-lang'), "$p.php: старых чипов нет");
+    }
 });
 
 run_tests();

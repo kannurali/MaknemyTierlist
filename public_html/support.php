@@ -31,12 +31,12 @@ page_lscache();
 <link rel="icon" type="image/png" href="/assets/favicon.png?v=2" sizes="256x256" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=15" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=15" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=30" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
-<script src="js/topbar.js?v=31" defer fetchpriority="high"></script>
+<script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
@@ -53,11 +53,6 @@ page_lscache();
       <img class="mk-top-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </a>
 
-    <div class="mk-top-lang lang-switch" id="langSwitch" role="group"
-         data-i18n-label="lang.switch" aria-label="<?= ta('lang.switch') ?>">
-      <button class="chip" type="button" data-lang="ru" data-i18n="lang.ru" aria-pressed="false"><?= te('lang.ru') ?></button>
-      <button class="chip" type="button" data-lang="en" data-i18n="lang.en" aria-pressed="false"><?= te('lang.en') ?></button>
-    </div>
 
     <nav class="mk-top-bar" id="mkTopBar" aria-label="<?= ta('topbar.sections') ?>">
       <ul class="mk-nav">
@@ -105,6 +100,7 @@ page_lscache();
             <span class="mk-pill-text" data-i18n="nav.promote"><?= te('nav.promote') ?></span>
           </a>
         </li>
+        <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
       </ul>
 
       <a class="mk-promote" href="<?= u('/giveaways') ?>" data-i18n="nav.giveaways"><?= te('nav.giveaways') ?></a>
@@ -197,10 +193,10 @@ page_lscache();
     </p>
   </footer>
   <?= i18n_dict_tag() ?>
-  <script src="js/i18n.js?v=83" fetchpriority="high"></script>
+  <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/support-page.js?v=1" defer></script>
-  <script src="js/news-blocks.js?v=3" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=12" fetchpriority="high"></script>
+  <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=13" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

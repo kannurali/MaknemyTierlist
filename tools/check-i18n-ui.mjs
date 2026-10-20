@@ -38,14 +38,14 @@ const cookie = async c => ((await c.cookies(ORIGIN)).find(x => x.name === 'nx_la
 {
   const [c, p] = await ctx('de-DE');
   await p.goto(ORIGIN + '/tierlist');
-  ok(path(p) === '/en/tierlist', 'de-браузер попал на /en/tierlist: ' + p.url());
-  ok(await lang(p) === 'en', 'html lang=en');
-  ok(await p.locator('a[href="/en/calculator"]').count() > 0, 'шапка ведёт на /en/calculator');
+  ok(path(p) === '/de/tierlist', 'de-браузер попал на /de/tierlist: ' + p.url());
+  ok(await lang(p) === 'de', 'html lang=de');
+  ok(await p.locator('a[href="/de/calculator"]').count() > 0, 'шапка ведёт на /de/calculator');
   ok(await p.locator('link[hreflang="ru"]').count() === 1, 'hreflang ru');
-  ok((await p.title()).startsWith('Maknemy Tier List — Blox Fruits'), 'английский title: ' + await p.title());
-  await p.screenshot({ path: `${out}/en-tierlist.png` });
+  ok((await p.title()).startsWith('Maknemy Tier List — Blox Fruits'), 'немецкий title: ' + await p.title());
+  await p.screenshot({ path: `${out}/de-tierlist.png` });
 
-  await p.locator('#langSwitch [data-lang="ru"]').dispatchEvent('click');
+  await p.locator('#langSwitch [data-lang-go="ru"]').dispatchEvent('click');
   await p.waitForURL(u => new URL(u).pathname === '/tierlist');
   ok(await lang(p) === 'ru', 'RU-чип: html lang=ru');
   ok(await cookie(c) === 'ru', 'RU-чип: кука nx_lang=ru');
@@ -53,7 +53,7 @@ const cookie = async c => ((await c.cookies(ORIGIN)).find(x => x.name === 'nx_la
   await p.goto(ORIGIN + '/calculator');
   ok(path(p) === '/calculator', 'кука ru сильнее de-браузера');
 
-  await p.locator('#langSwitch [data-lang="en"]').dispatchEvent('click');
+  await p.locator('#langSwitch [data-lang-go="en"]').dispatchEvent('click');
   await p.waitForURL(u => new URL(u).pathname === '/en/calculator');
   ok(await cookie(c) === 'en', 'EN-чип: кука nx_lang=en');
 
@@ -91,6 +91,31 @@ const cookie = async c => ((await c.cookies(ORIGIN)).find(x => x.name === 'nx_la
   await p.goto(ORIGIN + '/tierlist');
   ok(path(p) === '/tierlist', 'и на следующей странице тоже');
   ok(await cookie(c) === undefined, 'кука выбора не появилась сама');
+  await c.close();
+}
+
+{
+  const [c, p] = await ctx('pl-PL');
+  await p.goto(ORIGIN + '/tierlist');
+  ok(path(p) === '/pl/tierlist', 'pl-браузер попал на /pl/tierlist: ' + p.url());
+  ok(await lang(p) === 'pl', 'html lang=pl');
+  await p.click('#mkTopToggle');
+  await p.click('.mk-lang-btn');
+  ok(await p.locator('#mkLangList').isVisible(), 'меню «Język ▾» раскрывает список');
+  ok(await p.locator('.mk-lang-item').count() === 10, 'в списке 10 языков');
+  await p.screenshot({ path: out + '/pl-lang-menu.png' });
+  await p.click('.mk-lang-item[data-lang-go="de"]');
+  await p.waitForURL(u => new URL(u).pathname === '/de/tierlist');
+  ok(await cookie(c) === 'de', 'выбор Deutsch: кука de');
+  await p.keyboard.press('Escape');
+  await c.close();
+}
+
+{
+  const [c, p] = await ctx('uk-UA');
+  await p.goto(ORIGIN + '/');
+  ok(path(p) === '/uk', 'uk-браузер попал на /uk: ' + p.url());
+  ok((await p.title()).includes('Maknemy'), 'украинский title: ' + await p.title());
   await c.close();
 }
 

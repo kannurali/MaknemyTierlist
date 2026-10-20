@@ -118,6 +118,10 @@ function i18n_flatten(string $src): string {
         $s = array_key_exists($m[2], $ru) ? (string)$ru[$m[2]] : $m[2];
         return htmlspecialchars($s, ($m[1] === 'te' ? ENT_NOQUOTES : ENT_QUOTES) | ENT_SUBSTITUTE, 'UTF-8');
     }, $src);
+    $src = preg_replace_callback("~<\\?= tj\\('([^']+)'\\) \\?>~", function ($m) use ($ru) {
+        $s = array_key_exists($m[1], $ru) ? (string)$ru[$m[1]] : $m[1];
+        return substr((string)json_encode($s, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG), 1, -1);
+    }, $src);
     $src = preg_replace("~<\\?= u\\('([^']*)'\\) \\?>~", '$1', $src);
     $src = preg_replace("~<\\?= i18n_url\\('([^']*)'\\) \\?>~", 'https://maknemy.com$1', $src);
     $src = str_replace(['<?= i18n_lang() ?>', '<?= i18n_og_locale() ?>'], ['ru', 'ru_RU'], $src);

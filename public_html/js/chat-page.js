@@ -78,7 +78,7 @@
   var EMOJI = '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🤫 🤔 🤐 🤨 😐 😑 😶 😶‍🌫️ 😏 😒 🙄 😬 😮‍💨 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊';
 
 
-  function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
+  function lang() { return i18n ? i18n.pageLang() : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
   function when(sec) {
     var d = new Date(sec * 1000);
@@ -1023,7 +1023,7 @@
   }
 
   function banDate(sec) {
-    return new Date(sec * 1000).toLocaleString(lang() === 'en' ? 'en-GB' : 'ru-RU', {
+    return new Date(sec * 1000).toLocaleString(i18n ? i18n.locale() : 'ru-RU', {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   }

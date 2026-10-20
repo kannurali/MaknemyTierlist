@@ -23,7 +23,7 @@
 
   var savedAbout = aboutInput ? aboutInput.value : '';
 
-  function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
+  function lang() { return window.I18N ? window.I18N.pageLang() : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
 
   function syncMenuLabel() {

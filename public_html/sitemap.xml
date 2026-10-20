@@ -4,6 +4,14 @@
     <loc>https://maknemy.com/</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -12,6 +20,142 @@
     <loc>https://maknemy.com/en</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/" />
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -20,6 +164,14 @@
     <loc>https://maknemy.com/tierlist</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -28,6 +180,142 @@
     <loc>https://maknemy.com/en/tierlist</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/tierlist</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/tierlist" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/tierlist" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/tierlist" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/tierlist" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/tierlist" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/tierlist" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/tierlist" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/tierlist" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/tierlist" />
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -36,6 +324,14 @@
     <loc>https://maknemy.com/news</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -44,6 +340,142 @@
     <loc>https://maknemy.com/en/news</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/news</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/news" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/news" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/news" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/news" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/news" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/news" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/news" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/news" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/news" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/news" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/news" />
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -52,6 +484,14 @@
     <loc>https://maknemy.com/calculator</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -60,6 +500,142 @@
     <loc>https://maknemy.com/en/calculator</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/calculator" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/calculator" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/calculator" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/calculator" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/calculator" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/calculator" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/calculator" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/calculator" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/calculator" />
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -68,6 +644,14 @@
     <loc>https://maknemy.com/trading</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
@@ -76,6 +660,142 @@
     <loc>https://maknemy.com/en/trading</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/trading</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/trading" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/trading" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/trading" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/trading" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/trading" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/trading" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/trading" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/trading" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/trading" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/trading" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/trading" />
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
@@ -84,6 +804,14 @@
     <loc>https://maknemy.com/stock</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -92,6 +820,142 @@
     <loc>https://maknemy.com/en/stock</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/stock</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/stock" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/stock" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/stock" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/stock" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/stock" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/stock" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/stock" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/stock" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/stock" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/stock" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/stock" />
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -100,6 +964,14 @@
     <loc>https://maknemy.com/giveaways</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -108,12 +980,303 @@
     <loc>https://maknemy.com/en/giveaways</loc>
     <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
     <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/giveaways</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/giveaways" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/giveaways" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/giveaways" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/giveaways" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/giveaways" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/giveaways" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/giveaways" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/giveaways" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/giveaways" />
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://maknemy.com/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/en/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/de/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/fr/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/es/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/it/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pt/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/pl/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/tr/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://maknemy.com/uk/ads</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maknemy.com/ads" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://maknemy.com/en/ads" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maknemy.com/de/ads" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://maknemy.com/fr/ads" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maknemy.com/es/ads" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://maknemy.com/it/ads" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maknemy.com/pt/ads" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maknemy.com/pl/ads" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://maknemy.com/tr/ads" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://maknemy.com/uk/ads" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://maknemy.com/ads" />
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
