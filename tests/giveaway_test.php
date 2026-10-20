@@ -1823,4 +1823,50 @@ test('карточки: слоты стоят на пяти страницах, 
     assert_true(strpos($news, 'data-gwc="news"') < strpos($news, 'id="feed"'), 'новости: карточка над лентой');
 });
 
+// ------------------------------ Язык страницы ------------------------------
+
+test('?lang=de: заголовок, абзацы и условия по-немецки, недостающее — по-английски', function () {
+    $p = gw_db();
+    $id = gw_live($p, ['title_en' => 'Magnet giveaway', 'conds' => [gw_cond('Подпишись', GW_YT, 'Subscribe', 'Канал', 'Channel')]]);
+    i18n_put($p, 'gw', (string)$id, 'title', 'de', i18n_hash('Розыгрыш Magnet'), 'Magnet-Gewinnspiel', 1);
+    i18n_put($p, 'gw', (string)$id, 'c0', 'de', i18n_hash('Подпишись'), 'Abonnieren', 1);
+    $db = function () use ($p) { return $p; };
+    $g = handle_giveaways($db, GW_NOW, false, 'de')['live'][0];
+    assert_eq(['ru' => '', 'en' => 'Magnet-Gewinnspiel'], $g['title']);
+    assert_eq(['ru' => '', 'en' => 'Abonnieren'], $g['conds'][0]['text']);
+    assert_eq(['ru' => '', 'en' => 'Channel'], $g['conds'][0]['btn'], 'нет перевода — EN');
+    assert_eq([[], gw_spans('Первый абзац')], [$g['body'][0]['ru'], $g['body'][0]['en']], 'нет и EN — RU в своём слоте');
+
+    $ru = handle_giveaways($db, GW_NOW, false, 'ru')['live'][0];
+    assert_eq(['ru' => 'Розыгрыш Magnet', 'en' => ''], $ru['title']);
+    $both = handle_giveaways($db, GW_NOW)['live'][0];
+    assert_eq(['ru' => 'Розыгрыш Magnet', 'en' => 'Magnet giveaway'], $both['title'], 'без lang — как раньше');
+});
+
+test('фоновый перевод розыгрыша: восемь языков, условия по номерам выдачи', function () {
+    $p = gw_db();
+    $id = gw_live($p, ['title_en' => 'X', 'conds' => [gw_cond('Подпишись', GW_YT, 'Subscribe', 'Канал', 'Channel')]]);
+    $langs = [];
+    $tr = function (string $lang) use (&$langs): callable {
+        return function (string $text) use ($lang, &$langs): ?string {
+            $langs[] = $lang;
+            $out = [];
+            foreach (explode(TR_SEP, $text) as $part) { $out[] = '[' . $lang . ']' . $part; }
+            return implode(TR_SEP, $out);
+        };
+    };
+    $st = gw_i18n_job($p, $id, $tr, microtime(true) + 60);
+    assert_eq(I18N_CONTENT_LANGS, $langs);
+    assert_eq(0, $st['failed']);
+    $g = handle_giveaways(function () use ($p) { return $p; }, GW_NOW, false, 'pl')['live'][0];
+    assert_eq('[pl]Розыгрыш Magnet', $g['title']['en']);
+    assert_eq('[pl]Подпишись', $g['conds'][0]['text']['en']);
+    assert_eq('[pl]Канал', $g['conds'][0]['btn']['en']);
+    assert_eq(gw_spans('[pl]Второй абзац'), $g['body'][1]['en']);
+
+    [$s] = handle_gw_admin($p, gw_cfg(), function () { return null; }, ['action' => 'delete', 'id' => $id], GW_NOW);
+    assert_eq(200, $s);
+    assert_eq(0, (int)$p->query("SELECT COUNT(*) FROM i18n_texts")->fetchColumn(), 'удаление уносит переводы');
+});
+
 run_tests();

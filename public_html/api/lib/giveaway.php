@@ -86,6 +86,7 @@ require_once __DIR__ . '/telegram.php';
 require_once __DIR__ . '/gw_prefs.php';
 require_once __DIR__ . '/news_blocks.php';
 require_once __DIR__ . '/translate.php';
+require_once __DIR__ . '/i18n_content.php';
 
 const GW_TITLE_MAX       = 120;
 const GW_PRIZES_MAX      = 20;
@@ -692,6 +693,32 @@ function gw_public_list(PDO $pdo, int $now, bool $withTest = false): array {
         return $out;
     };
     return ['live' => $map($liveRows), 'past' => $map($pastRows)];
+}
+
+// Список для окна и страницы на одном языке (?lang=). Переводы из таблицы
+// нужны только восьми языкам: EN розыгрыша — в колонках.
+function gw_localize_list(PDO $pdo, array $list, string $lang): array {
+    $ids = array_merge(array_column($list['live'], 'id'), array_column($list['past'], 'id'));
+    $rows = in_array($lang, I18N_CONTENT_LANGS, true) ? i18n_rows($pdo, 'gw', $lang, $ids) : [];
+    foreach (['live', 'past'] as $k) {
+        foreach ($list[$k] as $i => $g) {
+            $list[$k][$i] = i18n_gw_localize($g, $lang, $rows[(string)$g['id']] ?? []);
+        }
+    }
+    return $list;
+}
+
+// Места с текстом у розыгрыша в базе — для фонового перевода. Номера
+// условий те же, что у gw_public_item(): оба идут по gw_conds().
+function gw_i18n_load(PDO $pdo, int $id): array {
+    $row = gw_load($pdo, $id);
+    if (!$row) { return []; }
+    return [(string)$id => i18n_units_gw((string)$row['title_ru'], gw_decode_blocks($row['body_json']), gw_conds($row['conds_json'] ?? null))];
+}
+
+function gw_i18n_job(PDO $pdo, int $id, callable $requestFor, float $deadline): array {
+    $load = function () use ($pdo, $id): array { return gw_i18n_load($pdo, $id); };
+    return i18n_fill($pdo, 'gw', $load, I18N_CONTENT_LANGS, $requestFor, $deadline);
 }
 
 // Где человек уже участвует среди идущих розыгрышей — для окна: оно не

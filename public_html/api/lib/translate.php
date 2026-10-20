@@ -15,7 +15,9 @@
 
 require_once __DIR__ . '/news_blocks.php';
 
-const TR_ENDPOINT    = 'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&dj=1&sl=ru&tl=en';
+// Язык перевода дописывает tr_endpoint(): EN при сохранении поста и восемь
+// языков сайта в фоне (api/lib/i18n_content.php) идут одним эндпоинтом.
+const TR_ENDPOINT    = 'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&dj=1&sl=ru';
 // Потолок одного запроса в символах. Эндпоинт принимал и 16 000 (проверено
 // 2026-09-19), но веб-переводчик Google сам режет по 5000 — держимся ниже.
 const TR_CHUNK_CHARS = 4500;
@@ -30,14 +32,22 @@ const TR_BUDGET_SEC  = 15;
 // возвращает "< x1 >".
 const TR_TAG_RE      = '~<\s*(/?)\s*x\s*(\d+)\s*>~i';
 
+// Адрес запроса на язык $tl. Коды сайта совпадают с кодами Google; pt у
+// Google — бразильский португальский, как и задумано (спека, раздел 1).
+function tr_endpoint(string $tl = 'en'): string {
+    return TR_ENDPOINT . '&tl=' . rawurlencode($tl);
+}
+
 // Один запрос к Google. null — любой сбой: сеть, не-200, не тот JSON.
+// Без второго аргумента — на английский: так его зовут сохранение поста и
+// розыгрыша, передавая имя функции как переводчик.
 //
 // Сначала TLS не выше 1.2: 2026-09-19 Google отвечал 429 «Sorry…» на КАЖДЫЙ
 // запрос из PHP с curl 7.76 + OpenSSL 1.1.1 по TLS 1.3, а тот же запрос по
 // TLS 1.2 (и curl.exe на Schannel по любому TLS) проходил. Какая сборка на
 // бою — заранее не знать, поэтому при сбое вторая попытка идёт с настройками
 // по умолчанию.
-function tr_google_request(string $text): ?string {
+function tr_google_request(string $text, string $tl = 'en'): ?string {
     if (!function_exists('curl_init')) { return null; }
     $attempts = [];
     if (defined('CURL_SSLVERSION_MAX_TLSv1_2')) {
@@ -45,7 +55,7 @@ function tr_google_request(string $text): ?string {
     }
     $attempts[] = null;
     foreach ($attempts as $ssl) {
-        $ch = curl_init(TR_ENDPOINT);
+        $ch = curl_init(tr_endpoint($tl));
         $opts = [
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => http_build_query(['q' => $text]),
@@ -565,4 +575,51 @@ function news_autotranslate(array $post, ?array $blocks, ?array $old, callable $
 function tr_fix_spans_dashes(array $spans, string $ru): array {
     foreach ($spans as $i => $sp) { $spans[$i]['s'] = tr_fix_dashes((string)$sp['s'], $ru); }
     return $spans;
+}
+
+// --- Произвольные места -----------------------------------------------------
+
+// Переводит набор мест на один язык. $units[ключ] = ['ru' => строка или
+// спаны, 'spans' => true у спанов]. Возвращает ключ => перевод (строка или
+// спаны) либо null, если это место не вышло.
+//
+// Те же шаги, что news_autotranslate() делает для EN поста, только без
+// самого поста: так переводятся восемь языков сайта в фоне
+// (api/lib/i18n_content.php). Все места идут одной пачкой
+// tr_translate_texts(); абзацы со сломанной разметкой — вторым заходом, по
+// спану.
+function tr_translate_units(array $units, callable $request, float $deadline): array {
+    $out = array_fill_keys(array_keys($units), null);
+    $texts = [];
+    foreach ($units as $k => $u) {
+        $texts[$k] = empty($u['spans']) ? (string)$u['ru'] : tr_spans_encode($u['ru']);
+    }
+    if (!$texts) { return $out; }
+
+    $res = tr_translate_texts($texts, $request, $deadline);
+    $retry = [];
+    foreach ($units as $k => $u) {
+        if ($res[$k] === null) { continue; }
+        if (empty($u['spans'])) {
+            $out[$k] = tr_fix_dashes($res[$k], (string)$u['ru']);
+            continue;
+        }
+        $spans = tr_spans_decode($res[$k], $u['ru']);
+        if ($spans === null) { $retry[$k] = $u; continue; }
+        $out[$k] = tr_fix_spans_dashes($spans, tr_spans_text($u['ru']));
+    }
+    if (!$retry) { return $out; }
+
+    $texts2 = [];
+    foreach ($retry as $k => $u) {
+        foreach (tr_fallback_texts($u['ru']) as $i => $t) { $texts2[$k . ':' . $i] = $t; }
+    }
+    $res2 = $texts2 ? tr_translate_texts($texts2, $request, $deadline) : [];
+    foreach ($retry as $k => $u) {
+        $tr = [];
+        foreach (tr_fallback_texts($u['ru']) as $i => $_) { $tr[$i] = $res2[$k . ':' . $i] ?? null; }
+        $spans = tr_fallback_apply($u['ru'], $tr);
+        if ($spans !== null) { $out[$k] = tr_fix_spans_dashes($spans, tr_spans_text($u['ru'])); }
+    }
+    return $out;
 }

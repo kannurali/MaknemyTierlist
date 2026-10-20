@@ -43,4 +43,70 @@ test('an empty table sends everyone to rev 0, which serves no data', function ()
     assert_eq(null, $p['tierlist'], 'no data yet');
 });
 
+// ------------------------------ Язык страницы ------------------------------
+
+function tl_seed_items(PDO $pdo, int $rev): void {
+    $blob = json_encode(['tiers' => [['label' => 'S', 'items' => [
+        ['id' => 'a', 'name' => 'Kitsune', 'desc' => 'Описание', 'descEn' => 'Description', 'terms' => '', 'termsEn' => ''],
+    ]]], '_rev' => $rev], JSON_UNESCAPED_UNICODE);
+    $pdo->prepare("UPDATE tierlist SET data = :d, rev = :r WHERE id = 1")->execute([':d' => $blob, ':r' => $rev]);
+}
+
+test('the redirect to the current revision keeps the language', function () {
+    $pdo = test_db();
+    tl_seed_items($pdo, 42);
+    assert_eq([302, ['location' => '/api/tierlist.php?rev=42&lang=de']], tierlist_route($pdo, '41', 'de'));
+    assert_eq([302, ['location' => '/api/tierlist.php?rev=42&lang=de']], tierlist_route($pdo, null, 'de'));
+});
+
+test('an unknown language is redirected to the two-language address', function () {
+    $pdo = test_db();
+    tl_seed_items($pdo, 42);
+    foreach (['', 'xx', 'DE', ['de']] as $bad) {
+        assert_eq([302, ['location' => '/api/tierlist.php?rev=42']], tierlist_route($pdo, '42', $bad), var_export($bad, true));
+    }
+});
+
+test('without a language the data is the stored two-language document, cached for good', function () {
+    $pdo = test_db();
+    tl_seed_items($pdo, 42);
+    [$status, $p, $final] = tierlist_route($pdo, '42');
+    assert_eq(200, $status);
+    assert_eq(['Описание', 'Description'], [$p['tierlist']['tiers'][0]['items'][0]['desc'], $p['tierlist']['tiers'][0]['items'][0]['descEn']]);
+    assert_eq(true, $final);
+});
+
+test('German: the translation once it is there, until then EN with a short cache', function () {
+    $pdo = test_db();
+    tl_seed_items($pdo, 42);
+    [$status, $p, $final] = tierlist_route($pdo, '42', 'de');
+    $it = $p['tierlist']['tiers'][0]['items'][0];
+    assert_eq(['', 'Description'], [$it['desc'], $it['descEn']], 'EN fallback in the English slot');
+    assert_eq(false, $final, 'not cached for good');
+
+    i18n_put($pdo, 'item', 'a', 'desc', 'de', i18n_hash('Описание'), 'Beschreibung', 1);
+    [, $p, $final] = tierlist_route($pdo, '42', 'de');
+    assert_eq('Beschreibung', $p['tierlist']['tiers'][0]['items'][0]['descEn']);
+    assert_eq(true, $final);
+});
+
+test('Russian needs no translation and is cached for good', function () {
+    $pdo = test_db();
+    tl_seed_items($pdo, 42);
+    [, $p, $final] = tierlist_route($pdo, '42', 'ru');
+    $it = $p['tierlist']['tiers'][0]['items'][0];
+    assert_eq(['Описание', ''], [$it['desc'], $it['descEn']]);
+    assert_eq(true, $final);
+});
+
+test('before the migration German falls back to EN', function () {
+    $pdo = test_db();
+    $pdo->exec('DROP TABLE i18n_texts');
+    tl_seed_items($pdo, 42);
+    [$status, $p, $final] = tierlist_route($pdo, '42', 'de');
+    assert_eq(200, $status);
+    assert_eq('Description', $p['tierlist']['tiers'][0]['items'][0]['descEn']);
+    assert_eq(false, $final);
+});
+
 run_tests();

@@ -3,6 +3,7 @@ require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/images.php';
 require_once __DIR__ . '/lib/validate.php';
 require_once __DIR__ . '/lib/telegram.php';
+require_once __DIR__ . '/lib/i18n_content.php';
 
 function handle_save(PDO $pdo, array $state, string $imagesDir, int $revMs): array {
     // Structure only at this point. The size cap must NOT run yet: a client
@@ -43,5 +44,16 @@ if (!defined('TESTING')) {
     // Подписчикам в Telegram — уже после ответа админке.
     if ($status === 200) {
         tg_after_prices($pdo, $cfg, $before, $body);
+    }
+
+    // Описания и условия предметов на языки сайта — последними: цены
+    // подписчикам важнее. Переводится только новое и исправленное, первое
+    // сохранение после миграции догоняет все описания сразу
+    // (api/lib/i18n_content.php). Пока переводы не легли, ответ
+    // api/tierlist.php на языке кешируется ненадолго.
+    if ($status === 200) {
+        i18n_after_save(function (float $deadline) use ($pdo) {
+            i18n_job_items($pdo, 'i18n_google_for', $deadline);
+        });
     }
 }

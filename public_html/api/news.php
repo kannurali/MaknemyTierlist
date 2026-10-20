@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/lib/i18n_content.php';
 
 // Потолок ленты. Не размер страницы: пагинации нет, 51-й пост навсегда
 // выталкивает самый старый. При паре постов в месяц это годы; когда упрёмся,
@@ -39,7 +40,10 @@ function news_body_json_missing(PDOException $e): bool {
     return strpos($msg, 'no such column: body_json') !== false; // SQLite
 }
 
-function handle_news(PDO $pdo): array {
+// $lang — язык страницы из ?lang= (i18n_api_lang()): посты приходят на нём
+// одном, с откатом на EN и RU (api/lib/i18n_content.php). null — прежняя
+// выдача на двух языках: её читает редактор в админке.
+function handle_news(PDO $pdo, ?string $lang = null): array {
     // LIMIT подставляется из константы, а не из запроса пользователя, поэтому
     // интерполяция здесь безопасна: плейсхолдер в LIMIT переносим не везде.
     $cols = "id, category, title_ru, title_en, body_ru, body_en, image_url, image_pct,
@@ -117,7 +121,20 @@ function handle_news(PDO $pdo): array {
             'body_json'    => $blocks,
         ];
     }
+    if ($lang !== null) { $posts = news_localize($pdo, $posts, $lang); }
     return [200, ['posts' => $posts]];
+}
+
+// Переводы берутся только для восьми языков из таблицы: EN новостей живёт в
+// колонках, русский — исходник.
+function news_localize(PDO $pdo, array $posts, string $lang): array {
+    $rows = in_array($lang, I18N_CONTENT_LANGS, true)
+        ? i18n_rows($pdo, 'news', $lang, array_column($posts, 'id'))
+        : [];
+    foreach ($posts as $i => $p) {
+        $posts[$i] = i18n_news_localize($p, $lang, $rows[(string)$p['id']] ?? []);
+    }
+    return $posts;
 }
 
 // Обёртка боевого пути вокруг handle_news(). Любая PDOException, которая
@@ -136,9 +153,9 @@ function handle_news(PDO $pdo): array {
 // подключение тоже бросает PDOException при обрыве соединения, и вызов
 // db() снаружи (как аргумент) остался бы этим try не пойман. Тесты
 // подставляют свой $pdo напрямую, минуя db() и config.php целиком.
-function news_dispatch(?PDO $pdo = null): array {
+function news_dispatch(?PDO $pdo = null, ?string $lang = null): array {
     try {
-        return handle_news($pdo ?? db());
+        return handle_news($pdo ?? db(), $lang);
     } catch (PDOException $e) {
         error_log('news.php: ' . $e->getMessage());
         return [503, ['error' => 'temporarily_unavailable']];
@@ -157,6 +174,6 @@ if (!defined('TESTING')) {
     // Кэшировать нечем: у ленты нет rev, а заводить его — значит вернуть ту
     // самую связку с тирлистом, ради разрыва которой таблица и отдельная.
     header('Cache-Control: no-cache');
-    [$status, $payload] = news_dispatch();
+    [$status, $payload] = news_dispatch(null, i18n_api_lang($_GET['lang'] ?? null));
     json_out($payload, $status);
 }

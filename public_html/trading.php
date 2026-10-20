@@ -307,7 +307,7 @@ page_lscache();
   <script src="js/trade-cards.js?v=5" fetchpriority="high"></script>
   <script src="js/trading-page.js?v=9" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=13" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
 </body>

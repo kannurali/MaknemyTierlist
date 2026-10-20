@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/og.php';
+require_once __DIR__ . '/api/lib/i18n_content.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
 // Превью-карточка ссылки (og:image/title/description) собирается из самого
@@ -28,10 +29,10 @@ function news_og_fallback(): array {
 
 function news_og_data(PDO $pdo): array {
     $row = $pdo->query(
-        'SELECT id, category, title_ru, body_ru, image_url, published_at
+        'SELECT id, category, title_ru, title_en, body_ru, body_en, body_json, image_url, published_at
            FROM news ORDER BY published_at DESC, id DESC LIMIT 1'
     )->fetch(PDO::FETCH_ASSOC);
-    $summary = og_news_summary($row === false ? null : $row);
+    $summary = og_news_summary($row === false ? null : news_og_localize($pdo, $row, i18n_lang()));
     if ($summary === null) { return news_og_fallback(); }
 
     $meta = og_news_meta($summary);
@@ -43,6 +44,26 @@ function news_og_data(PDO $pdo): array {
         'title'       => $meta['title'],
         'description' => $meta['description'] !== '' ? $meta['description'] : news_og_fallback()['description'],
     ];
+}
+
+// Строка поста для превью на языке страницы: og_news_summary() читает
+// title_ru/body_ru, и на нерусской странице туда кладётся текст её языка —
+// перевод, иначе EN, иначе RU, как и в ленте (api/lib/i18n_content.php).
+// Картинка превью (api/og-news.php) остаётся русской.
+function news_og_localize(PDO $pdo, array $row, string $lang): array {
+    if ($lang === I18N_DEFAULT) { return $row; }
+    $id = (string)($row['id'] ?? '');
+    $rows = in_array($lang, I18N_CONTENT_LANGS, true) ? i18n_rows($pdo, 'news', $lang, [$id]) : [];
+    $post = i18n_news_localize([
+        'title_ru'  => (string)($row['title_ru'] ?? ''),
+        'title_en'  => (string)($row['title_en'] ?? ''),
+        'body_ru'   => (string)($row['body_ru'] ?? ''),
+        'body_en'   => (string)($row['body_en'] ?? ''),
+        'body_json' => $row['body_json'] ?? null,
+    ], $lang, $rows[$id] ?? []);
+    $row['title_ru'] = $post['title_en'];
+    $row['body_ru'] = $post['body_en'];
+    return $row;
 }
 
 // ---------------------------------------------------------------------------
@@ -73,7 +94,7 @@ function news_parse_post_id($raw): ?int {
 // ни в чём не бывало.
 function news_post_by_id(PDO $pdo, int $id): ?array {
     $stmt = $pdo->prepare(
-        'SELECT id, category, title_ru, body_ru, image_url, published_at
+        'SELECT id, category, title_ru, title_en, body_ru, body_en, body_json, image_url, published_at
            FROM news WHERE id = :id'
     );
     $stmt->execute([':id' => $id]);
@@ -146,7 +167,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
                 $notFound = true;
             } else {
                 $linkedPostId = $postId;
-                $og = news_post_og_data($row);
+                $og = news_post_og_data(news_og_localize($pdo, $row, i18n_lang()));
             }
         } else {
             $og = news_og_data($pdo);
@@ -390,8 +411,8 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=2" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=32" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=13" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=33" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=14" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
 </body>

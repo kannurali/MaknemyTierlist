@@ -66,16 +66,21 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # и MySQL. Такие запросы LiteSpeed отбивает 403 сам, не запуская PHP.
 #
 # state.php и stock.php клиент зовёт без параметров вовсе, giveaways.php —
-# без них или с ?test=1 (тестовые розыгрыши), tierlist.php и promo.php — без
-# них или с ?rev=<число>.
+# без них или с ?test=1 (тестовые розыгрыши), promo.php — без них или с
+# ?rev=<число>, tierlist.php — так же. Страницы сайта добавляют последним
+# параметром язык: giveaways.php?test=1&lang=de, tierlist.php?rev=1&lang=de —
+# по адресу на язык, не больше.
 RewriteCond %{QUERY_STRING} .
 RewriteRule ^api/(state|stock)\.php$ - [F,L]
 
-RewriteCond %{QUERY_STRING} !^(test=1)?$
+RewriteCond %{QUERY_STRING} !^((test=1&)?lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)|test=1)?$
 RewriteRule ^api/giveaways\.php$ - [F,L]
 
+RewriteCond %{QUERY_STRING} !^((rev=[0-9]{1,18}&)?lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)|rev=[0-9]{1,18})?$
+RewriteRule ^api/tierlist\.php$ - [F,L]
+
 RewriteCond %{QUERY_STRING} !^(rev=[0-9]{1,18})?$
-RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]
+RewriteRule ^api/promo\.php$ - [F,L]
 
 # Хвост пути после .php (PATH_INFO): /api/state.php/<что угодно> исполнил бы
 # тот же state.php под новым ключом кеша. Ни одна ссылка сайта так не выглядит.

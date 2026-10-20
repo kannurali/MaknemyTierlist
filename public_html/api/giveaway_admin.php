@@ -83,6 +83,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'delete') {
         [$s, $p] = gw_delete($pdo, $id);
+        if ($s === 200) { i18n_forget($pdo, 'gw', (string)$id); }
         return [$s, $p, null];
     }
     return [400, ['ok' => false, 'error' => 'bad action'], null];
@@ -110,4 +111,15 @@ if (!defined('TESTING')) {
 
     if ($after && $after[0] === 'announce') { gw_after_publish(db(), $cfg, $after[1]); }
     if ($after && $after[0] === 'winners' && $after[1]) { gw_after_draw(db(), $cfg, $after[1], $after[2], null, null, $after[3]); }
+
+    // Восемь языков сайта — после ответа, как и у новостей. EN уже
+    // переведён внутри сохранения (gw_save()). Кеш выдачи при этом не
+    // сбрасывается — заголовок ушёл с ответом; переводы появятся у
+    // посетителей не позже чем через GW_PUBLIC_CACHE секунд.
+    if ($action === 'save' && $status === 200) {
+        $id = (int)$payload['id'];
+        i18n_after_save(function (float $deadline) use ($id) {
+            gw_i18n_job(db(), $id, 'i18n_google_for', $deadline);
+        });
+    }
 }

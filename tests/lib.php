@@ -99,6 +99,17 @@ function test_db(): PDO {
         created_at INTEGER NOT NULL,
         PRIMARY KEY (user_id, target)
     )");
+    // Зеркалит schema.sql: переводы контента на языки сайта.
+    $pdo->exec("CREATE TABLE i18n_texts (
+        kind TEXT NOT NULL,
+        ref_id TEXT NOT NULL,
+        field TEXT NOT NULL,
+        lang TEXT NOT NULL,
+        src_hash TEXT NOT NULL,
+        text TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (kind, ref_id, field, lang)
+    )");
     $pdo->exec("INSERT INTO tierlist (id, data, rev) VALUES (1, '{}', 0)");
     $pdo->exec("INSERT INTO likes (id, count) VALUES (1, 0)");
     return $pdo;
