@@ -272,6 +272,14 @@
     ], "gw-stat-svg");
   }
 
+  function clockIcon() {
+    return svg("0 0 38 38", [
+      ["circle", { cx: "19", cy: "20", r: "13" }],
+      ["path", { d: "M19 12.5V20.5L24 23.5" }],
+      ["path", { d: "M15.5 4H22.5" }]
+    ], "gw-stat-svg is-clock");
+  }
+
   function overBadge() {
     var b = el("span", "gw-over");
     b.setAttribute("role", "img");
@@ -390,14 +398,15 @@
   function renderStat(g) {
     var live = g.phase === "live";
     var row = el("div", "gw-stat");
+    var byCount = g.end_by === "entries" || (!live && g.max_entries);
     var ico = el("span", "gw-stat-ico");
-    ico.appendChild(userIcon());
+    ico.appendChild(byCount ? userIcon() : clockIcon());
     row.appendChild(ico);
     var pill = el("span", "gw-stat-pill");
     pill.appendChild(el("span", "gw-stat-label", t("gw.stat")));
     pill.appendChild(el("span", "gw-stat-word", t("gw.statPill")));
     var val = el("span", "gw-stat-val");
-    if (g.end_by === "entries" || (!live && g.max_entries)) {
+    if (byCount) {
       var need = live ? Math.max(0, (g.max_entries || 0) - (g.entries || 0)) : 0;
       val.textContent = t("gw.peopleLeft." + plural(need), { n: num(need) });
     } else if (live) {

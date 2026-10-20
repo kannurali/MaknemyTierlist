@@ -260,6 +260,13 @@
   height: calc(38 * var(--k));
   fill: #fff;
 }
+.gw-stat-svg.is-clock {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .gw-stat-pill {
   display: flex;
   flex-wrap: wrap;
