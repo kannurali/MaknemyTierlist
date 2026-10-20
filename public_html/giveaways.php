@@ -51,7 +51,7 @@ page_lscache();
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=7" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
@@ -143,7 +143,6 @@ page_lscache();
       <div class="gw-head-in">
         <img class="gw-head-branch<?= HALLOWEEN ? ' is-flip' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
         <span class="gw-ghost gw-ghost-a" aria-hidden="true" data-i18n="gw.title"><?= te('gw.title') ?></span>
-        <span class="gw-ghost gw-ghost-b" aria-hidden="true" data-i18n="gw.title"><?= te('gw.title') ?></span>
         <h1 class="gw-page-title" data-i18n="gw.title"><?= te('gw.title') ?></h1>
         <p class="gw-kicker" data-i18n="gw.kicker"><?= te('gw.kicker') ?></p>
         <p class="gw-lead" id="gwLead" data-i18n="gw.lead"><?= te('gw.lead') ?></p>
@@ -234,7 +233,7 @@ page_lscache();
       <div class="gw-rail-slot gw-rail-r" aria-hidden="true">
         <aside class="gw-rail" id="gwRailR" data-i18n-label="promo.rail" aria-label="<?= ta('promo.rail') ?>"></aside>
       </div>
-      <img class="gw-deco gw-branch-l" src="<?= HALLOWEEN ? 'assets/halloween/branch.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
+      <img class="gw-deco gw-branch-l" src="<?= HALLOWEEN ? 'assets/halloween/gw-branch-l.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
       <img class="gw-deco gw-branch-r<?= HALLOWEEN ? ' is-hw' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/gw-branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
 
       <div class="gw-wrap">

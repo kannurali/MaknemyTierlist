@@ -43,7 +43,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=7" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=7" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
