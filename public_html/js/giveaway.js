@@ -440,72 +440,141 @@
     return w.display || (w.name ? "@" + w.name : "#" + w.id);
   }
 
-  function renderWins(list) {
-    var many = list.length > 1;
-    var box = el("div", "gw-wins" + (many ? " is-many" : ""));
-    if (!list.length) {
-      box.appendChild(el("span", "gw-win-none", t("gw.noWinner")));
+  function avatar(w, cls) {
+    if (w.avatar) {
+      var img = el("img", cls);
+      img.src = w.avatar;
+      img.alt = "";
+      img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
+      return img;
+    }
+    return el("span", cls + " is-empty", winnerLabel(w).replace(/^[@#]/, "").charAt(0).toUpperCase());
+  }
+
+  function renderWin(w, total) {
+    var box = el("div", "gw-wins");
+    if (!w) {
+      if (total) { box.setAttribute("aria-hidden", "true"); }
+      else { box.appendChild(el("span", "gw-win-none", t("gw.noWinner"))); }
       return box;
     }
-    var faces = many ? el("div", "gw-win-faces") : box;
-    var shown = list.length > 6 ? list.slice(0, 5) : list;
-    shown.forEach(function (w) {
-      var label = winnerLabel(w);
-      var a = el("a", "gw-win");
-      a.href = siteUrl("/profile?id=" + encodeURIComponent(w.id));
-      if (w.avatar) {
-        var img = el("img", "gw-win-ava");
-        img.src = w.avatar;
-        img.alt = "";
-        img.loading = "lazy";
-        img.referrerPolicy = "no-referrer";
-        a.appendChild(img);
-      } else {
-        a.appendChild(el("span", "gw-win-ava is-empty", label.replace(/^[@#]/, "").charAt(0).toUpperCase()));
-      }
-      if (many) {
-        a.title = label;
-        a.setAttribute("aria-label", label);
-      } else {
-        a.appendChild(el("span", "gw-win-name", label));
-      }
-      faces.appendChild(a);
-    });
-    if (shown.length < list.length) {
-      var rest = list.slice(shown.length).map(winnerLabel).join(", ");
-      var more = el("span", "gw-win-ava gw-win-more", "+" + (list.length - shown.length));
-      more.title = rest;
-      more.setAttribute("aria-label", rest);
-      faces.appendChild(more);
-    }
-    if (many) { box.appendChild(faces); }
+    var a = el("a", "gw-win");
+    a.href = siteUrl("/profile?id=" + encodeURIComponent(w.id));
+    a.appendChild(avatar(w, "gw-win-ava"));
+    a.appendChild(el("span", "gw-win-name", winnerLabel(w)));
+    box.appendChild(a);
     box.appendChild(el("span", "gw-win-line"));
     return box;
+  }
+
+  function winGroups(g) {
+    var groups = (g.prizes || []).map(function () { return []; });
+    (g.winners || []).forEach(function (w) { if (groups[w.prize]) { groups[w.prize].push(w); } });
+    return groups;
+  }
+
+  function placeIcon(i, cls) {
+    var img = el("img", cls + (i ? "" : " is-first"));
+    img.src = i ? MEDAL : CROWN;
+    img.alt = "";
+    img.width = i ? 33 : 40;
+    img.height = 38;
+    img.decoding = "async";
+    return img;
+  }
+
+  function prizeName(p) {
+    var n = prizeCount(p);
+    return p.name + (n > 1 ? " " + String.fromCharCode(215) + n : "");
+  }
+
+  var winPop = null;
+  var winBack = null;
+
+  function onWinKey(e) {
+    if (e.key === "Escape") { e.preventDefault(); closeWinners(); }
+  }
+
+  function closeWinners() {
+    if (!winPop) { return; }
+    winPop.parentNode.removeChild(winPop);
+    winPop = null;
+    document.body.classList.remove("gw-locked");
+    document.removeEventListener("keydown", onWinKey, true);
+    if (winBack && winBack.focus) { try { winBack.focus({ preventScroll: true }); } catch (_) {} }
+    winBack = null;
+  }
+
+  function openWinners(g) {
+    closeWinners();
+    winBack = document.activeElement;
+    var pop = el("div", "gw-pop gw-wl");
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-modal", "true");
+    pop.setAttribute("aria-labelledby", "gwWlTitle");
+    var box = el("div", "gw-wl-box");
+    var x = el("button", "gw-pop-close gw-wl-close");
+    x.type = "button";
+    x.setAttribute("aria-label", t("gw.close"));
+    x.title = t("gw.close");
+    x.addEventListener("click", closeWinners);
+    box.appendChild(x);
+    var title = el("h2", "gw-wl-title", pick(g.title));
+    title.id = "gwWlTitle";
+    box.appendChild(title);
+    box.appendChild(el("p", "gw-wl-sub", t("gw.allWinners")));
+    var groups = winGroups(g);
+    var list = el("ul", "gw-wl-list");
+    (g.prizes || []).forEach(function (p, i) {
+      var li = el("li", "gw-wl-group");
+      var head = el("div", "gw-wl-prize");
+      head.appendChild(placeIcon(i, "gw-wl-place"));
+      head.appendChild(prizePic(p, "gw-wl-pic"));
+      head.appendChild(el("span", "gw-wl-name", prizeName(p)));
+      li.appendChild(head);
+      var ul = el("ul", "gw-wl-wins");
+      if (!groups[i].length) { ul.appendChild(el("li", "gw-wl-none", t("gw.noWinner"))); }
+      groups[i].forEach(function (w) {
+        var item = el("li");
+        var a = el("a", "gw-wl-win");
+        a.href = siteUrl("/profile?id=" + encodeURIComponent(w.id));
+        a.appendChild(avatar(w, "gw-wl-ava"));
+        a.appendChild(el("span", "gw-wl-who", winnerLabel(w)));
+        item.appendChild(a);
+        ul.appendChild(item);
+      });
+      li.appendChild(ul);
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    pop.appendChild(box);
+    pop.addEventListener("click", function (e) { if (e.target === pop) { closeWinners(); } });
+    document.body.appendChild(pop);
+    document.body.classList.add("gw-locked");
+    document.addEventListener("keydown", onWinKey, true);
+    winPop = pop;
+    x.focus({ preventScroll: true });
   }
 
   function renderPrizes(g) {
     var prizes = g.prizes || [];
     var drawn = g.phase === "drawn" && g.winners && g.winners.length;
-    var groups = prizes.map(function () { return []; });
-    if (drawn) {
-      g.winners.forEach(function (w) { if (groups[w.prize]) { groups[w.prize].push(w); } });
-    }
+    var groups = winGroups(g);
+    var seen = 0;
     var list = el("ul", "gw-prizes");
     list.setAttribute("aria-label", t(drawn ? "gw.winners" : "gw.prizes"));
     prizes.forEach(function (p, i) {
       var li = el("li", "gw-prize");
-      var place = el("img", "gw-place" + (i ? "" : " is-first"));
-      place.src = i ? MEDAL : CROWN;
-      place.alt = "";
-      place.width = i ? 33 : 40;
-      place.height = 38;
-      place.decoding = "async";
-      li.appendChild(place);
-      if (drawn) { li.appendChild(renderWins(groups[i])); }
+      li.appendChild(placeIcon(i, "gw-place"));
+      if (drawn) {
+        var first = seen < 3 ? groups[i][0] : null;
+        if (first) { seen++; }
+        li.appendChild(renderWin(first, groups[i].length));
+      }
       var tile = el("div", "gw-prize-tile");
       tile.appendChild(prizePic(p, "gw-prize-pic"));
-      var n = prizeCount(p);
-      tile.appendChild(el("span", "gw-prize-name", p.name + (n > 1 ? " " + String.fromCharCode(215) + n : "")));
+      tile.appendChild(el("span", "gw-prize-name", prizeName(p)));
       li.appendChild(tile);
       list.appendChild(li);
     });
@@ -659,6 +728,17 @@
     var grid = el("div", "gw-grid");
     var left = el("div", "gw-left");
     if (g.prizes && g.prizes.length) { left.appendChild(renderPrizes(g)); }
+    if (g.phase === "drawn" && g.winners && g.winners.length && g.prizes && g.prizes.length) {
+      var seeAll = el("button", "gw-allwin", t("gw.seeAll"));
+      seeAll.type = "button";
+      seeAll.addEventListener("click", function () { openWinners(g); });
+      left.appendChild(seeAll);
+      root_.classList.add("has-wins");
+      root_.addEventListener("click", function (e) {
+        if (e.target.closest && e.target.closest("a, button")) { return; }
+        openWinners(g);
+      });
+    }
     grid.appendChild(left);
     grid.appendChild(renderSteps(g, ui));
 
