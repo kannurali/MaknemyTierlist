@@ -109,7 +109,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=30" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
-<link rel="stylesheet" href="css/promo-dock-mini.css?v=2" />
+<link rel="stylesheet" href="css/promo-dock-mini.css?v=3" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>

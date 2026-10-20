@@ -90,7 +90,7 @@
     color: rgba(255, 255, 255, .6);
   }
 
-  .ptn-dock.is-mini-art .ptn-dock-mini {
+  .ptn-dock.is-mini.is-mini-art .ptn-dock-mini {
     display: block;
     height: auto;
     padding-right: 0;
