@@ -260,31 +260,27 @@
   height: calc(38 * var(--k));
   fill: #fff;
 }
-.gw-stat-label {
+.gw-stat-pill {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: calc(12 * var(--k));
+  row-gap: calc(2 * var(--k));
+  min-height: calc(52 * var(--k));
+  box-sizing: border-box;
   margin-left: calc(19 * var(--k));
-  white-space: nowrap;
+  padding: calc(6 * var(--k)) calc(26 * var(--k));
+  border-radius: calc(32 * var(--k));
+  background: #0d0613;
 }
+.gw-stat-label,
+.gw-stat-word { white-space: nowrap; }
 .gw-stat-val {
-  margin-left: calc(16 * var(--k));
   color: #bb00ff;
   white-space: nowrap;
 }
-.gw-stat-pill {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  min-width: calc(168 * var(--k));
-  height: calc(52 * var(--k));
-  box-sizing: border-box;
-  margin-left: calc(16 * var(--k));
-  padding: 0 calc(20 * var(--k));
-  border-radius: calc(32 * var(--k));
-  background: #0d0613;
-  white-space: nowrap;
-}
 .gw-card:is([data-phase="ended"], [data-phase="drawn"]) .gw-stat-ico { background: #454545; }
-.gw-card:is([data-phase="ended"], [data-phase="drawn"]) .gw-stat-val { color: #454545; }
+.gw-card:is([data-phase="ended"], [data-phase="drawn"]) .gw-stat-val { color: #7a7a7a; }
 
 .gw-bar {
   position: relative;
@@ -714,12 +710,10 @@ button.gw-step-label:disabled { cursor: default; }
     margin-top: 14px;
     font-size: calc(24 * var(--k));
   }
-  .gw-stat-label { margin-left: calc(14 * var(--k)); }
-  .gw-stat-val { margin-left: calc(10 * var(--k)); }
   .gw-stat-pill {
-    min-width: 0;
-    margin-left: calc(10 * var(--k));
-    padding: 0 calc(18 * var(--k));
+    column-gap: calc(9 * var(--k));
+    margin-left: calc(12 * var(--k));
+    padding: calc(6 * var(--k)) calc(18 * var(--k));
   }
   .gw-bar { margin-top: 22px; }
   .gw-grid {
