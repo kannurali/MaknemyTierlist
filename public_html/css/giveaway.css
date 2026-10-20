@@ -269,11 +269,8 @@
 }
 .gw-stat-pill {
   display: flex;
-  flex: 1 1 auto;
+  flex: none;
   align-items: center;
-  justify-content: space-between;
-  gap: calc(16 * var(--k));
-  min-width: 0;
   min-height: calc(52 * var(--k));
   box-sizing: border-box;
   margin-left: calc(19 * var(--k));
@@ -282,8 +279,14 @@
   background: #0d0613;
 }
 .gw-stat-text { white-space: nowrap; }
+.gw-stat-pill.is-val { margin-left: auto; }
 .gw-stat-val {
   color: #bb00ff;
+  font-family: var(--gw-inter);
+  font-size: calc(23 * var(--k));
+  font-weight: 800;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .gw-card:is([data-phase="ended"], [data-phase="drawn"]) .gw-stat-ico { background: #454545; }
@@ -718,9 +721,10 @@ button.gw-step-label:disabled { cursor: default; }
     font-size: calc(24 * var(--k));
   }
   .gw-stat-pill {
-    margin-left: calc(12 * var(--k));
-    padding: calc(6 * var(--k)) calc(18 * var(--k));
+    margin-left: calc(10 * var(--k));
+    padding: calc(6 * var(--k)) calc(14 * var(--k));
   }
+  .gw-stat-val { font-size: calc(20 * var(--k)); }
   .gw-bar { margin-top: 22px; }
   .gw-grid {
     display: flex;

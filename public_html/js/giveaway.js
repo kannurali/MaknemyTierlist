@@ -415,8 +415,10 @@
       val.textContent = clockText(0);
     }
     pill.appendChild(text);
-    pill.appendChild(val);
     row.appendChild(pill);
+    var island = el("span", "gw-stat-pill is-val");
+    island.appendChild(val);
+    row.appendChild(island);
     return row;
   }
 
