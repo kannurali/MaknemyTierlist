@@ -261,7 +261,7 @@
 .gw-stat-text {
   flex: 1 1 auto;
   min-width: 0;
-  margin: 0 calc(12 * var(--k)) 0 calc(19 * var(--k));
+  margin: 0 0 0 calc(19 * var(--k));
 }
 .gw-stat-label { margin-right: calc(16 * var(--k)); }
 .gw-stat-val {
@@ -276,7 +276,7 @@
   min-width: calc(168 * var(--k));
   height: calc(52 * var(--k));
   box-sizing: border-box;
-  margin-left: auto;
+  margin-left: calc(19 * var(--k));
   padding: 0 calc(20 * var(--k));
   border-radius: calc(32 * var(--k));
   background: #0d0613;
@@ -710,7 +710,7 @@ button.gw-step-label:disabled { cursor: default; }
   .gw-bar { width: 100%; }
   .gw-media { border-radius: 18px; }
   .gw-stat { margin-top: 14px; }
-  .gw-stat-text { margin: 0 calc(10 * var(--k)) 0 calc(14 * var(--k)); }
+  .gw-stat-text { margin-left: calc(14 * var(--k)); }
   .gw-stat-label { margin-right: calc(10 * var(--k)); }
   .gw-stat-pill {
     min-width: 0;
@@ -761,29 +761,12 @@ button.gw-step-label:disabled { cursor: default; }
   }
 }
 
-.gw-allwin {
-  align-self: flex-start;
-  margin: calc(18 * var(--k)) 0 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #bb00ff;
-  font-family: var(--gw-inter);
-  font-size: max(13px, calc(15 * var(--k)));
-  font-weight: 800;
-  line-height: 1.3;
-  text-align: left;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.gw-allwin:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 4px; }
 .gw-card.has-wins { cursor: pointer; }
 .gw-card.has-wins::after { transition: background-color .25s; }
 @media (hover: hover) {
   .gw-card.has-wins:hover::after { background: #6a6a6a; }
-  .gw-allwin:hover { color: #d36bff; }
 }
+.gw-card.has-wins:focus-visible { outline: 2px solid #fff; outline-offset: 6px; }
 
 .gw-wl {
   --gw-poiret: "Poiret One", var(--ui);

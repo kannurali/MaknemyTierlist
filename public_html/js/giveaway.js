@@ -391,6 +391,7 @@
     var ico = el("span", "gw-stat-ico");
     ico.appendChild(userIcon());
     row.appendChild(ico);
+    row.appendChild(el("span", "gw-stat-pill", t("gw.statPill")));
     var text = el("span", "gw-stat-text");
     text.appendChild(el("span", "gw-stat-label", t("gw.stat")));
     text.appendChild(document.createTextNode(" "));
@@ -406,7 +407,6 @@
     }
     text.appendChild(val);
     row.appendChild(text);
-    row.appendChild(el("span", "gw-stat-pill", t("gw.statPill")));
     return row;
   }
 
@@ -729,13 +729,18 @@
     var left = el("div", "gw-left");
     if (g.prizes && g.prizes.length) { left.appendChild(renderPrizes(g)); }
     if (g.phase === "drawn" && g.winners && g.winners.length && g.prizes && g.prizes.length) {
-      var seeAll = el("button", "gw-allwin", t("gw.seeAll"));
-      seeAll.type = "button";
-      seeAll.addEventListener("click", function () { openWinners(g); });
-      left.appendChild(seeAll);
       root_.classList.add("has-wins");
+      root_.tabIndex = 0;
+      root_.setAttribute("aria-haspopup", "dialog");
+      root_.setAttribute("aria-describedby", title.id);
+      root_.setAttribute("aria-label", t("gw.allWinners"));
       root_.addEventListener("click", function (e) {
         if (e.target.closest && e.target.closest("a, button")) { return; }
+        openWinners(g);
+      });
+      root_.addEventListener("keydown", function (e) {
+        if (e.target !== root_ || (e.key !== "Enter" && e.key !== " ")) { return; }
+        e.preventDefault();
         openWinners(g);
       });
     }
