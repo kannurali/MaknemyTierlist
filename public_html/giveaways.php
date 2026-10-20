@@ -56,7 +56,7 @@ page_lscache();
 
 <?php echo metrika_counter_html(); ?>
 </head>
-<body>
+<body class="gw-body">
 
   <header class="mk-top">
     <a class="mk-top-brand" href="<?= u('/') ?>">
@@ -137,7 +137,7 @@ page_lscache();
   </header>
 
   <main class="gw-page">
-    <?= halloween_decor('giveaways', 'hw-decor hw-decor--column') ?>
+    <?= halloween_decor('giveaways', 'hw-decor hw-decor--fill hw-decor--column') ?>
     <header class="gw-head">
       <div class="gw-head-in">
         <img class="gw-head-branch<?= HALLOWEEN ? ' is-flip' : '' ?>" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
