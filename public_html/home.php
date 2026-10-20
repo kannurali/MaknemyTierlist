@@ -97,7 +97,7 @@ page_lscache();
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=31" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=32" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=32" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -285,6 +285,27 @@ page_lscache();
     <div class="hm-ghost hm-ghost-a hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-ghost hm-ghost-b hm-deco hm-anim" aria-hidden="true"></div>
     <div class="hm-phone hm-deco hm-anim" aria-hidden="true"></div>
+    <svg class="hm-glass-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <filter id="hmGlassCircle" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-circle.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2014" xChannelSelector="R" yChannelSelector="G" result="lens" />
+        <feGaussianBlur in="lens" stdDeviation="0.0092" />
+      </filter>
+      <filter id="hmGlassSquareLg" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-square-lg.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.2196" xChannelSelector="R" yChannelSelector="G" result="lens" />
+        <feGaussianBlur in="lens" stdDeviation="0.0243" />
+      </filter>
+      <filter id="hmGlassSquareSm" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-square-sm.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.3514" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="hmGlassTri" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+        <feImage href="assets/design/home/glass-tri.png" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="0.0986" xChannelSelector="R" yChannelSelector="G" result="lens" />
+        <feGaussianBlur in="lens" stdDeviation="0.0037" />
+      </filter>
+    </svg>
     <div class="hm-fig hm-fig-square-lg hm-deco hm-anim" aria-hidden="true"></div>
     <img class="hm-sakura hm-sakura-l hm-deco hm-anim" src="<?= HALLOWEEN ? 'assets/halloween/branch-l.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
     <img class="hm-sakura hm-sakura-r hm-deco hm-anim" src="<?= HALLOWEEN ? 'assets/halloween/branch-r.webp' : 'assets/design/home/sakura.webp' ?>" alt="" aria-hidden="true" />
@@ -400,6 +421,6 @@ page_lscache();
 
 <?= i18n_dict_tag() ?>
 <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-<script src="js/home.js?v=7" fetchpriority="high"></script>
+<script src="js/home.js?v=8" fetchpriority="high"></script>
 </body>
 </html>
