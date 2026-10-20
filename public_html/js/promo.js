@@ -777,13 +777,8 @@
     return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
 
-  var METRIKA_ID = 111127188;
-
   function goal(name, params) {
     var p = params || {};
-    try {
-      if (typeof root.ym === "function") { root.ym(METRIKA_ID, "reachGoal", name, p); }
-    } catch (_) {}
     try {
       if (typeof root.gtag === "function") {
         var g = {};
