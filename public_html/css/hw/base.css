@@ -191,42 +191,6 @@ body.protected img {
 }
 .chip.all { border-style: dashed; }
 
-.lang-switch {
-  display: inline-flex;
-  gap: 0;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.536);
-  box-shadow: inset 0 0 0 1px rgba(203, 120, 255, 0.16);
-}
-.lang-switch .chip {
-  padding: 5px 14px;
-  min-width: 40px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  text-align: center;
-  color: #c49fd8;
-
-  font-family: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.lang-switch .chip.active {
-  color: #fff;
-  background: linear-gradient(255deg, #8400ff 0%, #bb00ff 100%);
-
-  box-shadow: 0 3px 10px rgba(83, 37, 97, .45);
-}
-.lang-switch .chip:focus-visible {
-  outline: 2px solid var(--cyan);
-  outline-offset: 2px;
-  z-index: 1;
-}
-
 .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .switch input { display: none; }
 .switch .track {

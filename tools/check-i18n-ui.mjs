@@ -45,7 +45,7 @@ const cookie = async c => ((await c.cookies(ORIGIN)).find(x => x.name === 'nx_la
   ok((await p.title()).startsWith('Maknemy Tier List — Blox Fruits'), 'английский title: ' + await p.title());
   await p.screenshot({ path: `${out}/en-tierlist.png` });
 
-  await p.locator('#langSwitch [data-lang="ru"]').dispatchEvent('click');
+  await p.locator('#langSwitch [data-lang-go="ru"]').dispatchEvent('click');
   await p.waitForURL(u => new URL(u).pathname === '/tierlist');
   ok(await lang(p) === 'ru', 'RU-чип: html lang=ru');
   ok(await cookie(c) === 'ru', 'RU-чип: кука nx_lang=ru');
@@ -53,7 +53,7 @@ const cookie = async c => ((await c.cookies(ORIGIN)).find(x => x.name === 'nx_la
   await p.goto(ORIGIN + '/calculator');
   ok(path(p) === '/calculator', 'кука ru сильнее de-браузера');
 
-  await p.locator('#langSwitch [data-lang="en"]').dispatchEvent('click');
+  await p.locator('#langSwitch [data-lang-go="en"]').dispatchEvent('click');
   await p.waitForURL(u => new URL(u).pathname === '/en/calculator');
   ok(await cookie(c) === 'en', 'EN-чип: кука nx_lang=en');
 
