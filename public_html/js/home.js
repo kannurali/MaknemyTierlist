@@ -269,6 +269,39 @@
 (function () {
   'use strict';
 
+  var desc = document.querySelector('.hm-desc');
+  var panel = document.querySelector('.hm-panel-text');
+  if (!desc || !panel) return;
+
+  function fits(room) { return desc.offsetHeight <= room + 1; }
+
+  function fit() {
+    desc.style.removeProperty('--hm-desc-fit');
+    if (!panel.offsetHeight) return;
+    var room = panel.offsetHeight - 2 * (desc.offsetTop - panel.offsetTop);
+    if (fits(room)) return;
+    var lo = 0.5, hi = 1;
+    for (var i = 0; i < 8; i++) {
+      var k = (lo + hi) / 2;
+      desc.style.setProperty('--hm-desc-fit', k);
+      if (fits(room)) lo = k; else hi = k;
+    }
+    desc.style.setProperty('--hm-desc-fit', lo);
+  }
+
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () { requestAnimationFrame(fit); });
+    ro.observe(panel);
+    ro.observe(desc);
+  } else {
+    window.addEventListener('resize', fit);
+  }
+  fit();
+})();
+
+(function () {
+  'use strict';
+
   if (!window.IntersectionObserver || !window.matchMedia || !window.matchMedia('(hover: none)').matches) return;
 
   function near(selector, rootMargin) {

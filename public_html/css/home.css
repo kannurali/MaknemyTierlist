@@ -87,7 +87,7 @@
   top: calc(276 * var(--u));
   width: calc(675 * var(--u));
   margin: 0;
-  font-size: calc(26 * var(--u));
+  font-size: calc(26 * var(--u) * var(--hm-desc-fit, 1));
   line-height: 1.45;
   font-weight: 400;
 }
