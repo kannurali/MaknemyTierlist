@@ -732,12 +732,6 @@
   background: linear-gradient(to top, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
 }
 
-.hm-ghost-c {
-  left: calc(1520 * var(--u));
-  top: calc(168 * var(--u));
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), rgba(153, 153, 153, 0));
-}
-
 .hm-anim {
   animation-duration: 1s;
   animation-delay: 0.8s;

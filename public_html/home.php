@@ -98,7 +98,7 @@ page_lscache();
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=32" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=32" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/home.css?v=33" /><?php else: ?><link rel="stylesheet" href="css/home.css?v=33" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 
 <?php echo metrika_counter_html(); ?>
@@ -192,8 +192,6 @@ page_lscache();
     <h1 class="hm-title">
       <img class="hm-word" src="assets/design/wordmark.svg" alt="MAKNEMY" />
     </h1>
-
-    <div class="hm-ghost hm-ghost-c hm-deco" aria-hidden="true"></div>
 
     <p class="hm-since hm-ak" data-i18n="home.since"><?= te('home.since') ?></p>
 
