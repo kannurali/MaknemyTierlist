@@ -10,7 +10,8 @@ require __DIR__ . '/../tools/halloween_css.php';
 // css/hw/, css/halloween.css, assets/halloween/.
 //
 // Главные обещания:
-//  - тема живёт ровно с 1 октября по 2 ноября по Москве, без правок кода;
+//  - тема живёт, пока стоит HALLOWEEN_SWITCH, и не снимается сама по дате
+//    (владелец снимает её вручную, решение 2026-10-19);
 //  - копии стилей в css/hw/ совпадают с тем, что генератор собрал бы из
 //    сегодняшних css/*.css, — правка оригинала без перегенерации ловится здесь;
 //  - каждая страница, где подключён перекрашиваемый файл, подключает в тему
@@ -32,25 +33,12 @@ function hw_pages(string $pub): array {
     return $out;
 }
 
-function hw_at(string $msk): DateTimeImmutable {
-    return new DateTimeImmutable($msk, new DateTimeZone('Europe/Moscow'));
-}
-
-test('тема включена с 1 октября по 2 ноября по Москве', function () {
-    assert_eq(false, halloween_on(hw_at('2026-09-30 23:59:59')), '30 сентября');
-    assert_eq(true,  halloween_on(hw_at('2026-10-01 00:00:00')), '1 октября, полночь');
-    assert_eq(true,  halloween_on(hw_at('2026-10-31 12:00:00')), 'сам Хэллоуин');
-    assert_eq(true,  halloween_on(hw_at('2026-11-02 23:59:59')), '2 ноября, конец дня');
-    assert_eq(false, halloween_on(hw_at('2026-11-03 00:00:00')), '3 ноября');
-    assert_eq(false, halloween_on(hw_at('2027-03-15 12:00:00')), 'весна');
-    assert_eq(true,  halloween_on(hw_at('2027-10-15 12:00:00')), 'следующий год');
-});
-
-test('граница считается по Москве, а не по часам сервера', function () {
-    // 2 ноября 22:30 UTC — в Москве уже 3 ноября.
-    assert_eq(false, halloween_on(new DateTimeImmutable('2026-11-02 22:30:00', new DateTimeZone('UTC'))), '3 ноября по Москве');
-    // 30 сентября 21:30 UTC — в Москве уже 1 октября.
-    assert_eq(true, halloween_on(new DateTimeImmutable('2026-09-30 21:30:00', new DateTimeZone('UTC'))), '1 октября по Москве');
+test('тему включает и снимает только переключатель, не календарь', function () use ($PUB) {
+    assert_eq(HALLOWEEN_SWITCH, halloween_on(), 'halloween_on() = HALLOWEEN_SWITCH');
+    $src = file_get_contents($PUB . '/api/lib/halloween.php');
+    foreach (['DateTime', 'date(', 'time(', 'strtotime'] as $clock) {
+        assert_true(strpos($src, $clock) === false, "в halloween.php снова часы: $clock");
+    }
 });
 
 test('цвета макета переводятся точно', function () {
