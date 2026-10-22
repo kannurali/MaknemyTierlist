@@ -974,14 +974,18 @@ test('STARVELL занимает все четыре места трейдинг�
     assert.equal(safeHref(STARVELL.href), 'https://starvell.com/lead/045fa3/roblox/blox-fruits');
     assert.equal(STARVELL.advertiser, 'Starvell');
     // Борт 300×1200 как прислали: бокс борта сам берёт пропорции (fitBox).
-    const size = { strip: [1200, 300], rail: [300, 1200], dock: [640, 200], dockMini: [810, 224], popup: [800, 800] };
-    for (const key of PROMO.CREATIVE_KEYS) {
+    const size = { strip: [1200, 300], rail: [300, 1200], dock: [640, 200], popup: [800, 800] };
+    for (const key of SLOTS) {
         const cre = PROMO.creativeFor(STARVELL, key);
         assert.ok(cre, `у ${key} должен быть макет`);
         assert.ok(cre.src.startsWith('/assets/promo/starvell-'),
             'макеты лежат в репозитории рядом с остальными');
         assert.deepEqual([cre.w, cre.h], size[key], `размер макета ${key}`);
     }
+    // Свёрнутая полоса как у Playerok: уменьшенный dock и строка текста.
+    // Картинка «Mobile mini» 810×224 на высоте 48 px нечитаема.
+    assert.equal(PROMO.creativeFor(STARVELL, 'dockMini'), null);
+    assert.equal(PROMO.dockTextKey(STARVELL), 'promo.starvellDockText');
     assert.ok(STARVELL.textKey && STARVELL.ctaKey);
     assert.equal(STARVELL.popup.maxPerWeek, 3);
     assert.equal(STARVELL.erid, '');
@@ -993,11 +997,12 @@ test('STARVELL занимает все четыре места трейдинг�
 test('текст окна Starvell переведён на оба языка', () => {
     const I18N = require('../public_html/js/i18n.js');
     for (const lang of ['ru', 'en']) {
-        for (const key of [STARVELL.textKey, STARVELL.ctaKey]) {
+        for (const key of [STARVELL.textKey, STARVELL.ctaKey, 'promo.starvellDockText']) {
             const s = I18N.t(key, lang);
             assert.ok(s && s !== key, `${lang}: ${key}`);
         }
     }
+    assert.equal(I18N.t('promo.starvellDockText', 'ru'), 'Выбери свой следующий апгрейд');
 });
 
 test('houseFor отдаёт Starvell все места трейдинга', () => {
