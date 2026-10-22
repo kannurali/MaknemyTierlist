@@ -92,7 +92,8 @@
 
   var DOCK_TEXT_KEYS = {
     "c_muryn4isxftf": "promo.channelDockText",
-    "house-tg-bloxfruits": "promo.channelDockText"
+    "house-tg-bloxfruits": "promo.channelDockText",
+    "starvell-2026-10": "promo.starvellDockText"
   };
 
   function dockTextKey(campaign) {
@@ -730,11 +731,10 @@
     pages: ["trading"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
-      strip:    { src: "/assets/promo/starvell-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
-      rail:     { src: "/assets/promo/starvell-rail.webp",      w: 300,  h: 1200, anim: false, poster: "" },
-      dock:     { src: "/assets/promo/starvell-dock.webp",      w: 640,  h: 200,  anim: false, poster: "" },
-      dockMini: { src: "/assets/promo/starvell-dock-mini.webp", w: 810,  h: 224,  anim: false, poster: "" },
-      popup:    { src: "/assets/promo/starvell-popup.webp",     w: 800,  h: 800,  anim: false, poster: "" }
+      strip: { src: "/assets/promo/starvell-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/starvell-rail.webp",  w: 300,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/starvell-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/starvell-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
     },
     popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
     notes: ""
