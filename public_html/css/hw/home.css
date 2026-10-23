@@ -334,8 +334,6 @@
   align-items: center;
   width: max-content;
   height: 100%;
-
-  animation: hm-ticker 8s linear infinite;
 }
 
 .hm-ticker-list {
@@ -370,11 +368,6 @@
   background: conic-gradient(#fff 0 90deg, transparent 90deg 180deg, #fff 180deg);
 }
 
-@keyframes hm-ticker {
-  from { transform: translateX(0); }
-  to   { transform: translateX(calc(-100% / 3)); }
-}
-
 .hm-cards {
   left: calc(-1 * var(--hm-bleed));
   top: calc(779 * var(--u));
@@ -398,8 +391,9 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  will-change: transform;
 }
+
+.hm-cards-row > li { will-change: transform; }
 
 .hm-card {
   position: relative;
@@ -773,8 +767,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hm-anim,
-  .hm-cards-row,
-  .hm-ticker-track {
+  .hm-cards-row {
     animation: none;
   }
 }

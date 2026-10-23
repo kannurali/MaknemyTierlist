@@ -122,7 +122,8 @@
   }
 
   function paint() {
-    row.style.transform = 'translate3d(' + (-offset) + 'px, 0, 0)';
+    var t = 'translate3d(' + (-offset) + 'px, 0, 0)';
+    for (var i = 0; i < row.children.length; i++) row.children[i].style.transform = t;
   }
 
   function frame(now) {
@@ -231,30 +232,57 @@
   var box = document.querySelector('.hm-ticker');
   var track = box && box.querySelector('.hm-ticker-track');
   var lists = track ? Array.prototype.slice.call(track.querySelectorAll('.hm-ticker-list')) : [];
-  if (!lists.length) return;
+  if (lists.length < 2 || !track.animate) return;
 
   var items = Array.prototype.slice.call(lists[0].children);
   if (!items.length) return;
 
-  var duration = parseFloat(getComputedStyle(track).animationDuration) || 8;
+  var LAP = 8000;
   var reps = 1;
+  var shift = 0;
+  var lap = 0;
+  var anims = [];
+
+  var mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function run() {
+    var phase = anims.length && lap ? (anims[0].currentTime % lap) / lap : 0;
+    anims.forEach(function (a) { a.cancel(); });
+    anims = [];
+    if (!shift || (mq && mq.matches)) return;
+
+    lap = LAP * reps;
+    var frames = [{ transform: 'translateX(0)' }, { transform: 'translateX(' + (-shift) + 'px)' }];
+    track.querySelectorAll('li').forEach(function (li) {
+      var a = li.animate(frames, { duration: lap, iterations: Infinity });
+      a.currentTime = phase * lap;
+      anims.push(a);
+    });
+  }
 
   function fit() {
     var one = lists[0].offsetWidth / reps;
     if (!one) return;
     var need = Math.max(1, Math.ceil(box.clientWidth / (2 * one)));
-    if (need === reps) return;
-    lists.forEach(function (ul) {
-      while (ul.children.length > need * items.length) ul.removeChild(ul.lastElementChild);
-      while (ul.children.length < need * items.length) {
-        var li = items[ul.children.length % items.length].cloneNode(true);
-        li.setAttribute('aria-hidden', 'true');
-        ul.appendChild(li);
-      }
-    });
-    reps = need;
-    track.style.animationDuration = duration * reps + 's';
+    var grown = need !== reps;
+    if (grown) {
+      lists.forEach(function (ul) {
+        while (ul.children.length > need * items.length) ul.removeChild(ul.lastElementChild);
+        while (ul.children.length < need * items.length) {
+          var li = items[ul.children.length % items.length].cloneNode(true);
+          li.setAttribute('aria-hidden', 'true');
+          ul.appendChild(li);
+        }
+      });
+      reps = need;
+    }
+    var next = lists[1].getBoundingClientRect().left - lists[0].getBoundingClientRect().left;
+    if (!grown && next === shift) return;
+    shift = next;
+    run();
   }
+
+  if (mq && mq.addEventListener) mq.addEventListener('change', run);
 
   if (window.ResizeObserver) {
     var ro = new ResizeObserver(function () { requestAnimationFrame(fit); });
