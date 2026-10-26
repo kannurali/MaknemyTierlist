@@ -297,7 +297,7 @@ page_lscache();
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-  <script src="js/promo.js?v=33" fetchpriority="high"></script>
+  <script src="js/promo.js?v=34" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
 

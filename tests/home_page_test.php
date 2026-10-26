@@ -721,7 +721,7 @@ test('нижняя полоса рекламы подключена на лен�
     // Playerok и Starvell — платные размещения, и живут они там же, где свои
     // кампании: в коде с макетами в репозитории. Отличие одно — список
     // страниц: Playerok — тирлист ("tierlist") и калькулятор ("calc"),
-    // Starvell с 19 октября — трейдинг ("trading").
+    // Starvell с 19 по 25 октября — трейдинг ("trading").
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
     assert_true(strpos($promo, 'pages: ["tierlist", "calc"]') !== false,
         'Playerok привязан к тирлисту и калькулятору, иначе он разольётся по всему сайту');
@@ -732,7 +732,7 @@ test('нижняя полоса рекламы подключена на лен�
     assert_true(strpos($promo, 'var STARVELL') !== false, 'Starvell объявлен в js/promo.js');
     assert_true(strpos($promo, 'pages: ["trading"]') !== false,
         'Starvell привязан к трейдингу, иначе он разольётся по всему сайту');
-    foreach (['strip', 'rail', 'dock', 'dock-mini', 'popup'] as $slot) {
+    foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/starvell-' . $slot . '.webp'),
             "макет Starvell для $slot должен лежать в репозитории");
     }
