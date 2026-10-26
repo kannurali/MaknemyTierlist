@@ -960,7 +960,7 @@ test('выключенный Playerok возвращает место кампа
 //  Starvell
 // ============================================================================
 
-// Starvell с 18 октября 2026 года, без даты конца. Первый день стоял на
+// Starvell с 18 по 25 октября 2026 года. Первый день стоял на
 // тирлисте, с 19 октября занимает трейдинг ("trading") — место, с которого
 // Playerok ушёл на тирлист.
 const STARVELL_RUN = Date.parse('2026-10-20T12:00:00Z');
@@ -970,7 +970,7 @@ test('STARVELL занимает все четыре места трейдинг�
     assert.deepEqual(STARVELL.pages, ['trading']);
     assert.equal(STARVELL.enabled, true);
     assert.equal(STARVELL.start, '2026-10-18');
-    assert.equal(STARVELL.end, '');
+    assert.equal(STARVELL.end, '2026-10-25');
     assert.equal(safeHref(STARVELL.href), 'https://starvell.com/lead/045fa3/roblox/blox-fruits');
     assert.equal(STARVELL.advertiser, 'Starvell');
     // Борт 300×1200 как прислали: бокс борта сам берёт пропорции (fitBox).
@@ -1030,6 +1030,16 @@ test('Starvell начинается 18 октября по Москве', () => 
         assert.equal(houseFor(slot, first.startMs - 1, 'trading').id, HOUSE_CHANNEL.id, `17 октября ещё канал: ${slot}`);
         assert.equal(houseFor(slot, first.startMs, 'trading').id, STARVELL.id, `18 октября уже Starvell: ${slot}`);
     }
+});
+
+test('Starvell снят с 26 октября по Москве: трейдинг снова у канала и админки', () => {
+    const last = dayBoundsMsk('2026-10-25');
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, last.endMs, 'trading').id, STARVELL.id, `25 октября ещё Starvell: ${slot}`);
+        assert.equal(houseFor(slot, last.endMs + 1, 'trading').id, HOUSE_CHANNEL.id, `26 октября уже канал: ${slot}`);
+        assert.deepEqual(eligible(PAID_EVERYWHERE, slot, last.endMs + 1, 'trading').map(c => c.id), ['paid'], slot);
+    }
+    assert.equal(PROMO.bookedOn('strip', last.endMs + 1, 'trading'), null);
 });
 
 test('на трейдинге Starvell перебивает кампанию из админки', () => {

@@ -721,7 +721,7 @@
     enabled: true,
     weight: 1,
     start: "2026-10-18",
-    end: "",
+    end: "2026-10-25",
     href: "https://starvell.com/lead/045fa3/roblox/blox-fruits",
     text: "",
     cta: "",
