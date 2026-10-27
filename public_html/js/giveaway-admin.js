@@ -53,6 +53,8 @@
     "bad end_by": "Выберите, когда итоги: по времени или по числу участников.",
     max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
     drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
+    posts_migrate: "Для постов в канале выполните docs/migrations/2026-10-27-giveaway-posts.sql.",
+    "bad posts": "Каналов для поста — не больше пяти.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -63,6 +65,8 @@
     rights: [],
     addUrl: "",
     tgOn: false,
+    postsOn: false,
+    postLast: [],
     cur: null,
     image: null,
     dirty: false,
@@ -601,6 +605,64 @@
     return Array.from($("fChannels").querySelectorAll("input:checked")).map(i => i.value);
   }
 
+  function renderPostChecks(selected) {
+    const sec = $("fPostBox");
+    sec.hidden = !S.postsOn;
+    if (!S.postsOn) return;
+    const box = $("fPosts");
+    box.textContent = "";
+    const posts = (S.cur && S.cur.posts) || [];
+    const byChat = {};
+    posts.forEach(p => { byChat[p.chat] = p; });
+    if (!S.channels.length) {
+      const p = document.createElement("span");
+      p.className = "muted small";
+      p.textContent = "Каналов пока нет — см. «Каналы бота» слева.";
+      box.appendChild(p);
+      return;
+    }
+    S.channels.forEach(c => {
+      const post = byChat[c.id];
+      const lab = document.createElement("label");
+      lab.className = "page-chk" + (c.admin || post ? "" : " ga-ch-off");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = c.id;
+      cb.checked = !!post || selected.indexOf(c.id) >= 0;
+      cb.disabled = locked() || !!(post && post.posted) || (!c.admin && !post);
+      cb.addEventListener("change", changed);
+      let note = "";
+      if (post && post.posted) note = post.results ? " — пост с итогами" : " — пост вышел";
+      else if (!c.admin) note = " (у бота нет прав)";
+      lab.append(cb, document.createTextNode(" " + (c.title || c.id) + note));
+      if (post && post.url) {
+        const a = document.createElement("a");
+        a.href = post.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = " открыть ↗";
+        lab.appendChild(a);
+      }
+      box.appendChild(lab);
+    });
+  }
+
+  function readPosts() {
+    return Array.from($("fPosts").querySelectorAll("input:checked")).map(i => i.value);
+  }
+
+  function postNote(r) {
+    const parts = [];
+    const p = r && r.post;
+    if (p && p.posted) parts.push("пост вышел в каналах: " + p.posted);
+    if (p && p.edited) parts.push("пост в канале обновлён");
+    if (p && p.failed && p.failed.length) {
+      parts.push("пост не вышел или не обновился: " + p.failed.join(", ") + " (нет прав у бота, пост удалён в канале или Telegram не ответил — нажмите «Сохранить» ещё раз)");
+    }
+    if (r && r.post_failed) parts.push("итоги в пост канала не дописались — бот повторит сам через минуту");
+    return parts.length ? " " + parts.join("; ") + "." : "";
+  }
+
   function renderChannelsList() {
     refreshCondChats();
     const ul = $("gwChannels");
@@ -639,6 +701,7 @@
             S.channels = r.channels;
             renderChannelsList();
             renderChannelChecks(readChannels());
+            renderPostChecks(readPosts());
             preview();
           }
           hint(r && r.ok ? "Канал обновлён" : "Telegram не ответил", r && r.ok ? "ok" : "bad");
@@ -810,7 +873,7 @@
     stock: "Сток, над дилерами",
     news: "Новости, над лентой"
   };
-  const SOURCES = { tg: "Бот", pop: "Окно на сайте", page: "Страница /giveaways" };
+  const SOURCES = { tg: "Бот", ch: "Пост в канале", pop: "Окно на сайте", page: "Страница /giveaways" };
   Object.keys(PLACES).forEach(k => { SOURCES["c-" + k] = "Карточка: " + PLACES[k]; });
 
   function pct(a, b) {
@@ -1009,7 +1072,7 @@
       const rep = r.report;
       const s = rep.sources;
       const fromCards = Object.keys(PLACES).reduce((n, k) => n + (s["c-" + k] || 0), 0);
-      $("gwSources").textContent = "Откуда пришли участники: из бота " + s.tg + " · окно на сайте " + s.pop
+      $("gwSources").textContent = "Откуда пришли участники: из бота " + s.tg + " · пост в канале " + (s.ch || 0) + " · окно на сайте " + s.pop
         + " · страница /giveaways " + s.page + " · карточки на сайте " + fromCards + (s[""] ? " · неизвестно " + s[""] : "");
       reportCards(rep.cards);
       const box = $("gwReportChannels");
@@ -1026,7 +1089,7 @@
   }
 
   function collect() {
-    return {
+    const out = {
       title_ru: $("fTitleRu").value.trim(),
       title_en: $("fTitleEn").value.trim(),
       image: S.image,
@@ -1040,6 +1103,8 @@
       test: $("fTest").checked,
       drop_unsub: $("fDropUnsub").checked
     };
+    if (S.postsOn) out.posts = readPosts();
+    return out;
   }
 
   function readMax() {
@@ -1122,6 +1187,7 @@
     msg("");
     hint("");
     renderStatus();
+    renderPostChecks(g.posts ? [] : S.postLast);
     renderPeople();
     loadReport();
     renderList();
@@ -1165,6 +1231,8 @@
       S.rights = r.rights || [];
       S.addUrl = r.add_url || "";
       S.tgOn = r.tg;
+      S.postsOn = !!r.posts;
+      S.postLast = r.post_last || [];
       renderChannelsList();
       renderList();
       if (selectId) {
@@ -1195,6 +1263,7 @@
         } else {
           hint(r.translate_failed ? "Сохранено, но перевод на английский не удался" : "Сохранено", r.translate_failed ? "bad" : "ok");
         }
+        if (r.post) msg("Сохранено:" + postNote(r), !!(r.post.failed && r.post.failed.length));
         return r.id;
       });
     });
@@ -1277,14 +1346,14 @@
         test
           ? "Опубликовать тестовый? Посетители его не увидят, рассылки не будет — только по ссылке /giveaways?test."
           : "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
-        () => test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.");
+        r => (test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.") + postNote(r));
     });
     $("aEnd").addEventListener("click", () => act("end",
       "Закончить приём заявок прямо сейчас?", () => "Приём заявок закрыт. Теперь можно разыграть."));
     $("aDraw").addEventListener("click", () => act("draw",
       "Итоги подводятся сами сразу после конца — эта кнопка на случай, если они не появились (например, Telegram не ответил). Подвести сейчас? Победители выбираются один раз, отменить нельзя. Бот сразу напишет победителям.",
       r => "Готово: победителей " + r.winners + " из " + r.slots + " мест, участников " + r.entries
-        + (r.skipped ? ", пропущено " + r.skipped + " (отписались, отключили бота или в бане)" : "") + "."));
+        + (r.skipped ? ", пропущено " + r.skipped + " (отписались, отключили бота или в бане)" : "") + "." + postNote(r)));
     $("aDelete").addEventListener("click", () => act("delete",
       "Удалить розыгрыш вместе со списком участников? Это нельзя отменить.", () => "Удалён."));
     window.addEventListener("beforeunload", e => { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });

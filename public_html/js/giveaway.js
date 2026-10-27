@@ -125,10 +125,10 @@
   }
 
   function noteFromBot() {
-    var m = /^#g(\d+)-tg$/.exec(location.hash);
+    var m = /^#g(\d+)-(tg|ch)$/.exec(location.hash);
     if (!m) { return; }
     var v = readFromBot();
-    v[m[1]] = 1;
+    v[m[1]] = m[2];
     try { sessionStorage.setItem(FROM_BOT_KEY, JSON.stringify(v)); } catch (_) {}
   }
 
@@ -143,7 +143,8 @@
   }
 
   function source(id, mode) {
-    if (readFromBot()[String(id)]) { return "tg"; }
+    var bot = readFromBot()[String(id)];
+    if (bot) { return bot === "ch" ? "ch" : "tg"; }
     if (mode !== "page") { return "pop"; }
     var c = readFromCard()[String(id)];
     return typeof c === "string" && /^c-[a-z]{3,6}$/.test(c) ? c : "page";

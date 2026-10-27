@@ -151,6 +151,11 @@ echo <<<HTML
         <span class="muted small">Когда участников станет столько, приём закроется и итоги подведутся сразу. Срока нет — розыгрыш идёт, пока не наберётся. Не меньше числа призов.</span>
       </label>
 
+      <div class="f" id="fPostBox" hidden>Пост в Telegram <span class="muted">(бот опубликует розыгрыш в отмеченные каналы — баннер, описание, призы, условия и кнопка «Участвовать», а после итогов допишет в этот же пост победителей)</span>
+        <div class="pages" id="fPosts"></div>
+        <span class="muted small">У черновика пост выйдет при публикации, у идущего — сразу после «Сохранить». Пока розыгрыш идёт, каждое «Сохранить» обновляет пост. Вышедший пост галочкой не снять — удалите его в канале сами. Канал появится здесь, когда бот станет в нём админом (см. «Каналы бота» слева).</span>
+      </div>
+
       <div class="f">Проверка
         <div class="pages">
           <label class="page-chk"><input type="checkbox" id="fTest" /> Тестовый — посетители его не видят, бот о старте никому не пишет</label>
@@ -208,8 +213,8 @@ echo <<<HTML
 
 {$i18nDictTag}<script src="/js/i18n.js?v=84"></script>
 <script src="/js/news-blocks.js?v=4"></script>
-<script src="/js/giveaway.js?v=16"></script>
-<script src="/js/giveaway-admin.js?v=11"></script>
+<script src="/js/giveaway.js?v=17"></script>
+<script src="/js/giveaway-admin.js?v=12"></script>
 </body>
 </html>
 HTML;
