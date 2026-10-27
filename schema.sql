@@ -366,6 +366,24 @@ CREATE TABLE IF NOT EXISTS tg_channels (
   updated_at BIGINT UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Посты розыгрышей в каналах и премиум-эмодзи бота. Для боевой базы —
+-- docs/migrations/2026-10-27-giveaway-posts.sql, там же пояснения к полям.
+CREATE TABLE IF NOT EXISTS giveaway_posts (
+  giveaway_id INT UNSIGNED    NOT NULL,
+  chat_id     BIGINT          NOT NULL,
+  message_id  INT UNSIGNED    NOT NULL DEFAULT 0,
+  posted_at   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  results_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (giveaway_id, chat_id),
+  KEY idx_results (results_at, message_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tg_emoji (
+  slot       VARCHAR(16)     NOT NULL PRIMARY KEY,
+  emoji_id   VARCHAR(24)     NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Лайки только вошедшим, один на аккаунт: кто уже голосовал за тирлист
 -- ('tierlist') или за пост ('news:<id>'). Счётчики остаются в likes.count и
 -- news.likes. Для боевой базы — docs/migrations/2026-10-14-like-votes.sql.

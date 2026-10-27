@@ -35,7 +35,9 @@ if (!defined('TESTING')) {
     $left = [];
     try {
         $update = read_json_body();
-        $reply = tg_handle_update(db(), $update, time());
+        // Прислали боту премиум-эмодзи — он отвечает их id для админки
+        // розыгрышей (раздел «Премиум-эмодзи» в api/lib/giveaway.php).
+        $reply = gw_emoji_reply($update) ?? tg_handle_update(db(), $update, time());
         // Бота добавили в канал или убрали — список каналов для условий
         // розыгрышей (api/lib/giveaway.php). Ссылку-приглашение приватного
         // канала просим уже после ответа Telegram. Добавившему бот сразу

@@ -55,6 +55,7 @@
     drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     posts_migrate: "Для постов в канале выполните docs/migrations/2026-10-27-giveaway-posts.sql.",
     "bad posts": "Каналов для поста — не больше пяти.",
+    "bad emoji": "id премиум-эмодзи — только цифры, до 24.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -67,6 +68,7 @@
     tgOn: false,
     postsOn: false,
     postLast: [],
+    emoji: null,
     cur: null,
     image: null,
     dirty: false,
@@ -651,6 +653,45 @@
     return Array.from($("fPosts").querySelectorAll("input:checked")).map(i => i.value);
   }
 
+  function renderEmoji() {
+    const box = $("gwEmojiBox");
+    box.hidden = !S.emoji;
+    if (!S.emoji) return;
+    const list = $("gwEmoji");
+    list.textContent = "";
+    S.emoji.forEach(e => {
+      const lab = document.createElement("label");
+      lab.className = "f";
+      lab.textContent = e.char + " " + e.where;
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.inputMode = "numeric";
+      inp.maxLength = 24;
+      inp.placeholder = "id — пусто: обычный " + e.char;
+      inp.value = e.id;
+      inp.dataset.slot = e.slot;
+      lab.appendChild(inp);
+      list.appendChild(lab);
+    });
+    $("gwEmojiHelp").textContent = "Как узнать id: пришлите премиум-эмодзи " + (S.bot ? "боту @" + S.bot : "боту")
+      + " в личку — он ответит его id. Где Telegram их покажет: в личных сообщениях бота — если у владельца бота Telegram Premium;"
+      + " в канале — только если у бота куплен дополнительный ник на Fragment (бусты канала тут не помогают)."
+      + " Где нельзя — останется обычный эмодзи, пост всё равно выйдет.";
+  }
+
+  function saveEmoji() {
+    const ids = {};
+    $("gwEmoji").querySelectorAll("input").forEach(i => { ids[i.dataset.slot] = i.value.trim(); });
+    $("gwEmojiSave").disabled = true;
+    call({ action: "emoji", ids: ids }).then(r => {
+      $("gwEmojiSave").disabled = false;
+      if (!r || !r.ok) { hint(errText(r), "bad"); return; }
+      S.emoji = r.emoji;
+      renderEmoji();
+      hint("Эмодзи сохранены — уже вышедший пост обновится при следующем «Сохранить» розыгрыша", "ok");
+    });
+  }
+
   function postNote(r) {
     const parts = [];
     const p = r && r.post;
@@ -1233,7 +1274,9 @@
       S.tgOn = r.tg;
       S.postsOn = !!r.posts;
       S.postLast = r.post_last || [];
+      S.emoji = r.emoji || null;
       renderChannelsList();
+      renderEmoji();
       renderList();
       if (selectId) {
         S.dirty = false;
@@ -1340,6 +1383,7 @@
       changed();
     }));
     $("aSave").addEventListener("click", save);
+    $("gwEmojiSave").addEventListener("click", saveEmoji);
     $("aPublish").addEventListener("click", () => {
       const test = $("fTest").checked;
       act("publish",

@@ -72,6 +72,7 @@ function gw_db(): PDO {
     $pdo->exec('CREATE TABLE giveaway_posts (
         giveaway_id INTEGER NOT NULL, chat_id INTEGER NOT NULL, message_id INTEGER NOT NULL DEFAULT 0,
         posted_at INTEGER NOT NULL DEFAULT 0, results_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (giveaway_id, chat_id))');
+    $pdo->exec('CREATE TABLE tg_emoji (slot TEXT NOT NULL PRIMARY KEY, emoji_id TEXT NOT NULL, updated_at INTEGER NOT NULL)');
     return $pdo;
 }
 
@@ -2119,6 +2120,121 @@ test('пост: новый розыгрыш берёт каналы поста �
     handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'id' => $out['id'], 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW);
     handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'delete', 'id' => $out['id']], GW_NOW);
     assert_eq(0, (int)$p->query('SELECT COUNT(*) FROM giveaway_posts')->fetchColumn());
+});
+
+// --------------------------------------------------------------------------
+//  Премиум-эмодзи
+// --------------------------------------------------------------------------
+
+const GW_EMOJI_GIFT  = '5368324170671202286';
+const GW_EMOJI_PRIZE = '5377490853241000000';
+const GW_EMOJI_WIN   = '5226945370684140473';
+
+function gw_emoji_set(PDO $p, array $ids): void {
+    [$s] = handle_gw_admin($p, gw_cfg(), function () { return null; }, ['action' => 'emoji', 'ids' => $ids], GW_NOW);
+    assert_eq(200, $s, 'эмодзи сохранены');
+}
+
+test('эмодзи: админка сохраняет id, пустое — обычный, мусор не пускает', function () {
+    $p = gw_db();
+    [, $out] = handle_gw_admin($p, gw_cfg(), function () { return null; }, ['action' => 'list'], GW_NOW);
+    assert_eq(['gift', '🎁', ''], [$out['emoji'][0]['slot'], $out['emoji'][0]['char'], $out['emoji'][0]['id']], 'шесть мест, пока пусто');
+    gw_emoji_set($p, ['gift' => ' ' . GW_EMOJI_GIFT . ' ', 'win' => GW_EMOJI_WIN]);
+    assert_eq(['gift' => GW_EMOJI_GIFT, 'win' => GW_EMOJI_WIN], gw_emoji_map($p));
+    gw_emoji_set($p, ['win' => '']);
+    assert_eq(['gift' => GW_EMOJI_GIFT], gw_emoji_map($p), 'пустое — снова обычный');
+    foreach ([['gift' => 'abc'], ['gift' => str_repeat('1', 25)], ['nope' => '1'], 'x'] as $bad) {
+        [$s, $out] = handle_gw_admin($p, gw_cfg(), function () { return null; }, ['action' => 'emoji', 'ids' => $bad], GW_NOW);
+        assert_eq([400, 'bad emoji'], [$s, $out['error']], json_encode($bad));
+    }
+    $old = test_db();
+    [$s, $out] = gw_emoji_save($old, ['gift' => GW_EMOJI_GIFT], GW_NOW);
+    assert_eq([409, 'posts_migrate'], [$s, $out['error']], 'до миграции просит её');
+    assert_eq([null, []], [gw_admin_emoji($old), gw_emoji_map($old)]);
+});
+
+test('эмодзи: в посте — премиум с обычным внутри, на кнопке — иконка', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_emoji_set($p, ['gift' => GW_EMOJI_GIFT, 'prize' => GW_EMOJI_PRIZE]);
+    $log = [];
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
+    $m = gw_posts_sent($log)[0][1];
+    assert_true(strpos($m['text'], '<tg-emoji emoji-id="' . GW_EMOJI_GIFT . '">🎁</tg-emoji> <b>Розыгрыш Magnet</b>') !== false, 'название');
+    assert_true(strpos($m['text'], '<tg-emoji emoji-id="' . GW_EMOJI_PRIZE . '">🏆</tg-emoji> <b>Призы</b>') !== false, 'призы');
+    assert_true(strpos($m['text'], '✅ <b>Условия</b>') !== false, 'не выбранный — обычный');
+    assert_eq(['text' => 'Участвовать', 'icon_custom_emoji_id' => GW_EMOJI_GIFT],
+        array_intersect_key($m['reply_markup']['inline_keyboard'][0][0], ['text' => 1, 'icon_custom_emoji_id' => 1]), 'иконка на кнопке');
+});
+
+test('эмодзи: Telegram отказал — то же без премиум, дальше сразу без них', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_channel($p, GW_CH_B, 'Канал B');
+    gw_emoji_set($p, ['gift' => GW_EMOJI_GIFT]);
+    $log = [];
+    $n = 100;
+    $tg = function (string $method, array $params) use (&$log, &$n): ?array {
+        $log[] = [$method, $params];
+        if ($method !== 'sendMessage') { return ['ok' => true, 'result' => []]; }
+        $fancy = strpos($params['text'], '<tg-emoji') !== false || isset($params['reply_markup']['inline_keyboard'][0][0]['icon_custom_emoji_id']);
+        return $fancy
+            ? ['ok' => false, 'error_code' => 400, 'description' => "Bad Request: can't use custom emoji in the message"]
+            : ['ok' => true, 'result' => ['message_id' => ++$n]];
+    };
+    [, $out] = handle_gw_admin($p, gw_cfg(), $tg, ['action' => 'save', 'posts' => [GW_CH_A, GW_CH_B]] + gw_draft(), GW_NOW - 10);
+    [$s, $out] = handle_gw_admin($p, gw_cfg(), $tg, ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
+    assert_eq(['posted' => 2, 'edited' => 0, 'failed' => []], $out['post'], 'оба поста вышли');
+    $sent = gw_sent($log);
+    assert_eq(3, count($sent), 'отказ, повтор, второй канал сразу без премиум');
+    $plain = $sent[1][1];
+    assert_true(strpos($plain['text'], '🎁 <b>Розыгрыш Magnet</b>') === 0, 'обычный эмодзи на месте');
+    assert_eq('🎁 Участвовать', $plain['reply_markup']['inline_keyboard'][0][0]['text'], 'эмодзи вернулся в надпись кнопки');
+    assert_true(!isset($plain['reply_markup']['inline_keyboard'][0][0]['icon_custom_emoji_id']));
+});
+
+test('эмодзи: личные сообщения — премиум поверх первого эмодзи, без выбора — как раньше', function () {
+    $p = gw_db();
+    gw_user($p, '1', 'u1', 501);
+    $id = gw_live($p);
+    $log = [];
+    gw_announce($p, gw_tg($log), gw_load($p, $id), function () {});
+    assert_true(!isset(gw_sent($log)[0][1]['entities']), 'без выбора — без сущностей');
+
+    gw_emoji_set($p, ['gift' => GW_EMOJI_GIFT, 'win' => GW_EMOJI_WIN]);
+    $log = [];
+    gw_announce($p, gw_tg($log), gw_load($p, $id), function () {});
+    assert_eq([['type' => 'custom_emoji', 'offset' => 0, 'length' => 2, 'custom_emoji_id' => GW_EMOJI_GIFT]],
+        gw_sent($log)[0][1]['entities'], 'о старте — 🎁 премиум');
+    $log = [];
+    gw_notify_winners($p, gw_tg($log), gw_load($p, $id), [['user_id' => '1', 'chat_id' => 501, 'lang' => 'ru', 'prize' => 0]], function () {});
+    assert_eq(GW_EMOJI_WIN, gw_sent($log)[0][1]['entities'][0]['custom_emoji_id'], 'о победе — 🎉 премиум');
+});
+
+test('эмодзи: бот отвечает id присланных премиум-эмодзи', function () {
+    $text = 'вот 🎁 и ✨';
+    $upd = ['message' => [
+        'chat' => ['id' => 777, 'type' => 'private'], 'from' => ['id' => 777], 'text' => $text,
+        'entities' => [
+            ['type' => 'custom_emoji', 'offset' => 4, 'length' => 2, 'custom_emoji_id' => GW_EMOJI_GIFT],
+            ['type' => 'custom_emoji', 'offset' => 9, 'length' => 1, 'custom_emoji_id' => GW_EMOJI_WIN],
+        ],
+    ]];
+    $r = gw_emoji_reply($upd);
+    assert_eq(['sendMessage', 777], [$r['method'], $r['chat_id']]);
+    assert_true(strpos($r['text'], "🎁 " . GW_EMOJI_GIFT . "\n✨ " . GW_EMOJI_WIN) !== false, 'эмодзи и id по строкам');
+    $e = $r['entities'][0];
+    assert_eq(['custom_emoji', GW_EMOJI_GIFT, '🎁'], [$e['type'], $e['custom_emoji_id'], gw_utf16_cut($r['text'], $e['offset'], $e['length'])], 'сам эмодзи — премиум');
+    $c = $r['entities'][1];
+    assert_eq(GW_EMOJI_GIFT, gw_utf16_cut($r['text'], $c['offset'], $c['length']), 'id — моноширинный, копируется нажатием');
+
+    $sticker = ['message' => ['chat' => ['id' => 777, 'type' => 'private'], 'sticker' => ['emoji' => '🔥', 'custom_emoji_id' => GW_EMOJI_PRIZE]]];
+    assert_true(strpos(gw_emoji_reply($sticker)['text'], '🔥 ' . GW_EMOJI_PRIZE) !== false, 'эмодзи-стикер');
+    $group = $upd;
+    $group['message']['chat']['type'] = 'supergroup';
+    assert_eq(null, gw_emoji_reply($group), 'в группе молчит');
+    assert_eq(null, gw_emoji_reply(['message' => ['chat' => ['id' => 777, 'type' => 'private'], 'text' => '/start']]), 'без эмодзи — обычный разбор');
 });
 
 run_tests();

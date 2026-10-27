@@ -1603,11 +1603,13 @@ function gw_announce(PDO $pdo, callable $send, array $row, ?callable $sleep = nu
         return 0;
     }
     $id = (int)$row['id'];
-    return tg_send_rows($pdo, $send, $rows, function (string $lang) use ($row, $id): array {
+    $map = gw_emoji_map($pdo);
+    return tg_send_rows($pdo, gw_send_fancy($send, $map), $rows, function (string $lang) use ($row, $id, $map): array {
+        $text = gw_announce_text($row, $lang);
         return [
-            gw_announce_text($row, $lang),
+            $text,
             [[$lang === 'en' ? 'Join' : 'Участвовать', gw_link($id, true, gw_is_test($row))]],
-            gw_preview($row),
+            gw_preview($row) + array_diff_key(gw_lead_emoji(['text' => $text], $map), ['text' => 1]),
         ];
     }, $sleep);
 }
@@ -1616,12 +1618,14 @@ function gw_announce(PDO $pdo, callable $send, array $row, ?callable $sleep = nu
 function gw_notify_winners(PDO $pdo, callable $send, array $row, array $winners, ?callable $sleep = null): int {
     $sleep = $sleep ?? function (int $us): void { usleep($us); };
     $prizes = gw_decode_list($row['prizes_json']);
+    $map = gw_emoji_map($pdo);
+    $send = gw_send_fancy($send, $map);
     $sent = 0;
     foreach ($winners as $i => $w) {
         $lang = tg_lang($w['lang']);
         $prize = (string)($prizes[$w['prize']]['name'] ?? '');
-        $msg = tg_message_buttons((int)$w['chat_id'], gw_win_text($row, $prize, $lang),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'], false, gw_is_test($row))]]);
+        $msg = gw_lead_emoji(tg_message_buttons((int)$w['chat_id'], gw_win_text($row, $prize, $lang),
+            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'], false, gw_is_test($row))]]), $map);
         if ($i > 0) { $sleep(TG_BROADCAST_GAP); }
         if (tg_after_send($pdo, (int)$w['chat_id'], $send('sendMessage', $msg))) { $sent++; }
     }
@@ -1834,19 +1838,19 @@ function gw_post_conds(PDO $pdo, array $row, string $bot): string {
     return implode("\n", $lines);
 }
 
-// Пост идущего розыгрыша.
-function gw_post_text(PDO $pdo, array $row, string $bot): string {
+// Пост идущего розыгрыша. $map — премиум-эмодзи (gw_emoji_map()).
+function gw_post_text(PDO $pdo, array $row, string $bot, array $map = []): string {
     $prizes = [];
     foreach (gw_decode_list($row['prizes_json']) as $p) {
         $prizes[] = '<b>' . gw_html((string)$p['name']) . '</b>' . ((int)$p['count'] > 1 ? ' × ' . (int)$p['count'] : '');
     }
     $body = gw_body_html(gw_decode_blocks($row['body_json']));
     return (gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
-        . '🎁 <b>' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>'
+        . gw_e($map, 'gift') . ' <b>' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>'
         . ($body !== '' ? "\n\n" . $body : '')
-        . "\n\n🏆 <b>Призы</b>\n<blockquote>" . implode("\n", $prizes) . '</blockquote>'
-        . "\n✅ <b>Условия</b>\n" . gw_post_conds($pdo, $row, $bot)
-        . "\n\n⏳ <b>Итоги:</b> " . gw_html(gw_when($row, GW_POST_LANG));
+        . "\n\n" . gw_e($map, 'prize') . " <b>Призы</b>\n<blockquote>" . implode("\n", $prizes) . '</blockquote>'
+        . "\n" . gw_e($map, 'conds') . " <b>Условия</b>\n" . gw_post_conds($pdo, $row, $bot)
+        . "\n\n" . gw_e($map, 'time') . ' <b>Итоги:</b> ' . gw_html(gw_when($row, GW_POST_LANG));
 }
 
 // Победитель в посте: ник на сайте и логин Roblox, если они разные (не
@@ -1861,14 +1865,14 @@ function gw_winner_label(array $w): string {
 }
 
 // Пост после итогов: победители по призам. Не влезли все — хвост «и ещё N».
-function gw_post_results_text(PDO $pdo, array $row): string {
+function gw_post_results_text(PDO $pdo, array $row, array $map = []): string {
     $id = (int)$row['id'];
     $byPrize = [];
     foreach (gw_winners($pdo, [$id])[$id] ?? [] as $w) { $byPrize[$w['prize']][] = $w; }
     $count = gw_entry_counts($pdo, [$id])[$id] ?? 0;
     $head = (gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
-        . '🎉 <b>Итоги: ' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>';
-    $foot = "\n\n👥 Участников: " . $count;
+        . gw_e($map, 'win') . ' <b>Итоги: ' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>';
+    $foot = "\n\n" . gw_e($map, 'people') . ' Участников: ' . $count;
     if (!$byPrize) { return $head . "\n\nПобедителей нет: никто не выполнил условия." . $foot; }
     $foot .= "\nПоздравляем! Бот уже написал победителям.";
 
@@ -1898,16 +1902,16 @@ function gw_post_results_text(PDO $pdo, array $row): string {
         }
     }
     if ($total > $shown) { $lines[] = '…и ещё ' . ($total - $shown) . ' — все победители на сайте'; }
-    return $head . "\n\n🏆 <b>Победители</b>\n<blockquote" . ($total > GW_POST_FOLD ? ' expandable' : '') . '>'
+    return $head . "\n\n" . gw_e($map, 'prize') . " <b>Победители</b>\n<blockquote" . ($total > GW_POST_FOLD ? ' expandable' : '') . '>'
         . implode("\n", $lines) . '</blockquote>' . $foot;
 }
 
 // Поля sendMessage / editMessageText поста: текст, баннер над ним, кнопка.
-function gw_post_params(array $row, string $text, bool $results): array {
+function gw_post_params(array $row, string $text, bool $results, array $map = []): array {
     $id = (int)$row['id'];
     $btn = $results
-        ? ['text' => '🏆 Итоги на сайте', 'url' => gw_link($id, false, gw_is_test($row))]
-        : ['text' => '🎁 Участвовать', 'url' => gw_post_link($id, gw_is_test($row))];
+        ? gw_button($map, 'prize', 'Итоги на сайте', gw_link($id, false, gw_is_test($row)))
+        : gw_button($map, 'gift', 'Участвовать', gw_post_link($id, gw_is_test($row)));
     return ['text' => $text, 'parse_mode' => 'HTML', 'reply_markup' => ['inline_keyboard' => [[$btn]]]] + gw_preview($row);
 }
 
@@ -1935,12 +1939,14 @@ function gw_post_sync(PDO $pdo, callable $send, array $row, string $bot, int $no
     $posts = gw_posts($pdo, $id);
     if (!$posts) { return $out; }
     $channels = gw_channels($pdo, array_keys($posts));
-    $text = gw_post_text($pdo, $row, $bot);
+    $map = gw_emoji_map($pdo);
+    $send = gw_send_fancy($send, $map);
+    $text = gw_post_text($pdo, $row, $bot, $map);
     foreach ($posts as $chat => $p) {
         if ((int)$p['results_at'] > 0) { continue; }
         $c = $channels[$chat] ?? null;
         $name = $c && (string)$c['title'] !== '' ? (string)$c['title'] : (string)$chat;
-        $params = ['chat_id' => $chat] + gw_post_params($row, $text, false);
+        $params = ['chat_id' => $chat] + gw_post_params($row, $text, false, $map);
         $mid = (int)$p['message_id'];
         if ($mid > 0) {
             $state = gw_post_edit_state($send('editMessageText', $params + ['message_id' => $mid]));
@@ -1974,11 +1980,13 @@ function gw_post_results(PDO $pdo, callable $send, array $row, int $now): int {
     $st->execute([':g' => $id]);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC);
     if (!$rows) { return 0; }
-    $text = gw_post_results_text($pdo, $row);
+    $map = gw_emoji_map($pdo);
+    $send = gw_send_fancy($send, $map);
+    $text = gw_post_results_text($pdo, $row, $map);
     $mark = $pdo->prepare('UPDATE giveaway_posts SET results_at = :t WHERE giveaway_id = :g AND chat_id = :c');
     $failed = 0;
     foreach ($rows as $r) {
-        $params = ['chat_id' => (int)$r['chat_id'], 'message_id' => (int)$r['message_id']] + gw_post_params($row, $text, true);
+        $params = ['chat_id' => (int)$r['chat_id'], 'message_id' => (int)$r['message_id']] + gw_post_params($row, $text, true, $map);
         if (gw_post_edit_state($send('editMessageText', $params)) === 'down') { $failed++; continue; }
         $mark->execute([':t' => $now, ':g' => $id, ':c' => (int)$r['chat_id']]);
     }
@@ -2000,6 +2008,206 @@ function gw_has_post_due(PDO $pdo): bool {
     } catch (PDOException $e) {
         return false;
     }
+}
+
+// --------------------------------------------------------------------------
+//  Премиум-эмодзи
+// --------------------------------------------------------------------------
+//
+// Бот ставит премиум-эмодзи (custom emoji Telegram) вместо обычных: в посте
+// канала, на кнопке под ним и в начале своих сообщений о розыгрыше (о
+// старте, «вы участвуете», о победе). Какие — выбирает владелец в
+// /admin/giveaways: в каждое место — id премиум-эмодзи. id узнают так:
+// прислать эмодзи боту в личку, он ответит (gw_emoji_reply()).
+//
+// Где Telegram их покажет, решает Telegram (Bot API, «Formatting options»):
+// в личке, группе и супергруппе — если у владельца бота есть Telegram
+// Premium; в канале — только если у бота куплен дополнительный ник на
+// Fragment. Бусты канала тут ни при чём. Где нельзя — виден обычный эмодзи,
+// он всегда лежит внутри запасным. Если Telegram не подставит его, а откажет
+// в отправке, сообщение уходит повторно без премиум-эмодзи
+// (gw_send_fancy()): ни пост, ни рассылка не теряются.
+//
+// Нет таблицы tg_emoji (миграция 2026-10-27-giveaway-posts.sql) — всё
+// обычными эмодзи.
+
+// Место => [обычный эмодзи, где стоит — для админки].
+const GW_EMOJI = [
+    'gift'   => ['🎁', 'Название розыгрыша, кнопка «Участвовать», сообщение о старте'],
+    'prize'  => ['🏆', 'Призы, победители, кнопка «Итоги на сайте»'],
+    'conds'  => ['✅', 'Условия, «Вы участвуете»'],
+    'time'   => ['⏳', 'Срок итогов'],
+    'win'    => ['🎉', 'Итоги в посте, поздравление победителю'],
+    'people' => ['👥', 'Число участников'],
+];
+
+function gw_has_emoji(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT 1 FROM tg_emoji LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function gw_emoji_id_ok($v): bool {
+    return is_string($v) && preg_match('/^[0-9]{1,24}\z/', $v) === 1;
+}
+
+// Выбранные премиум-эмодзи: [место => id]. Нет таблицы — пусто.
+function gw_emoji_map(PDO $pdo): array {
+    try {
+        $rows = $pdo->query('SELECT slot, emoji_id FROM tg_emoji')->fetchAll(PDO::FETCH_KEY_PAIR);
+    } catch (PDOException $e) {
+        return [];
+    }
+    $out = [];
+    foreach (GW_EMOJI as $slot => $e) {
+        if (isset($rows[$slot]) && gw_emoji_id_ok((string)$rows[$slot])) { $out[$slot] = (string)$rows[$slot]; }
+    }
+    return $out;
+}
+
+// Эмодзи места в HTML-тексте: премиум с обычным внутри или просто обычный.
+function gw_e(array $map, string $slot): string {
+    $plain = GW_EMOJI[$slot][0];
+    return isset($map[$slot]) ? '<tg-emoji emoji-id="' . $map[$slot] . '">' . $plain . '</tg-emoji>' : $plain;
+}
+
+// Кнопка-ссылка: с премиум-эмодзи — иконкой, без него — обычный в надписи.
+function gw_button(array $map, string $slot, string $text, string $url): array {
+    if (isset($map[$slot])) { return ['text' => $text, 'url' => $url, 'icon_custom_emoji_id' => $map[$slot]]; }
+    return ['text' => GW_EMOJI[$slot][0] . ' ' . $text, 'url' => $url];
+}
+
+// Длина в единицах UTF-16 — так Telegram считает смещения сущностей.
+function gw_utf16_len(string $s): int {
+    return intdiv(strlen(mb_convert_encoding($s, 'UTF-16LE', 'UTF-8')), 2);
+}
+
+function gw_utf16_cut(string $s, int $offset, int $length): string {
+    $u = mb_convert_encoding($s, 'UTF-16LE', 'UTF-8');
+    return mb_convert_encoding(substr($u, $offset * 2, $length * 2), 'UTF-8', 'UTF-16LE');
+}
+
+// Сообщение простым текстом: обычный эмодзи места в самом начале становится
+// премиум (сущность custom_emoji поверх него). Остальное не трогается.
+function gw_lead_emoji(array $msg, array $map): array {
+    $text = (string)($msg['text'] ?? '');
+    foreach ($map as $slot => $id) {
+        $plain = GW_EMOJI[$slot][0];
+        if (strpos($text, $plain) === 0) {
+            $msg['entities'] = [['type' => 'custom_emoji', 'offset' => 0, 'length' => gw_utf16_len($plain), 'custom_emoji_id' => $id]];
+            break;
+        }
+    }
+    return $msg;
+}
+
+// То же сообщение без премиум-эмодзи: обычные остаются на своих местах.
+function gw_plain(array $params, array $map): array {
+    if (isset($params['text'])) {
+        $params['text'] = preg_replace('~<tg-emoji emoji-id="[0-9]+">(.*?)</tg-emoji>~su', '$1', (string)$params['text']) ?? $params['text'];
+    }
+    unset($params['entities']);
+    $slots = array_flip($map);
+    foreach ($params['reply_markup']['inline_keyboard'] ?? [] as $i => $row) {
+        foreach ($row as $j => $b) {
+            if (!isset($b['icon_custom_emoji_id'])) { continue; }
+            $slot = $slots[$b['icon_custom_emoji_id']] ?? null;
+            unset($b['icon_custom_emoji_id']);
+            if ($slot !== null) { $b['text'] = GW_EMOJI[$slot][0] . ' ' . $b['text']; }
+            $params['reply_markup']['inline_keyboard'][$i][$j] = $b;
+        }
+    }
+    return $params;
+}
+
+// Отказ Telegram из-за премиум-эмодзи (бот не вправе их ставить сюда).
+function gw_emoji_refused(?array $res): bool {
+    if (!is_array($res) || !empty($res['ok']) || (int)($res['error_code'] ?? 0) !== 400) { return false; }
+    return preg_match('~emoji|entit|icon~i', (string)($res['description'] ?? '')) === 1;
+}
+
+// $send, который при отказе из-за премиум-эмодзи повторяет то же без них — и
+// дальше сразу шлёт без них, чтобы рассылка не спотыкалась на каждом.
+function gw_send_fancy(callable $send, array $map): callable {
+    if (!$map) { return $send; }
+    $refused = false;
+    return function (string $method, array $params) use ($send, $map, &$refused): ?array {
+        if ($refused) { return $send($method, gw_plain($params, $map)); }
+        $res = $send($method, $params);
+        if (!gw_emoji_refused($res)) { return $res; }
+        $refused = true;
+        return $send($method, gw_plain($params, $map));
+    };
+}
+
+/**
+ * Премиум-эмодзи в личке боту → в ответ их id, чтобы вставить в админку.
+ * Отвечает любому: id эмодзи не секрет. null — премиум-эмодзи в сообщении
+ * нет, им займётся обычный разбор (tg_handle_update()).
+ */
+function gw_emoji_reply(array $update): ?array {
+    $msg = $update['message'] ?? null;
+    if (!is_array($msg) || ($msg['chat']['type'] ?? '') !== 'private' || !is_int($msg['chat']['id'] ?? null)) { return null; }
+    $found = [];
+    $text = is_string($msg['text'] ?? null) ? $msg['text'] : '';
+    foreach (is_array($msg['entities'] ?? null) ? $msg['entities'] : [] as $e) {
+        if (!is_array($e) || ($e['type'] ?? '') !== 'custom_emoji' || !gw_emoji_id_ok($e['custom_emoji_id'] ?? null)) { continue; }
+        $found[$e['custom_emoji_id']] = gw_utf16_cut($text, (int)($e['offset'] ?? 0), (int)($e['length'] ?? 0));
+    }
+    $st = $msg['sticker'] ?? null;
+    if (is_array($st) && gw_emoji_id_ok($st['custom_emoji_id'] ?? null)) {
+        $found[$st['custom_emoji_id']] = is_string($st['emoji'] ?? null) ? $st['emoji'] : '';
+    }
+    if (!$found) { return null; }
+
+    // Каждая строка — сам эмодзи (премиум поверх запасного) и его id.
+    $out = "id премиум-эмодзи:\n";
+    $entities = [];
+    foreach ($found as $id => $plain) {
+        $id = (string)$id;
+        if ($plain !== '') {
+            $entities[] = ['type' => 'custom_emoji', 'offset' => gw_utf16_len($out), 'length' => gw_utf16_len($plain), 'custom_emoji_id' => $id];
+            $out .= $plain . ' ';
+        }
+        $entities[] = ['type' => 'code', 'offset' => gw_utf16_len($out), 'length' => strlen($id)];
+        $out .= $id . "\n";
+    }
+    $out .= "\nСкопируйте нужный и вставьте в /admin/giveaways → «Премиум-эмодзи».";
+    return ['method' => 'sendMessage', 'chat_id' => $msg['chat']['id'], 'text' => $out, 'entities' => $entities];
+}
+
+// Для админки: [{slot, char, where, id}]. Нет таблицы — null, и раздела
+// «Премиум-эмодзи» нет.
+function gw_admin_emoji(PDO $pdo): ?array {
+    if (!gw_has_emoji($pdo)) { return null; }
+    $map = gw_emoji_map($pdo);
+    $out = [];
+    foreach (GW_EMOJI as $slot => $e) {
+        $out[] = ['slot' => $slot, 'char' => $e[0], 'where' => $e[1], 'id' => $map[$slot] ?? ''];
+    }
+    return $out;
+}
+
+// Сохранить выбор из админки: {место: id или ''}. Пустое — обычный эмодзи.
+function gw_emoji_save(PDO $pdo, $ids, int $now): array {
+    if (!gw_has_emoji($pdo)) { return [409, ['ok' => false, 'error' => 'posts_migrate']]; }
+    if (!is_array($ids)) { return [400, ['ok' => false, 'error' => 'bad emoji']]; }
+    $clean = [];
+    foreach ($ids as $slot => $id) {
+        $id = is_string($id) ? trim($id) : $id;
+        if (!isset(GW_EMOJI[$slot]) || !($id === '' || gw_emoji_id_ok($id))) { return [400, ['ok' => false, 'error' => 'bad emoji']]; }
+        $clean[$slot] = $id;
+    }
+    $del = $pdo->prepare('DELETE FROM tg_emoji WHERE slot = :s');
+    $add = $pdo->prepare('INSERT INTO tg_emoji (slot, emoji_id, updated_at) VALUES (:s, :id, :t)');
+    foreach ($clean as $slot => $id) {
+        $del->execute([':s' => $slot]);
+        if ($id !== '') { $add->execute([':s' => $slot, ':id' => $id, ':t' => $now]); }
+    }
+    return [200, ['ok' => true, 'emoji' => gw_admin_emoji($pdo)]];
 }
 
 // --------------------------------------------------------------------------
@@ -2864,10 +3072,11 @@ function gw_after_join(PDO $pdo, array $cfg, array $note, ?callable $send = null
     tg_finish_response();
     try {
         $lang = tg_lang($note['lang']);
-        $msg = tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang, !empty($note['last'])),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]);
+        $map = gw_emoji_map($pdo);
+        $msg = gw_lead_emoji(tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang, !empty($note['last'])),
+            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]), $map);
         $chat = (int)$note['chat_id'];
-        tg_after_send($pdo, $chat, ($send ?? tg_http($tg['token']))('sendMessage', $msg));
+        tg_after_send($pdo, $chat, gw_send_fancy($send ?? tg_http($tg['token']), $map)('sendMessage', $msg));
     } catch (Throwable $e) {
         error_log('giveaway joined: ' . $e->getMessage());
     }

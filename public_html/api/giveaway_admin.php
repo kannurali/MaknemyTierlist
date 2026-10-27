@@ -20,6 +20,7 @@ require_once __DIR__ . '/lib/giveaway.php';
 // {posted, edited, failed: [канал, …]}; нет постов — поля нет.
 //   delete {id}     → удалить вместе с участниками
 //   channel {id}    → перечитать канал у Telegram (название, права, ссылку)
+//   emoji {ids}     → премиум-эмодзи бота: {место: id или ''}
 //
 // Всё, что меняет публичную картину, сбрасывает кеш api/giveaways.php
 // (тег giveaways), иначе окно ещё полминуты показывало бы старое.
@@ -50,7 +51,12 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
             'add_url'   => tg_add_channel_url($tg['name']),
             'posts'     => gw_has_posts($pdo),
             'post_last' => gw_post_last($pdo),
+            'emoji'     => gw_admin_emoji($pdo),
         ], null];
+    }
+    if ($action === 'emoji') {
+        [$s, $p] = gw_emoji_save($pdo, $body['ids'] ?? null, $now);
+        return [$s, $p, null];
     }
     if ($action === 'save') {
         [$s, $p] = gw_save($pdo, $body, $now, $translate);
