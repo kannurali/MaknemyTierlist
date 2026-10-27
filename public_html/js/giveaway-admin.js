@@ -55,7 +55,8 @@
     drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     posts_migrate: "Для постов в канале выполните docs/migrations/2026-10-27-giveaway-posts.sql.",
     "bad posts": "Каналов для поста — не больше пяти.",
-    "bad emoji": "id премиум-эмодзи — только цифры, до 24.",
+    "bad emoji": "В строке эмодзи слева — сам эмодзи (не буквы, до 8 знаков), справа id — только цифры, до 24. Строк — до 100.",
+    "dup emoji": "Один и тот же эмодзи в списке дважды — оставьте одну строку.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
   };
 
@@ -653,37 +654,74 @@
     return Array.from($("fPosts").querySelectorAll("input:checked")).map(i => i.value);
   }
 
+  function emojiRow(emoji, id, where) {
+    const row = document.createElement("div");
+    row.className = "slot-row ga-emoji";
+    const ch = document.createElement("input");
+    ch.type = "text";
+    ch.maxLength = 16;
+    ch.placeholder = "🔥";
+    ch.value = emoji;
+    ch.title = "Обычный эмодзи — его бот заменит премиум";
+    ch.style.width = "3.2em";
+    ch.style.textAlign = "center";
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.inputMode = "numeric";
+    inp.maxLength = 24;
+    inp.placeholder = "id премиум-эмодзи";
+    inp.value = id;
+    inp.style.flex = "1";
+    inp.style.minWidth = "0";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn small";
+    del.textContent = "✕";
+    del.title = "Убрать — снова обычный эмодзи";
+    del.addEventListener("click", () => row.remove());
+    row.append(ch, inp, del);
+    if (where) {
+      const sub = document.createElement("div");
+      sub.className = "li-sub";
+      sub.style.flexBasis = "100%";
+      sub.textContent = "в шаблоне: " + where;
+      row.appendChild(sub);
+    }
+    return row;
+  }
+
   function renderEmoji() {
     const box = $("gwEmojiBox");
     box.hidden = !S.emoji;
     if (!S.emoji) return;
     const list = $("gwEmoji");
     list.textContent = "";
-    S.emoji.forEach(e => {
-      const lab = document.createElement("label");
-      lab.className = "f";
-      lab.textContent = e.char + " " + e.where;
-      const inp = document.createElement("input");
-      inp.type = "text";
-      inp.inputMode = "numeric";
-      inp.maxLength = 24;
-      inp.placeholder = "id — пусто: обычный " + e.char;
-      inp.value = e.id;
-      inp.dataset.slot = e.slot;
-      lab.appendChild(inp);
-      list.appendChild(lab);
+    const tpl = {};
+    S.emoji.template.forEach(t => { tpl[t.emoji] = t.where; });
+    const have = {};
+    S.emoji.list.forEach(e => {
+      have[e.emoji] = true;
+      list.appendChild(emojiRow(e.emoji, e.id, tpl[e.emoji] || ""));
     });
-    $("gwEmojiHelp").textContent = "Как узнать id: пришлите премиум-эмодзи " + (S.bot ? "боту @" + S.bot : "боту")
+    S.emoji.template.forEach(t => { if (!have[t.emoji]) list.appendChild(emojiRow(t.emoji, "", t.where)); });
+    $("gwEmojiHelp").textContent = "Слева обычный эмодзи, справа id премиум-эмодзи — можно из своего набора, строк сколько угодно."
+      + " Где этот эмодзи встретится в посте или сообщении бота — в шаблоне, названии, описании, призах, — Telegram покажет премиум; на сайте останется обычный."
+      + " Строка без id не сохраняется. Как узнать id: пришлите премиум-эмодзи " + (S.bot ? "боту @" + S.bot : "боту")
       + " в личку — он ответит его id. Где Telegram их покажет: в личных сообщениях бота — если у владельца бота Telegram Premium;"
       + " в канале — только если у бота куплен дополнительный ник на Fragment (бусты канала тут не помогают)."
       + " Где нельзя — останется обычный эмодзи, пост всё равно выйдет.";
   }
 
   function saveEmoji() {
-    const ids = {};
-    $("gwEmoji").querySelectorAll("input").forEach(i => { ids[i.dataset.slot] = i.value.trim(); });
+    const rows = [];
+    $("gwEmoji").querySelectorAll(".ga-emoji").forEach(r => {
+      const ins = r.querySelectorAll("input");
+      const emoji = ins[0].value.trim();
+      const id = ins[1].value.trim();
+      if (id !== "") rows.push({ emoji: emoji, id: id });
+    });
     $("gwEmojiSave").disabled = true;
-    call({ action: "emoji", ids: ids }).then(r => {
+    call({ action: "emoji", rows: rows }).then(r => {
       $("gwEmojiSave").disabled = false;
       if (!r || !r.ok) { hint(errText(r), "bad"); return; }
       S.emoji = r.emoji;
@@ -1384,6 +1422,11 @@
     }));
     $("aSave").addEventListener("click", save);
     $("gwEmojiSave").addEventListener("click", saveEmoji);
+    $("gwEmojiAdd").addEventListener("click", () => {
+      const row = emojiRow("", "", "");
+      $("gwEmoji").appendChild(row);
+      row.querySelector("input").focus();
+    });
     $("aPublish").addEventListener("click", () => {
       const test = $("fTest").checked;
       act("publish",

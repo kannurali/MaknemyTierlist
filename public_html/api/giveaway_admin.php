@@ -20,7 +20,7 @@ require_once __DIR__ . '/lib/giveaway.php';
 // {posted, edited, failed: [канал, …]}; нет постов — поля нет.
 //   delete {id}     → удалить вместе с участниками
 //   channel {id}    → перечитать канал у Telegram (название, права, ссылку)
-//   emoji {ids}     → премиум-эмодзи бота: {место: id или ''}
+//   emoji {rows}    → премиум-эмодзи бота: [{emoji, id}, …] целиком
 //
 // Всё, что меняет публичную картину, сбрасывает кеш api/giveaways.php
 // (тег giveaways), иначе окно ещё полминуты показывало бы старое.
@@ -55,7 +55,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
         ], null];
     }
     if ($action === 'emoji') {
-        [$s, $p] = gw_emoji_save($pdo, $body['ids'] ?? null, $now);
+        [$s, $p] = gw_emoji_save($pdo, $body['rows'] ?? null, $now);
         return [$s, $p, null];
     }
     if ($action === 'save') {

@@ -33,14 +33,16 @@ CREATE TABLE IF NOT EXISTS giveaway_posts (
 -- --------------------------------------------------------------------------
 --  Премиум-эмодзи бота
 -- --------------------------------------------------------------------------
--- Какой премиум-эмодзи бот ставит вместо обычного: slot — место (gift —
--- название розыгрыша и кнопка «Участвовать», prize — призы и победители,
--- conds — условия, time — срок итогов, win — итоги и поздравление, people —
--- число участников; список — GW_EMOJI в api/lib/giveaway.php), emoji_id —
--- id премиум-эмодзи из Telegram (бот присылает его в ответ на эмодзи в
--- личке). Нет строки — обычный эмодзи. Правится в /admin/giveaways.
+-- Список «обычный эмодзи → премиум»: где в посте или сообщении бота о
+-- розыгрыше стоит emoji, Telegram покажет премиум-эмодзи emoji_id (id бот
+-- присылает в ответ на эмодзи в личке). Сколько угодно строк, правится в
+-- /admin/giveaways. emoji хранится без невидимого U+FE0F.
+--
+-- utf8mb4_bin обязателен: в обычных сравнениях utf8mb4 (general_ci,
+-- unicode_ci) все эмодзи за пределами BMP равны друг другу, и 🎁 с 🏆
+-- упёрлись бы в один ключ.
 CREATE TABLE IF NOT EXISTS tg_emoji (
-  slot       VARCHAR(16)     NOT NULL PRIMARY KEY,
+  emoji      VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
   emoji_id   VARCHAR(24)     NOT NULL,
   updated_at BIGINT UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

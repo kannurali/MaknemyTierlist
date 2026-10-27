@@ -60,7 +60,10 @@ echo <<<HTML
       <div class="ga-channels" id="gwEmojiBox" hidden>
         <div class="list-head">Премиум-эмодзи бота</div>
         <div class="ga-ch-list" id="gwEmoji"></div>
-        <button class="btn small" id="gwEmojiSave" type="button">Сохранить эмодзи</button>
+        <div class="slot-row">
+          <button class="btn small" id="gwEmojiAdd" type="button">＋ Эмодзи</button>
+          <button class="btn small primary" id="gwEmojiSave" type="button">Сохранить эмодзи</button>
+        </div>
         <p class="muted small" id="gwEmojiHelp"></p>
       </div>
     </aside>
