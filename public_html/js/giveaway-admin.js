@@ -906,20 +906,30 @@
       const tr = document.createElement("tr");
       if (e.prize !== null) tr.className = "is-win";
       const who = document.createElement("td");
-      const a = document.createElement("a");
-      a.href = "/profile?id=" + encodeURIComponent(e.id);
-      a.target = "_blank";
-      a.rel = "noopener";
-      a.className = "ga-who";
-      if (e.avatar) {
-        const img = document.createElement("img");
-        img.src = e.avatar;
-        img.alt = "";
-        img.referrerPolicy = "no-referrer";
-        a.appendChild(img);
+      if (e.tg_only) {
+        who.textContent = (e.display || "Участник из Telegram") + " — без аккаунта на сайте";
+        if (e.prize !== null) {
+          const nick = document.createElement("div");
+          nick.className = "li-sub";
+          nick.textContent = e.nick ? "Ник в Roblox для приза: " + e.nick : "Ник в Roblox ещё не прислал боту";
+          who.appendChild(nick);
+        }
+      } else {
+        const a = document.createElement("a");
+        a.href = "/profile?id=" + encodeURIComponent(e.id);
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.className = "ga-who";
+        if (e.avatar) {
+          const img = document.createElement("img");
+          img.src = e.avatar;
+          img.alt = "";
+          img.referrerPolicy = "no-referrer";
+          a.appendChild(img);
+        }
+        a.appendChild(document.createTextNode((e.display || e.name || "#" + e.id) + (e.name ? " @" + e.name : "")));
+        who.appendChild(a);
       }
-      a.appendChild(document.createTextNode((e.display || e.name || "#" + e.id) + (e.name ? " @" + e.name : "")));
-      who.appendChild(a);
       const tg = document.createElement("td");
       tg.textContent = e.tg || "—";
       const when = document.createElement("td");
@@ -933,13 +943,15 @@
         prize.textContent = "Отписался " + fmtDate(e.left_at) + " — не участвует";
       }
       const act = document.createElement("td");
-      const chat = document.createElement("a");
-      chat.href = "/chat?to=" + encodeURIComponent(e.id);
-      chat.target = "_blank";
-      chat.rel = "noopener";
-      chat.className = "btn small";
-      chat.textContent = "Написать";
-      act.appendChild(chat);
+      if (!e.tg_only || e.tg_user) {
+        const chat = document.createElement("a");
+        chat.href = e.tg_only ? "https://t.me/" + encodeURIComponent(e.tg_user) : "/chat?to=" + encodeURIComponent(e.id);
+        chat.target = "_blank";
+        chat.rel = "noopener";
+        chat.className = "btn small";
+        chat.textContent = e.tg_only ? "Написать в Telegram" : "Написать";
+        act.appendChild(chat);
+      }
       tr.append(who, tg, when, from, prize, act);
       body.appendChild(tr);
     });
@@ -952,7 +964,7 @@
     stock: "Сток, над дилерами",
     news: "Новости, над лентой"
   };
-  const SOURCES = { tg: "Бот", ch: "Пост в канале", pop: "Окно на сайте", page: "Страница /giveaways" };
+  const SOURCES = { tg: "Бот", ch: "Пост в канале → сайт", cb: "Кнопка в канале (без сайта)", pop: "Окно на сайте", page: "Страница /giveaways" };
   Object.keys(PLACES).forEach(k => { SOURCES["c-" + k] = "Карточка: " + PLACES[k]; });
 
   function pct(a, b) {
@@ -1151,7 +1163,8 @@
       const rep = r.report;
       const s = rep.sources;
       const fromCards = Object.keys(PLACES).reduce((n, k) => n + (s["c-" + k] || 0), 0);
-      $("gwSources").textContent = "Откуда пришли участники: из бота " + s.tg + " · пост в канале " + (s.ch || 0) + " · окно на сайте " + s.pop
+      $("gwSources").textContent = "Откуда пришли участники: из бота " + s.tg + " · пост в канале → сайт " + (s.ch || 0)
+        + " · кнопка в канале без сайта " + (s.cb || 0) + " · окно на сайте " + s.pop
         + " · страница /giveaways " + s.page + " · карточки на сайте " + fromCards + (s[""] ? " · неизвестно " + s[""] : "");
       reportCards(rep.cards);
       const box = $("gwReportChannels");

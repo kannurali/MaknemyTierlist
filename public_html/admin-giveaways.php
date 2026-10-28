@@ -224,7 +224,7 @@ echo <<<HTML
 {$i18nDictTag}<script src="/js/i18n.js?v=84"></script>
 <script src="/js/news-blocks.js?v=4"></script>
 <script src="/js/giveaway.js?v=17"></script>
-<script src="/js/giveaway-admin.js?v=12"></script>
+<script src="/js/giveaway-admin.js?v=13"></script>
 </body>
 </html>
 HTML;

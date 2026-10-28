@@ -378,6 +378,18 @@ CREATE TABLE IF NOT EXISTS giveaway_posts (
   KEY idx_results (results_at, message_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Люди, вступившие в розыгрыш кнопкой в канале, без аккаунта сайта. Для
+-- боевой базы — docs/migrations/2026-10-28-giveaway-tg-entry.sql.
+CREATE TABLE IF NOT EXISTS tg_people (
+  chat_id     BIGINT          NOT NULL PRIMARY KEY,
+  name        VARCHAR(80)     NOT NULL DEFAULT '',
+  username    VARCHAR(32)     NOT NULL DEFAULT '',
+  lang        VARCHAR(5)      NOT NULL DEFAULT 'ru',
+  roblox_nick VARCHAR(20)     NOT NULL DEFAULT '',
+  await_gw    INT UNSIGNED    NOT NULL DEFAULT 0,
+  updated_at  BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS tg_emoji (
   emoji      VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
   emoji_id   VARCHAR(24)     NOT NULL,
