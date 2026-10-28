@@ -1785,6 +1785,14 @@ function gw_post_link(int $id, bool $test): string {
     return TG_SITE . '/giveaways' . ($test ? '?test' : '') . '#g' . $id . '-ch';
 }
 
+// Ссылка на сайт строкой в конце поста — там, где под постом кнопка бота.
+// Второй кнопкой её не ставим: Telegram (Desktop, iOS, Android) выводит
+// кнопку в полосе закреплённого сообщения, только если у сообщения ровно
+// один ряд с одной кнопкой.
+function gw_post_site_html(string $url, string $text): string {
+    return "\n\n" . '<a href="' . gw_html($url) . '">' . gw_html($text) . ' ↗</a>';
+}
+
 function gw_html(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
@@ -1890,8 +1898,8 @@ function gw_post_when(array $row): string {
 // Пост идущего розыгрыша — по образцу постов рандомайзеров, который прислал
 // владелец (RandomGodBot): заголовок капсом, приз, сколько победителей,
 // условия списком @каналов, срок итогов, пожелание удачи. Описание из
-// админки — между заголовком и призом. $map — премиум-эмодзи
-// (gw_emoji_map()).
+// админки — между заголовком и призом. Под постом кнопка бота — в конце
+// ссылка «Участвовать на сайте». $map — премиум-эмодзи (gw_emoji_map()).
 function gw_post_text(PDO $pdo, array $row, array $map = []): string {
     $prizes = gw_decode_list($row['prizes_json']);
     $lines = [];
@@ -1903,6 +1911,7 @@ function gw_post_text(PDO $pdo, array $row, array $map = []): string {
     if (!preg_match('/[.!?…]\z/u', $title)) { $title .= '!'; }
     $body = gw_body_html(gw_decode_blocks($row['body_json']));
     $conds = gw_post_conds($pdo, $row);
+    $site = gw_has_tg_entry($pdo) ? gw_post_site_html(gw_post_link((int)$row['id'], gw_is_test($row)), 'Участвовать на сайте') : '';
     return gw_fancy_html((gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
         . '🌟 <b>' . gw_html($title) . '</b>'
         . ($body !== '' ? "\n\n" . $body : '')
@@ -1910,7 +1919,7 @@ function gw_post_text(PDO $pdo, array $row, array $map = []): string {
         . "\n\n🏆 " . ($slots === 1 ? 'Победитель будет <b>только один</b>.' : 'Победителей будет <b>' . $slots . '</b>.')
         . ($conds !== '' ? "\n\n<b>Условия для участия:</b>\n" . $conds : '')
         . "\n\n🔜 <b>Итоги — " . gw_html(gw_post_when($row)) . '.</b>'
-        . "\n\nЖелаем всем удачи! 🍀", $map);
+        . "\n\nЖелаем всем удачи! 🍀" . $site, $map);
 }
 
 // Победитель в посте: ник на сайте и логин Roblox, если они разные (не
@@ -1929,7 +1938,9 @@ function gw_winner_label(array $w): string {
 }
 
 // Пост после итогов: победители по призам. Не влезли все — хвост «и ещё N».
-function gw_post_results_text(PDO $pdo, array $row, array $map = []): string {
+// $site — ссылка на итоги строкой в конце, когда кнопка под постом —
+// «Забрать приз».
+function gw_post_results_text(PDO $pdo, array $row, array $map = [], string $site = ''): string {
     $id = (int)$row['id'];
     $byPrize = [];
     foreach (gw_winners($pdo, [$id])[$id] ?? [] as $w) { $byPrize[$w['prize']][] = $w; }
@@ -1938,7 +1949,7 @@ function gw_post_results_text(PDO $pdo, array $row, array $map = []): string {
         . '🎉 <b>Итоги: ' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>';
     $foot = "\n\n👥 Участников: " . $count;
     if (!$byPrize) { return gw_fancy_html($head . "\n\nПобедителей нет: никто не выполнил условия." . $foot, $map); }
-    $foot .= "\nПоздравляем! Бот уже написал победителям.";
+    $foot .= "\nПоздравляем! Бот уже написал победителям." . ($site !== '' ? gw_post_site_html($site, 'Итоги на сайте') : '');
 
     $budget = GW_POST_MAX - mb_strlen($head . $foot) - 200;
     $lines = [];
@@ -1971,8 +1982,8 @@ function gw_post_results_text(PDO $pdo, array $row, array $map = []): string {
 }
 
 // Поля sendMessage / editMessageText поста: текст, баннер над ним, кнопки.
-// $keyboard — свои ряды кнопок (участие в Telegram, «Забрать приз»); без
-// него — одна кнопка-ссылка на сайт.
+// $keyboard — своя кнопка (участие в Telegram, «Забрать приз»); без него —
+// кнопка-ссылка на сайт.
 function gw_post_params(array $row, string $text, bool $results, array $map = [], ?array $keyboard = null): array {
     $id = (int)$row['id'];
     if ($keyboard === null) {
@@ -1983,9 +1994,10 @@ function gw_post_params(array $row, string $text, bool $results, array $map = []
     return ['text' => $text, 'parse_mode' => 'HTML', 'reply_markup' => ['inline_keyboard' => $keyboard]] + gw_preview($row);
 }
 
-// Кнопки под постом идущего розыгрыша; на «Участвовать» — число участников,
-// как у рандомайзеров. Есть tg_people — участие прямо в Telegram (gw_tg.php)
-// и кнопка на сайт, нет — одна кнопка-ссылка на сайт.
+// Кнопка под постом идущего розыгрыша; на «Участвовать» — число участников,
+// как у рандомайзеров. Есть tg_people — участие прямо в Telegram (gw_tg.php),
+// нет — кнопка-ссылка на сайт. Кнопка одна, чтобы была видна и в закрепе
+// (gw_post_site_html()).
 function gw_post_keyboard(PDO $pdo, array $row, array $map, int $count): array {
     $tail = $count > 0 ? ' (' . $count . ')' : '';
     if (gw_has_tg_entry($pdo)) { return gw_tg_post_buttons($row, $map, $tail); }
@@ -2117,7 +2129,7 @@ function gw_post_sync(PDO $pdo, callable $send, array $row, int $now): array {
  * не вышло из-за молчания Telegram: их повторит следующий проход автоитогов.
  * Отказ Telegram (пост удалили) окончательный — пост больше не трогаем.
  * $bot — имя бота: если среди победителей есть участники из Telegram, под
- * постом кнопка «Забрать приз» (gw_tg.php).
+ * постом кнопка «Забрать приз» (gw_tg.php), а ссылка на итоги — в тексте.
  */
 function gw_post_results(PDO $pdo, callable $send, array $row, int $now, string $bot = ''): int {
     if ($row['status'] !== 'drawn' || !gw_has_posts($pdo)) { return 0; }
@@ -2128,14 +2140,13 @@ function gw_post_results(PDO $pdo, callable $send, array $row, int $now, string 
     if (!$rows) { return 0; }
     $map = gw_emoji_map($pdo);
     $send = gw_send_fancy($send, $map);
-    $text = gw_post_results_text($pdo, $row, $map);
     $keyboard = null;
+    $site = '';
     if ($bot !== '' && gw_has_tg_entry($pdo) && gw_tg_has_winners($pdo, $id)) {
-        $keyboard = [
-            [gw_button($map, '🏆', 'Итоги на сайте', gw_link($id, false, gw_is_test($row)))],
-            [gw_tg_prize_button($row, $bot)],
-        ];
+        $keyboard = [[gw_tg_prize_button($row, $bot)]];
+        $site = gw_link($id, false, gw_is_test($row));
     }
+    $text = gw_post_results_text($pdo, $row, $map, $site);
     $mark = $pdo->prepare('UPDATE giveaway_posts SET results_at = :t WHERE giveaway_id = :g AND chat_id = :c');
     $failed = 0;
     foreach ($rows as $r) {
