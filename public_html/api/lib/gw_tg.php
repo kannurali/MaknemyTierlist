@@ -96,9 +96,10 @@ function gw_tg_person(PDO $pdo, int $chat): ?array {
 }
 
 // Кнопки под постом идущего розыгрыша: участие прямо в Telegram и сайт.
-function gw_tg_post_buttons(array $row, array $map): array {
+// $tail — хвост надписи «Участвовать», число участников: « (128)».
+function gw_tg_post_buttons(array $row, array $map, string $tail = ''): array {
     $id = (int)$row['id'];
-    $join = gw_button($map, '🎁', 'Участвовать', '');
+    $join = gw_button($map, '🎁', 'Участвовать' . $tail, '');
     unset($join['url']);
     $join['callback_data'] = 'gw:' . $id;
     return [[$join], [['text' => 'На сайте ↗', 'url' => gw_post_link($id, gw_is_test($row))]]];
@@ -265,6 +266,7 @@ function gw_tg_after(PDO $pdo, array $cfg, ?array $after, int $now): void {
     if (!$after) { return; }
     $note = $after[1] ?? null;
     if ($after[0] === 'join' && $note) { gw_after_join($pdo, $cfg, $note); }
+    if ($note) { gw_after_counts($pdo, $cfg, $now, (int)$note['row']['id']); }
     if ($note && empty($note['last'])) { gw_after_places($pdo, $cfg, $note, $now); }
     if ($note && !empty($note['last'])) { gw_after_due($pdo, $cfg, $now); }
 }

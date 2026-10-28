@@ -54,4 +54,7 @@ if (!defined('TESTING')) {
     try { $remind = gw_has_remind(db(), time()); } catch (Throwable $e) { $remind = false; }
     if ($remind) { gw_after_remind(db(), app_config(), time()); }
     gw_after_sweep(db(), app_config(), time());
+    // Отписки и вступления меняют число участников — оно же на кнопке под
+    // постами в каналах (не чаще раза в минуту на розыгрыш).
+    gw_after_counts(db(), app_config(), time());
 }

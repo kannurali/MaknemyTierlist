@@ -1939,12 +1939,13 @@ test('пост: отмечен у черновика — выходит при �
     $m = $posts[0][1];
     assert_eq([GW_CH_A, 'HTML'], [$m['chat_id'], $m['parse_mode']]);
     foreach ([
-        '🎁 <b>&lt;b&gt;Ура&lt;/b&gt; &amp; co</b>'                => 'название экранировано',
+        '🌟 <b>&lt;B&gt;УРА&lt;/B&gt; &amp; CO!</b>'               => 'название капсом и экранировано',
         'Жми <a href="https://example.com/x"><b>сюда</b></a>'      => 'жирная ссылка',
         '<tg-spoiler>тайна</tg-spoiler>'                            => 'спойлер',
         '<blockquote expandable>Цитата</blockquote>'                => 'свёрнутая цитата',
         '• пункт'                                                   => 'список',
-        "<blockquote><b>Magnet</b> × 2\n<b>Chromatic Box</b></blockquote>\n⏳ <b>Итоги:</b> " => 'призы, сразу срок',
+        "🤩 <b>Призы:</b>\n<b>Magnet</b> × 2\n<b>Chromatic Box</b>\n\n🏆 Победителей будет <b>3</b>.\n\n🔜 <b>Итоги — " => 'призы, сколько победителей, сразу срок',
+        "\n\nЖелаем всем удачи! 🍀"                                   => 'пожелание в конце',
     ] as $needle => $why) {
         assert_true(strpos($m['text'], $needle) !== false, $why);
     }
@@ -1962,20 +1963,32 @@ test('пост: отмечен у черновика — выходит при �
     assert_eq([409, []], [$s, gw_posts_sent($log)], 'второй раз не постит');
 });
 
-test('пост: в условиях только подписки и свои условия, без входа на сайт', function () {
+test('пост: как у рандомайзеров — условия списком @каналов, без входа на сайт', function () {
     $p = gw_db();
     gw_channel($p, GW_CH_A, 'Башня Шута');
+    gw_channel($p, GW_CH_B, 'Канал Грибова', true, 'GRIB0V');
     $log = [];
     [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]]
-        + gw_draft(['channels' => [GW_CH_A], 'conds' => [['ru' => 'Подписаться на YouTube', 'url' => 'https://youtube.com/@maknemy', 'btn_ru' => 'Открыть']]]), GW_NOW - 10);
+        + gw_draft(['title_ru' => 'Розыгрыш Permanent Dragon', 'prizes' => [['name' => 'Permanent Dragon', 'count' => 1]],
+            'body' => gw_body(['Запускаем быстрый совместный конкурс.']),
+            'channels' => [GW_CH_B, GW_CH_A], 'conds' => [['ru' => 'Подписаться на YouTube', 'url' => 'https://youtube.com/@maknemy', 'btn_ru' => 'Открыть']],
+            'ends_at' => strtotime('2026-10-31 09:00:00 UTC')]), GW_NOW - 10);
     [$s] = gw_publish($p, $out['id'], GW_NOW - 5);
     assert_eq(200, $s);
     gw_post_sync($p, gw_tg_posts($log), gw_load($p, $out['id']), GW_NOW - 5);
     $text = gw_posts_sent($log)[0][1]['text'];
-    assert_true(strpos($text, "✅ <b>Условия</b>\n• Подписаться на <a href=\"https://t.me/+secret\">Башня Шута</a>\n"
-        . "• Подписаться на YouTube — <a href=\"https://youtube.com/@maknemy\">Открыть</a>\n\n⏳ <b>Итоги:</b>") !== false,
-        'подписка по ссылке розыгрыша, своё условие, дальше срок');
+    assert_eq("🌟 <b>РОЗЫГРЫШ PERMANENT DRAGON!</b>\n\nЗапускаем быстрый совместный конкурс."
+        . "\n\n🤩 <b>Приз:</b>\n<b>Permanent Dragon</b>"
+        . "\n\n🏆 Победитель будет <b>только один</b>."
+        . "\n\n<b>Условия для участия:</b>\n<a href=\"https://t.me/GRIB0V\">@GRIB0V</a>\n<a href=\"https://t.me/+secret\">Башня Шута</a>"
+        . "\nПодписаться на YouTube — <a href=\"https://youtube.com/@maknemy\">Открыть</a>"
+        . "\n\n🔜 <b>Итоги — 31 октября в 12:00 МСК.</b>"
+        . "\n\nЖелаем всем удачи! 🍀", $text, 'пост целиком');
     assert_true(strpos($text, 'Roblox') === false && strpos($text, 'maknemy.com через') === false, 'входа на сайт нет');
+    $row = gw_load($p, $out['id']);
+    $row['ends_at'] = GW_NO_DEADLINE;
+    $row['max_entries'] = 500;
+    assert_true(strpos(gw_post_text($p, $row), '🔜 <b>Итоги — когда участников станет 500.</b>') !== false, 'по числу участников');
 });
 
 test('пост: правка идущего обновляет пост, новый канал — новый пост, вышедший не снимается', function () {
@@ -1995,7 +2008,7 @@ test('пост: правка идущего обновляет пост, нов�
     assert_eq(['posted' => 1, 'edited' => 1, 'failed' => []], $out['post']);
     $edits = gw_sent($log, 'editMessageText');
     assert_eq([GW_CH_A, 101], [$edits[0][1]['chat_id'], $edits[0][1]['message_id']], 'правится вышедший пост');
-    assert_true(strpos($edits[0][1]['text'], 'Новое название') !== false, 'с новым названием');
+    assert_true(strpos($edits[0][1]['text'], 'НОВОЕ НАЗВАНИЕ') !== false, 'с новым названием');
     assert_eq(GW_CH_B, gw_posts_sent($log)[0][1]['chat_id'], 'в новый канал — новый пост');
     assert_eq(101, gw_post_row($p, $id, GW_CH_A)['message_id'], 'снятая галочка вышедший пост не убирает');
 
@@ -2165,7 +2178,7 @@ test('эмодзи: список «обычный → id» любой длины
     $p = gw_db();
     [, $out] = handle_gw_admin($p, gw_cfg(), function () { return null; }, ['action' => 'list'], GW_NOW);
     assert_eq([], $out['emoji']['list'], 'пока пусто');
-    assert_eq(['🎁', '🏆', '✅', '⏳', '🎉', '👥'], array_column($out['emoji']['template'], 'emoji'), 'подсказка: эмодзи шаблона');
+    assert_eq(['🌟', '🎁', '🤩', '🏆', '🔜', '🍀', '🎉', '👥', '✅'], array_column($out['emoji']['template'], 'emoji'), 'подсказка: эмодзи шаблона');
 
     $heart = mb_chr(0x2764) . mb_chr(0xFE0F);
     gw_emoji_set($p, [' 🎁 ' => ' ' . GW_EMOJI_GIFT . ' ', '🔥' => GW_EMOJI_FIRE, $heart => GW_EMOJI_WIN]);
@@ -2218,12 +2231,12 @@ test('эмодзи: в посте — везде, где встретился э
     $t = gw_posts_sent($log)[0][1]['text'];
     $fire = '<tg-emoji emoji-id="' . GW_EMOJI_FIRE . '">🔥</tg-emoji>';
     foreach ([
-        '<tg-emoji emoji-id="' . GW_EMOJI_GIFT . '">🎁</tg-emoji> <b>Розыгрыш ' . $fire . ' Magnet</b>' => 'шаблон и название',
+        '🌟 <b>РОЗЫГРЫШ ' . $fire . ' MAGNET!</b>'                          => 'название; 🌟 не в списке — обычный',
         'Огонь ' . $fire . ' <code>🔥</code>'                               => 'описание — да, код — нет',
         '<tg-emoji emoji-id="' . GW_EMOJI_WIN . '">' . $heart . mb_chr(0xFE0F) . '</tg-emoji>' => 'с U+FE0F в тексте тоже',
-        '<tg-emoji emoji-id="' . GW_EMOJI_PRIZE . '">🏆</tg-emoji> <b>Призы</b>' => 'заголовок призов',
+        '<tg-emoji emoji-id="' . GW_EMOJI_PRIZE . '">🏆</tg-emoji> Победитель будет <b>только один</b>.' => 'эмодзи шаблона',
         '<b>Magnet ' . $fire . '</b>'                                       => 'название приза',
-        '⏳ <b>Итоги:</b>'                                                  => 'не из списка — обычный',
+        '🔜 <b>Итоги — '                                                    => 'не из списка — обычный',
     ] as $needle => $why) {
         assert_true(strpos($t, $needle) !== false, $why);
     }
@@ -2253,7 +2266,7 @@ test('эмодзи: Telegram отказал — то же без премиум,
     $sent = gw_sent($log);
     assert_eq(3, count($sent), 'отказ, повтор, второй канал сразу без премиум');
     $plain = $sent[1][1];
-    assert_true(strpos($plain['text'], '🎁 <b>Розыгрыш Magnet</b>') === 0, 'обычный эмодзи на месте');
+    assert_true(strpos($plain['text'], '🌟 <b>РОЗЫГРЫШ MAGNET!</b>') === 0, 'текст на месте');
     assert_eq('🎁 Участвовать', $plain['reply_markup']['inline_keyboard'][0][0]['text'], 'эмодзи вернулся в надпись кнопки');
     assert_true(!isset($plain['reply_markup']['inline_keyboard'][0][0]['icon_custom_emoji_id']));
 });
@@ -2438,6 +2451,37 @@ test('Telegram: до итогов «Забрать приз» просит по�
     handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
     assert_eq([[['text' => '🎁 Участвовать', 'url' => TG_SITE . '/giveaways#g' . $out['id'] . '-ch']]],
         gw_posts_sent($log)[0][1]['reply_markup']['inline_keyboard'], 'прежняя кнопка-ссылка');
+});
+
+test('счётчик на кнопке: число участников, не чаще раза в минуту', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    $log = [];
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    assert_eq('🎁 Участвовать', gw_posts_sent($log)[0][1]['reply_markup']['inline_keyboard'][0][0]['text'], 'никого — без числа');
+    $state = gw_lock_file();
+
+    gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7001), GW_NOW);
+    $log = [];
+    assert_eq(1, gw_post_counts($p, gw_tg_posts($log), GW_NOW, $id, $state), 'вступил — число обновилось');
+    $e = gw_sent($log, 'editMessageReplyMarkup')[0][1];
+    assert_eq([GW_CH_A, 101, '🎁 Участвовать (1)', 'gw:' . $id],
+        [$e['chat_id'], $e['message_id'], $e['reply_markup']['inline_keyboard'][0][0]['text'], $e['reply_markup']['inline_keyboard'][0][0]['callback_data']]);
+
+    gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7002), GW_NOW + 10);
+    $log = [];
+    assert_eq(0, gw_post_counts($p, gw_tg_posts($log), GW_NOW + 10, null, $state), 'через 10 с — ждёт');
+    assert_eq(1, gw_post_counts($p, gw_tg_posts($log), GW_NOW + GW_POST_COUNT_EVERY, null, $state), 'через минуту — обновил');
+    assert_eq('🎁 Участвовать (2)', gw_sent($log, 'editMessageReplyMarkup')[0][1]['reply_markup']['inline_keyboard'][0][0]['text']);
+    $log = [];
+    assert_eq(0, gw_post_counts($p, gw_tg_posts($log), GW_NOW + 5 * GW_POST_COUNT_EVERY, null, $state), 'число то же — не трогает');
+    assert_eq([], $log);
+
+    $log = [];
+    handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'id' => $id] + gw_draft(), GW_NOW + 400);
+    assert_eq('🎁 Участвовать (2)', gw_sent($log, 'editMessageText')[0][1]['reply_markup']['inline_keyboard'][0][0]['text'], '«Сохранить» тоже ставит число');
 });
 
 run_tests();
