@@ -6,7 +6,9 @@
 // её и не уходит из канала. Telegram присылает вебхуку callback_query, бот
 // проверяет подписку на каналы из условий (getChatMember) и отвечает
 // всплывающим окном: «✅ Вы участвуете» или на какие каналы подписаться.
-// Рядом вторая кнопка — «На сайте», для тех, кто хочет участвовать там.
+// Кнопка под постом одна: только такую Telegram показывает и в полосе
+// закреплённого сообщения. Ссылка «Участвовать на сайте» — строкой в конце
+// поста (gw_post_text()).
 //
 // Кто участвует. Telegram подключён к аккаунту сайта (tg_links) — участвует
 // этот аккаунт, ровно как с кнопки на сайте (gw_enter()). Не подключён —
@@ -95,14 +97,13 @@ function gw_tg_person(PDO $pdo, int $chat): ?array {
     return $r ?: null;
 }
 
-// Кнопки под постом идущего розыгрыша: участие прямо в Telegram и сайт.
+// Кнопка под постом идущего розыгрыша: участие прямо в Telegram.
 // $tail — хвост надписи «Участвовать», число участников: « (128)».
 function gw_tg_post_buttons(array $row, array $map, string $tail = ''): array {
-    $id = (int)$row['id'];
     $join = gw_button($map, '🎁', 'Участвовать' . $tail, '');
     unset($join['url']);
-    $join['callback_data'] = 'gw:' . $id;
-    return [[$join], [['text' => 'На сайте ↗', 'url' => gw_post_link($id, gw_is_test($row))]]];
+    $join['callback_data'] = 'gw:' . (int)$row['id'];
+    return [[$join]];
 }
 
 // Кнопка «Забрать приз» под постом с итогами: открывает бота.
@@ -141,7 +142,7 @@ function gw_tg_text(string $key, string $lang, array $v = []): string {
         'full'    => ['Все места заняты — приём закрыт.', 'All spots are taken — entries are closed.'],
         'banned'  => ['Участие в розыгрышах для вас закрыто.', "You can't enter giveaways."],
         'tg_used' => ['Этот Telegram уже участвует с другого аккаунта сайта.', 'This Telegram is already in with another site account.'],
-        'site'    => ['Участвуйте на сайте: кнопка «На сайте» под постом.', 'Join on the site: the «На сайте» button under the post.'],
+        'site'    => ['Участвуйте на сайте maknemy.com, в разделе «Розыгрыши».', 'Join on the site maknemy.com, in the «Розыгрыши» section.'],
         'error'   => ['Не получилось. Нажмите ещё раз.', "That didn't work. Tap again."],
     ];
     $s = $t[$key][$lang === 'en' ? 1 : 0];

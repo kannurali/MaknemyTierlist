@@ -1951,8 +1951,10 @@ test('пост: отмечен у черновика — выходит при �
     }
     assert_true(strpos($m['text'], 'Условия') === false, 'условий нет — нет и блока');
     assert_true(strpos($m['text'], 'Roblox') === false, 'входа на сайт в посте нет');
-    assert_eq([[['text' => '🎁 Участвовать', 'callback_data' => 'gw:' . $id]], [['text' => 'На сайте ↗', 'url' => TG_SITE . '/giveaways#g' . $id . '-ch']]],
-        $m['reply_markup']['inline_keyboard'], 'участие прямо в Telegram и кнопка на сайт, помеченная каналом');
+    assert_eq([[['text' => '🎁 Участвовать', 'callback_data' => 'gw:' . $id]]],
+        $m['reply_markup']['inline_keyboard'], 'одна кнопка — участие прямо в Telegram, её видно и в закрепе');
+    $tail = "Желаем всем удачи! 🍀\n\n<a href=\"" . TG_SITE . '/giveaways#g' . $id . '-ch">Участвовать на сайте ↗</a>';
+    assert_eq($tail, substr($m['text'], -strlen($tail)), 'ссылка на сайт — в конце текста, помечена каналом');
     assert_eq(TG_SITE . '/images/' . str_repeat('a', 40) . '.png', $m['link_preview_options']['url'], 'баннер над текстом');
     assert_eq(['message_id' => 101, 'results_at' => 0], gw_post_row($p, $id, GW_CH_A), 'номер поста записан');
     [, $g] = handle_gw_admin($p, $cfg, $tg, ['action' => 'get', 'id' => $id], GW_NOW);
@@ -1983,7 +1985,8 @@ test('пост: как у рандомайзеров — условия спис
         . "\n\n<b>Условия для участия:</b>\n<a href=\"https://t.me/GRIB0V\">@GRIB0V</a>\n<a href=\"https://t.me/+secret\">Башня Шута</a>"
         . "\nПодписаться на YouTube — <a href=\"https://youtube.com/@maknemy\">Открыть</a>"
         . "\n\n🔜 <b>Итоги — 31 октября в 12:00 МСК.</b>"
-        . "\n\nЖелаем всем удачи! 🍀", $text, 'пост целиком');
+        . "\n\nЖелаем всем удачи! 🍀"
+        . "\n\n<a href=\"" . TG_SITE . '/giveaways#g' . $out['id'] . '-ch">Участвовать на сайте ↗</a>', $text, 'пост целиком');
     assert_true(strpos($text, 'Roblox') === false && strpos($text, 'maknemy.com через') === false, 'входа на сайт нет');
     $row = gw_load($p, $out['id']);
     $row['ends_at'] = GW_NO_DEADLINE;
@@ -2065,9 +2068,9 @@ test('пост: итоги дописываются в пост, Telegram мол
     assert_true(strpos($m['text'], "<b>Chromatic Box</b>\n1. " . $byPrize[1][0]) !== false, 'победитель Box');
     assert_true(strpos($m['text'], '👥 Участников: 5') !== false, 'сколько участвовало');
     assert_true(strpos($m['text'], '@') === false, 'логины без @ — не ссылки на чужие аккаунты');
-    assert_eq(['🏆 Итоги на сайте', TG_SITE . '/giveaways#g' . $id], [
-        $m['reply_markup']['inline_keyboard'][0][0]['text'], $m['reply_markup']['inline_keyboard'][0][0]['url'],
-    ], 'кнопка ведёт на итоги');
+    assert_eq([[['text' => '🏆 Итоги на сайте', 'url' => TG_SITE . '/giveaways#g' . $id]]],
+        $m['reply_markup']['inline_keyboard'], 'одна кнопка — ведёт на итоги');
+    assert_true(strpos($m['text'], '<a href=') === false, 'ссылка на итоги — кнопкой, не в тексте');
     assert_eq(false, gw_has_post_due($p), 'больше ждать нечего');
 
     $log = [];
@@ -2411,7 +2414,10 @@ test('Telegram: итоги — победитель без аккаунта в �
     assert_eq([gw_tg_uid(7001), 'ivan_7001', 'Иван П', true], [$w['id'], $w['name'], $w['display'], $w['tg']], 'победил участник из Telegram');
     $edit = gw_sent($log, 'editMessageText')[0][1];
     assert_true(strpos($edit['text'], '1. Иван П (@ivan_7001)') !== false, 'в посте — имя и @ник');
-    assert_eq(['text' => '🎁 Забрать приз', 'url' => 'https://t.me/MaknemyBot?start=gwp' . $id], $edit['reply_markup']['inline_keyboard'][1][0], 'кнопка «Забрать приз»');
+    assert_eq([[['text' => '🎁 Забрать приз', 'url' => 'https://t.me/MaknemyBot?start=gwp' . $id]]], $edit['reply_markup']['inline_keyboard'],
+        'одна кнопка «Забрать приз» — её видно и в закрепе');
+    $tail = "победителям.\n\n<a href=\"" . TG_SITE . '/giveaways#g' . $id . '">Итоги на сайте ↗</a>';
+    assert_eq($tail, substr($edit['text'], -strlen($tail)), 'ссылка на итоги — в конце текста');
     $dm = gw_sent($log)[0][1];
     assert_eq(7001, $dm['chat_id'], 'бот пробует написать сам');
     assert_true(strpos($dm['text'], 'ник в Roblox') !== false, 'и просит ник');
@@ -2451,6 +2457,7 @@ test('Telegram: до итогов «Забрать приз» просит по�
     handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
     assert_eq([[['text' => '🎁 Участвовать', 'url' => TG_SITE . '/giveaways#g' . $out['id'] . '-ch']]],
         gw_posts_sent($log)[0][1]['reply_markup']['inline_keyboard'], 'прежняя кнопка-ссылка');
+    assert_true(strpos(gw_posts_sent($log)[0][1]['text'], 'Участвовать на сайте') === false, 'сайт уже на кнопке — в тексте ссылки нет');
 });
 
 test('счётчик на кнопке: число участников, не чаще раза в минуту', function () {
@@ -2467,8 +2474,8 @@ test('счётчик на кнопке: число участников, не ч
     $log = [];
     assert_eq(1, gw_post_counts($p, gw_tg_posts($log), GW_NOW, $id, $state), 'вступил — число обновилось');
     $e = gw_sent($log, 'editMessageReplyMarkup')[0][1];
-    assert_eq([GW_CH_A, 101, '🎁 Участвовать (1)', 'gw:' . $id],
-        [$e['chat_id'], $e['message_id'], $e['reply_markup']['inline_keyboard'][0][0]['text'], $e['reply_markup']['inline_keyboard'][0][0]['callback_data']]);
+    assert_eq([GW_CH_A, 101, [[['text' => '🎁 Участвовать (1)', 'callback_data' => 'gw:' . $id]]]],
+        [$e['chat_id'], $e['message_id'], $e['reply_markup']['inline_keyboard']], 'с числом кнопка по-прежнему одна');
 
     gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7002), GW_NOW + 10);
     $log = [];
