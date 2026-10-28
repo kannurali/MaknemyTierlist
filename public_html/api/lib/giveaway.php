@@ -1853,9 +1853,10 @@ function gw_body_html(array $blocks): string {
 }
 
 // Условия: каналы — по ссылке этого розыгрыша (кто подпишется по ней,
-// попадёт в отчёт рекламодателю), свои условия — со своей ссылкой, и то, что
-// нужно всегда: вход через Roblox и бот.
-function gw_post_conds(PDO $pdo, array $row, string $bot): string {
+// попадёт в отчёт рекламодателю) и свои условия — со своей ссылкой. Входа
+// на сайт тут нет: в Telegram участвуют кнопкой под постом (gw_tg.php), так
+// решил владелец. Условий нет — пусто, и блока «Условия» в посте нет.
+function gw_post_conds(PDO $pdo, array $row): string {
     $id = (int)$row['id'];
     $links = gw_links($pdo, [$id])[$id] ?? [];
     $chIds = array_map('intval', gw_decode_list($row['channels_json']));
@@ -1872,23 +1873,23 @@ function gw_post_conds(PDO $pdo, array $row, string $bot): string {
         $btn = $c['btn_ru'] !== '' ? $c['btn_ru'] : 'Подписаться';
         $lines[] = '• ' . gw_html($c['ru']) . ' — <a href="' . gw_html($c['url']) . '">' . gw_html($btn) . '</a>';
     }
-    $lines[] = '• Войти на maknemy.com через Roblox и подключить бота' . ($bot !== '' ? ' @' . gw_html($bot) : '');
     return implode("\n", $lines);
 }
 
 // Пост идущего розыгрыша. $map — премиум-эмодзи (gw_emoji_map()).
-function gw_post_text(PDO $pdo, array $row, string $bot, array $map = []): string {
+function gw_post_text(PDO $pdo, array $row, array $map = []): string {
     $prizes = [];
     foreach (gw_decode_list($row['prizes_json']) as $p) {
         $prizes[] = '<b>' . gw_html((string)$p['name']) . '</b>' . ((int)$p['count'] > 1 ? ' × ' . (int)$p['count'] : '');
     }
     $body = gw_body_html(gw_decode_blocks($row['body_json']));
+    $conds = gw_post_conds($pdo, $row);
     return gw_fancy_html((gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
         . '🎁 <b>' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>'
         . ($body !== '' ? "\n\n" . $body : '')
         . "\n\n🏆 <b>Призы</b>\n<blockquote>" . implode("\n", $prizes) . '</blockquote>'
-        . "\n✅ <b>Условия</b>\n" . gw_post_conds($pdo, $row, $bot)
-        . "\n\n⏳ <b>Итоги:</b> " . gw_html(gw_when($row, GW_POST_LANG)), $map);
+        . ($conds !== '' ? "\n✅ <b>Условия</b>\n" . $conds . "\n" : '')
+        . "\n⏳ <b>Итоги:</b> " . gw_html(gw_when($row, GW_POST_LANG)), $map);
 }
 
 // Победитель в посте: ник на сайте и логин Roblox, если они разные (не
@@ -1976,9 +1977,8 @@ function gw_post_edit_state(?array $res): string {
  * Привести посты идущего розыгрыша к его виду: где поста ещё нет — выпустить,
  * где есть — поправить. Черновик и закончившийся не трогаются (итоги —
  * gw_post_results()). ['posted' => n, 'edited' => n, 'failed' => [канал, …]].
- * $bot — имя бота для строки условий.
  */
-function gw_post_sync(PDO $pdo, callable $send, array $row, string $bot, int $now): array {
+function gw_post_sync(PDO $pdo, callable $send, array $row, int $now): array {
     $out = ['posted' => 0, 'edited' => 0, 'failed' => []];
     if ($row['status'] !== 'live' || !gw_has_posts($pdo)) { return $out; }
     $id = (int)$row['id'];
@@ -1987,7 +1987,7 @@ function gw_post_sync(PDO $pdo, callable $send, array $row, string $bot, int $no
     $channels = gw_channels($pdo, array_keys($posts));
     $map = gw_emoji_map($pdo);
     $send = gw_send_fancy($send, $map);
-    $text = gw_post_text($pdo, $row, $bot, $map);
+    $text = gw_post_text($pdo, $row, $map);
     // Есть tg_people — участие прямо в Telegram (gw_tg.php) и кнопка на сайт.
     $keyboard = gw_has_tg_entry($pdo) ? gw_tg_post_buttons($row, $map) : null;
     foreach ($posts as $chat => $p) {

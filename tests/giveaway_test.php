@@ -1944,12 +1944,12 @@ test('пост: отмечен у черновика — выходит при �
         '<tg-spoiler>тайна</tg-spoiler>'                            => 'спойлер',
         '<blockquote expandable>Цитата</blockquote>'                => 'свёрнутая цитата',
         '• пункт'                                                   => 'список',
-        "<blockquote><b>Magnet</b> × 2\n<b>Chromatic Box</b></blockquote>" => 'призы',
-        '• Войти на maknemy.com через Roblox и подключить бота @MaknemyBot' => 'что нужно всегда',
-        '⏳ <b>Итоги:</b> '                                         => 'срок',
+        "<blockquote><b>Magnet</b> × 2\n<b>Chromatic Box</b></blockquote>\n⏳ <b>Итоги:</b> " => 'призы, сразу срок',
     ] as $needle => $why) {
         assert_true(strpos($m['text'], $needle) !== false, $why);
     }
+    assert_true(strpos($m['text'], 'Условия') === false, 'условий нет — нет и блока');
+    assert_true(strpos($m['text'], 'Roblox') === false, 'входа на сайт в посте нет');
     assert_eq([[['text' => '🎁 Участвовать', 'callback_data' => 'gw:' . $id]], [['text' => 'На сайте ↗', 'url' => TG_SITE . '/giveaways#g' . $id . '-ch']]],
         $m['reply_markup']['inline_keyboard'], 'участие прямо в Telegram и кнопка на сайт, помеченная каналом');
     assert_eq(TG_SITE . '/images/' . str_repeat('a', 40) . '.png', $m['link_preview_options']['url'], 'баннер над текстом');
@@ -1960,6 +1960,22 @@ test('пост: отмечен у черновика — выходит при �
     $log = [];
     [$s] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW);
     assert_eq([409, []], [$s, gw_posts_sent($log)], 'второй раз не постит');
+});
+
+test('пост: в условиях только подписки и свои условия, без входа на сайт', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Башня Шута');
+    $log = [];
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]]
+        + gw_draft(['channels' => [GW_CH_A], 'conds' => [['ru' => 'Подписаться на YouTube', 'url' => 'https://youtube.com/@maknemy', 'btn_ru' => 'Открыть']]]), GW_NOW - 10);
+    [$s] = gw_publish($p, $out['id'], GW_NOW - 5);
+    assert_eq(200, $s);
+    gw_post_sync($p, gw_tg_posts($log), gw_load($p, $out['id']), GW_NOW - 5);
+    $text = gw_posts_sent($log)[0][1]['text'];
+    assert_true(strpos($text, "✅ <b>Условия</b>\n• Подписаться на <a href=\"https://t.me/+secret\">Башня Шута</a>\n"
+        . "• Подписаться на YouTube — <a href=\"https://youtube.com/@maknemy\">Открыть</a>\n\n⏳ <b>Итоги:</b>") !== false,
+        'подписка по ссылке розыгрыша, своё условие, дальше срок');
+    assert_true(strpos($text, 'Roblox') === false && strpos($text, 'maknemy.com через') === false, 'входа на сайт нет');
 });
 
 test('пост: правка идущего обновляет пост, новый канал — новый пост, вышедший не снимается', function () {
@@ -2207,7 +2223,7 @@ test('эмодзи: в посте — везде, где встретился э
         '<tg-emoji emoji-id="' . GW_EMOJI_WIN . '">' . $heart . mb_chr(0xFE0F) . '</tg-emoji>' => 'с U+FE0F в тексте тоже',
         '<tg-emoji emoji-id="' . GW_EMOJI_PRIZE . '">🏆</tg-emoji> <b>Призы</b>' => 'заголовок призов',
         '<b>Magnet ' . $fire . '</b>'                                       => 'название приза',
-        '✅ <b>Условия</b>'                                                 => 'не из списка — обычный',
+        '⏳ <b>Итоги:</b>'                                                  => 'не из списка — обычный',
     ] as $needle => $why) {
         assert_true(strpos($t, $needle) !== false, $why);
     }
