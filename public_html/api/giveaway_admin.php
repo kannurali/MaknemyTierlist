@@ -64,7 +64,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
         $row = $s === 200 ? gw_load($pdo, (int)$p['id']) : null;
         if ($row && $row['status'] === 'live') {
             $p['link_failed'] = gw_ensure_links($pdo, $send, $row, $now);
-            $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, (string)$tg['name'], $now));
+            $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, $now));
         }
         return [$s, $p, null];
     }
@@ -91,7 +91,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'publish') {
         [$s, $p, $row] = gw_publish($pdo, $id, $now, $send, tg_enabled($tg) ? (int)strtok((string)$tg['token'], ':') : 0);
-        if ($row) { $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, (string)$tg['name'], $now)); }
+        if ($row) { $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, $now)); }
         // О тестовом бот не пишет никому.
         return [$s, $p, $row && !gw_is_test($row) ? ['announce', $row] : null];
     }
