@@ -105,7 +105,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
         if ($s !== 200) { return [$s, $p, null]; }
         $row = gw_load($pdo, $id);
         // Не дописалось (Telegram молчал) — допишет следующий проход автоитогов.
-        $failed = gw_post_results($pdo, $send, $row, $now);
+        $failed = gw_post_results($pdo, $send, $row, $now, (string)$tg['name']);
         if ($failed) { $p['post_failed'] = $failed; }
         return [$s, $p, ['winners', $row, $winners, $gone]];
     }

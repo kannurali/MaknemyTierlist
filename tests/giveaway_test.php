@@ -73,6 +73,11 @@ function gw_db(): PDO {
         giveaway_id INTEGER NOT NULL, chat_id INTEGER NOT NULL, message_id INTEGER NOT NULL DEFAULT 0,
         posted_at INTEGER NOT NULL DEFAULT 0, results_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (giveaway_id, chat_id))');
     $pdo->exec('CREATE TABLE tg_emoji (emoji TEXT NOT NULL PRIMARY KEY, emoji_id TEXT NOT NULL, updated_at INTEGER NOT NULL)');
+    // Зеркалит docs/migrations/2026-10-28-giveaway-tg-entry.sql.
+    $pdo->exec("CREATE TABLE tg_people (
+        chat_id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL DEFAULT '', username TEXT NOT NULL DEFAULT '',
+        lang TEXT NOT NULL DEFAULT 'ru', roblox_nick TEXT NOT NULL DEFAULT '', await_gw INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL)");
     return $pdo;
 }
 
@@ -1398,7 +1403,7 @@ test('отписался — участие снято, бот пишет, в о
     assert_true(strpos($msg['text'], 'отписались от канала «Канал A»') !== false && strpos($msg['text'], 'подпишитесь снова') !== false, 'текст отписки');
 
     $rep = gw_report($p, gw_load($p, $id));
-    assert_eq(['tg' => 1, 'ch' => 0, 'pop' => 0, 'page' => 0, 'c-tier' => 0, 'c-trade' => 0, 'c-calc' => 0,
+    assert_eq(['tg' => 1, 'ch' => 0, 'cb' => 0, 'pop' => 0, 'page' => 0, 'c-tier' => 0, 'c-trade' => 0, 'c-calc' => 0,
         'c-stock' => 0, 'c-news' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
     $ch = $rep['channels'][0];
     assert_eq([1, 0, $link], [$ch['joined'], $ch['stayed'], $ch['link']], 'пришёл 1, остался 0');
@@ -1945,7 +1950,8 @@ test('пост: отмечен у черновика — выходит при �
     ] as $needle => $why) {
         assert_true(strpos($m['text'], $needle) !== false, $why);
     }
-    assert_eq(TG_SITE . '/giveaways#g' . $id . '-ch', $m['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка помечает канал');
+    assert_eq([[['text' => '🎁 Участвовать', 'callback_data' => 'gw:' . $id]], [['text' => 'На сайте ↗', 'url' => TG_SITE . '/giveaways#g' . $id . '-ch']]],
+        $m['reply_markup']['inline_keyboard'], 'участие прямо в Telegram и кнопка на сайт, помеченная каналом');
     assert_eq(TG_SITE . '/images/' . str_repeat('a', 40) . '.png', $m['link_preview_options']['url'], 'баннер над текстом');
     assert_eq(['message_id' => 101, 'results_at' => 0], gw_post_row($p, $id, GW_CH_A), 'номер поста записан');
     [, $g] = handle_gw_admin($p, $cfg, $tg, ['action' => 'get', 'id' => $id], GW_NOW);
@@ -2280,6 +2286,142 @@ test('эмодзи: бот отвечает id присланных премиу
     $group['message']['chat']['type'] = 'supergroup';
     assert_eq(null, gw_emoji_reply($group), 'в группе молчит');
     assert_eq(null, gw_emoji_reply(['message' => ['chat' => ['id' => 777, 'type' => 'private'], 'text' => '/start']]), 'без эмодзи — обычный разбор');
+});
+
+// --------------------------------------------------------------------------
+//  Участие прямо в Telegram (gw_tg.php)
+// --------------------------------------------------------------------------
+
+// Нажатие «Участвовать» под постом розыгрыша $id от Telegram $from.
+function gw_tap(int $id, int $from, array $extra = []): array {
+    return ['update_id' => 1, 'callback_query' => [
+        'id'      => 'cb' . $from,
+        'from'    => $extra + ['id' => $from, 'is_bot' => false, 'first_name' => 'Иван', 'last_name' => 'П', 'username' => 'ivan_' . $from, 'language_code' => 'ru'],
+        'message' => ['message_id' => 101, 'chat' => ['id' => GW_CH_A, 'type' => 'channel']],
+        'data'    => 'gw:' . $id,
+    ]];
+}
+
+function gw_dm(int $chat, string $text): array {
+    return ['update_id' => 2, 'message' => ['chat' => ['id' => $chat, 'type' => 'private'], 'from' => ['id' => $chat, 'language_code' => 'ru'], 'text' => $text]];
+}
+
+test('Telegram: кнопка в канале — без аккаунта, с проверкой подписки, считается как все', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Башня Шута');
+    $id = gw_live($p, ['channels' => [GW_CH_A]]);
+    $log = [];
+
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log, [GW_CH_A => []]), gw_tap($id, 7001), GW_NOW);
+    assert_eq(['answerCallbackQuery', 'cb7001', true], [$r['reply']['method'], $r['reply']['callback_query_id'], $r['reply']['show_alert']]);
+    assert_true(strpos($r['reply']['text'], 'подпишитесь: Башня Шута') !== false, 'не подписан — на что подписаться');
+    assert_eq(0, gw_entry_counts($p, [$id])[$id] ?? 0, 'не записан');
+
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log, [GW_CH_A => [7001]]), gw_tap($id, 7001), GW_NOW + 1);
+    assert_true(strpos($r['reply']['text'], '✅ Вы участвуете в розыгрыше «Розыгрыш Magnet»') === 0, 'подписан — участвует');
+    assert_true(mb_strlen($r['reply']['text']) <= 200, 'влезает во всплывающее окно');
+    assert_eq('places', $r['after'][0], 'после ответа — напоминания «осталось N мест»');
+    $e = $p->query('SELECT user_id, chat_id, src FROM giveaway_entries')->fetch(PDO::FETCH_ASSOC);
+    assert_eq([gw_tg_uid(7001), 7001, 'cb'], [(string)$e['user_id'], (int)$e['chat_id'], $e['src']], 'строка участия без аккаунта Roblox');
+    assert_true(gw_is_tg_uid($e['user_id']) && !gw_is_tg_uid('2841062255'), 'отличается от аккаунта Roblox');
+    assert_eq(['Иван П', 'ivan_7001', 'ru'], array_values(array_intersect_key(gw_tg_person($p, 7001), ['name' => 1, 'username' => 1, 'lang' => 1])), 'кто это — для админки');
+    assert_eq(1, gw_entry_counts($p, [$id])[$id], 'считается в участниках');
+    assert_eq(1, gw_report($p, gw_load($p, $id))['sources']['cb'], 'в отчёте — кнопка в канале');
+
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log, [GW_CH_A => [7001]]), gw_tap($id, 7001), GW_NOW + 2);
+    assert_true(strpos($r['reply']['text'], 'Вы уже участвуете') === 0, 'второе нажатие');
+    assert_eq(1, gw_entry_counts($p, [$id])[$id], 'дубля нет');
+
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log, [], [GW_CH_A]), gw_tap($id, 7002), GW_NOW + 3);
+    assert_true(strpos($r['reply']['text'], 'Telegram не ответил') === 0, 'Telegram молчит — не «не подписан»');
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7002), GW_NOW + 86400);
+    assert_eq('Приём заявок закрыт.', $r['reply']['text'], 'после конца');
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7002, ['language_code' => 'en']), GW_NOW + 86400);
+    assert_eq('Entries are closed.', $r['reply']['text'], 'по-английски');
+    assert_eq(null, gw_tg_callback($p, gw_cfg(), gw_tg($log), ['callback_query' => ['id' => 'x', 'from' => ['id' => 1], 'data' => 'gw:1;drop']], GW_NOW), 'чужие данные — не наше');
+});
+
+test('Telegram: подключён к сайту — участвует его аккаунт; лимит закрывает приём', function () {
+    $p = gw_db();
+    gw_user($p, '1', 'u1', 501);
+    $id = gw_live($p, ['max_entries' => 2, 'prizes' => [['name' => 'Magnet', 'count' => 1]], 'end_by' => 'entries']);
+    $log = [];
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 501), GW_NOW);
+    assert_eq(['join', '1'], [$r['after'][0], $r['after'][1]['user']], 'аккаунт сайта, «вы участвуете» уйдёт в личку');
+    assert_eq('cb', $p->query('SELECT src FROM giveaway_entries WHERE user_id = 1')->fetchColumn());
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7003), GW_NOW + 1);
+    assert_eq('due', $r['after'][0], 'последнее место — итоги сразу');
+    assert_true(strpos($r['reply']['text'], 'последнее место') !== false);
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7004), GW_NOW + 2);
+    assert_eq('Все места заняты — приём закрыт.', $r['reply']['text']);
+
+    // Тот же Telegram сначала вступил кнопкой, потом подключил сайт — участвует.
+    $id2 = gw_live($p);
+    gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id2, 7005), GW_NOW);
+    gw_user($p, '5', 'u5', 7005);
+    [$s, $out] = gw_enter($p, gw_cfg(), gw_tg($log), '5', $id2, GW_NOW + 5);
+    assert_eq([200, true], [$s, $out['joined']], 'с сайта — «вы уже участвуете», не ошибка');
+});
+
+test('Telegram: итоги — победитель без аккаунта в посте, «Забрать приз», бот спрашивает ник', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    $cfg = gw_cfg();
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]]
+        + gw_draft(['prizes' => [['name' => 'Magnet', 'count' => 1]]]), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    gw_tg_callback($p, $cfg, gw_tg($log), gw_tap($id, 7001), GW_NOW);
+    gw_user($p, '2', 'u2', 502);
+
+    $log = [];
+    $res = gw_after_due($p, $cfg, GW_NOW + 86400, gw_tg_posts($log), gw_lock_file(), function () {});
+    assert_eq(1, $res['drawn']);
+    $w = gw_winners($p, [$id])[$id][0];
+    assert_eq([gw_tg_uid(7001), 'ivan_7001', 'Иван П', true], [$w['id'], $w['name'], $w['display'], $w['tg']], 'победил участник из Telegram');
+    $edit = gw_sent($log, 'editMessageText')[0][1];
+    assert_true(strpos($edit['text'], '1. Иван П (@ivan_7001)') !== false, 'в посте — имя и @ник');
+    assert_eq(['text' => '🎁 Забрать приз', 'url' => 'https://t.me/MaknemyBot?start=gwp' . $id], $edit['reply_markup']['inline_keyboard'][1][0], 'кнопка «Забрать приз»');
+    $dm = gw_sent($log)[0][1];
+    assert_eq(7001, $dm['chat_id'], 'бот пробует написать сам');
+    assert_true(strpos($dm['text'], 'ник в Roblox') !== false, 'и просит ник');
+
+    $r = gw_tg_bot_reply($p, gw_dm(7001, '/start gwp' . $id), GW_NOW + 86401);
+    assert_true(strpos($r['text'], '🎉 Поздравляем! Вы победили') === 0 && strpos($r['text'], 'Magnet') !== false, '«Забрать приз» — поздравление');
+    $r = gw_tg_bot_reply($p, gw_dm(7001, 'не ник!'), GW_NOW + 86402);
+    assert_true(strpos($r['text'], 'от 3 до 20') !== false, 'кривой ник — просит ещё раз');
+    $r = gw_tg_bot_reply($p, gw_dm(7001, 'Kitsune_Fan99'), GW_NOW + 86403);
+    assert_true(strpos($r['text'], 'Kitsune_Fan99') !== false, 'ник принят');
+    assert_eq(['Kitsune_Fan99', 0], [gw_tg_person($p, 7001)['roblox_nick'], (int)gw_tg_person($p, 7001)['await_gw']]);
+    assert_eq(null, gw_tg_bot_reply($p, gw_dm(7001, 'привет'), GW_NOW + 86404), 'дальше — обычный разбор');
+    $r = gw_tg_bot_reply($p, gw_dm(7001, '/start gwp' . $id), GW_NOW + 86405);
+    assert_true(strpos($r['text'], 'Ник в Roblox для приза: Kitsune_Fan99') !== false, 'повторно — показывает ник');
+
+    $r = gw_tg_bot_reply($p, gw_dm(7777, '/start gwp' . $id), GW_NOW + 86406);
+    assert_true(strpos($r['text'], 'вы не выиграли') !== false, 'не победитель');
+
+    [, $g] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'get', 'id' => $id], GW_NOW + 86407);
+    $e = $g['giveaway']['list'][0];
+    assert_eq([true, 'Иван П', '@ivan_7001', 'ivan_7001', 'Kitsune_Fan99'], [$e['tg_only'], $e['display'], $e['tg'], $e['tg_user'], $e['nick']], 'админка: кто и ник для приза');
+});
+
+test('Telegram: до итогов «Забрать приз» просит подождать; без таблицы — кнопка ведёт на сайт', function () {
+    $p = gw_db();
+    $id = gw_live($p);
+    $r = gw_tg_bot_reply($p, gw_dm(7001, '/start gwp' . $id), GW_NOW);
+    assert_true(strpos($r['text'], 'ещё не подведены') !== false);
+
+    $p->exec('DROP TABLE tg_people');
+    $log = [];
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7001), GW_NOW);
+    assert_true(strpos($r['reply']['text'], 'Участвуйте на сайте') === 0, 'до миграции — на сайт');
+    assert_eq(null, gw_tg_bot_reply($p, gw_dm(7001, '/start gwp' . $id), GW_NOW), 'и бот молчит про призы');
+    gw_channel($p, GW_CH_A, 'Канал A');
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
+    assert_eq([[['text' => '🎁 Участвовать', 'url' => TG_SITE . '/giveaways#g' . $out['id'] . '-ch']]],
+        gw_posts_sent($log)[0][1]['reply_markup']['inline_keyboard'], 'прежняя кнопка-ссылка');
 });
 
 run_tests();

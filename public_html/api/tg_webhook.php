@@ -33,11 +33,17 @@ if (!defined('TESTING')) {
     $reply = null;
     $invite = null;
     $left = [];
+    $joined = null;
     try {
         $update = read_json_body();
+        // Нажали «Участвовать» под постом розыгрыша в канале — участие прямо
+        // в Telegram, ответ всплывающим окном (api/lib/gw_tg.php).
+        $joined = gw_tg_callback(db(), app_config(), tg_http($tg['token']), $update, time());
         // Прислали боту премиум-эмодзи — он отвечает их id для админки
         // розыгрышей (раздел «Премиум-эмодзи» в api/lib/giveaway.php).
-        $reply = gw_emoji_reply($update) ?? tg_handle_update(db(), $update, time());
+        // «Забрать приз» и ник в Roblox от победителя — gw_tg_bot_reply().
+        $reply = $joined['reply'] ?? gw_emoji_reply($update) ?? gw_tg_bot_reply(db(), $update, time())
+            ?? tg_handle_update(db(), $update, time());
         // Бота добавили в канал или убрали — список каналов для условий
         // розыгрышей (api/lib/giveaway.php). Ссылку-приглашение приватного
         // канала просим уже после ответа Telegram. Добавившему бот сразу
@@ -50,7 +56,10 @@ if (!defined('TESTING')) {
     } catch (Throwable $e) {
         error_log('tg webhook: ' . $e->getMessage());
     }
+    // Новый участник меняет число на сайте — кеш выдачи розыгрышей сбрасывается.
+    if (!empty($joined['after'])) { header('X-LiteSpeed-Purge: tag=giveaways'); }
     json_out($reply ?? ['ok' => true]);
+    if ($joined) { gw_tg_after(db(), app_config(), $joined['after'], time()); }
     if ($invite !== null) { gw_after_channel(db(), app_config(), $invite, time()); }
     if ($left) { gw_after_member(db(), app_config(), $left, time()); }
 }
