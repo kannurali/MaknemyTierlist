@@ -235,6 +235,59 @@ test('сообщение со старой сменой свежий сток н
     assert_eq('spike', stock_read($pdo)['normal']['fruits'][0]['key'], 'сток прежний');
 });
 
+// 28.10 в 12:00 UTC: новый сток пришёл в 12:03, а время смены в базе осталось
+// 12:00:28 — страница писала «меняется» до следующего поста.
+test('новый сток со старой меткой — время смены по расписанию, рассылка есть', function () {
+    $pdo = sk_db();
+    $p = stock_parse_message(sk_fixture('command'));
+    unset($p['mirage']);
+    $ends = $p['normal']['ends'];
+    stock_apply($pdo, $p, '30', SK_NOW, SK_NOW - 30);
+    $next = $p;
+    $next['normal']['fruits'] = [['key' => 'gas', 'name' => 'Gas', 'price' => 3200000]];
+    $new = stock_apply($pdo, $next, '31', $ends + 154, $ends + 154);
+    assert_eq(['normal'], array_keys($new), 'смена новая');
+    assert_eq($ends + 14400, $new['normal']['ends'], 'в рассылку — время следующей смены');
+    assert_eq($ends + 14400, stock_read($pdo)['normal']['ends'], 'в базе время следующей смены');
+    assert_eq('gas', stock_read($pdo)['normal']['fruits'][0]['key'], 'состав новый');
+});
+
+test('новый сток без метки — время смены по расписанию', function () {
+    $pdo = sk_db();
+    $p = stock_parse_message(sk_fixture('command'));
+    unset($p['mirage']);
+    $ends = $p['normal']['ends'];
+    stock_apply($pdo, $p, '30', SK_NOW, SK_NOW - 30);
+    $next = $p;
+    $next['normal']['ends'] = null;
+    $next['normal']['fruits'] = [['key' => 'gas', 'name' => 'Gas', 'price' => 3200000]];
+    assert_eq(['normal'], array_keys(stock_apply($pdo, $next, '31', $ends + 154, $ends + 154)), 'смена новая');
+    assert_eq($ends + 14400, stock_read($pdo)['normal']['ends'], 'время следующей смены');
+});
+
+test('метка, которая ещё не прошла, и сообщение без времени не сдвигаются', function () {
+    assert_eq(1000, stock_next_change(1000, 999, 7200), 'смена впереди');
+    assert_eq(1000, stock_next_change(1000, null, 7200), 'время сообщения неизвестно');
+    assert_eq(null, stock_next_change(null, 5000, 7200), 'метки нет совсем');
+    assert_eq(8200, stock_next_change(1000, 1000, 7200), 'смена ровно сейчас');
+    assert_eq(15400, stock_next_change(1000, 8200 + 1, 7200), 'пропущено больше одной смены');
+});
+
+test('старое сообщение со старой меткой свежий сток не затирает', function () {
+    $pdo = sk_db();
+    $p = stock_parse_message(sk_fixture('command'));
+    unset($p['mirage']);
+    $ends = $p['normal']['ends'];
+    stock_apply($pdo, $p, '30', SK_NOW, SK_NOW - 30);
+    $old = $p;
+    // Позапрошлая смена: пост в её начале с меткой ещё более ранней.
+    $old['normal']['ends'] = $ends - 28800;
+    $old['normal']['fruits'] = [['key' => 'rocket', 'name' => 'Rocket', 'price' => 5000]];
+    assert_eq([], stock_apply($pdo, $old, '29', SK_NOW, $ends - 28800 + 120), 'досчитанная смена — прошлая');
+    assert_eq($ends, stock_read($pdo)['normal']['ends'], 'время прежнее');
+    assert_eq('spike', stock_read($pdo)['normal']['fruits'][0]['key'], 'сток прежний');
+});
+
 // --------------------------------------------------------------------------
 //  Сбор из Discord
 // --------------------------------------------------------------------------
@@ -275,6 +328,20 @@ test('канал читается с последнего прочитанног
     stock_pull($pdo, $sc, sk_discord([], $paths), SK_NOW + 60, true);
     assert_eq('/channels/' . SK_CHANNEL . '/messages?limit=50&after=1555358551919300713', $paths[1],
         'дальше — только после последнего прочитанного');
+});
+
+test('пост со старыми метками: смена считается от времени поста, бот засыпает', function () {
+    $pdo = sk_db();
+    $paths = [];
+    $sc = stock_config(sk_cfg());
+    stock_pull($pdo, $sc, sk_discord([sk_command('800', SK_NOW - 30)], $paths), SK_NOW);
+    $at = 1790899211 + 150;
+    $r = stock_pull($pdo, $sc, sk_discord([sk_command('801', $at, 1790899211, 1790899272)], $paths), $at + 30);
+    assert_eq(['normal', 'mirage'], array_keys($r['new']), 'обе смены новые и в рассылку');
+    $s = stock_read($pdo);
+    assert_eq(1790899211 + 14400, $s['normal']['ends'], 'обычный — через 4 часа');
+    assert_eq(1790899272 + 7200, $s['mirage']['ends'], 'Mirage — через 2 часа');
+    assert_true(!stock_due($s, $at + 90, $at + 30), 'до следующей смены в Discord не ходит');
 });
 
 test('после простоя старые сообщения в базу ложатся, но не рассылаются', function () {

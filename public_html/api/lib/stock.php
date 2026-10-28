@@ -333,14 +333,19 @@ function stock_id_gt(string $a, string $b): bool {
  * начале: это та же смена, и второй рассылки нет. Если состав при этом
  * другой (Vulcan поправился) — он просто перезаписывается. Сообщение со
  * старой сменой (канал читается после простоя) свежий сток не затирает.
+ *
+ * $at — когда сообщение выложено. Если метка к этому моменту уже прошла или
+ * её нет, время смены досчитывается по расписанию (stock_next_change).
  */
-function stock_apply(PDO $pdo, array $parsed, string $messageId, int $now): array {
+function stock_apply(PDO $pdo, array $parsed, string $messageId, int $now, ?int $at = null): array {
     $cur = stock_read($pdo);
     $new = [];
     foreach ($parsed as $kind => $s) {
         if (!in_array($kind, STOCK_KINDS, true)) { continue; }
-        $row  = $cur[$kind];
-        $ends = $s['ends'];
+        $row    = $cur[$kind];
+        $period = STOCK_PERIODS[$kind];
+        $ends   = stock_next_change($s['ends'], $at, $period);
+        $s['ends'] = $ends;
         if ($row === null) {
             stock_write($pdo, $kind, $s['fruits'], $ends, $messageId, $now);
             $new[$kind] = $s;
@@ -358,11 +363,29 @@ function stock_apply(PDO $pdo, array $parsed, string $messageId, int $now): arra
         }
         // Метки времени нет у одной из сторон — смена узнаётся только по составу.
         if (!$same) {
-            stock_write($pdo, $kind, $s['fruits'], $ends ?? $row['ends'], $messageId, $now);
+            $s['ends'] = stock_next_change($ends ?? $row['ends'], $at, $period);
+            stock_write($pdo, $kind, $s['fruits'], $s['ends'], $messageId, $now);
             $new[$kind] = $s;
         }
     }
     return $new;
+}
+
+/**
+ * Время ближайшей смены после выхода сообщения. 28.10 в 12:00 UTC Vulcan
+ * выложил новый сток, а время в базе осталось от прошлой смены: в посте не
+ * было новой метки — либо стояла старая, либо никакой. Страница до
+ * следующего поста писала «меняется», а при старой метке смена ещё и сошла
+ * за ту же, и в Telegram ничего не ушло. Расписание у дилеров постоянное (STOCK_PERIODS),
+ * поэтому прошедшая метка сдвигается вперёд на целое число смен.
+ *
+ * Сдвиг только от времени самого сообщения, не от «сейчас»: старое сообщение,
+ * прочитанное после простоя, получает время своей смены и свежий сток не
+ * затирает. Без $at (время сообщения неизвестно) метка остаётся как есть.
+ */
+function stock_next_change(?int $ends, ?int $at, int $period): ?int {
+    if ($ends === null || $at === null || $ends > $at) { return $ends; }
+    return $ends + $period * (intdiv($at - $ends, $period) + 1);
 }
 
 // --------------------------------------------------------------------------
@@ -465,7 +488,7 @@ function stock_pull(PDO $pdo, array $sc, callable $get, int $now, bool $force = 
         }
         $at = isset($m['timestamp']) && is_string($m['timestamp']) ? strtotime($m['timestamp']) : false;
         $fresh = $at !== false && $now - $at <= STOCK_FRESH;
-        foreach (stock_apply($pdo, $parsed, $m['id'], $now) as $kind => $s) {
+        foreach (stock_apply($pdo, $parsed, $m['id'], $now, $at !== false ? $at : null) as $kind => $s) {
             if ($fresh) { $new[$kind] = $s; } else { unset($new[$kind]); }
         }
     }
