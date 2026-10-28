@@ -299,7 +299,7 @@ page_lscache();
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/stock-page.js?v=5" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=16" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
 </body>

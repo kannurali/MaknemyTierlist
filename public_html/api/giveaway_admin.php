@@ -9,15 +9,27 @@ require_once __DIR__ . '/lib/giveaway.php';
 //   get {id}        → розыгрыш целиком с участниками
 //   report {id}     → для рекламодателя: источники участников и кто
 //                     подписался на каналы по ссылке розыгрыша
-//   save {id?, …}   → сохранить черновик или правку (пустой EN переводит Google)
-//   publish {id}    → старт; бот пишет всем после ответа
+//   save {id?, …}   → сохранить черновик или правку (пустой EN переводит Google);
+//                     у идущего бот сразу выпускает и правит посты в каналах
+//   publish {id}    → старт; посты в каналы — до ответа, рассылка — после
 //   end {id}        → закончить досрочно
-//   draw {id}       → выбрать победителей; бот пишет им после ответа
+//   draw {id}       → выбрать победителей и дописать их в посты каналов;
+//                     победителям бот пишет после ответа
+//
+// Как прошли посты в каналах (save, publish), — поле post в ответе:
+// {posted, edited, failed: [канал, …]}; нет постов — поля нет.
 //   delete {id}     → удалить вместе с участниками
 //   channel {id}    → перечитать канал у Telegram (название, права, ссылку)
+//   emoji {rows}    → премиум-эмодзи бота: [{emoji, id}, …] целиком
 //
 // Всё, что меняет публичную картину, сбрасывает кеш api/giveaways.php
 // (тег giveaways), иначе окно ещё полминуты показывало бы старое.
+
+// Итог постов в каналах — в ответ админке, если постов было что делать.
+function gw_admin_post_note(array $p, array $sync): array {
+    if ($sync['posted'] || $sync['edited'] || $sync['failed']) { $p['post'] = $sync; }
+    return $p;
+}
 
 /**
  * [код, тело, что сделать после ответа]. Третье — null или
@@ -37,13 +49,23 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
             'tg'        => tg_enabled($tg),
             'rights'    => tg_right_names(tg_admin_rights(true), 'ru'),
             'add_url'   => tg_add_channel_url($tg['name']),
+            'posts'     => gw_has_posts($pdo),
+            'post_last' => gw_post_last($pdo),
+            'emoji'     => gw_admin_emoji($pdo),
         ], null];
+    }
+    if ($action === 'emoji') {
+        [$s, $p] = gw_emoji_save($pdo, $body['rows'] ?? null, $now);
+        return [$s, $p, null];
     }
     if ($action === 'save') {
         [$s, $p] = gw_save($pdo, $body, $now, $translate);
         // Идущему розыгрышу добавили канал — ему тоже нужна своя ссылка.
         $row = $s === 200 ? gw_load($pdo, (int)$p['id']) : null;
-        if ($row && $row['status'] === 'live') { $p['link_failed'] = gw_ensure_links($pdo, $send, $row, $now); }
+        if ($row && $row['status'] === 'live') {
+            $p['link_failed'] = gw_ensure_links($pdo, $send, $row, $now);
+            $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, (string)$tg['name'], $now));
+        }
         return [$s, $p, null];
     }
     if ($action === 'channel') {
@@ -69,6 +91,7 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     }
     if ($action === 'publish') {
         [$s, $p, $row] = gw_publish($pdo, $id, $now, $send, tg_enabled($tg) ? (int)strtok((string)$tg['token'], ':') : 0);
+        if ($row) { $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, (string)$tg['name'], $now)); }
         // О тестовом бот не пишет никому.
         return [$s, $p, $row && !gw_is_test($row) ? ['announce', $row] : null];
     }
@@ -79,7 +102,12 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     if ($action === 'draw') {
         if (!tg_enabled($tg)) { return [503, ['ok' => false, 'error' => 'tg_off'], null]; }
         [$s, $p, $winners, $gone] = gw_draw($pdo, $cfg, $send, $id, $now);
-        return [$s, $p, $s === 200 ? ['winners', gw_load($pdo, $id), $winners, $gone] : null];
+        if ($s !== 200) { return [$s, $p, null]; }
+        $row = gw_load($pdo, $id);
+        // Не дописалось (Telegram молчал) — допишет следующий проход автоитогов.
+        $failed = gw_post_results($pdo, $send, $row, $now);
+        if ($failed) { $p['post_failed'] = $failed; }
+        return [$s, $p, ['winners', $row, $winners, $gone]];
     }
     if ($action === 'delete') {
         [$s, $p] = gw_delete($pdo, $id);

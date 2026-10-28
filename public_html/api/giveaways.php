@@ -46,7 +46,8 @@ if (!defined('TESTING')) {
     header('X-LiteSpeed-Tag: giveaways');
     $now = time();
     $due = false;
-    try { $due = gw_has_due(db(), $now); } catch (Throwable $e) { $due = false; }
+    // Итоги, не дописанные в пост канала (Telegram молчал), — тем же проходом.
+    try { $due = gw_has_due(db(), $now) || gw_has_post_due(db()); } catch (Throwable $e) { $due = false; }
     if ($due) { lscache_off(); } else { lscache_public(GW_PUBLIC_CACHE); }
     json_out(handle_giveaways('db', $now, ($_GET['test'] ?? '') === '1', i18n_api_lang($_GET['lang'] ?? null)));
     if ($due) { gw_after_due(db(), app_config(), $now); }
