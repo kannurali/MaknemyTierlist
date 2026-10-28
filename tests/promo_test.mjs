@@ -581,14 +581,16 @@ test('popupPick falls back to the house ad when nothing is sold', () => {
     assert.equal(popupPick(null, {}, Date.now(), 0.5).id, own);
 });
 
-test('popupPick falls back to the house ad once the paid one is capped today', () => {
+// Окно кампании из админки на лимите не уступает место своему объявлению:
+// иначе со второго захода за сутки опять всплывал бы старый код-баннер.
+test('popupPick keeps quiet while the paid campaign is capped today', () => {
     const now = Date.now();
     const doc = { campaigns: [{
         id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
         creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
     }] };
     const seen = recordPopupShown({}, 'c_paid', now);
-    assert.equal(popupPick(doc, seen, now + HOUR, 0.5).id, houseFor('popup', now).id);
+    assert.equal(popupPick(doc, seen, now + HOUR, 0.5), null);
     // А через сутки платная кампания снова забирает место.
     assert.equal(popupPick(doc, seen, now + 25 * HOUR, 0.5).id, 'c_paid');
 });
@@ -679,14 +681,16 @@ test('a paid campaign still beats the giveaway in the popup', () => {
 
 // ------------------------------------------------ houseFor / HOUSE_CHANNEL
 
-// Телеграм-канал «BLOX FRUITS: Новости, Обновления, Находки» стоит во всех
+// Телеграм-канал «BLOX FRUITS: Новости, Обновления, Находки» стоял во всех
 // свободных местах, где нет Playerok и Starvell. Списка страниц у него нет:
 // свои страницы рекламодатели забирают раньше, чем очередь доходит до канала.
+// С 28 октября канал снят: места, где нет Playerok, отданы кампаниям из
+// админки. Код и макеты оставлены — канал можно вернуть одной датой.
 
 test('HOUSE_CHANNEL ships a creative for every slot', () => {
     assert.deepEqual(HOUSE_CHANNEL.slots, ['strip', 'rail', 'dock', 'popup']);
     assert.equal(HOUSE_CHANNEL.enabled, true);
-    assert.equal(HOUSE_CHANNEL.end, '');
+    assert.equal(HOUSE_CHANNEL.end, '2026-10-27');
     assert.equal(HOUSE_CHANNEL.pages, undefined);
     assert.equal(safeHref(HOUSE_CHANNEL.href), 'https://t.me/+VQVMx_Imrus1Zjhi');
     const size = { strip: [1200, 300], rail: [320, 1200], dock: [640, 200], popup: [800, 800] };
@@ -726,6 +730,47 @@ test('houseFor falls back to the placeholder and the channel ad once it is off',
         assert.equal(houseFor('popup', CHANNEL_RUN).id, HOUSE_TG.id);
     } finally {
         HOUSE_CHANNEL.enabled = true;
+    }
+});
+
+test('с 28 октября канал больше нигде не стоит', () => {
+    const last = dayBoundsMsk('2026-10-27');
+    for (const page of [undefined, 'news', 'trading', 'stock']) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, last.endMs, page).id, HOUSE_CHANNEL.id, `27 октября ещё канал: ${page} / ${slot}`);
+            assert.notEqual(houseFor(slot, last.endMs + 1, page).id, HOUSE_CHANNEL.id, `28 октября уже нет: ${page} / ${slot}`);
+        }
+    }
+    const after = last.endMs + DAY;
+    assert.equal(houseFor('strip', after, 'news').id, HOUSE_SLOT.id);
+    assert.equal(houseFor('popup', after, 'news').id, HOUSE_TG.id);
+});
+
+// Кампания «Розыгрыш кицуне» из админки размечена на новости, трейдинг и
+// сток — все страницы без Playerok. Пока она в своих датах, ничего из кода
+// там не показывается, окно тоже.
+test('кампания из админки занимает все места без Playerok', () => {
+    const after = dayBoundsMsk('2026-10-28').startMs + 12 * HOUR;
+    const doc = { campaigns: [{
+        id: 'c_admin', slots: ['strip', 'rail', 'dock', 'popup'], pages: ['news', 'trading', 'stock'],
+        href: 'https://maknemy.com/giveaways',
+        creatives: {
+            strip: { src: '/images/s.jpg', w: 1200, h: 300 }, rail: { src: '/images/r.jpg', w: 300, h: 1200 },
+            dock: { src: '/images/d.jpg', w: 640, h: 200 }, popup: { src: '/images/p.jpg', w: 900, h: 900 }
+        }
+    }] };
+    for (const page of ['news', 'trading', 'stock']) {
+        for (const slot of SLOTS) {
+            assert.deepEqual(eligible(doc, slot, after, page).map(c => c.id), ['c_admin'], `${page} / ${slot}`);
+        }
+        assert.equal(popupPick(doc, {}, after, 0, page).id, 'c_admin', page);
+        const seen = recordPopupShown({}, 'c_admin', after);
+        assert.equal(popupPick(doc, seen, after + HOUR, 0, page), null, `${page}: окно на лимите молчит`);
+    }
+    for (const page of ['tierlist', 'calc']) {
+        for (const slot of SLOTS) {
+            assert.deepEqual(eligible(doc, slot, after, page), [PLAYEROK], `${page} / ${slot}`);
+        }
     }
 });
 

@@ -670,7 +670,7 @@
     enabled: true,
     weight: 1,
     start: "",
-    end: "",
+    end: "2026-10-27",
     href: "https://t.me/+VQVMx_Imrus1Zjhi",
     text: "",
     cta: "",
@@ -767,10 +767,12 @@
   }
 
   function popupPick(doc, seen, nowMs, rnd, page) {
-    var paid = eligible(doc, "popup", nowMs, page).filter(function (c) {
+    var sold = eligible(doc, "popup", nowMs, page);
+    var paid = sold.filter(function (c) {
       return shouldShowPopup(c, seen, nowMs);
     });
     if (paid.length) { return pickWeighted(paid, rnd); }
+    if (sold.length) { return null; }
     var house = houseFor("popup", nowMs, page);
     return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
