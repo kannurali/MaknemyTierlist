@@ -93,7 +93,8 @@
   var DOCK_TEXT_KEYS = {
     "c_muryn4isxftf": "promo.channelDockText",
     "house-tg-bloxfruits": "promo.channelDockText",
-    "starvell-2026-10": "promo.starvellDockText"
+    "starvell-2026-10": "promo.starvellDockText",
+    "house-giveaway-halloween-2026": "promo.halloweenGiveawayDockText"
   };
 
   function dockTextKey(campaign) {
@@ -663,6 +664,34 @@
     notes: ""
   };
 
+  var HOUSE_HALLOWEEN = {
+    id: "house-giveaway-halloween-2026",
+    name: "house-giveaway-halloween-2026",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "2026-10-29",
+    end: "",
+    href: "/giveaways#g2",
+    text: "",
+    cta: "",
+    textKey: "promo.halloweenGiveawayText",
+    ctaKey: "promo.giveawayCta",
+    gw: 2,
+
+    erid: "",
+    pages: ["tierlist", "news", "calc", "trading", "stock"],
+    slots: ["strip", "rail", "dock"],
+    creatives: {
+      strip: { src: "/assets/promo/halloween-gw-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/halloween-gw-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/halloween-gw-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" }
+    },
+
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
   var HOUSE_CHANNEL = {
     id: "house-tg-bloxfruits",
     name: "house-tg-bloxfruits",
@@ -760,6 +789,7 @@
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
     var booked = bookedOn(slot, now, page);
     if (booked) { return booked; }
+    if (bookedFor(HOUSE_HALLOWEEN, slot, now, page)) { return HOUSE_HALLOWEEN; }
     if (bookedFor(HOUSE_GIVEAWAY, slot, now, page)) { return HOUSE_GIVEAWAY; }
     if (bookedFor(HOUSE_CHANNEL, slot, now, page)) { return HOUSE_CHANNEL; }
     if (slot === "popup") { return HOUSE_TG; }
@@ -812,6 +842,7 @@
     HOUSE_TG: HOUSE_TG,
     HOUSE_SLOT: HOUSE_SLOT,
     HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
+    HOUSE_HALLOWEEN: HOUSE_HALLOWEEN,
     HOUSE_CHANNEL: HOUSE_CHANNEL,
     PLAYEROK: PLAYEROK,
     STARVELL: STARVELL,

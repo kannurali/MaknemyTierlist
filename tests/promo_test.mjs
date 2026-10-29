@@ -15,7 +15,7 @@ const {
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, PLAYEROK, STARVELL, houseFor, popupPick
+    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_CHANNEL, PLAYEROK, STARVELL, houseFor, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -677,6 +677,83 @@ test('a paid campaign still beats the giveaway in the popup', () => {
         creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
     }] };
     assert.equal(popupPick(doc, {}, GIVEAWAY_RUN, 0.5).id, 'c_paid');
+});
+
+// ------------------------------------------------ houseFor / HOUSE_HALLOWEEN
+
+// Хэллоуинский мега-розыгрыш (#2 на /giveaways) с 29 октября стоит в полосе,
+// борту и нижней полосе везде, где нет Playerok. Кампания из админки по-прежнему
+// сильнее: houseFor зовут, только когда eligible() пуст. Окна у кампании нет
+// намеренно: розыгрыш уже открывает своё окно (giveaway-pop.js) тем, кто в нём
+// ещё не участвует, и рекламное окно о том же всплывало бы вторым, в том числе
+// у тех, кто уже участвует. Конца у кампании нет: розыгрыш закрывается по числу
+// участников, и снимать её — полем end.
+
+const HALLOWEEN_RUN = Date.parse('2026-10-30T12:00:00Z');
+
+test('HOUSE_HALLOWEEN ships strip, rail and dock creatives tied to giveaway #2', () => {
+    assert.deepEqual(HOUSE_HALLOWEEN.slots, ['strip', 'rail', 'dock']);
+    assert.equal(HOUSE_HALLOWEEN.enabled, true);
+    assert.equal(HOUSE_HALLOWEEN.start, '2026-10-29');
+    assert.equal(HOUSE_HALLOWEEN.end, '');
+    // Счётчик мест на баннере берётся из розыгрыша по этому номеру.
+    assert.equal(HOUSE_HALLOWEEN.gw, 2);
+    assert.equal(safeHref(HOUSE_HALLOWEEN.href), '/giveaways#g2');
+    const size = { strip: [1200, 300], rail: [320, 1200], dock: [640, 200] };
+    for (const slot of HOUSE_HALLOWEEN.slots) {
+        const cre = PROMO.creativeFor(HOUSE_HALLOWEEN, slot);
+        assert.ok(cre, `у слота ${slot} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/halloween-gw-'),
+            'макеты лежат в репозитории: объявление обязано работать на чистой установке');
+        assert.deepEqual([cre.w, cre.h], size[slot], `размер макета ${slot}`);
+    }
+    assert.equal(PROMO.creativeFor(HOUSE_HALLOWEEN, 'popup'), null);
+    assert.ok(HOUSE_HALLOWEEN.textKey && HOUSE_HALLOWEEN.ctaKey);
+    assert.equal(PROMO.dockTextKey(HOUSE_HALLOWEEN), 'promo.halloweenGiveawayDockText');
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_CHANNEL, PLAYEROK, STARVELL]) {
+        assert.notEqual(HOUSE_HALLOWEEN.id, other.id);
+    }
+});
+
+test('houseFor gives the Halloween giveaway every free slot but the popup', () => {
+    for (const page of ['news', 'trading', 'stock']) {
+        for (const slot of HOUSE_HALLOWEEN.slots) {
+            assert.equal(houseFor(slot, HALLOWEEN_RUN, page).id, HOUSE_HALLOWEEN.id, `${page} / ${slot}`);
+        }
+        assert.equal(houseFor('popup', HALLOWEEN_RUN, page).id, HOUSE_TG.id, `${page} / popup`);
+        assert.equal(popupPick({}, {}, HALLOWEEN_RUN, 0, page).id, HOUSE_TG.id, `${page} / popupPick`);
+    }
+});
+
+test('Playerok keeps the tier list and the calculator during the Halloween giveaway', () => {
+    for (const page of ['tierlist', 'calc']) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, HALLOWEEN_RUN, page).id, PLAYEROK.id, `${page} / ${slot}`);
+        }
+    }
+});
+
+test('the giveaways page does not advertise its own giveaway', () => {
+    assert.equal(houseFor('rail', HALLOWEEN_RUN, 'giveaways').id, HOUSE_SLOT.id);
+});
+
+test('the Halloween giveaway starts on 29 October by Moscow time', () => {
+    const first = dayBoundsMsk('2026-10-29');
+    for (const slot of HOUSE_HALLOWEEN.slots) {
+        assert.equal(houseFor(slot, first.startMs - 1, 'news').id, HOUSE_SLOT.id, `28 октября ещё заглушка: ${slot}`);
+        assert.equal(houseFor(slot, first.startMs, 'news').id, HOUSE_HALLOWEEN.id, `29 октября уже розыгрыш: ${slot}`);
+    }
+});
+
+test('the Halloween giveaway drops out with one flag', () => {
+    HOUSE_HALLOWEEN.enabled = false;
+    try {
+        for (const slot of HOUSE_HALLOWEEN.slots) {
+            assert.equal(houseFor(slot, HALLOWEEN_RUN, 'news').id, HOUSE_SLOT.id, slot);
+        }
+    } finally {
+        HOUSE_HALLOWEEN.enabled = true;
+    }
 });
 
 // ------------------------------------------------ houseFor / HOUSE_CHANNEL
