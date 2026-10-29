@@ -704,6 +704,12 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true(is_file($PUB . '/assets/promo/giveaway-' . $slot . '.webp'),
             "макет розыгрыша для слота $slot должен лежать в репозитории");
     }
+    // Хэллоуинский мега-розыгрыш — то же правило, без окна.
+    assert_true(strpos($promo, 'var HOUSE_HALLOWEEN') !== false, 'хэллоуинский розыгрыш объявлен в js/promo.js');
+    foreach (['strip', 'rail', 'dock'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/halloween-gw-' . $slot . '.webp'),
+            "макет хэллоуинского розыгрыша для слота $slot должен лежать в репозитории");
+    }
     // После розыгрыша свободные места занимает телеграм-канал, и его макеты
     // лежат там же и по той же причине.
     assert_true(strpos($promo, 'var HOUSE_CHANNEL') !== false, 'канал объявлен в js/promo.js');
