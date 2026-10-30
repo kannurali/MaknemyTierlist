@@ -45,7 +45,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=3" />
+<link rel="stylesheet" href="css/hunt.css?v=4" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -148,6 +148,17 @@ page_lscache();
           <stop offset="0" stop-color="#1f1030" />
           <stop offset="1" stop-color="#0a0611" />
         </linearGradient>
+        <radialGradient id="hnBrew" gradientUnits="userSpaceOnUse" cx="120" cy="60" r="92" gradientTransform="matrix(1 0 0 .2 0 48)">
+          <stop offset="0" stop-color="#f6e2ff" />
+          <stop offset=".3" stop-color="#d266ff" />
+          <stop offset=".72" stop-color="#8400ff" />
+          <stop offset="1" stop-color="#3d0a78" />
+        </radialGradient>
+        <linearGradient id="hnIron" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2c1a3b" />
+          <stop offset=".5" stop-color="#150b20" />
+          <stop offset="1" stop-color="#08050d" />
+        </linearGradient>
       </defs>
     </svg>
 
@@ -196,14 +207,21 @@ page_lscache();
 
       <div class="hn-body" id="hnBody" hidden>
 
+        <section class="hn-sec hn-draw" id="hnDraw" aria-labelledby="hnDrawTitle" hidden>
+          <div class="hn-sec-head">
+            <h2 class="hn-h2" id="hnDrawTitle" data-i18n="hunt.draw.title"><?= te('hunt.draw.title') ?></h2>
+            <p class="hn-lead" id="hnDrawLead"></p>
+          </div>
+          <div class="hn-draw-in">
+            <div class="hn-draw-stage" id="hnDrawStage"></div>
+            <div class="hn-draw-side" id="hnDrawSide"></div>
+          </div>
+          <p class="hn-sr" id="hnDrawLive" role="status" aria-live="polite"></p>
+        </section>
+
         <section class="hn-sec hn-wins" id="hnWins" aria-labelledby="hnWinsTitle" hidden>
           <h2 class="hn-h2" id="hnWinsTitle" data-i18n="hunt.win.title"><?= te('hunt.win.title') ?></h2>
           <div class="hn-win-list" id="hnWinList"></div>
-        </section>
-
-        <section class="hn-sec hn-winners" id="hnWinners" aria-labelledby="hnWinnersTitle" hidden>
-          <h2 class="hn-h2" id="hnWinnersTitle" data-i18n="hunt.winners.title"><?= te('hunt.winners.title') ?></h2>
-          <ol class="hn-winner-list" id="hnWinnerList"></ol>
         </section>
 
         <section class="hn-sec hn-cal" aria-labelledby="hnCalTitle">
@@ -298,6 +316,6 @@ page_lscache();
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
-  <script src="js/hunt-page.js?v=2" fetchpriority="high"></script>
+  <script src="js/hunt-page.js?v=3" fetchpriority="high"></script>
 </body>
 </html>

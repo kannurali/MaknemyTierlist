@@ -12,9 +12,9 @@ require_once __DIR__ . '/lib/hunt.php';
 
 const HUNT_PUBLIC_CACHE = 30;
 
-function handle_hunt(callable $pdo, int $now): array {
+function handle_hunt(callable $pdo, int $now, array $cfg = []): array {
     try {
-        return hunt_public($pdo(), $now);
+        return hunt_public($pdo(), $now, $cfg);
     } catch (Throwable $e) {
         error_log('hunt: ' . $e->getMessage());
         return ['hunt' => null];
@@ -25,5 +25,5 @@ if (!defined('TESTING')) {
     header('Cache-Control: no-cache, must-revalidate');
     header('X-LiteSpeed-Tag: hunt');
     lscache_public(HUNT_PUBLIC_CACHE);
-    json_out(handle_hunt('db', time()));
+    json_out(handle_hunt('db', time(), app_config()));
 }

@@ -150,7 +150,7 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/hunt-admin.js?v=1"></script>
+<script src="/js/hunt-admin.js?v=2"></script>
 </body>
 </html>
 HTML;

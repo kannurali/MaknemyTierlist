@@ -463,6 +463,44 @@ test('после итогов публичное показывает побед
     assert_eq([['1', 'ann', 'Gas']], array_map(function ($w) { return [$w['user']['id'], $w['user']['username'], $w['prize']['name']]; }, $pub['winners']));
 });
 
+test('итоги сами: первый запрос после draw_at, победители с номерами билетов', function () {
+    $p = ht_db();
+    $h = ht_hunt($p);
+    foreach (['1' => 'ann', '2' => 'bob', '3' => 'cat', '4' => 'dan'] as $id => $n) { ht_user($p, (string)$id, $n); }
+    ht_tickets($p, $h, ['1', '1', '2', '3', '4', '4']);
+    $p->exec('UPDATE hunt_tickets SET void = 1 WHERE id = 6');
+    $at = (int)hunt_load($p, $h)['draw_at'];
+    $pub = hunt_public($p, $at - 1);
+    assert_eq(['closed', 5, 0, []], [$pub['hunt']['phase'], $pub['hunt']['tickets'], $pub['hunt']['drawn_at'], $pub['winners']], 'до draw_at ждём');
+    $pub = hunt_public($p, $at);
+    assert_eq(['drawn', $at, 3], [$pub['hunt']['phase'], $pub['hunt']['drawn_at'], count($pub['winners'])]);
+    $rows = $p->query('SELECT ticket_id, user_id FROM hunt_wins ORDER BY prize_idx, id')->fetchAll(PDO::FETCH_ASSOC);
+    assert_eq(array_map(function ($r) { return [hunt_ticket_no((int)$r['ticket_id']), (string)$r['user_id']]; }, $rows),
+        array_map(function ($w) { return [$w['ticket_no'], $w['user']['id']]; }, $pub['winners']), 'номер билета у каждого победителя');
+    assert_eq(3, count(array_unique(array_column($rows, 'user_id'))), 'три разных человека');
+    assert_eq($pub['winners'], hunt_public($p, $at + 60)['winners'], 'второй запрос не разыгрывает заново');
+    assert_eq(3, (int)$p->query('SELECT COUNT(*) FROM hunt_wins')->fetchColumn());
+});
+
+test('итоги сами: из сессии и из hunt_me; без времени итогов — только кнопкой', function () {
+    $p = ht_db();
+    $h = ht_hunt($p, ['draw_at' => 0]);
+    $u = ht_user($p, '1', 'ann');
+    ht_tickets($p, $h, ['1']);
+    $late = ht_start() + 20 * HT_DAY;
+    assert_eq('closed', hunt_public($p, $late)['hunt']['phase'], 'draw_at не задан — ждём кнопку');
+    $p->exec('UPDATE hunts SET draw_at = ' . (ht_start() + 8 * HT_DAY + 3600));
+    assert_eq('won', hunt_session_field($p, [], $u, $late)['next'], 'сессия подвела итоги, выигрыш виден сразу');
+    assert_eq('drawn', hunt_load($p, $h)['status']);
+
+    $p = ht_db();
+    $h = ht_hunt($p);
+    $u = ht_user($p, '1', 'ann');
+    ht_tickets($p, $h, ['1']);
+    $me = hunt_me($p, [], $u, ht_start() + 8 * HT_DAY + 3600);
+    assert_eq([1, 'won'], [count($me['wins']), $me['wins'][0]['status']], 'hunt_me тоже подводит итоги');
+});
+
 test('моё: кошелёк, календарь, сегодняшнее время, билеты, титулы, Telegram', function () {
     $p = ht_db();
     $h = ht_hunt($p);

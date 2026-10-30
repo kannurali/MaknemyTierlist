@@ -596,6 +596,33 @@ function hunt_draw(PDO $pdo, array $cfg, int $huntId, int $now, ?callable $rand 
     return [200, ['ok' => true, 'winners' => count($won), 'tickets' => count($queue)]];
 }
 
+/**
+ * Итоги сами: первый запрос после draw_at (страница, счётчик, сессия)
+ * разыгрывает призы — cron нет, как у розыгрышей. Кнопка в админке остаётся,
+ * чтобы разыграть раньше. Гонку двух запросов разводит условный UPDATE в
+ * hunt_draw. Ошибка розыгрыша не роняет страницу: сезон остаётся live, и
+ * следующий запрос попробует снова. → [сезон после, разыграл ли этот запрос].
+ */
+function hunt_auto_draw(PDO $pdo, array $cfg, array $hunt, int $now): array {
+    $at = (int)$hunt['draw_at'];
+    if ((string)$hunt['status'] !== 'live' || $at <= 0 || $now < $at || $now < (int)$hunt['sales_end_at']) {
+        return [$hunt, false];
+    }
+    try {
+        [$code] = hunt_draw($pdo, $cfg, (int)$hunt['id'], $now);
+    } catch (Throwable $e) {
+        error_log('hunt auto draw: ' . $e->getMessage());
+        return [$hunt, false];
+    }
+    return [hunt_load($pdo, (int)$hunt['id']) ?? $hunt, $code === 200];
+}
+
+// Ответ api/hunt.php лежит в кеше LiteSpeed: итоги, подведённые другим
+// запросом, сбрасывают его, чтобы страница не ждала конца кеша.
+function hunt_purge_public(): void {
+    if (!defined('TESTING') && !headers_sent()) { header('X-LiteSpeed-Purge: tag=hunt'); }
+}
+
 // Не подтвердил выигрыш до срока — expired. Зовётся при чтении: отдельного
 // cron нет, а срок — граница, которую видно с первого же запроса после неё.
 function hunt_expire_wins(PDO $pdo, int $huntId, int $now): int {
@@ -701,27 +728,35 @@ function hunt_my_titles(PDO $pdo, string $uid): array {
 
 /**
  * Публичное — одно для всех, поэтому лежит в кеше LiteSpeed (api/hunt.php).
+ * После draw_at сначала подводит итоги (hunt_auto_draw). winners — в порядке
+ * призов, с номером билета: страница вытягивает их по одному. tickets —
+ * сколько билетов в барабане (без аннулированных).
  */
-function hunt_public(PDO $pdo, int $now): array {
+function hunt_public(PDO $pdo, int $now, array $cfg = []): array {
     if (!hunt_ready($pdo)) { return ['hunt' => null]; }
     $hunt = hunt_current($pdo, $now);
     if (!$hunt) { return ['hunt' => null]; }
+    [$hunt] = hunt_auto_draw($pdo, $cfg, $hunt, $now);
     $hid = (int)$hunt['id'];
     $phase = hunt_phase($hunt, $now);
 
     $winners = [];
     if ($phase === 'drawn') {
-        $st = $pdo->prepare("SELECT w.prize_idx, w.prize_name, w.prize_icon, w.user_id, u.username, u.display_name
+        $st = $pdo->prepare("SELECT w.prize_idx, w.prize_name, w.prize_icon, w.user_id, w.ticket_id, u.username, u.display_name
                                FROM hunt_wins w LEFT JOIN users u ON u.roblox_id = w.user_id
                               WHERE w.hunt_id = :h AND w.status NOT IN ('expired', 'redrawn') ORDER BY w.prize_idx, w.id");
         $st->execute([':h' => $hid]);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $w) {
             $winners[] = ['prize' => ['idx' => (int)$w['prize_idx'], 'name' => (string)$w['prize_name'], 'icon' => (string)$w['prize_icon']],
+                'ticket_no' => hunt_ticket_no((int)$w['ticket_id']),
                 'user' => ['id' => (string)$w['user_id'], 'username' => (string)($w['username'] ?? ''),
                            'display_name' => (string)($w['display_name'] ?? '')]];
         }
     }
 
+    $tk = $pdo->prepare('SELECT COUNT(*) FROM hunt_tickets WHERE hunt_id = :h AND void = 0');
+    $tk->execute([':h' => $hid]);
+    $tickets = (int)$tk->fetchColumn();
     $st = $pdo->prepare('SELECT COUNT(*) FROM hunt_wallets WHERE hunt_id = :h');
     $st->execute([':h' => $hid]);
 
@@ -735,6 +770,7 @@ function hunt_public(PDO $pdo, int $now): array {
             'ends_at'      => hunt_ends_at($hunt),
             'sales_end_at' => (int)$hunt['sales_end_at'],
             'draw_at'      => (int)$hunt['draw_at'],
+            'drawn_at'     => (int)($hunt['drawn_at'] ?? 0),
             'day'          => hunt_day_n($hunt, $now),
             'days'         => HUNT_DAYS,
             'login'        => hunt_login_rewards($hunt),
@@ -745,6 +781,7 @@ function hunt_public(PDO $pdo, int $now): array {
             'prizes'       => gw_prizes($hunt['prizes_json'] ?? null),
             'titles'       => hunt_titles_cfg($hunt),
             'hunters'      => (int)$st->fetchColumn(),
+            'tickets'      => $tickets,
         ],
         'winners' => $winners,
     ];
@@ -805,6 +842,8 @@ function hunt_me(PDO $pdo, array $cfg, string $uid, int $now): array {
     if (!hunt_ready($pdo)) { return ['hunt_id' => null]; }
     $hunt = hunt_current($pdo, $now);
     if (!$hunt) { return ['hunt_id' => null]; }
+    [$hunt, $drawn] = hunt_auto_draw($pdo, $cfg, $hunt, $now);
+    if ($drawn) { hunt_purge_public(); }
     $hid = (int)$hunt['id'];
     hunt_expire_wins($pdo, $hid, $now);
     $wallet = hunt_wallet($pdo, $hid, $uid);
@@ -840,6 +879,8 @@ function hunt_session_field(PDO $pdo, array $cfg, string $uid, int $now): ?array
         $hunt = hunt_current($pdo, $now);
         if (!$hunt || hunt_phase($hunt, $now) === 'draft') { return null; }
         if (site_banned($uid, $cfg, $now, $pdo)) { return null; }
+        [$hunt, $drawn] = hunt_auto_draw($pdo, $cfg, $hunt, $now);
+        if ($drawn) { hunt_purge_public(); }
         $hid = (int)$hunt['id'];
         $award = hunt_login_award($pdo, $hunt, $uid, $now);
         $wallet = hunt_wallet($pdo, $hid, $uid);
