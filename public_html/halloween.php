@@ -45,7 +45,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=2" />
+<link rel="stylesheet" href="css/hunt.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -188,8 +188,6 @@ page_lscache();
           <a class="hn-btn hn-guest-go" id="hnGuestGo" href="/api/roblox_start.php" hidden data-i18n="hunt.guest.login"><?= te('hunt.guest.login') ?></a>
           <p class="hn-guest-wait" id="hnGuestWait" hidden data-i18n="hunt.guest.closed"><?= te('hunt.guest.closed') ?></p>
         </section>
-
-        <img class="hn-hero-token" src="assets/hunt/token-512.webp" width="512" height="512" alt="" aria-hidden="true" />
       </div>
     </header>
 

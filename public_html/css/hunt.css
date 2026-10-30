@@ -809,16 +809,6 @@ body > .hn-page { flex: 1 0 auto; }
   color: var(--hn-soft);
 }
 
-.hn-hero-token {
-  position: absolute;
-  z-index: 1;
-  right: 60px;
-  top: 34px;
-  width: 300px;
-  height: auto;
-  rotate: -9deg;
-  pointer-events: none;
-}
 .hn-hero-branch {
   position: absolute;
   z-index: 0;
@@ -829,12 +819,8 @@ body > .hn-page { flex: 1 0 auto; }
   scale: -1 1;
   pointer-events: none;
 }
-@keyframes hn-drop {
-  from { opacity: 0; translate: 0 -46px; scale: .82; }
-}
 @keyframes hn-fly-l { from { translate: -260px 0; } }
 @keyframes hn-fly-r { from { translate: 220px 0; } }
-.hn-hero-token { animation: hn-drop var(--dur-bouncy, .958s) .2s var(--ease-bouncy, ease-out) both; }
 .hn-ghost { animation: hn-fly-l 1s .35s var(--ease-out, ease-out) both; }
 .hn-hero-branch { animation: hn-fly-r 1s .35s var(--ease-out, ease-out) both; }
 
@@ -1574,16 +1560,11 @@ body > .hn-page { flex: 1 0 auto; }
 .hn-page[data-phase="loading"] .hn-steps,
 .hn-page[data-phase="none"] .hn-steps { opacity: .55; }
 
-@media (max-width: 1100px) {
-  .hn-hero-token { right: 20px; width: 250px; }
-}
-
 @media (max-width: 900px) {
   .hn-hero-in { padding: 36px 20px 28px; }
   .hn-title,
   .hn-ghost { font-size: 80px; }
   .hn-ghost { left: -170px; }
-  .hn-hero-token { right: 12px; top: 40px; width: 190px; }
   .hn-hero-branch { right: -300px; top: -70px; width: 520px; }
   .hn-steps { max-width: none; }
   .hn-grid { grid-template-columns: minmax(0, 1fr); }
@@ -1601,7 +1582,6 @@ body > .hn-page { flex: 1 0 auto; }
   .hn-kicker { max-width: 60%; margin-top: 10px; font-size: 17px; }
   .hn-phase { margin-top: 12px; padding: 6px 14px 6px 11px; font-size: 13.5px; }
   .hn-phase-clock { font-size: 16px; }
-  .hn-hero-token { right: -4px; top: 6px; width: 118px; rotate: -12deg; }
   .hn-hero-branch { right: -170px; top: -46px; width: 320px; }
 
   .hn-steps {
@@ -1695,7 +1675,6 @@ body > .hn-page { flex: 1 0 auto; }
 @media (max-width: 370px) {
   .hn-title,
   .hn-ghost { font-size: 40px; }
-  .hn-hero-token { width: 100px; }
   .hn-days { gap: 16px 6px; }
 }
 
@@ -1711,7 +1690,6 @@ body > .hn-page { flex: 1 0 auto; }
   .hn-purse-fill,
   .hn-meter-fill { transition: none; }
   .hn.is-won .hn-bar::before { animation: none; opacity: 1; }
-  .hn-hero-token,
   .hn-ghost,
   .hn-hero-branch,
   .hn-day.is-now .hn-win::before,
