@@ -19,6 +19,7 @@ const SITEMAP_PAGES = [
     ['/trading',    'daily',   '0.7'],
     ['/stock',      'hourly',  '0.7'],
     ['/giveaways',  'daily',   '0.6'],
+    ['/halloween',  'daily',   '0.6'],
     ['/ads',        'monthly', '0.4'],
 ];
 // Правовые страницы двуязычные на одном адресе — языковых версий у них нет.

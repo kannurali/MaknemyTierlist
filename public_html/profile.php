@@ -81,6 +81,10 @@ $pfLogo  = $pfState === 'card' ? nick_logo($pfWho) : null;
 // Всплывающую подсказку рисует js/topbar.js по data-tip.
 $pfLogoKey = $pfLogo !== null ? 'nick.' . $pfLogo['role'] : '';
 
+// Титулы хэллоуинского ивента Spooky Tokens — под ником, на языке страницы
+// (api/lib/hunt_titles.php). Таблиц нет — пустой список, карточка цела.
+$pfTitles = $pfState === 'card' ? (hunt_titles_for($pfPdo, [$pfWho])[$pfWho] ?? []) : [];
+
 // Вход в панель со своего профиля: кнопку видят только те, кого config.php
 // записал в admin_ids (вся панель) или moderator_ids (обращения) — см.
 // site_role() в api/_bootstrap.php. На чужом профиле её нет никогда: права
@@ -162,6 +166,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
+<link rel="stylesheet" href="css/hunt.css?v=1" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -302,6 +307,9 @@ $pfTitle = $pfNick !== ''
 <?php endif; ?>
 
       <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?><?php if ($pfLogo !== null): ?><span class="nx-nick-badge" tabindex="0" role="img" data-tip="<?= $pfLogoKey ?>" data-i18n-label="<?= $pfLogoKey ?>" aria-label="<?= ta($pfLogoKey) ?>"><img class="pf-nick-logo" src="<?= $pfLogo['src'] ?>" alt="" /></span><?php endif; ?></h1>
+<?php if ($pfTitles): ?>
+      <p class="nx-titles pf-titles"><?php foreach ($pfTitles as $pfT): ?><span class="nx-title" data-kind="<?= $pfT['kind'] ?>"><?= htmlspecialchars(hunt_title_text($pfT['title'], i18n_lang()), ENT_QUOTES, 'UTF-8') ?></span><?php endforeach; ?></p>
+<?php endif; ?>
 <?php if ($pfCard['handle'] !== null): ?>
       <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php endif; ?>
@@ -594,6 +602,7 @@ $pfTitle = $pfNick !== ''
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/hunt-bar.js?v=1" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=7" defer></script>
   <script src="js/profile-chart.js?v=5" defer></script>
 <?php if ($pfTg !== null): ?>
@@ -601,7 +610,7 @@ $pfTitle = $pfNick !== ''
 <?php endif; ?>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=5" defer></script>
+  <script src="js/trade-cards.js?v=6" defer></script>
   <script src="js/profile-trades.js?v=4" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>

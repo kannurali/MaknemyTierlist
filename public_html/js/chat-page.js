@@ -48,6 +48,21 @@
     return badge;
   }
 
+  function titleChips(user) {
+    if (!user || !user.titles || !user.titles.length) { return null; }
+    var ru = (document.documentElement.lang || 'ru') === 'ru';
+    var box = document.createElement('span');
+    box.className = 'nx-titles';
+    user.titles.forEach(function (t) {
+      var chip = document.createElement('span');
+      chip.className = 'nx-title';
+      chip.setAttribute('data-kind', t.kind);
+      chip.textContent = ru ? t.title.ru : t.title.en;
+      box.appendChild(chip);
+    });
+    return box;
+  }
+
   function copyAllowed(node) {
     var el = node && node.nodeType === 1 ? node : (node ? node.parentElement : null);
     return !!(el && el.closest && el.closest(COPY_OK));
@@ -141,6 +156,8 @@
       handle.className = 'ct-handle';
       handle.textContent = t.peer.handle;
       meta.appendChild(handle);
+      var chips = titleChips(t.peer);
+      if (chips) { meta.appendChild(chips); }
 
       var st = document.createElement('span');
       st.className = 'ct-status';
@@ -193,6 +210,8 @@
       if (sel && !sel.isCollapsed && sel.containsNode(a, true)) { e.preventDefault(); }
     });
     roomTitle.appendChild(a);
+    var peerChips = titleChips(peer);
+    if (peerChips) { roomTitle.appendChild(peerChips); }
   }
 
   var emojiBtn   = $('ctEmojiBtn');

@@ -30,6 +30,18 @@
     return badge;
   }
 
+  function titleChips(user) {
+    if (!user || !user.titles || !user.titles.length) { return null; }
+    const ru = (document.documentElement.lang || "ru") === "ru";
+    const box = el("span", "nx-titles");
+    user.titles.forEach(t => {
+      const chip = el("span", "nx-title", ru ? t.title.ru : t.title.en);
+      chip.setAttribute("data-kind", t.kind);
+      box.appendChild(chip);
+    });
+    return box;
+  }
+
   function icon(id, cls) {
     const svg = document.createElementNS(SVG_NS, "svg");
     svg.setAttribute("class", cls);
@@ -206,6 +218,8 @@
       if (logo) { nick.appendChild(logo); }
       who.appendChild(nick);
       if (offer.author.handle) { who.appendChild(el("span", "tr-handle", offer.author.handle)); }
+      const chips = titleChips(offer.author);
+      if (chips) { who.appendChild(chips); }
       head.appendChild(who);
 
       const rep = el("span", "tr-rep");

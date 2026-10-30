@@ -136,6 +136,7 @@ function admin_nav(string $active): string {
             'news'    => ['/admin/news', 'Новости'],
             'promo'   => ['/admin/promo', 'Реклама'],
             'giveaways' => ['/admin/giveaways', 'Розыгрыши'],
+            'hunt'    => ['/admin/hunt', 'Ивент'],
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
         ]

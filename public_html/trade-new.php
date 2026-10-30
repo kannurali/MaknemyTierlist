@@ -57,6 +57,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
+<link rel="stylesheet" href="css/hunt.css?v=1" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
@@ -372,6 +373,7 @@ page_lscache();
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/hunt-bar.js?v=1" fetchpriority="high"></script>
   <script src="js/promo.js?v=36" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=12" fetchpriority="high"></script>
