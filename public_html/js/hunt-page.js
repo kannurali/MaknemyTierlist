@@ -231,6 +231,14 @@
     var showGuest = guest() && (H.phase === "soon" || H.phase === "open" || H.phase === "sales");
     g.hidden = !showGuest;
     if (!showGuest) { return; }
+    var gift = H.phase === "open" ? +(H.login || [])[H.day - 1] || 0 : 0;
+    var today = $("hnGuestToday");
+    today.textContent = "";
+    if (gift) {
+      today.appendChild(img(COIN));
+      today.appendChild(doc.createTextNode(t("hunt.guest.today", { n: num(gift) })));
+    }
+    today.hidden = !gift;
     var go = $("hnGuestGo");
     var can = !!(root.MKAuth && root.MKAuth.canLogin(S));
     go.hidden = !can;

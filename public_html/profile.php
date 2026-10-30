@@ -166,7 +166,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=1" />
+<link rel="stylesheet" href="css/hunt.css?v=2" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -602,7 +602,7 @@ $pfTitle = $pfNick !== ''
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-  <script src="js/hunt-bar.js?v=1" fetchpriority="high"></script>
+  <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/profile-page.js?v=7" defer></script>
   <script src="js/profile-chart.js?v=5" defer></script>
 <?php if ($pfTg !== null): ?>

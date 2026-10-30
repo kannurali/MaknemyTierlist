@@ -45,7 +45,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=1" />
+<link rel="stylesheet" href="css/hunt.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -183,6 +183,7 @@ page_lscache();
 
         <section class="hn-guest" id="hnGuest" aria-labelledby="hnGuestTitle" hidden>
           <p class="hn-guest-title" id="hnGuestTitle" data-i18n="hunt.guest.title"><?= te('hunt.guest.title') ?></p>
+          <p class="hn-guest-today" id="hnGuestToday" hidden></p>
           <p class="hn-guest-text" data-i18n="hunt.guest.text"><?= te('hunt.guest.text') ?></p>
           <a class="hn-btn hn-guest-go" id="hnGuestGo" href="/api/roblox_start.php" hidden data-i18n="hunt.guest.login"><?= te('hunt.guest.login') ?></a>
           <p class="hn-guest-wait" id="hnGuestWait" hidden data-i18n="hunt.guest.closed"><?= te('hunt.guest.closed') ?></p>
@@ -298,7 +299,7 @@ page_lscache();
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-  <script src="js/hunt-bar.js?v=1" fetchpriority="high"></script>
-  <script src="js/hunt-page.js?v=1" fetchpriority="high"></script>
+  <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
+  <script src="js/hunt-page.js?v=2" fetchpriority="high"></script>
 </body>
 </html>

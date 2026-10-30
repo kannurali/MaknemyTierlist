@@ -248,7 +248,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=1" />
+<link rel="stylesheet" href="css/hunt.css?v=2" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
 <link rel="stylesheet" href="css/gw-card.css?v=1" />
@@ -400,7 +400,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
-  <script src="js/hunt-bar.js?v=1" fetchpriority="high"></script>
+  <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/news.js?v=6" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
 

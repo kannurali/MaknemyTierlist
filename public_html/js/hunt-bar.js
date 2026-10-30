@@ -79,6 +79,10 @@
     return Math.floor((ms / 1000 + MSK) / DAY);
   }
 
+  function onEventPage() {
+    return /^\/(?:[a-z]{2}\/)?halloween\/?$/.test(root.location.pathname);
+  }
+
   function visible() {
     return doc.visibilityState === "visible";
   }
@@ -170,7 +174,7 @@
 
     bar = el("a", "hn-bar");
     bar.href = path("/halloween");
-    if (/^\/(?:[a-z]{2}\/)?halloween\/?$/.test(root.location.pathname)) {
+    if (onEventPage()) {
       bar.setAttribute("aria-current", "page");
       bar.addEventListener("click", function (e) {
         e.preventDefault();
@@ -241,8 +245,10 @@
     box.classList.toggle("is-won", st.next === "won");
     box.classList.toggle("is-ticket", st.next === "ticket");
 
-    tipLines[0].textContent = st.guest ? t("hunt.bar.guest") : t("hunt.earned", { n: num(st.earned), cap: num(st.cap) });
-    tipLines[1].textContent = "";
+    var gift = guestGift();
+    tipLines[0].textContent = gift ? t("hunt.bar.guestToday", { n: num(gift) })
+      : st.guest ? t("hunt.bar.guest") : t("hunt.earned", { n: num(st.earned), cap: num(st.cap) });
+    tipLines[1].textContent = gift ? t("hunt.bar.guest") : "";
     if (!st.guest && st.phase === "open") {
       tipLines[1].textContent = st.full ? t("hunt.today.full") : t("hunt.bar.today", { n: num(Math.floor(st.secs / 60)) });
     }
@@ -251,6 +257,7 @@
 
     var label = st.guest ? t("hunt.bar.label", { n: "0", cap: num(st.cap) }) + ". " + t("hunt.bar.guest")
       : t("hunt.bar.label", { n: num(st.earned), cap: num(st.cap) });
+    if (gift) { label += ". " + t("hunt.bar.guestToday", { n: num(gift) }); }
     if (hot) { label += ". " + hot; }
     bar.setAttribute("aria-label", label);
     measure();
@@ -286,8 +293,35 @@
     }, wait);
   }
 
+  function guestGift() {
+    return st && st.guest && st.phase === "open" ? st.gift : 0;
+  }
+
+  function joinUrl(s) {
+    var a = root.MKAuth;
+    return a && a.canLogin(s) ? a.startUrl() : path("/halloween");
+  }
+
+  function guestToast(s) {
+    var gift = guestGift();
+    if (!gift || onEventPage()) { return; }
+    var key = "hn-guest-day";
+    var day = String(mskDay(Date.now()));
+    try {
+      if (root.localStorage.getItem(key) === day) { return; }
+      root.localStorage.setItem(key, day);
+    } catch (_) {}
+    toastQ.push({
+      amt: "+" + num(gift),
+      text: t("hunt.toast.guest", { n: st.day }),
+      href: joinUrl(s),
+      ms: TOAST_MS * 2
+    });
+    pump();
+  }
+
   function showToast(item) {
-    var li = el("li", "hn-toast" + (item.title != null ? " is-title" : ""));
+    var li = el("li", "hn-toast" + (item.title != null ? " is-title" : "") + (item.href ? " is-link" : ""));
     var img = el("img");
     img.alt = "";
     img.width = 96;
@@ -303,6 +337,12 @@
       li.appendChild(el("span", "hn-toast-amt", item.amt));
       li.appendChild(el("span", "hn-toast-text", item.text));
     }
+    if (item.href) {
+      var go = el("a", "hn-toast-go");
+      go.href = item.href;
+      go.setAttribute("aria-label", item.amt + " " + item.text);
+      li.appendChild(go);
+    }
     while (toastBox.children.length >= 3) { toastBox.removeChild(toastBox.firstChild); }
     toastBox.appendChild(li);
     root.requestAnimationFrame(function () {
@@ -311,7 +351,7 @@
     setTimeout(function () {
       li.classList.remove("is-on");
       setTimeout(function () { if (li.parentNode) { li.parentNode.removeChild(li); } }, 700);
-    }, TOAST_MS);
+    }, item.ms || TOAST_MS);
   }
 
   function canBeat() {
@@ -477,11 +517,13 @@
     render();
   }
 
-  function startGuest() {
+  function startGuest(s) {
     pub(false).then(function (d) {
       var h = d && d.hunt;
       if (!h || !GUEST_PHASES[h.phase]) { return; }
+      var login = Array.isArray(h.login) ? h.login : [];
       st = {
+        gift: +login[(+h.day || 0) - 1] || 0,
         guest: true,
         phase: h.phase,
         day: h.day,
@@ -497,6 +539,7 @@
       };
       render();
       bind();
+      guestToast(s);
     });
   }
 
@@ -514,7 +557,7 @@
       startBeats();
       return;
     }
-    startGuest();
+    startGuest(s);
   }
 
   root.NX_HUNT = {
