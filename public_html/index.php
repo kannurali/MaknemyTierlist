@@ -158,7 +158,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
 <link rel="stylesheet" href="css/hunt.css?v=4" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
-<link rel="stylesheet" href="css/gw-card.css?v=1" />
+<link rel="stylesheet" href="css/gw-card.css?v=2" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -588,6 +588,6 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
-  <script src="js/gw-card.js?v=3" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=4" fetchpriority="high"></script>
 </body>
 </html>

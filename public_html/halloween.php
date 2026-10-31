@@ -46,6 +46,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=4" />
+<link rel="stylesheet" href="css/gw-card.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -224,6 +225,8 @@ page_lscache();
           <div class="hn-win-list" id="hnWinList"></div>
         </section>
 
+        <div class="hn-gwc" data-gwc="hunt"></div>
+
         <section class="hn-sec hn-cal" aria-labelledby="hnCalTitle">
           <div class="hn-sec-head">
             <h2 class="hn-h2" id="hnCalTitle" data-i18n="hunt.cal.title"><?= te('hunt.cal.title') ?></h2>
@@ -317,5 +320,7 @@ page_lscache();
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/hunt-page.js?v=3" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=4" fetchpriority="high"></script>
 </body>
 </html>

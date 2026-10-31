@@ -1404,7 +1404,7 @@ test('отписался — участие снято, бот пишет, в о
 
     $rep = gw_report($p, gw_load($p, $id));
     assert_eq(['tg' => 1, 'ch' => 0, 'cb' => 0, 'pop' => 0, 'page' => 0, 'c-tier' => 0, 'c-trade' => 0, 'c-calc' => 0,
-        'c-stock' => 0, 'c-news' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
+        'c-stock' => 0, 'c-news' => 0, 'c-hunt' => 0, '' => 0], $rep['sources'], 'источники оставшихся участников');
     $ch = $rep['channels'][0];
     assert_eq([1, 0, $link], [$ch['joined'], $ch['stayed'], $ch['link']], 'пришёл 1, остался 0');
     assert_eq(['501', '@ann', GW_NOW + 10, '1', false], [$ch['list'][0]['tg_id'], $ch['list'][0]['tg_name'], $ch['list'][0]['left_at'],

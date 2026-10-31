@@ -7,7 +7,7 @@
   var FLUSH_MS = 2500;
   var MAX_BATCH = 12;
 
-  var PLACES = ["tier", "trade", "calc", "stock", "news"];
+  var PLACES = ["tier", "trade", "calc", "stock", "news", "hunt"];
 
   function src(place) { return "c-" + place; }
 
@@ -217,13 +217,40 @@
       body.appendChild(el("b", "gwc-title", prize(g)));
       body.appendChild(meta(g, true));
       return [pic(g), body, button("gwc.see")];
+    },
+    hunt: function (g) {
+      var body = el("span", "gwc-body");
+      body.appendChild(tag("gwc.huntKicker"));
+      body.appendChild(el("b", "gwc-title", prize(g)));
+      body.appendChild(meta(g, true));
+      return [pic(g), body, button("gwc.huntBtn")];
+    }
+  };
+
+  var IDLE = {
+    hunt: function () {
+      var body = el("span", "gwc-body");
+      body.appendChild(tag("gwc.huntKicker"));
+      body.appendChild(el("b", "gwc-title", t("gwc.huntIdle")));
+      var m = el("span", "gwc-meta");
+      m.appendChild(el("span", "gwc-when", t("gwc.huntIdleText")));
+      body.appendChild(m);
+      return [GW.prizePic(null, "gwc-pic"), body, button("gwc.huntBtn")];
     }
   };
 
   function siteUrl(path) { return root.I18N && root.I18N.url ? root.I18N.url(path) : path; }
 
   function hrefFor(place, g) {
-    return siteUrl(place === "stock" ? "/giveaways" : "/giveaways#g" + g.id);
+    return siteUrl(place === "stock" || place === "hunt" ? "/giveaways" : "/giveaways#g" + g.id);
+  }
+
+  function idle(shell, place) {
+    shell.hidden = false;
+    var a = el("a", "gwc gwc--" + place + " is-idle");
+    a.href = siteUrl("/giveaways");
+    IDLE[place]().forEach(function (n) { a.appendChild(n); });
+    shell.appendChild(a);
   }
 
   function shellFor(place) {
@@ -236,6 +263,7 @@
   function fill(shell, place) {
     shell.textContent = "";
     shell.classList.remove("is-wait");
+    if (!pick && IDLE[place]) { idle(shell, place); return; }
     if (!pick) { shell.hidden = true; return; }
     shell.hidden = false;
     var g = pick.g;
