@@ -3,7 +3,8 @@
 --  Спека: docs/superpowers/specs/2026-10-30-spooky-tokens-design.md
 --
 --  Выполнить один раз на боевой базе после мержа (phpMyAdmin → SQL).
---  Повторный запуск безопасен: только CREATE TABLE IF NOT EXISTS.
+--  Повторный запуск безопасен: CREATE TABLE IF NOT EXISTS, а сезон 2026
+--  вставляется, только если его ещё нет. После запуска ивент сразу идёт.
 -- ==========================================================================
 
 -- --------------------------------------------------------------------------
@@ -137,3 +138,25 @@ CREATE TABLE IF NOT EXISTS hunt_titles (
   created_at BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (user_id, hunt_id, kind)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Сезон Хэллоуина 2026 (решение владельца 31.10.2026)
+-- --------------------------------------------------------------------------
+-- Старт 31 октября 00:00 МСК (1793394000), 7 дней: токены копятся до
+-- 7 ноября 00:00 МСК, потом их получить нельзя. Билеты продаются ещё сутки —
+-- до 8 ноября 00:00 МСК, итоги сами 8 ноября в 01:00 МСК (время итогов можно
+-- сдвинуть в /admin/hunt). Один приз — Hellfire Gas, один победитель; картинка
+-- из тирлиста. Титулы выдаются сами: за все 7 входов и за все 14 часовых
+-- наград. Сезон сразу опубликован (live). Повторный запуск второй не создаёт.
+INSERT INTO hunts (slug, status, title_ru, title_en, rules_ru, rules_en, starts_at, sales_end_at, draw_at,
+                   login_json, hours_json, prizes_json, claim_days, titles_json, created_at, updated_at)
+SELECT 'halloween-2026', 'live', 'Spooky Tokens', 'Spooky Tokens',
+       'Токены нельзя передать или продать. Победитель подтверждает выигрыш на этой странице за 7 дней, для связи нужен Telegram.',
+       'Tokens cannot be transferred or sold. The winner confirms the prize on this page within 7 days; Telegram is needed to get in touch.',
+       1793394000, 1794085200, 1794088800,
+       '[10,15,20,25,30,35,40]', '[15,20]',
+       '[{"name":"Hellfire Gas","count":1,"icon":"/images/aca91791385fbe7baeeae61a5699e27778971b9a.png"}]', 7,
+       '{"login":{"ru":"Ночной дозор","en":"Night Watch"},"hours":{"ru":"Хранитель склепа","en":"Crypt Keeper"}}',
+       UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM hunts WHERE slug = 'halloween-2026');

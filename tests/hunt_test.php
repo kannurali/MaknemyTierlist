@@ -110,6 +110,29 @@ test('миграция и schema.sql описывают таблицы ивен�
     assert_eq(false, hunt_ready(test_db()), 'без таблиц — не готово');
 });
 
+test('сезон 2026 из миграции: 31.10 по Москве, 7 дней, один Hellfire Gas, сразу идёт', function () {
+    $p = ht_db();
+    $sql = str_replace("\r\n", "\n", (string)file_get_contents(HT_ROOT . '/docs/migrations/2026-10-30-hunt.sql'));
+    assert_eq(1, preg_match_all('~^INSERT INTO hunts .*?;$~ms', $sql, $m), 'одна вставка сезона');
+    $ins = str_replace(['FROM DUAL', 'UNIX_TIMESTAMP()'], ['', "strftime('%s', 'now')"], $m[0][0]);
+    $p->exec($ins);
+    $p->exec($ins);
+    assert_eq(1, (int)$p->query('SELECT COUNT(*) FROM hunts')->fetchColumn(), 'повторный запуск не создаёт второй сезон');
+    $h = hunt_current($p, ht_at(1));
+    assert_eq([ht_start(), ht_start() + 8 * HT_DAY, ht_start() + 8 * HT_DAY + 3600],
+        [(int)$h['starts_at'], (int)$h['sales_end_at'], (int)$h['draw_at']], 'старт 31.10 00:00 МСК, итоги 8.11 01:00');
+    $pub = hunt_public($p, ht_at(1))['hunt'];
+    assert_eq(['open', 1, 420, 210], [$pub['phase'], $pub['day'], $pub['cap'], $pub['price']]);
+    assert_eq([['name' => 'Hellfire Gas', 'count' => 1, 'icon' => '/images/aca91791385fbe7baeeae61a5699e27778971b9a.png']], $pub['prizes']);
+    assert_eq(['Ночной дозор', 'Crypt Keeper'], [$pub['titles']['login']['ru'], $pub['titles']['hours']['en']]);
+    $u = ht_user($p, '1', 'ann');
+    assert_eq(10, hunt_session_field($p, [], $u, ht_at(1))['earned'], 'в первый день вход даёт токены');
+    assert_eq('sales', hunt_public($p, ht_start() + 7 * HT_DAY)['hunt']['phase'], 'после 7 дней — только билеты');
+    assert_eq([], hunt_session_field($p, [], $u, ht_start() + 7 * HT_DAY + 60)['gains'], 'после 7 дней токенов нет');
+    $form = hunt_admin_state($p, ht_at(1))['hunt'];
+    assert_eq(200, hunt_admin_save($p, $form, ht_at(1))[0], 'админка сохраняет сезон как есть');
+});
+
 test('день ивента — сутки по Москве', function () {
     $h = ['status' => 'live', 'starts_at' => ht_start(), 'sales_end_at' => ht_start() + 8 * HT_DAY];
     assert_eq(1793394000, ht_start(), '31.10 00:00 МСК = 30.10 21:00 UTC');

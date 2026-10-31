@@ -1033,7 +1033,7 @@
     var w = WINNERS[i];
     var mine = isMine(w);
     var A = L.anims;
-    var tk = ticketEl(w.ticket_no, t("hunt.draw.step", { n: i + 1, total: WINNERS.length }), { src: safeArt(w.prize && w.prize.icon), size: 120 }, false);
+    var tk = ticketEl(w.ticket_no, WINNERS.length > 1 ? t("hunt.draw.step", { n: i + 1, total: WINNERS.length }) : t("hunt.draw.stepOne"),{ src: safeArt(w.prize && w.prize.icon), size: 120 }, false);
     clearStage();
     L.slot.appendChild(tk.node);
     if (L.cap) { L.cap.classList.add("is-out"); }
