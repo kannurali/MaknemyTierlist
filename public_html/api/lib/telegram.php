@@ -678,8 +678,8 @@ function tg_tierlist_state(PDO $pdo): array {
     return is_array($d) ? $d : [];
 }
 
-// Предметы тирлиста — [id, имя, цена] по порядку тиров. Состояние присылает
-// админка, поэтому каждое поле проверяется, а не берётся на веру.
+// Предметы тирлиста — [id, имя, цена, тип, спрос] по порядку тиров. Состояние
+// присылает админка, поэтому каждое поле проверяется, а не берётся на веру.
 function tg_tier_items(array $state): array {
     $out = [];
     $tiers = is_array($state['tiers'] ?? null) ? $state['tiers'] : [];
@@ -692,7 +692,12 @@ function tg_tier_items(array $state): array {
             $name  = is_string($it['name'] ?? null) ? $it['name'] : '';
             $value = $it['value'] ?? '';
             $value = is_string($value) || is_int($value) || is_float($value) ? (string)$value : '';
-            $out[] = ['id' => $id, 'name' => tg_clean_line($name, 64), 'value' => tg_clean_line($value, 24)];
+            $type   = is_string($it['type'] ?? null) ? $it['type'] : '';
+            $demand = is_string($it['demand'] ?? null) && isset(TG_DEMAND[$it['demand']]) ? $it['demand'] : '';
+            $out[] = [
+                'id' => $id, 'name' => tg_clean_line($name, 64), 'value' => tg_clean_line($value, 24),
+                'type' => $type, 'demand' => $demand,
+            ];
         }
     }
     return $out;
@@ -724,27 +729,64 @@ function tg_price_number(string $v): ?float {
  * все предметы разом, поэтому молчим и здесь.
  */
 function tg_price_changes(array $old, array $new): array {
+    $out = [];
+    foreach (tg_item_changes($old, $new) as $c) {
+        if ($c['kind'] === 'price') { $out[] = ['name' => $c['name'], 'from' => $c['from'], 'to' => $c['to']]; }
+    }
+    return $out;
+}
+
+/**
+ * То же с подробностями — для поста в чат: цены по тем же правилам, что
+ * выше, а за ними смена спроса. Каждое изменение — ['key', 'kind' =>
+ * price|demand, 'from', 'to', 'name', 'group']; key — вид и id предмета, по
+ * нему склеиваются сохранения подряд (tg_post_merge).
+ *
+ * Спрос объявляется только у предмета, который был и раньше, и только новый:
+ * снятую отметку объявлять нечем.
+ */
+function tg_item_changes(array $old, array $new): array {
     $before = [];
-    foreach (tg_tier_items($old) as $it) { $before[$it['id']] = $it['value']; }
+    foreach (tg_tier_items($old) as $it) { $before[$it['id']] = $it; }
     if (!$before) { return []; }
 
-    $out  = [];
-    $seen = [];
+    $prices = [];
+    $demand = [];
+    $seen   = [];
     foreach (tg_tier_items($new) as $it) {
         if (isset($seen[$it['id']])) { continue; }
         $seen[$it['id']] = true;
-        if ($it['value'] === '' || $it['name'] === '') { continue; }
+        if ($it['name'] === '') { continue; }
 
-        $was = $before[$it['id']] ?? '';
-        if ($was === $it['value']) { continue; }
-        if ($was !== '') {
-            $a = tg_price_number($was);
-            $b = tg_price_number($it['value']);
-            if ($a !== null && $b !== null && $a == $b) { continue; }
+        $prev = $before[$it['id']] ?? null;
+        $base = ['name' => $it['name'], 'group' => tg_item_group($it['type'])];
+        $was  = $prev !== null && $prev['value'] !== '' ? $prev['value'] : null;
+        if ($it['value'] !== '' && tg_price_moved($was, $it['value'])) {
+            $prices[] = ['key' => 'p:' . $it['id'], 'kind' => 'price', 'from' => $was, 'to' => $it['value']] + $base;
         }
-        $out[] = ['name' => $it['name'], 'from' => $was === '' ? null : $was, 'to' => $it['value']];
+        if ($prev !== null && $it['demand'] !== '' && $it['demand'] !== $prev['demand']) {
+            $demand[] = ['key' => 'd:' . $it['id'], 'kind' => 'demand', 'from' => $prev['demand'], 'to' => $it['demand']] + $base;
+        }
     }
-    return $out;
+    return array_merge($prices, $demand);
+}
+
+// Сменилась ли цена. null — раньше цены не было. «25000» → «25 000» и
+// «1k» → «1000» — та же цена.
+function tg_price_moved(?string $from, string $to): bool {
+    if ($from === null) { return true; }
+    if ($from === $to) { return false; }
+    $a = tg_price_number($from);
+    $b = tg_price_number($to);
+    return !($a !== null && $b !== null && $a == $b);
+}
+
+// Раздел тирлиста по типу предмета — как groupOf() в js/app.js.
+function tg_item_group(string $type): string {
+    if ($type === 'p') { return 'perms'; }
+    if (in_array($type, ['gp', 'vh', 'v'], true)) { return 'passes'; }
+    if (in_array($type, ['s', 'm', 'cs', 'cm', 'ms', 'cr'], true)) { return 'configurators'; }
+    return 'fruits';
 }
 
 function tg_prices_text(array $changes, string $lang): string {
@@ -841,16 +883,23 @@ function tg_after_support(PDO $pdo, array $cfg, string $authorId): void {
 }
 
 // Админка сохранила тирлист. $old — состояние из базы до сохранения.
-// $send и $sleep подставляют тесты; на бою — настоящий Telegram.
-function tg_after_prices(PDO $pdo, array $cfg, array $old, array $new, ?callable $send = null, ?callable $sleep = null): void {
+// Сначала пост в «Башню Шута» (одно сообщение), потом личная рассылка.
+// $send, $sleep и $now подставляют тесты; на бою — настоящий Telegram.
+function tg_after_prices(PDO $pdo, array $cfg, array $old, array $new, ?callable $send = null, ?callable $sleep = null, ?int $now = null): void {
     $tg = tg_config($cfg);
     if (!tg_enabled($tg)) { return; }
-    $changes = tg_price_changes($old, $new);
-    if (!$changes) { return; }
+    $post = tg_item_changes($old, $new);
+    if (!$post) { return; }
     tg_finish_response();
     tg_long_run();
+    $send = $send ?? tg_http($tg['token']);
     try {
-        tg_notify_prices($pdo, $tg, $send ?? tg_http($tg['token']), $changes, $sleep);
+        tg_post_prices($pdo, $send, $post, $now ?? time(), $sleep);
+    } catch (Throwable $e) {
+        error_log('tg prices post: ' . $e->getMessage());
+    }
+    try {
+        tg_notify_prices($pdo, $tg, $send, tg_price_changes($old, $new), $sleep);
     } catch (Throwable $e) {
         error_log('tg prices notify: ' . $e->getMessage());
     }
@@ -867,6 +916,297 @@ function tg_after_news(PDO $pdo, array $cfg, int $newsId, int $now, ?callable $s
     } catch (Throwable $e) {
         error_log('tg news notify: ' . $e->getMessage());
     }
+}
+
+// --------------------------------------------------------------------------
+//  Пост о ценах в чат «Башня Шута»
+// --------------------------------------------------------------------------
+//
+// Кроме личной рассылки бот публикует изменения цен в один общий чат —
+// «Башня Шута», где он админ. Только туда: другие группы и каналы бота
+// (розыгрыши) постов не получают, так решил владелец. И только цены со
+// спросом: новости, сток и розыгрыши в этот чат не идут.
+//
+// Чат ищется в tg_channels по названию: строку туда кладёт вебхук, когда
+// бота добавляют в чат или меняют ему права. Нет строки — пост молчит, а
+// /admin/support говорит, что сделать.
+//
+// Оформление — как у постов владельца об обновлении экономики: картинка
+// сверху (превью ссылки на assets/tg/prices.jpg), разделы тирлиста,
+// «Упали / Выросли», «Обновили Demand», ссылка на тирлист.
+//
+// Сохранения подряд не плодят посты: TG_POST_MERGE секунд после поста бот
+// правит тот же пост, сливая изменения. Цену вернули как было — строка
+// уходит; вернули всё — пост удаляется. Для этого нужны колонки prices_* в
+// tg_channels (docs/migrations/2026-10-17-tg-price-post.sql); без них каждое
+// сохранение — новый пост.
+
+// Часть названия чата, в нижнем регистре.
+const TG_POST_CHAT = 'башня шута';
+
+const TG_POST_MERGE = 1800;
+
+// Картинка над постом. Telegram кеширует превью по адресу: новая картинка —
+// новый ?v=.
+const TG_POST_IMAGE = TG_SITE . '/assets/tg/prices.jpg?v=1';
+
+// Сколько предметов перечисляется в посте; дальше — «…и ещё N». Telegram
+// режет сообщение на 4096 символах, и tg_post_fit() убавляет, если имена
+// длинные.
+const TG_POST_LINES = 30;
+
+// Спрос — значения поля demand и как их называет пост. Слова — из постов
+// владельца («Хороший», «Средний»), а не из легенды тирлиста.
+const TG_DEMAND = [
+    'neon'   => 'Overpriced',
+    'green'  => 'Хороший',
+    'yellow' => 'Средний',
+    'orange' => 'Ниже среднего',
+    'red'    => 'Низкий',
+];
+
+// Разделы тирлиста в посте и их порядок (tg_item_group).
+const TG_POST_GROUPS = [
+    'perms'         => '💵 Permanent Fruits',
+    'fruits'        => '🍎 Фрукты',
+    'configurators' => '🎨 Конфигураторы',
+    'passes'        => '🎟 Пассы и ваучеры',
+];
+
+const TG_POST_BUCKETS = [
+    'down' => '🔽 Упали:',
+    'up'   => '🔼 Выросли:',
+    'fix'  => '🔄 Исправили цену:',
+    'new'  => '🆕 Добавили:',
+];
+
+/**
+ * Чат «Башня Шута» — строка tg_channels целиком, с prices_*, если миграция
+ * уже есть. Группа важнее канала с тем же названием. null — бот о таком чате
+ * не знает.
+ */
+function tg_post_chat(PDO $pdo): ?array {
+    try {
+        $rows = $pdo->query('SELECT * FROM tg_channels ORDER BY updated_at DESC')->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return null;
+    }
+    $channel = null;
+    foreach ($rows as $r) {
+        if (mb_strpos(mb_strtolower((string)$r['title']), TG_POST_CHAT) === false) { continue; }
+        if ((string)$r['kind'] !== 'channel') { return $r; }
+        if ($channel === null) { $channel = $r; }
+    }
+    return $channel;
+}
+
+/**
+ * Для /admin/support: куда уйдёт пост. null — чата нет в tg_channels;
+ * иначе ['title', 'merge' => есть ли колонки для склейки постов].
+ */
+function tg_post_status(PDO $pdo): ?array {
+    $chat = tg_post_chat($pdo);
+    if ($chat === null) { return null; }
+    return ['title' => (string)$chat['title'], 'merge' => array_key_exists('prices_msg', $chat)];
+}
+
+function tg_post_plural(int $n): string {
+    $d = $n % 10;
+    $h = $n % 100;
+    if ($d === 1 && $h !== 11) { return 'изменение'; }
+    if ($d >= 2 && $d <= 4 && ($h < 12 || $h > 14)) { return 'изменения'; }
+    return 'изменений';
+}
+
+/**
+ * Текст поста в HTML-разметке Telegram. Имена и цены пришли из админки и
+ * экранируются. $limit — сколько предметов перечислить.
+ *
+ * Невидимая ссылка в начале — на картинку: link_preview_options в
+ * tg_post_message() и так показывают её, ссылка в тексте страхует превью.
+ */
+function tg_post_text(array $changes, int $limit = TG_POST_LINES): string {
+    $h = function (string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
+
+    $groups = [];
+    $demand = [];
+    foreach ($changes as $c) {
+        if ($c['kind'] === 'demand') {
+            $demand[] = '• ' . $h($c['name']) . ' → ' . $h(TG_DEMAND[$c['to']] ?? $c['to']);
+            continue;
+        }
+        if ($c['from'] === null) {
+            $bucket = 'new';
+            $line   = '• ' . $h($c['name']) . ' — ' . $h($c['to']);
+        } else {
+            $a = tg_price_number($c['from']);
+            $b = tg_price_number($c['to']);
+            $bucket = ($a === null || $b === null) ? 'fix' : ($b > $a ? 'up' : 'down');
+            $line   = '• ' . $h($c['name']) . ' — ' . $h($c['from']) . ' → ' . $h($c['to']);
+        }
+        $groups[$c['group']][$bucket][] = $line;
+    }
+
+    $left = $limit;
+    $cut  = 0;
+    $take = function (array $lines) use (&$left, &$cut): array {
+        $keep  = array_slice($lines, 0, max(0, $left));
+        $left -= count($keep);
+        $cut  += count($lines) - count($keep);
+        return $keep;
+    };
+
+    $parts = [];
+    foreach (TG_POST_GROUPS as $g => $title) {
+        if (empty($groups[$g])) { continue; }
+        $block = [];
+        foreach (TG_POST_BUCKETS as $b => $label) {
+            if (empty($groups[$g][$b])) { continue; }
+            $lines = $take($groups[$g][$b]);
+            if ($lines) { $block[] = '<b>' . $label . "</b>\n" . implode("\n", $lines); }
+        }
+        if ($block) { $parts[] = '<b>' . $title . "</b>\n\n" . implode("\n\n", $block); }
+    }
+    if ($demand) {
+        $lines = $take($demand);
+        if ($lines) { $parts[] = "<b>✅ Обновили Demand:</b>\n" . implode("\n", $lines); }
+    }
+    if ($cut > 0) { $parts[] = '…и ещё ' . $cut . ' ' . tg_post_plural($cut) . ' — всё в тирлисте.'; }
+
+    return '<a href="' . $h(TG_POST_IMAGE) . '">&#8205;</a>Ⓜ️ <b>Обновление цен в тирлисте</b>' . "\n\n"
+        . "Пересмотрели значения — вот что изменилось.\n\n"
+        . implode("\n\n", $parts) . "\n\n"
+        . '<i>Ориентируйтесь в первую очередь на собственное мнение: мы показываем ситуацию на рынке, '
+        . 'а не заставляем трейдить строго по нашим ценам.</i>' . "\n\n"
+        . '📊 ' . TG_SITE . "/tierlist\n\n"
+        . 'Удачи вам в трейдах!';
+}
+
+// Текст, который влезает в сообщение: Telegram берёт до 4096 символов после
+// разбора разметки, запас — на эмодзи, которые он считает за два.
+function tg_post_fit(array $changes): string {
+    $limit = TG_POST_LINES;
+    $text  = tg_post_text($changes, $limit);
+    while ($limit > 5 && mb_strlen(html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8')) > 3800) {
+        $limit -= 5;
+        $text = tg_post_text($changes, $limit);
+    }
+    return $text;
+}
+
+// Картинка сверху крупно, кнопка в тирлист.
+function tg_post_message(int $chatId, string $text): array {
+    return tg_message_buttons($chatId, $text, [['📊 Открыть тирлист', TG_SITE . '/tierlist']]) + [
+        'parse_mode'           => 'HTML',
+        'link_preview_options' => ['url' => TG_POST_IMAGE, 'prefer_large_media' => true, 'show_above_text' => true],
+    ];
+}
+
+/**
+ * Склеить изменения прошлого поста с новыми: «было» — из прошлого, «стало» —
+ * из нового. Вернули как было — изменение выпадает.
+ */
+function tg_post_merge(array $prev, array $cur): array {
+    $all = [];
+    foreach (array_merge($prev, $cur) as $c) {
+        $k = $c['key'];
+        if (isset($all[$k])) { $c['from'] = $all[$k]['from']; }
+        $all[$k] = $c;
+    }
+    $out = [];
+    foreach ($all as $c) {
+        $moved = $c['kind'] === 'price' ? tg_price_moved($c['from'], $c['to']) : $c['from'] !== $c['to'];
+        if ($moved) { $out[] = $c; }
+    }
+    return $out;
+}
+
+// Изменения прошлого поста из prices_log. Пишем их сами, но и свою строку из
+// базы проверяем: кривая запись не должна уронить пост.
+function tg_post_log($raw): array {
+    $d = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+    if (!is_array($d)) { return []; }
+    $out = [];
+    foreach ($d as $c) {
+        if (!is_array($c)) { continue; }
+        foreach (['key', 'kind', 'to', 'name', 'group'] as $f) {
+            if (!is_string($c[$f] ?? null)) { continue 2; }
+        }
+        $from = $c['from'] ?? null;
+        if (!in_array($c['kind'], ['price', 'demand'], true) || ($from !== null && !is_string($from))) { continue; }
+        $out[] = [
+            'key'   => $c['key'],
+            'kind'  => $c['kind'],
+            'from'  => $from,
+            'to'    => $c['to'],
+            'name'  => $c['name'],
+            'group' => isset(TG_POST_GROUPS[$c['group']]) ? $c['group'] : 'fruits',
+        ];
+    }
+    return $out;
+}
+
+// Запомнить пост для склейки. До миграции колонок нет — тогда без склейки.
+function tg_post_store(PDO $pdo, int $chatId, int $msgId, int $at, array $changes): void {
+    try {
+        $pdo->prepare('UPDATE tg_channels SET prices_msg = :m, prices_at = :a, prices_log = :l WHERE chat_id = :c')
+            ->execute([
+                ':m' => $msgId, ':a' => $at, ':c' => $chatId,
+                ':l' => $changes ? json_encode($changes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '',
+            ]);
+    } catch (PDOException $e) {
+        return;
+    }
+}
+
+// Вызов Telegram с одним повтором на 429 — как в рассылке.
+function tg_post_call(callable $send, string $method, array $params, callable $sleep): ?array {
+    $res = $send($method, $params);
+    if (is_array($res) && (int)($res['error_code'] ?? 0) === 429) {
+        $wait = (int)($res['parameters']['retry_after'] ?? 1);
+        $sleep(max(1, min(30, $wait)) * 1000000);
+        $res = $send($method, $params);
+    }
+    return $res;
+}
+
+/**
+ * Опубликовать изменения в «Башне Шута» или поправить недавний пост.
+ * $changes — из tg_item_changes(). true — пост ушёл, исправлен или удалён.
+ */
+function tg_post_prices(PDO $pdo, callable $send, array $changes, int $now, ?callable $sleep = null): bool {
+    if (!$changes) { return false; }
+    $chat = tg_post_chat($pdo);
+    if ($chat === null) { return false; }
+    $sleep  = $sleep ?? function (int $us): void { usleep($us); };
+    $chatId = (int)$chat['chat_id'];
+    $msgId  = (int)($chat['prices_msg'] ?? 0);
+    $at     = (int)($chat['prices_at'] ?? 0);
+
+    if ($msgId > 0 && $now - $at < TG_POST_MERGE) {
+        $all = tg_post_merge(tg_post_log($chat['prices_log'] ?? ''), $changes);
+        if (!$all) {
+            tg_post_call($send, 'deleteMessage', ['chat_id' => $chatId, 'message_id' => $msgId], $sleep);
+            tg_post_store($pdo, $chatId, 0, 0, []);
+            return true;
+        }
+        $res = tg_post_call($send, 'editMessageText', ['message_id' => $msgId] + tg_post_message($chatId, tg_post_fit($all)), $sleep);
+        $same = is_array($res) && stripos((string)($res['description'] ?? ''), 'not modified') !== false;
+        // Telegram не ответил — правка могла пройти, и второй пост был бы
+        // дублем. Склейку запоминаем в любом случае: следующая правка
+        // перепишет пост целиком.
+        if ($res === null || $same || !empty($res['ok'])) {
+            tg_post_store($pdo, $chatId, $msgId, $at, $all);
+            return $res !== null;
+        }
+        // Пост удалили руками — новый, со всем, что накопилось.
+        $changes = $all;
+    }
+
+    $res = tg_post_call($send, 'sendMessage', tg_post_message($chatId, tg_post_fit($changes)), $sleep);
+    if (!is_array($res) || empty($res['ok'])) { return false; }
+    tg_post_store($pdo, $chatId, (int)($res['result']['message_id'] ?? 0), $now, $changes);
+    return true;
 }
 
 // --------------------------------------------------------------------------

@@ -105,12 +105,30 @@ if (!is_admin()) {
     $reach = $aud !== null
         ? "<p>Подключили Telegram: {$aud['linked']}. Получают изменения цен: {$aud['prices']}, новости: {$aud['news']}.</p>"
         : '<p class="adm-muted">Рассылки цен и новостей молчат: выполните миграцию <code>docs/migrations/2026-09-25-tg-prefs.sql</code>.</p>';
+    // Пост о ценах в чат «Башня Шута» (tg_post_prices): нашёл ли бот чат и
+    // есть ли колонки, чтобы сохранения подряд правили один пост.
+    $chat = null;
+    try {
+        $chat = tg_post_status(db());
+    } catch (Throwable $e) {
+        $chat = null;
+    }
+    if ($chat === null) {
+        $group = '<p class="adm-muted">Пост о ценах в «Башню Шута» молчит: бот не знает этот чат. Поменяйте боту любое право в чате (или снимите и снова назначьте админом) — Telegram сообщит о чате, и посты пойдут.</p>';
+    } else {
+        $title = support_h($chat['title']);
+        $group = "<p>Изменения цен бот публикует в чат «{$title}».</p>";
+        if (!$chat['merge']) {
+            $group .= '<p class="adm-muted">Выполните миграцию <code>docs/migrations/2026-10-17-tg-price-post.sql</code> — тогда сохранения подряд будут править один пост, а не плодить новые.</p>';
+        }
+    }
     $note  = '';
     if ($flag === 'ok')   { $note = '<p class="sp-bot-note is-ok">Вебхук подключён.</p>'; }
     if ($flag === 'fail') { $note = '<p class="sp-bot-note is-fail">Telegram не принял вебхук — проверьте токен в config.php.</p>'; }
     $bot = <<<HTML
 <p>Бот {$name}. Модераторов в config.php: {$mods}, подключили Telegram: {$linked}.</p>
   {$reach}
+  {$group}
   <form method="post" action="/api/tg_setup.php">
     <button class="adm-btn" type="submit">Подключить вебхук</button>
   </form>
