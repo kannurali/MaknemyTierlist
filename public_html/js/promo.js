@@ -94,7 +94,8 @@
     "c_muryn4isxftf": "promo.channelDockText",
     "house-tg-bloxfruits": "promo.channelDockText",
     "starvell-2026-10": "promo.starvellDockText",
-    "house-giveaway-halloween-2026": "promo.halloweenGiveawayDockText"
+    "house-giveaway-halloween-2026": "promo.halloweenGiveawayDockText",
+    "house-giveaway-hellfire-2026": "promo.hellfireGiveawayDockText"
   };
 
   function dockTextKey(campaign) {
@@ -692,6 +693,34 @@
     notes: ""
   };
 
+  var HOUSE_HELLFIRE = {
+    id: "house-giveaway-hellfire-2026",
+    name: "house-giveaway-hellfire-2026",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "2026-10-31",
+    end: "",
+    href: "/giveaways#g6",
+    text: "",
+    cta: "",
+    textKey: "promo.hellfireGiveawayText",
+    ctaKey: "promo.giveawayCta",
+    gw: 6,
+
+    erid: "",
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip: { src: "/assets/promo/hellfire-gw-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/hellfire-gw-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/hellfire-gw-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/hellfire-gw-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+    },
+
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
   var HOUSE_CHANNEL = {
     id: "house-tg-bloxfruits",
     name: "house-tg-bloxfruits",
@@ -769,7 +798,7 @@
     notes: ""
   };
 
-  var BOOKED = [PLAYEROK, STARVELL];
+  var BOOKED = [HOUSE_HELLFIRE, PLAYEROK, STARVELL];
 
   function bookedFor(campaign, slot, now, page) {
     return campaign.enabled
@@ -843,6 +872,7 @@
     HOUSE_SLOT: HOUSE_SLOT,
     HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
     HOUSE_HALLOWEEN: HOUSE_HALLOWEEN,
+    HOUSE_HELLFIRE: HOUSE_HELLFIRE,
     HOUSE_CHANNEL: HOUSE_CHANNEL,
     PLAYEROK: PLAYEROK,
     STARVELL: STARVELL,
