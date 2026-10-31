@@ -48,6 +48,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
+<link rel="stylesheet" href="css/hunt.css?v=4" />
 
 
 
@@ -336,8 +337,9 @@ header('Cache-Control: no-cache, must-revalidate');
 
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
+  <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=20" defer></script>
+  <script src="js/chat-page.js?v=21" defer></script>
 
 
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>

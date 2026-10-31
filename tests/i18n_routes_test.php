@@ -5,7 +5,7 @@ require_once dirname(__DIR__) . '/public_html/api/lib/i18n.php';
 
 $HT = str_replace("\r\n", "\n", (string)file_get_contents(dirname(__DIR__) . '/public_html/.htaccess'));
 $EXTRA = implode('|', array_values(array_diff(I18N_LANGS, [I18N_DEFAULT])));
-const RT_SECTIONS = 'tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+';
+const RT_SECTIONS = 'tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|halloween|ads|news|news/[0-9]+';
 const RT_FILES = [
     'tierlist'       => '/index.php',
     'calculator'     => '/calculator.php',
@@ -16,6 +16,7 @@ const RT_FILES = [
     'stock'          => '/stock.php',
     'support'        => '/support.php',
     'giveaways'      => '/giveaways.php',
+    'halloween'      => '/halloween.php',
     'ads'            => '/promote.php',
     'news'           => '/news.php',
     'news/([0-9]+)'  => '/news.php?id=$2',

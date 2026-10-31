@@ -34,9 +34,9 @@ test('.htaccess turns on the LiteSpeed cache lookup', function () use ($PUB) {
         'CacheLookup inside <IfModule LiteSpeed>');
 });
 
-test('state.php and stock.php take no query string at all', function () use ($PUB) {
+test('state.php, stock.php and hunt.php take no query string at all', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
-    assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]'), 'any query string is refused');
+    assert_eq('.', dg_cond_before($ht, 'RewriteRule ^api/(state|stock|hunt)\.php$ - [F,L]'), 'any query string is refused');
 });
 
 // Язык в адресе — только из списка сайта и только последним параметром:
@@ -107,7 +107,7 @@ test('a path tail after .php is refused', function () use ($PUB) {
 test('the refusal rules sit between the redirects and the page rewrites', function () use ($PUB) {
     $ht = dg_read("$PUB/.htaccess");
     $https = strpos($ht, 'RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]');
-    $state = strpos($ht, 'RewriteRule ^api/(state|stock)\.php$ - [F,L]');
+    $state = strpos($ht, 'RewriteRule ^api/(state|stock|hunt)\.php$ - [F,L]');
     $pages = strpos($ht, 'RewriteRule ^tierlist$ /index.php [L]');
     assert_true($https !== false && $state !== false && $pages !== false, 'all rules found');
     assert_true($https < $state && $state < $pages, 'order');
@@ -131,7 +131,8 @@ test('session-bound and writing endpoints never ask for the cache', function () 
               'api/news_save.php', 'api/news_delete.php', 'api/like.php', 'api/news_like.php',
               'api/roblox_start.php', 'api/roblox_callback.php',
               'api/tg_link.php', 'api/tg_webhook.php', 'api/tg_setup.php',
-              'admin-giveaways.php', 'api/giveaway_enter.php', 'api/giveaway_admin.php'] as $f) {
+              'admin-giveaways.php', 'api/giveaway_enter.php', 'api/giveaway_admin.php',
+              'admin-hunt.php', 'api/hunt_me.php', 'api/hunt_act.php', 'api/hunt_admin.php'] as $f) {
         $src = dg_read("$PUB/$f");
         assert_eq(false, strpos($src, 'page_lscache('), "$f: page_lscache");
         assert_eq(false, strpos($src, 'lscache_public('), "$f: lscache_public");
@@ -153,6 +154,7 @@ test('a successful deploy purges the LiteSpeed cache', function () use ($PUB) {
 test('the polled endpoints are cacheable', function () use ($PUB) {
     assert_true(strpos(dg_read("$PUB/api/state.php"), 'lscache_public(5)') !== false, 'state.php for 5 s');
     assert_true(strpos(dg_read("$PUB/api/giveaways.php"), 'lscache_public(GW_PUBLIC_CACHE)') !== false, 'giveaways.php');
+    assert_true(strpos(dg_read("$PUB/api/hunt.php"), 'lscache_public(HUNT_PUBLIC_CACHE)') !== false, 'hunt.php');
     foreach (['tierlist.php', 'promo.php', 'og-tierlist.php', 'og-news.php'] as $f) {
         assert_true(strpos(dg_read("$PUB/api/$f"), 'lscache_public(86400)') !== false, $f);
     }

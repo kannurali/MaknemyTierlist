@@ -2813,11 +2813,11 @@ function gw_after_places(PDO $pdo, array $cfg, array $note, int $now, ?callable 
 // карточки и вступил на /giveaways — у участника src «c-» + место, так в
 // отчёте видно, какое место приводит участников. Показы и переходы каждого
 // места копятся в gw_card_stats (api/gw_stat.php).
-const GW_CARD_PLACES = ['tier', 'trade', 'calc', 'stock', 'news'];
+const GW_CARD_PLACES = ['tier', 'trade', 'calc', 'stock', 'news', 'hunt'];
 
 // ch — перешёл на сайт по кнопке поста в Telegram-канале (раздел «Пост в
 // канале»); cb — вступил кнопкой под постом прямо в Telegram (gw_tg.php).
-const GW_SOURCES = ['tg', 'ch', 'cb', 'pop', 'page', 'c-tier', 'c-trade', 'c-calc', 'c-stock', 'c-news'];
+const GW_SOURCES = ['tg', 'ch', 'cb', 'pop', 'page', 'c-tier', 'c-trade', 'c-calc', 'c-stock', 'c-news', 'c-hunt'];
 
 function gw_src($v): string {
     return is_string($v) && in_array($v, GW_SOURCES, true) ? $v : '';

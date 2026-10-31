@@ -115,6 +115,7 @@ function chat_user_row(?array $r, int $now): ?array {
         'handle' => '@' . (string)$r['username'],
         'avatar' => (string)($r['avatar_url'] ?? ''),
         'logo'   => nick_logo((string)$r['roblox_id']),
+        'titles' => [],
         'status' => ($seen > 0 && ($now - $seen) <= CHAT_ONLINE_WINDOW) ? 'online' : 'offline',
     ];
 }
@@ -240,7 +241,7 @@ function chat_users_by_id(PDO $pdo, array $ids, int $now): array {
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $out[(string)$r['roblox_id']] = chat_user_row($r, $now);
     }
-    return $out;
+    return hunt_titles_attach($pdo, $out);
 }
 
 function chat_last_messages(PDO $pdo, array $threadIds): array {

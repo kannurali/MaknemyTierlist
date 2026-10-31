@@ -65,13 +65,13 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # не шлёт, превращал бы каждый запрос флуда в промах мимо кеша, то есть в PHP
 # и MySQL. Такие запросы LiteSpeed отбивает 403 сам, не запуская PHP.
 #
-# state.php и stock.php клиент зовёт без параметров вовсе, giveaways.php —
+# state.php, stock.php и hunt.php клиент зовёт без параметров вовсе, giveaways.php —
 # без них или с ?test=1 (тестовые розыгрыши), promo.php — без них или с
 # ?rev=<число>, tierlist.php — так же. Страницы сайта добавляют последним
 # параметром язык: giveaways.php?test=1&lang=de, tierlist.php?rev=1&lang=de —
 # по адресу на язык, не больше.
 RewriteCond %{QUERY_STRING} .
-RewriteRule ^api/(state|stock)\.php$ - [F,L]
+RewriteRule ^api/(state|stock|hunt)\.php$ - [F,L]
 
 RewriteCond %{QUERY_STRING} !^((test=1&)?lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)|test=1)?$
 RewriteRule ^api/giveaways\.php$ - [F,L]
@@ -164,7 +164,7 @@ RewriteCond %{ENV:REDIRECT_STATUS} ^$
 RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
 RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
 RewriteCond %{ENV:NX_PICK} ^(en|de|fr|es|it|pt|pl|tr|uk)$
-RewriteRule ^(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|ads|news|news/[0-9]+)$ /%1/$1 [R=302,L]
+RewriteRule ^(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|halloween|ads|news|news/[0-9]+)$ /%1/$1 [R=302,L]
 
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/$ /$1 [L,R=301]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(.+)/$ /$1/$2 [L,R=301]
@@ -179,6 +179,7 @@ RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/trading/new$ /trade-new.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/stock$ /stock.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/support$ /support.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/giveaways$ /giveaways.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/halloween$ /halloween.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/ads$ /promote.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news$ /news.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news/([0-9]+)$ /news.php?id=$2 [L]
@@ -314,6 +315,17 @@ RewriteRule ^giveaways\.php$ /giveaways [L,R=301]
 
 RewriteRule ^giveaways$ /giveaways.php [L]
 
+# ------------------------- Хэллоуинский ивент -------------------------
+# Spooky Tokens (api/lib/hunt.php). Слова event/promo в адресе не берём —
+# их режут блокировщики. Пути внутри halloween.php документ-относительные,
+# отсюда тот же приём, что у /stock.
+RewriteRule ^halloween/$ /halloween [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^halloween\.php$ /halloween [L,R=301]
+
+RewriteRule ^halloween$ /halloween.php [L]
+
 # -------------------------------- Реклама --------------------------------
 # Условия для рекламодателей; в шапке на неё ведёт кнопка «Реклама». Адрес
 # /ads выбрал владелец (2026-10-17). Сверено на эту дату: EasyList, RU AdList,
@@ -424,6 +436,7 @@ RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
 RewriteRule ^admin/support/?$ /admin-support.php [L]
 RewriteRule ^admin/bans/?$  /admin-bans.php     [L]
 RewriteRule ^admin/giveaways/?$ /admin-giveaways.php [L]
+RewriteRule ^admin/hunt/?$ /admin-hunt.php [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 
 # Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому
