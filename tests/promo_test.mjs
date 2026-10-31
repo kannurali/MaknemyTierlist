@@ -15,11 +15,16 @@ const {
     pickWeighted, orderForCarousel,
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
-    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_CHANNEL, PLAYEROK, STARVELL, houseFor, popupPick
+    HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_HELLFIRE, HOUSE_CHANNEL, PLAYEROK, STARVELL,
+    houseFor, popupPick
 } = PROMO;
 
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
+
+// День, когда ни одна код-кампания не забирала места: проверки отбора кампаний
+// из админки не должны зависеть от того, какая бронь идёт сегодня.
+const QUIET = Date.parse('2026-09-15T12:00:00Z');
 
 // A minimal campaign with everything the filters look at.
 function camp(over = {}) {
@@ -488,8 +493,8 @@ test('normalizeDoc keeps the folded-dock creative but never books it as a slot',
     assert.deepEqual(Object.keys(c.creatives), ['dock', 'dockMini']);
     assert.equal(c.creatives.dockMini.src, '/i/mini.webp');
     assert.equal(c.creatives.dockMini.h, 80);
-    assert.deepEqual(eligible(d, 'dockMini', Date.now()), []);
-    assert.deepEqual(eligible(d, 'dock', Date.now()).map(x => x.id), ['c1']);
+    assert.deepEqual(eligible(d, 'dockMini', QUIET), []);
+    assert.deepEqual(eligible(d, 'dock', QUIET).map(x => x.id), ['c1']);
     assert.deepEqual(PROMO.CREATIVE_KEYS, ['strip', 'rail', 'dock', 'popup', 'dockMini']);
 });
 
@@ -572,7 +577,7 @@ test('popupPick prefers a paid campaign over the house ad', () => {
         id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
         creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
     }] };
-    assert.equal(popupPick(doc, {}, Date.now(), 0.5).id, 'c_paid');
+    assert.equal(popupPick(doc, {}, QUIET, 0.5).id, 'c_paid');
 });
 
 test('popupPick falls back to the house ad when nothing is sold', () => {
@@ -584,7 +589,7 @@ test('popupPick falls back to the house ad when nothing is sold', () => {
 // Окно кампании из админки на лимите не уступает место своему объявлению:
 // иначе со второго захода за сутки опять всплывал бы старый код-баннер.
 test('popupPick keeps quiet while the paid campaign is capped today', () => {
-    const now = Date.now();
+    const now = QUIET;
     const doc = { campaigns: [{
         id: 'c_paid', slots: ['popup'], href: 'https://shop.example/',
         creatives: { popup: { src: '/images/p.webp', w: 800, h: 800 } }
@@ -756,6 +761,80 @@ test('the Halloween giveaway drops out with one flag', () => {
     }
 });
 
+// ------------------------------------------------ HOUSE_HELLFIRE
+
+// Розыгрыш 10 Hellfire Gas (#6 на /giveaways). Решение владельца (31 октября):
+// баннер стоит на всех страницах и на всех четырёх местах, в том числе вместо
+// Playerok и кампаний из админки, поэтому кампания первой стоит в брони. Окно
+// оставлено: оно не добавляется к окну розыгрыша (giveaway-pop.js), а занимает
+// место окна Playerok или канала. Конца нет — снимать полем end.
+
+const HELLFIRE_RUN = Date.parse('2026-11-02T12:00:00Z');
+const PAID_ALL = { campaigns: [{
+    id: 'paid', enabled: true, weight: 1, href: 'https://shop.example/',
+    slots: ['strip', 'rail', 'dock', 'popup'],
+    creatives: {
+        strip: { src: '/images/s.webp', w: 1200, h: 300 },
+        rail: { src: '/images/r.webp', w: 320, h: 1200 },
+        dock: { src: '/images/d.webp', w: 640, h: 200 },
+        popup: { src: '/images/p.webp', w: 800, h: 800 }
+    }
+}] };
+
+test('HOUSE_HELLFIRE ships all four creatives from the repository', () => {
+    assert.deepEqual(HOUSE_HELLFIRE.slots, ['strip', 'rail', 'dock', 'popup']);
+    assert.equal(HOUSE_HELLFIRE.enabled, true);
+    assert.equal(HOUSE_HELLFIRE.start, '2026-10-31');
+    assert.equal(HOUSE_HELLFIRE.end, '');
+    assert.deepEqual(HOUSE_HELLFIRE.pages || [], [], 'без списка страниц — значит везде');
+    // Счётчик мест на баннере берётся из розыгрыша по этому номеру.
+    assert.equal(HOUSE_HELLFIRE.gw, 6);
+    assert.equal(safeHref(HOUSE_HELLFIRE.href), '/giveaways#g6');
+    const size = { strip: [1200, 300], rail: [320, 1200], dock: [640, 200], popup: [800, 800] };
+    for (const slot of HOUSE_HELLFIRE.slots) {
+        const cre = PROMO.creativeFor(HOUSE_HELLFIRE, slot);
+        assert.ok(cre, `у слота ${slot} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/hellfire-gw-'), 'макеты лежат в репозитории');
+        assert.deepEqual([cre.w, cre.h], size[slot], `размер макета ${slot}`);
+    }
+    assert.ok(HOUSE_HELLFIRE.textKey && HOUSE_HELLFIRE.ctaKey);
+    assert.equal(PROMO.dockTextKey(HOUSE_HELLFIRE), 'promo.hellfireGiveawayDockText');
+    assert.equal(HOUSE_HELLFIRE.popup.maxPerWeek, 7);
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_CHANNEL, PLAYEROK, STARVELL]) {
+        assert.notEqual(HOUSE_HELLFIRE.id, other.id);
+    }
+});
+
+test('Hellfire takes every slot on every page, Playerok and paid campaigns included', () => {
+    for (const page of ['tierlist', 'calc', 'news', 'trading', 'stock', 'giveaways', undefined]) {
+        for (const slot of SLOTS) {
+            assert.equal(houseFor(slot, HELLFIRE_RUN, page).id, HOUSE_HELLFIRE.id, `${page} / ${slot}`);
+            assert.deepEqual(eligible(PAID_ALL, slot, HELLFIRE_RUN, page), [HOUSE_HELLFIRE], `${page} / ${slot}`);
+        }
+        assert.equal(popupPick(PAID_ALL, {}, HELLFIRE_RUN, 0, page).id, HOUSE_HELLFIRE.id, `${page} / popup`);
+    }
+});
+
+test('Hellfire starts on 31 October by Moscow time', () => {
+    const first = dayBoundsMsk('2026-10-31');
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, first.startMs - 1, 'calc').id, PLAYEROK.id, `30 октября ещё Playerok: ${slot}`);
+        assert.equal(houseFor(slot, first.startMs, 'calc').id, HOUSE_HELLFIRE.id, `31 октября уже Hellfire: ${slot}`);
+    }
+    assert.equal(houseFor('rail', first.startMs - 1, 'news').id, HOUSE_HALLOWEEN.id);
+});
+
+test('Hellfire drops out with one flag and gives the slots back', () => {
+    HOUSE_HELLFIRE.enabled = false;
+    try {
+        assert.equal(houseFor('rail', HELLFIRE_RUN, 'calc').id, PLAYEROK.id);
+        assert.equal(houseFor('rail', HELLFIRE_RUN, 'news').id, HOUSE_HALLOWEEN.id);
+        assert.deepEqual(eligible(PAID_ALL, 'rail', HELLFIRE_RUN, 'news').map(c => c.id), ['paid']);
+    } finally {
+        HOUSE_HELLFIRE.enabled = true;
+    }
+});
+
 // ------------------------------------------------ houseFor / HOUSE_CHANNEL
 
 // Телеграм-канал «BLOX FRUITS: Новости, Обновления, Находки» стоял во всех
@@ -924,7 +1003,7 @@ test('normalizeDoc чистит список страниц так же, как 
 });
 
 test('eligible отсекает купленную кампанию на чужой странице', () => {
-    const now = Date.now();
+    const now = QUIET;
     const doc = {
         campaigns: [{
             id: 'paid-news', enabled: true, weight: 1, href: 'https://shop.example/',
