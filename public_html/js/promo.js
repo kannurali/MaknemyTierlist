@@ -711,10 +711,10 @@
     erid: "",
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
-      strip: { src: "/assets/promo/hellfire-gw-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
-      rail:  { src: "/assets/promo/hellfire-gw-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
-      dock:  { src: "/assets/promo/hellfire-gw-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
-      popup: { src: "/assets/promo/hellfire-gw-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+      strip: { src: "/assets/promo/hellfire-prizes-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/hellfire-prizes-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/hellfire-prizes-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/hellfire-prizes-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
     },
 
     popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },

@@ -763,8 +763,8 @@ test('the Halloween giveaway drops out with one flag', () => {
 
 // ------------------------------------------------ HOUSE_HELLFIRE
 
-// Розыгрыш 10 Hellfire Gas (#6 на /giveaways). Решение владельца (31 октября):
-// баннер стоит на всех страницах и на всех четырёх местах, в том числе вместо
+// Розыгрыш Venom, Gas и скинов Hellfire (#6 на /giveaways). Решение владельца
+// (31 октября): баннер стоит на всех страницах и на всех четырёх местах, в том числе вместо
 // Playerok и кампаний из админки, поэтому кампания первой стоит в брони. Окно
 // оставлено: оно не добавляется к окну розыгрыша (giveaway-pop.js), а занимает
 // место окна Playerok или канала. Конца нет — снимать полем end.
@@ -794,7 +794,7 @@ test('HOUSE_HELLFIRE ships all four creatives from the repository', () => {
     for (const slot of HOUSE_HELLFIRE.slots) {
         const cre = PROMO.creativeFor(HOUSE_HELLFIRE, slot);
         assert.ok(cre, `у слота ${slot} должен быть макет`);
-        assert.ok(cre.src.startsWith('/assets/promo/hellfire-gw-'), 'макеты лежат в репозитории');
+        assert.ok(cre.src.startsWith('/assets/promo/hellfire-prizes-'), 'макеты лежат в репозитории');
         assert.deepEqual([cre.w, cre.h], size[slot], `размер макета ${slot}`);
     }
     assert.ok(HOUSE_HELLFIRE.textKey && HOUSE_HELLFIRE.ctaKey);
