@@ -1,6 +1,8 @@
 <?php
-// Хэллоуин: сайт сам надевает тему с 1 октября по 2 ноября включительно по
-// Москве и сам же её снимает, править код к началу и концу не нужно.
+// Хэллоуин: тема включена, пока стоит HALLOWEEN_SWITCH. Дат у неё больше нет.
+// До 2026-10-19 она сама включалась 1 октября и снималась после 2 ноября по
+// Москве; владелец продлил тему под хэллоуинский ивент на неизвестный срок и
+// сам скажет, когда вернуть обычный дизайн, — тогда поставить false.
 //
 // Что меняется. Макет — страница «хелоуин» в Figma-файле MAKNEMY: синий
 // акцент становится фиолетовым, фон — замок с луной, сакура — голые ветки с
@@ -16,21 +18,16 @@
 //   php tools/halloween_css.php
 //
 // Кеш. Страницы лежат в LiteSpeed минуту (page_lscache()), поэтому тема
-// включается и выключается не позже чем через минуту после полуночи по Москве.
+// снимается не позже чем через минуту после деплоя с false.
 // css и js из css/hw/ кешируются на год, как и всё в css/: номер ?v= у копии
 // тот же, что у оригинала, и растёт вместе с ним.
 //
 // PHP 7.4: без match и без str_contains.
 
-const HALLOWEEN_FROM = '10-01';
-const HALLOWEEN_TO   = '11-02';
+const HALLOWEEN_SWITCH = true;
 
-function halloween_on(?DateTimeInterface $now = null): bool {
-    $now = $now ?? new DateTimeImmutable('now');
-    $msk = (new DateTimeImmutable('@' . $now->getTimestamp()))
-        ->setTimezone(new DateTimeZone('Europe/Moscow'))
-        ->format('m-d');
-    return $msk >= HALLOWEEN_FROM && $msk <= HALLOWEEN_TO;
+function halloween_on(): bool {
+    return HALLOWEEN_SWITCH;
 }
 
 // Тесты видят сайт без темы, в какой бы месяц их ни запускали; тест, которому
