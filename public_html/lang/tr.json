@@ -30,6 +30,7 @@
     "chat.send": "Gönder",
     "chat.sendFailed": "Mesaj gönderilemedi. Tekrar dene.",
     "chat.tooFast": "Çok hızlısın. Biraz bekle.",
+    "chat.linkRemoved": "bağlantı kaldırıldı",
     "chat.showList": "Konuşma listesini göster",
     "chat.hideList": "Konuşma listesini gizle",
     "chat.review": "Yorum",

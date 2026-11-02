@@ -199,6 +199,7 @@ test('/admin/news (admin-news.php) реально отдаёт разметку 
 $ADMIN_PHP   = __DIR__ . '/../public_html/admin.php';
 $SUPPORT_PHP = __DIR__ . '/../public_html/admin-support.php';
 $BANS_PHP    = __DIR__ . '/../public_html/admin-bans.php';
+$CHAT_FILTER_PHP = __DIR__ . '/../public_html/admin-chat-filter.php';
 
 // Чужому панель отвечает тем же, что LiteSpeed на maknemy.com отдаёт на
 // несуществующий адрес: 1251 байт, два из них — CR. Ни кнопки входа, ни
@@ -284,6 +285,39 @@ test('/admin/bans: админ видит все вкладки', function () use
         assert_true(strpos($r['html'], 'href="' . $tab) !== false, "вкладка $tab");
     }
     assert_true(strpos($r['html'], 'Сейчас никто не забанен.') !== false, 'пустой список');
+});
+
+test('/admin/chat-filter: анониму и игроку 404, модератор читает журнал, но слова не правит', function () use ($CHAT_FILTER_PHP) {
+    assert_host_404(admin_run_as($CHAT_FILTER_PHP, ''), 'аноним');
+    assert_host_404(admin_run_as($CHAT_FILTER_PHP, '100'), 'игрок');
+
+    $r = admin_run_as($CHAT_FILTER_PHP, '2', '/admin/chat-filter?done=bad_word');
+    if ($r === null) { return; }
+    assert_true($r['done'], 'страница отдана целиком');
+    $html = $r['html'];
+    assert_true(strpos($html, '<h1 class="bn-title">Фильтр чата') !== false, 'заголовок');
+    assert_true(strpos($html, 'class="adm-nav-tab is-active" href="/admin/chat-filter"') !== false, 'своя вкладка подсвечена');
+    assert_true(strpos($html, 'docs/migrations/2026-11-02-chat-filter.sql') !== false, 'без таблиц — какую миграцию запустить');
+    assert_true(strpos($html, 'Не добавлено') !== false, 'итог из ?done=');
+    assert_eq(false, strpos($html, 'action="/api/chat_filter.php"'), 'формы правки нет');
+    assert_eq(false, strpos($html, '<script'), 'страница без скриптов');
+    assert_eq(false, strpos($html, 'href="/admin/news"'), 'модератору вкладок админа нет');
+});
+
+test('/admin/chat-filter: вкладка есть у обеих ролей', function () use ($SUPPORT_PHP) {
+    foreach (['1', '2'] as $uid) {
+        $r = admin_run_as($SUPPORT_PHP, $uid);
+        if ($r === null) { return; }
+        assert_true(strpos($r['html'], 'href="/admin/chat-filter"') !== false, "у $uid");
+    }
+});
+
+test('/api/chat_filter.php правит только админ', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/api/chat_filter.php');
+    assert_true(strpos($src, 'require_admin();') !== false, 'require_admin');
+    assert_true(strpos($src, 'require_post();') !== false, 'только POST');
+    $route = file_get_contents(__DIR__ . '/../public_html/.htaccess');
+    assert_true(strpos($route, '/admin-chat-filter.php') !== false, 'адрес в .htaccess');
 });
 
 run_tests();
