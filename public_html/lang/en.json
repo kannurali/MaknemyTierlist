@@ -30,6 +30,7 @@
     "chat.send": "Send",
     "chat.sendFailed": "The message did not go through. Try again.",
     "chat.tooFast": "Too fast. Wait a moment.",
+    "chat.linkRemoved": "link removed",
     "chat.showList": "Show conversation list",
     "chat.hideList": "Hide conversation list",
     "chat.review": "Review",

@@ -339,7 +339,7 @@ header('Cache-Control: no-cache, must-revalidate');
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=21" defer></script>
+  <script src="js/chat-page.js?v=22" defer></script>
 
 
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>

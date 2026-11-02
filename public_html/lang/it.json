@@ -30,6 +30,7 @@
     "chat.send": "Invia",
     "chat.sendFailed": "Il messaggio non è stato inviato. Riprova.",
     "chat.tooFast": "Troppo veloce. Aspetta un attimo.",
+    "chat.linkRemoved": "link rimosso",
     "chat.showList": "Mostra l'elenco delle conversazioni",
     "chat.hideList": "Nascondi l'elenco delle conversazioni",
     "chat.review": "Recensione",

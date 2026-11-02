@@ -321,10 +321,15 @@
   }
 
   var STICKER_RE = /^\[sticker:([A-Za-z0-9_-]{1,40})\]$/;
+  var LINK_CUT = '[link]';
 
   var items = [];
   var itemsById = Object.create(null);
   var itemsState = '';
+
+  function showBody(body) {
+    return String(body).split(LINK_CUT).join('[' + tx('chat.linkRemoved', 'ссылка удалена') + ']');
+  }
 
   function stickerId(body) {
     var m = STICKER_RE.exec(typeof body === 'string' ? body : '');
@@ -368,7 +373,7 @@
 
   function previewText(body) {
     var id = stickerId(body);
-    if (!id) { return body; }
+    if (!id) { return showBody(body); }
     if (!itemsSettled()) { loadItems(); }
     var it = itemsById[id];
     return tx('chat.sticker', 'Стикер') + (it && it.name ? ': ' + it.name : '');
@@ -761,7 +766,7 @@
     } else {
       var body = document.createElement('p');
       body.className = 'ct-body';
-      body.textContent = m.body;
+      body.textContent = showBody(m.body);
       msg.appendChild(body);
     }
 

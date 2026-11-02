@@ -14,6 +14,10 @@
 // Каталог предметов для стикеров — тот же, по которому трейдинг проверяет
 // объявления (trade_catalog): список предметов на сайте один.
 require_once __DIR__ . '/trade.php';
+// Ссылки и запрещённые слова: всё, что уходит наружу как текст сообщения,
+// проходит через chat_filter_apply (и список диалогов, и переписка, и ответ
+// на отправку). Новый вывод body обязан делать то же.
+require_once __DIR__ . '/chat_filter.php';
 
 // Границы. Сообщение длиннее — отвергается; без потолка одна вставка может
 // занять сколько угодно места в TEXT.
@@ -259,11 +263,12 @@ function chat_last_messages(PDO $pdo, array $threadIds): array {
              ON t.mx = m.id"
     );
     $st->execute($threadIds);
+    $rules = chat_filter_rules($pdo);
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $out[(int)$r['thread_id']] = [
             'id'     => (int)$r['id'],
-            'body'   => (string)$r['body'],
+            'body'   => chat_filter_apply((string)$r['body'], $rules)['text'],
             'mine'   => null,   // проставляет вызывающий: он знает, кто «я»
             'sender' => (string)$r['sender_id'],
             'at'     => (int)$r['created_at'],
@@ -348,12 +353,13 @@ function chat_messages(PDO $pdo, string $me, int $threadId): array {
     // Тянем свежие, показываем по возрастанию: LIMIT обязан отрезать старые,
     // а не новые.
     $rows = array_reverse($st->fetchAll(PDO::FETCH_ASSOC));
+    $rules = chat_filter_rules($pdo);
     $out = [];
     foreach ($rows as $r) {
         $out[] = [
             'id'   => (int)$r['id'],
             'mine' => (string)$r['sender_id'] === $me,
-            'body' => (string)$r['body'],
+            'body' => chat_filter_apply((string)$r['body'], $rules)['text'],
             'at'   => (int)$r['created_at'],
         ];
     }
@@ -532,9 +538,14 @@ function chat_send(PDO $pdo, string $me, int $threadId, string $body, int $now):
     $pdo->prepare('UPDATE chat_threads SET last_at = :at WHERE id = :t')
         ->execute([':at' => $now, ':t' => $threadId]);
 
+    // В базу лёг исходный текст: фильтр работает при показе. Автор сразу видит
+    // то же, что собеседник, а модератор — кто что пытался отправить.
+    $seen = chat_filter_apply($body, chat_filter_rules($pdo));
+    chat_filter_log($pdo, $id, $me, $seen, $now);
+
     return [200, [
         'ok'      => true,
-        'message' => ['id' => $id, 'mine' => true, 'body' => $body, 'at' => $now],
+        'message' => ['id' => $id, 'mine' => true, 'body' => $seen['text'], 'at' => $now],
     ]];
 }
 
