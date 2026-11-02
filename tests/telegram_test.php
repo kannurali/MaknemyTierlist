@@ -870,4 +870,285 @@ test('пост задним числом и чужой id не рассылаю�
     assert_eq([], $log);
 });
 
+// --------------------------------------------------------------------------
+//  Пост о ценах в чат «Башня Шута»
+// --------------------------------------------------------------------------
+
+// tg_channels как на бою; $merge — после 2026-10-17-tg-price-post.sql.
+function tg_chats(PDO $p, bool $merge = true): void {
+    $p->exec("CREATE TABLE tg_channels (
+        chat_id INTEGER NOT NULL PRIMARY KEY, title TEXT NOT NULL DEFAULT '', username TEXT NOT NULL DEFAULT '',
+        kind TEXT NOT NULL DEFAULT '', invite_url TEXT NOT NULL DEFAULT '', is_admin INTEGER NOT NULL DEFAULT 0,
+        missing TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL"
+        . ($merge ? ', prices_msg INTEGER NOT NULL DEFAULT 0, prices_at INTEGER NOT NULL DEFAULT 0, prices_log TEXT NULL' : '')
+        . ')');
+}
+
+function tg_chat_row(PDO $p, int $id, string $title, string $kind = 'supergroup', int $at = TG_NOW): void {
+    $p->prepare('INSERT INTO tg_channels (chat_id, title, kind, is_admin, updated_at) VALUES (?, ?, ?, 1, ?)')
+      ->execute([$id, $title, $kind, $at]);
+}
+
+// Тирлист со всеми полями предмета: id => [имя, цена, тип, спрос].
+function tg_tier_full(array $items): array {
+    $out = [];
+    foreach ($items as $id => $it) {
+        $out[] = ['id' => $id, 'name' => $it[0], 'value' => $it[1], 'type' => $it[2] ?? 'f', 'demand' => $it[3] ?? ''];
+    }
+    return ['tiers' => [['id' => 't1', 'label' => 'MK', 'items' => $out]]];
+}
+
+// Ответ Telegram на sendMessage.
+function tg_sent(int $messageId): array {
+    return ['ok' => true, 'result' => ['message_id' => $messageId]];
+}
+
+function tg_price(string $id, string $name, ?string $from, string $to, string $group = 'fruits'): array {
+    return ['key' => 'p:' . $id, 'kind' => 'price', 'from' => $from, 'to' => $to, 'name' => $name, 'group' => $group];
+}
+
+test('пост: цены и спрос с разделом тирлиста', function () {
+    $old = tg_tier_full([
+        'a' => ['Torment Pain', '1,2кк', 'p', 'green'],
+        'b' => ['Dog Blade', '300к', 'cs', 'green'],
+        'c' => ['Venom', '50к', 'f', 'yellow'],
+        'd' => ['Control', '?', 'f', ''],
+    ]);
+    $new = tg_tier_full([
+        'a' => ['Torment Pain', '900к', 'p', 'green'],
+        'b' => ['Dog Blade', '300к', 'cs', 'neon'],
+        'c' => ['Venom', '50к', 'f', ''],
+        'd' => ['Control', '2кк', 'f', 'мусор'],
+        'e' => ['Magnet', '6кк', 'gp', 'green'],
+    ]);
+    assert_eq([
+        tg_price('a', 'Torment Pain', '1,2кк', '900к', 'perms'),
+        tg_price('d', 'Control', '?', '2кк'),
+        tg_price('e', 'Magnet', null, '6кк', 'passes'),
+        ['key' => 'd:b', 'kind' => 'demand', 'from' => 'green', 'to' => 'neon', 'name' => 'Dog Blade', 'group' => 'configurators'],
+    ], tg_item_changes($old, $new), 'снятый спрос, кривой спрос и спрос нового предмета не объявляются');
+    assert_eq([], tg_item_changes([], $new), 'первое сохранение молчит');
+    assert_eq(
+        [['name' => 'Torment Pain', 'from' => '1,2кк', 'to' => '900к'], ['name' => 'Control', 'from' => '?', 'to' => '2кк'], ['name' => 'Magnet', 'from' => null, 'to' => '6кк']],
+        tg_price_changes($old, $new),
+        'личная рассылка — по-прежнему только цены'
+    );
+});
+
+test('пост: оформление как у постов владельца', function () {
+    $text = tg_post_text([
+        tg_price('a', 'Torment Pain', '1,2кк', '900к', 'perms'),
+        tg_price('b', 'Rabid Dog Blade', '300к', '350к', 'perms'),
+        tg_price('c', 'Requiem Eagle', '?', '2кк', 'perms'),
+        tg_price('d', 'Magnet', null, '6кк'),
+        ['key' => 'd:e', 'kind' => 'demand', 'from' => 'green', 'to' => 'neon', 'name' => 'Dog Blade', 'group' => 'configurators'],
+        ['key' => 'd:f', 'kind' => 'demand', 'from' => '', 'to' => 'yellow', 'name' => 'Lightning', 'group' => 'fruits'],
+    ]);
+    assert_eq(implode("\n", [
+        '<a href="https://maknemy.com/assets/tg/prices.jpg?v=1">&#8205;</a>Ⓜ️ <b>Обновление цен в тирлисте</b>',
+        '',
+        'Пересмотрели значения — вот что изменилось.',
+        '',
+        '<b>💵 Permanent Fruits</b>',
+        '',
+        '<b>🔽 Упали:</b>',
+        '• Torment Pain — 1,2кк → 900к',
+        '',
+        '<b>🔼 Выросли:</b>',
+        '• Rabid Dog Blade — 300к → 350к',
+        '',
+        '<b>🔄 Исправили цену:</b>',
+        '• Requiem Eagle — ? → 2кк',
+        '',
+        '<b>🍎 Фрукты</b>',
+        '',
+        '<b>🆕 Добавили:</b>',
+        '• Magnet — 6кк',
+        '',
+        '<b>✅ Обновили Demand:</b>',
+        '• Dog Blade → Overpriced',
+        '• Lightning → Средний',
+        '',
+        '<i>Ориентируйтесь в первую очередь на собственное мнение: мы показываем ситуацию на рынке, а не заставляем трейдить строго по нашим ценам.</i>',
+        '',
+        '📊 https://maknemy.com/tierlist',
+        '',
+        'Удачи вам в трейдах!',
+    ]), $text);
+});
+
+test('пост: имена экранируются, длинный список — «и ещё N», в сообщение влезает', function () {
+    $text = tg_post_text([tg_price('x', '<b>Kitsune</b> & co', '1', '2')]);
+    assert_true(strpos($text, '• &lt;b&gt;Kitsune&lt;/b&gt; &amp; co — 1 → 2') !== false, 'разметка из админки не проходит');
+
+    $many = [];
+    for ($i = 1; $i <= TG_POST_LINES + 7; $i++) { $many[] = tg_price((string)$i, 'Item' . $i, '1', '2'); }
+    $text = tg_post_text($many);
+    assert_eq(TG_POST_LINES, substr_count($text, '• Item'));
+    assert_true(strpos($text, "\n\n…и ещё 7 изменений — всё в тирлисте.\n\n") !== false, 'хвост списка');
+    assert_eq(['изменение', 'изменения', 'изменений', 'изменений', 'изменение', 'изменения'],
+        array_map('tg_post_plural', [1, 3, 5, 12, 21, 34]));
+
+    $long = [];
+    for ($i = 1; $i <= 40; $i++) { $long[] = tg_price((string)$i, str_repeat('Я', 60) . $i, str_repeat('9', 24), str_repeat('8', 24)); }
+    $fit = tg_post_fit($long);
+    assert_true(mb_strlen(html_entity_decode(strip_tags($fit), ENT_QUOTES | ENT_HTML5, 'UTF-8')) <= 3800, 'не длиннее сообщения Telegram');
+    assert_true(substr_count($fit, '• ') < TG_POST_LINES, 'длинные строки — меньше предметов');
+    assert_true(strpos($fit, '…и ещё') !== false);
+});
+
+test('пост: только в «Башню Шута», группа важнее канала', function () {
+    $p = tg_db();
+    assert_eq(null, tg_post_status($p), 'таблицы каналов нет');
+    tg_chats($p);
+    assert_eq(null, tg_post_chat($p), 'бот о чате не знает');
+    tg_chat_row($p, -1001, 'Розыгрыши MAKNEMY', 'channel');
+    assert_eq(null, tg_post_chat($p), 'другие чаты бота не годятся');
+    tg_chat_row($p, -1002, 'Башня Шута', 'channel');
+    assert_eq(-1002, (int)tg_post_chat($p)['chat_id'], 'канал — если группы с таким названием нет');
+    tg_chat_row($p, -1003, '🃏 БАШНЯ ШУТА | чат', 'supergroup', TG_NOW - 100);
+    assert_eq(-1003, (int)tg_post_chat($p)['chat_id'], 'группа важнее, регистр и эмодзи в названии не мешают');
+    assert_eq(['title' => '🃏 БАШНЯ ШУТА | чат', 'merge' => true], tg_post_status($p));
+});
+
+test('пост: картинка сверху, сохранения подряд правят его, откат убирает строки', function () {
+    $p = tg_db();
+    tg_chats($p);
+    tg_chat_row($p, -1001, 'Розыгрыши', 'channel');
+    tg_chat_row($p, -1002, 'Башня Шута');
+    $quiet = function (int $us): void {};
+    $old = tg_tier_full(['a' => ['Dragon', '25000'], 'b' => ['Kitsune', '30000']]);
+    $mid = tg_tier_full(['a' => ['Dragon', '27000'], 'b' => ['Kitsune', '30000']]);
+    $new = tg_tier_full(['a' => ['Dragon', '27000'], 'b' => ['Kitsune', '28000']]);
+    $back = tg_tier_full(['a' => ['Dragon', '25000'], 'b' => ['Kitsune', '28000']]);
+
+    $log = [];
+    assert_true(tg_post_prices($p, tg_recorder($log, tg_sent(77)), tg_item_changes($old, $mid), TG_NOW, $quiet));
+    assert_eq(1, count($log));
+    [$method, $msg] = $log[0];
+    assert_eq('sendMessage', $method);
+    assert_eq(-1002, $msg['chat_id'], 'только в «Башню Шута»');
+    assert_eq('HTML', $msg['parse_mode']);
+    assert_eq(['url' => TG_POST_IMAGE, 'prefer_large_media' => true, 'show_above_text' => true], $msg['link_preview_options']);
+    $kb = $msg['reply_markup']['inline_keyboard'];
+    assert_eq(['📊 Открыть тирлист', 'https://maknemy.com/tierlist'], [$kb[0][0]['text'], $kb[0][0]['url']]);
+    assert_true(strpos($msg['text'], '• Dragon — 25000 → 27000') !== false);
+
+    $log = [];
+    assert_true(tg_post_prices($p, tg_recorder($log), tg_item_changes($mid, $new), TG_NOW + 600, $quiet));
+    assert_eq(['editMessageText', -1002, 77], [$log[0][0], $log[0][1]['chat_id'], $log[0][1]['message_id']], 'через 10 минут — правка того же поста');
+    $text = $log[0][1]['text'];
+    assert_true(strpos($text, '• Dragon — 25000 → 27000') !== false && strpos($text, '• Kitsune — 30000 → 28000') !== false, 'старое и новое вместе');
+    assert_eq(TG_POST_IMAGE, $log[0][1]['link_preview_options']['url'], 'картинка остаётся');
+
+    $log = [];
+    tg_post_prices($p, tg_recorder($log), tg_item_changes($new, $back), TG_NOW + 900, $quiet);
+    assert_eq('editMessageText', $log[0][0]);
+    assert_true(strpos($log[0][1]['text'], 'Dragon') === false, 'цену вернули — строка ушла');
+
+    $log = [];
+    tg_post_prices($p, tg_recorder($log), tg_item_changes($back, $old), TG_NOW + 1000, $quiet);
+    assert_eq([['deleteMessage', ['chat_id' => -1002, 'message_id' => 77]]], $log, 'вернули всё — пост удалён');
+
+    $log = [];
+    tg_post_prices($p, tg_recorder($log, tg_sent(78)), tg_item_changes($old, $mid), TG_NOW + 1100, $quiet);
+    assert_eq('sendMessage', $log[0][0], 'после удаления — новый пост');
+
+    $log = [];
+    tg_post_prices($p, tg_recorder($log, tg_sent(79)), tg_item_changes($mid, $new), TG_NOW + 1100 + TG_POST_MERGE, $quiet);
+    assert_eq('sendMessage', $log[0][0], 'через полчаса — новый пост, а не правка');
+    assert_true(strpos($log[0][1]['text'], 'Dragon') === false, 'в нём только новое');
+    assert_eq(79, (int)$p->query('SELECT prices_msg FROM tg_channels WHERE chat_id = -1002')->fetchColumn());
+    assert_eq(0, (int)$p->query('SELECT prices_msg FROM tg_channels WHERE chat_id = -1001')->fetchColumn(), 'другой чат не тронут');
+});
+
+test('пост удалили руками — новый со всем накопленным; Telegram молчит — без дубля', function () {
+    $p = tg_db();
+    tg_chats($p);
+    tg_chat_row($p, -1002, 'Башня Шута');
+    $quiet = function (int $us): void {};
+    $a = tg_tier_full(['a' => ['Dragon', '1'], 'b' => ['Kitsune', '1']]);
+    $b = tg_tier_full(['a' => ['Dragon', '2'], 'b' => ['Kitsune', '1']]);
+    $c = tg_tier_full(['a' => ['Dragon', '2'], 'b' => ['Kitsune', '3']]);
+    $d = tg_tier_full(['a' => ['Dragon', '5'], 'b' => ['Kitsune', '3']]);
+    $log = [];
+    tg_post_prices($p, tg_recorder($log, tg_sent(50)), tg_item_changes($a, $b), TG_NOW, $quiet);
+
+    $log = [];
+    $gone = function (string $method, array $params) use (&$log): ?array {
+        $log[] = [$method, $params];
+        return $method === 'editMessageText'
+            ? ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: message to edit not found']
+            : tg_sent(51);
+    };
+    assert_true(tg_post_prices($p, $gone, tg_item_changes($b, $c), TG_NOW + 60, $quiet));
+    assert_eq(['editMessageText', 'sendMessage'], array_column($log, 0));
+    $text = $log[1][1]['text'];
+    assert_true(strpos($text, '• Dragon — 1 → 2') !== false && strpos($text, '• Kitsune — 1 → 3') !== false, 'всё накопленное');
+    assert_eq(51, (int)$p->query('SELECT prices_msg FROM tg_channels')->fetchColumn());
+
+    $calls = [];
+    $silent = function (string $method, array $params) use (&$calls): ?array { $calls[] = $method; return null; };
+    assert_eq(false, tg_post_prices($p, $silent, tg_item_changes($c, $d), TG_NOW + 120, $quiet));
+    assert_eq(['editMessageText'], $calls, 'правка могла пройти — второго поста нет');
+
+    $calls = [];
+    $same = function (string $method, array $params) use (&$calls): ?array {
+        $calls[] = $method;
+        return ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: message is not modified'];
+    };
+    assert_true(tg_post_prices($p, $same, tg_item_changes($c, $d), TG_NOW + 180, $quiet), '«не изменилось» — тоже успех');
+    assert_eq(['editMessageText'], $calls);
+
+    $calls = [];
+    $naps  = [];
+    $busy = function (string $method, array $params) use (&$calls): ?array {
+        $calls[] = $method;
+        return count($calls) === 1 ? ['ok' => false, 'error_code' => 429, 'parameters' => ['retry_after' => 2]] : ['ok' => true];
+    };
+    tg_post_prices($p, $busy, tg_item_changes($d, $a), TG_NOW + 240, function (int $us) use (&$naps): void { $naps[] = $us; });
+    assert_eq([['deleteMessage', 'deleteMessage'], [2000000]], [$calls, $naps], '429 — подождать и повторить');
+});
+
+test('до миграции каждое сохранение — новый пост', function () {
+    $p = tg_db();
+    tg_chats($p, false);
+    tg_chat_row($p, -1002, 'Башня Шута');
+    assert_eq(['title' => 'Башня Шута', 'merge' => false], tg_post_status($p));
+    $quiet = function (int $us): void {};
+    $a = tg_tier_full(['a' => ['Dragon', '1']]);
+    $b = tg_tier_full(['a' => ['Dragon', '2']]);
+    $c = tg_tier_full(['a' => ['Dragon', '3']]);
+    $log = [];
+    assert_true(tg_post_prices($p, tg_recorder($log, tg_sent(1)), tg_item_changes($a, $b), TG_NOW, $quiet));
+    assert_true(tg_post_prices($p, tg_recorder($log, tg_sent(2)), tg_item_changes($b, $c), TG_NOW + 60, $quiet));
+    assert_eq(['sendMessage', 'sendMessage'], array_column($log, 0));
+});
+
+test('сохранение тирлиста: пост в «Башню Шута», потом личные сообщения', function () {
+    $p = tg_db();
+    tg_chats($p);
+    tg_chat_row($p, -1002, 'Башня Шута');
+    tg_chat_row($p, -1003, 'Другой чат бота');
+    tg_user($p, '101', 'ann');
+    tg_link_row($p, '101', 1001);
+    $cfg = ['tg_bot_token' => TG_TOKEN, 'tg_bot_name' => 'MaknemyBot'];
+    $quiet = function (int $us): void {};
+    $chats = function (array $log): array { return array_map(function ($c) { return $c[1]['chat_id']; }, $log); };
+    $old = tg_tier_full(['a' => ['Dragon', '25000', 'f', 'green']]);
+
+    $log = [];
+    tg_after_prices($p, $cfg, $old, tg_tier_full(['a' => ['Dragon', '26000', 'f', 'green']]), tg_recorder($log, tg_sent(5)), $quiet, TG_NOW);
+    assert_eq([-1002, 1001], $chats($log), 'сначала чат, потом личка; другие чаты бота молчат');
+
+    $log = [];
+    tg_after_prices($p, $cfg, $old, tg_tier_full(['a' => ['Dragon', '25000', 'f', 'neon']]), tg_recorder($log, tg_sent(6)), $quiet, TG_NOW + 3600);
+    assert_eq([-1002], $chats($log), 'сменился только спрос — пост в чат, личка молчит');
+    assert_true(strpos($log[0][1]['text'], '• Dragon → Overpriced') !== false);
+
+    $log = [];
+    tg_after_prices($p, [], $old, tg_tier_full(['a' => ['Dragon', '1']]), tg_recorder($log), $quiet, TG_NOW);
+    assert_eq([], $log, 'бот не настроен — тишина');
+});
+
 run_tests();

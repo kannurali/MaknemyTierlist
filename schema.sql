@@ -356,6 +356,10 @@ CREATE TABLE IF NOT EXISTS gw_card_stats (
 -- — бот больше не админ, проверять подписку там он не может.
 -- invite_url — куда ведёт кнопка «Подписаться»: t.me/<username> у публичного
 -- канала, ссылка-приглашение от exportChatInviteLink у приватного.
+-- missing — каких прав для розыгрышей не хватает (2026-10-14-tg-channel-rights.sql).
+-- prices_* — последний пост о ценах в чате «Башня Шута»: id сообщения, когда
+-- отправлен и его изменения JSON-ом. Сохранения подряд правят этот пост
+-- (tg_post_prices в api/lib/telegram.php, 2026-10-17-tg-price-post.sql).
 CREATE TABLE IF NOT EXISTS tg_channels (
   chat_id    BIGINT          NOT NULL PRIMARY KEY,
   title      VARCHAR(128)    NOT NULL DEFAULT '',
@@ -363,6 +367,10 @@ CREATE TABLE IF NOT EXISTS tg_channels (
   kind       VARCHAR(16)     NOT NULL DEFAULT '',
   invite_url VARCHAR(255)    NOT NULL DEFAULT '',
   is_admin   TINYINT         NOT NULL DEFAULT 0,
+  missing    VARCHAR(255)    NOT NULL DEFAULT '',
+  prices_msg BIGINT          NOT NULL DEFAULT 0,
+  prices_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  prices_log MEDIUMTEXT      NULL,
   updated_at BIGINT UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
