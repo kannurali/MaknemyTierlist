@@ -456,6 +456,19 @@ test('о новом обращении узнают подключившиеся
     assert_eq('https://maknemy.com/admin/support', $log[0][1]['reply_markup']['inline_keyboard'][0][0]['url']);
 });
 
+test('жалоба на фото уходит тем же модераторам, со ссылкой на панель жалоб', function () {
+    $p = tg_db();
+    tg_user($p, '901', 'mod1');
+    tg_user($p, '101', 'ann_trader', 'Ann');
+    tg_link_row($p, '901', 9001);
+
+    $log = [];
+    $sent = tg_notify_photo_report($p, tg_cfg(['moderator_ids' => ['901']]), tg_recorder($log), '101');
+    assert_eq(1, $sent);
+    assert_eq('📷 Жалоба на фото в чате от Ann (@ann_trader)', $log[0][1]['text']);
+    assert_eq('https://maknemy.com/admin/chat-photos', $log[0][1]['reply_markup']['inline_keyboard'][0][0]['url']);
+});
+
 test('модератору о его собственном обращении не пишем', function () {
     $p = tg_db();
     tg_user($p, '901', 'mod1');

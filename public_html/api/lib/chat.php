@@ -18,6 +18,8 @@ require_once __DIR__ . '/trade.php';
 // проходит через chat_filter_apply (и список диалогов, и переписка, и ответ
 // на отправку). Новый вывод body обязан делать то же.
 require_once __DIR__ . '/chat_filter.php';
+// Фото: приём, доступ и жалобы. Здесь только метка в теле сообщения.
+require_once __DIR__ . '/chat_photos.php';
 
 // Границы. Сообщение длиннее — отвергается; без потолка одна вставка может
 // занять сколько угодно места в TEXT.
@@ -35,6 +37,15 @@ const CHAT_STICKER_RE = '/^\[sticker:([A-Za-z0-9_-]{1,40})\]\z/';
 /** id предмета, если сообщение — стикер, иначе ''. */
 function chat_sticker_id(string $body): string {
     return preg_match(CHAT_STICKER_RE, $body, $m) === 1 ? $m[1] : '';
+}
+
+// Фото — такое же сообщение с телом «[photo:<номер в chat_photos>]». Ставит его
+// только chat_photo_send: обычной отправкой такое тело не пройдёт (chat_send).
+const CHAT_PHOTO_RE = '/^\[photo:(\d{1,18})\]\z/';
+
+/** Номер фото, если сообщение — фото, иначе 0. */
+function chat_photo_id(string $body): int {
+    return preg_match(CHAT_PHOTO_RE, $body, $m) === 1 ? (int)$m[1] : 0;
 }
 
 // Сколько сообщений отдаём за раз. Диалог может быть длинным, а страница
@@ -340,7 +351,7 @@ function chat_is_member(PDO $pdo, string $me, int $threadId): bool {
     return (bool)$st->fetchColumn();
 }
 
-function chat_messages(PDO $pdo, string $me, int $threadId): array {
+function chat_messages(PDO $pdo, string $me, int $threadId, ?int $now = null): array {
     if (!chat_ready($pdo) || !chat_is_member($pdo, $me, $threadId)) { return []; }
     // Удалённое у себя (chat_cleared) не отдаём вовсе, а не прячем на
     // странице: иначе оно вернулось бы от первого же взгляда в ответ сервера.
@@ -363,7 +374,7 @@ function chat_messages(PDO $pdo, string $me, int $threadId): array {
             'at'   => (int)$r['created_at'],
         ];
     }
-    return $out;
+    return chat_photo_attach($pdo, $me, $threadId, $out, $now ?? time());
 }
 
 /**
@@ -514,6 +525,9 @@ function chat_send(PDO $pdo, string $me, int $threadId, string $body, int $now):
     $body = trim($body);
     if ($body === '')                     { return [400, ['ok' => false, 'error' => 'empty']]; }
     if (mb_strlen($body) > CHAT_BODY_MAX) { return [400, ['ok' => false, 'error' => 'too_long']]; }
+
+    // Иначе метка в обход всех правил фото подсунула бы в переписку чужой номер.
+    if (chat_photo_id($body) > 0) { return [400, ['ok' => false, 'error' => 'bad_photo']]; }
 
     // Стикер — только предмет, который сейчас есть в тирлисте. Выдуманный id
     // у собеседника нарисовался бы пустой рамкой, а перебором в переписку

@@ -125,3 +125,7 @@
 .cf-hint code { font-size: 12px; }
 .cf-ban { flex: 0 0 auto; text-decoration: none; }
 .cf-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cp-photo summary { display: inline-flex; cursor: pointer; list-style: none; }
+.cp-photo summary::-webkit-details-marker { display: none; }
+.cp-photo img { display: block; max-width: 100%; max-height: 70vh; margin-top: 12px; border-radius: 10px; }
+.cp-actions { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }

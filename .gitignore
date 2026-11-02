@@ -21,6 +21,7 @@
 # То же для демо-рекламы: кампании-заглушки для показа клиенту.
 /public_html/__promo.local.*
 /config.php
+/chat-photos/
 /public_html/images/*
 !/public_html/images/.gitkeep
 !/public_html/images/.htaccess

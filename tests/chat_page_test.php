@@ -676,8 +676,10 @@ test('фоновая перечитка дописывает сообщения,
     assert_true(strpos($js, 'var from = keepScroll && peer ? sameHead(messages) : -1;') !== false,
         'сверка применяется при тихой перерисовке');
     assert_true(strpos($js, 'if (from >= 0) {') !== false, 'и решает, дописывать или пересобирать');
-    assert_true(strpos($js, "if (shown[i].dataset.id !== String(messages[i].id)) { return -1; }") !== false,
+    assert_true(strpos($js, "if (shown[i].dataset.key !== msgKey(messages[i])) { return -1; }") !== false,
         'сверка по настоящим номерам сообщений, а не по количеству');
+    assert_true(strpos($js, 'return String(m.id) + (p ?') !== false, 'ключ начинается с номера, у фото в нём ещё и состояние');
+    assert_true(strpos($js, 'msg.dataset.key = msgKey(m);') !== false, 'ключ есть на каждом пузыре');
     assert_true(strpos($js, 'msg.dataset.id = String(m.id);') !== false, 'номер есть на каждом пузыре');
     assert_true(strpos($js, 'for (var k = from; k < messages.length; k++) { place(messages[k]); }') !== false,
         'дописывается только хвост');

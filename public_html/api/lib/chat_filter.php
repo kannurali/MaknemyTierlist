@@ -294,7 +294,7 @@ function chat_filter_words(string $text, array $rules): ?string {
  */
 function chat_filter_apply(string $text, array $rules): array {
     $clean = ['text' => $text, 'link' => false, 'word' => false];
-    if (chat_sticker_id($text) !== '') { return $clean; }
+    if (chat_sticker_id($text) !== '' || chat_photo_id($text) > 0) { return $clean; }
 
     $failed = ['text' => CHAT_LINK_CUT, 'link' => true, 'word' => false];
     $folded = chat_filter_fold($text);
