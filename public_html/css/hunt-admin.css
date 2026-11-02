@@ -1,0 +1,41 @@
+.ha-main { display: flex; flex-direction: column; gap: 16px; padding: 16px; max-width: 1100px; }
+.ha-card { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.ha-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ha-head h2 { margin: 0; font-size: 16px; }
+.ha-head input[type="search"] { margin-left: auto; min-width: 220px; }
+.ha-phase { border-radius: 999px; padding: 3px 10px; font-size: 12px; border: 1px solid var(--edge); color: var(--muted); }
+.ha-phase.is-open { border-color: var(--ok); color: var(--ok); }
+.ha-phase.is-soon, .ha-phase.is-sales { border-color: var(--cyan); color: var(--cyan); }
+.ha-phase.is-closed { border-color: #ffb35c; color: #ffb35c; }
+.ha-alert { margin: 0 16px; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255, 90, 82, .5); color: #ffb3ae; background: rgba(255, 90, 82, .08); }
+.ha-alert.ok { border-color: rgba(92, 214, 140, .5); color: #9ff0bd; background: rgba(92, 214, 140, .08); }
+.ha-note { color: var(--muted); font-size: 12px; margin: 0; }
+.ha-sum { margin: 0; font-size: 14px; color: var(--text); }
+.ha-sum b { color: var(--cyan); }
+.ha-ints { display: flex; gap: 8px; flex-wrap: wrap; }
+.ha-ints label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.ha-ints input { width: 76px; }
+.ha-prizes { display: flex; flex-direction: column; gap: 6px; }
+.ha-prize { display: grid; grid-template-columns: 34px 1fr 80px 1fr auto; gap: 8px; align-items: center; }
+.ha-prize img { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; background: rgba(255, 255, 255, .04); }
+.ha-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ha-kpi { border: 1px solid var(--edge); border-radius: 10px; padding: 10px; }
+.ha-kpi b { display: block; font-size: 20px; color: var(--text); }
+.ha-kpi span { font-size: 12px; color: var(--muted); }
+.ha-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ha-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--edge); }
+.ha-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255, 255, 255, .05); vertical-align: middle; }
+.ha-table td .btn { margin-right: 4px; }
+.ha-table input[type="text"] { width: 100%; min-width: 140px; }
+.ha-ticket { display: inline-flex; gap: 4px; align-items: center; margin-right: 8px; }
+.ha-ticket.is-void { text-decoration: line-through; color: var(--muted); }
+.ha-st { border-radius: 999px; padding: 2px 8px; font-size: 11px; border: 1px solid var(--edge); }
+.ha-st.won { border-color: var(--cyan); color: var(--cyan); }
+.ha-st.confirmed, .ha-st.queued { border-color: #ffb35c; color: #ffb35c; }
+.ha-st.given { border-color: var(--ok); color: var(--ok); }
+.ha-st.expired, .ha-st.redrawn { color: var(--muted); }
+@media (max-width: 720px) {
+  .ha-prize { grid-template-columns: 34px 1fr 70px; }
+  .ha-prize .ha-prize-item, .ha-prize .btn { grid-column: span 3; }
+  .ha-table { font-size: 12px; }
+}

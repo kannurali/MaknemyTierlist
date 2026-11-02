@@ -92,7 +92,10 @@
 
   var DOCK_TEXT_KEYS = {
     "c_muryn4isxftf": "promo.channelDockText",
-    "house-tg-bloxfruits": "promo.channelDockText"
+    "house-tg-bloxfruits": "promo.channelDockText",
+    "starvell-2026-10": "promo.starvellDockText",
+    "house-giveaway-halloween-2026": "promo.halloweenGiveawayDockText",
+    "house-giveaway-hellfire-2026": "promo.hellfireGiveawayDockText"
   };
 
   function dockTextKey(campaign) {
@@ -187,17 +190,15 @@
     var g = root.NX_GW;
     if (g && g.t) { return g.t(key, vars); }
     var i18n = root.I18N;
-    var lang = root.document && root.document.documentElement.lang === "en" ? "en" : "ru";
+    var lang = i18n ? i18n.pageLang() : "ru";
     return i18n ? i18n.t(key, lang, vars) : key;
   }
 
   function gwcPlural(n) {
     var g = root.NX_GW;
-    if ((g && g.lang ? g.lang() : root.document.documentElement.lang) === "en") { return n === 1 ? "one" : "many"; }
-    var a = n % 10, b = n % 100;
-    if (a === 1 && b !== 11) { return "one"; }
-    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
-    return "many";
+    var i18n = root.I18N;
+    if (!i18n) { return "many"; }
+    return i18n.plural(n, g && g.lang ? g.lang() : undefined);
   }
 
   function gwcFind(id) {
@@ -664,6 +665,62 @@
     notes: ""
   };
 
+  var HOUSE_HALLOWEEN = {
+    id: "house-giveaway-halloween-2026",
+    name: "house-giveaway-halloween-2026",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "2026-10-29",
+    end: "",
+    href: "/giveaways#g2",
+    text: "",
+    cta: "",
+    textKey: "promo.halloweenGiveawayText",
+    ctaKey: "promo.giveawayCta",
+    gw: 2,
+
+    erid: "",
+    pages: ["tierlist", "news", "calc", "trading", "stock"],
+    slots: ["strip", "rail", "dock"],
+    creatives: {
+      strip: { src: "/assets/promo/halloween-gw-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/halloween-gw-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/halloween-gw-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" }
+    },
+
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
+  var HOUSE_HELLFIRE = {
+    id: "house-giveaway-hellfire-2026",
+    name: "house-giveaway-hellfire-2026",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "2026-10-31",
+    end: "",
+    href: "/giveaways#g6",
+    text: "",
+    cta: "",
+    textKey: "promo.hellfireGiveawayText",
+    ctaKey: "promo.giveawayCta",
+    gw: 6,
+
+    erid: "",
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip: { src: "/assets/promo/hellfire-prizes-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/hellfire-prizes-rail.webp",  w: 320,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/hellfire-prizes-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/hellfire-prizes-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
+    },
+
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 7 },
+    notes: ""
+  };
+
   var HOUSE_CHANNEL = {
     id: "house-tg-bloxfruits",
     name: "house-tg-bloxfruits",
@@ -671,7 +728,7 @@
     enabled: true,
     weight: 1,
     start: "",
-    end: "",
+    end: "2026-10-27",
     href: "https://t.me/+VQVMx_Imrus1Zjhi",
     text: "",
     cta: "",
@@ -722,7 +779,7 @@
     enabled: true,
     weight: 1,
     start: "2026-10-18",
-    end: "",
+    end: "2026-10-25",
     href: "https://starvell.com/lead/045fa3/roblox/blox-fruits",
     text: "",
     cta: "",
@@ -732,17 +789,16 @@
     pages: ["trading"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
-      strip:    { src: "/assets/promo/starvell-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
-      rail:     { src: "/assets/promo/starvell-rail.webp",      w: 300,  h: 1200, anim: false, poster: "" },
-      dock:     { src: "/assets/promo/starvell-dock.webp",      w: 640,  h: 200,  anim: false, poster: "" },
-      dockMini: { src: "/assets/promo/starvell-dock-mini.webp", w: 810,  h: 224,  anim: false, poster: "" },
-      popup:    { src: "/assets/promo/starvell-popup.webp",     w: 800,  h: 800,  anim: false, poster: "" }
+      strip: { src: "/assets/promo/starvell-strip.webp", w: 1200, h: 300,  anim: false, poster: "" },
+      rail:  { src: "/assets/promo/starvell-rail.webp",  w: 300,  h: 1200, anim: false, poster: "" },
+      dock:  { src: "/assets/promo/starvell-dock.webp",  w: 640,  h: 200,  anim: false, poster: "" },
+      popup: { src: "/assets/promo/starvell-popup.webp", w: 800,  h: 800,  anim: false, poster: "" }
     },
     popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
     notes: ""
   };
 
-  var BOOKED = [PLAYEROK, STARVELL];
+  var BOOKED = [HOUSE_HELLFIRE, PLAYEROK, STARVELL];
 
   function bookedFor(campaign, slot, now, page) {
     return campaign.enabled
@@ -762,6 +818,7 @@
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
     var booked = bookedOn(slot, now, page);
     if (booked) { return booked; }
+    if (bookedFor(HOUSE_HALLOWEEN, slot, now, page)) { return HOUSE_HALLOWEEN; }
     if (bookedFor(HOUSE_GIVEAWAY, slot, now, page)) { return HOUSE_GIVEAWAY; }
     if (bookedFor(HOUSE_CHANNEL, slot, now, page)) { return HOUSE_CHANNEL; }
     if (slot === "popup") { return HOUSE_TG; }
@@ -769,21 +826,18 @@
   }
 
   function popupPick(doc, seen, nowMs, rnd, page) {
-    var paid = eligible(doc, "popup", nowMs, page).filter(function (c) {
+    var sold = eligible(doc, "popup", nowMs, page);
+    var paid = sold.filter(function (c) {
       return shouldShowPopup(c, seen, nowMs);
     });
     if (paid.length) { return pickWeighted(paid, rnd); }
+    if (sold.length) { return null; }
     var house = houseFor("popup", nowMs, page);
     return (house && shouldShowPopup(house, seen, nowMs)) ? house : null;
   }
 
-  var METRIKA_ID = 111127188;
-
   function goal(name, params) {
     var p = params || {};
-    try {
-      if (typeof root.ym === "function") { root.ym(METRIKA_ID, "reachGoal", name, p); }
-    } catch (_) {}
     try {
       if (typeof root.gtag === "function") {
         var g = {};
@@ -817,6 +871,8 @@
     HOUSE_TG: HOUSE_TG,
     HOUSE_SLOT: HOUSE_SLOT,
     HOUSE_GIVEAWAY: HOUSE_GIVEAWAY,
+    HOUSE_HALLOWEEN: HOUSE_HALLOWEEN,
+    HOUSE_HELLFIRE: HOUSE_HELLFIRE,
     HOUSE_CHANNEL: HOUSE_CHANNEL,
     PLAYEROK: PLAYEROK,
     STARVELL: STARVELL,

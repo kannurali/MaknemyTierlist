@@ -6,7 +6,7 @@
     if (!item || !base) { return ""; }
     var ru = String(item[base] || "").trim();
     var en = String(item[base + "En"] || "").trim();
-    return lang === "en" ? (en || ru) : (ru || en);
+    return !lang || lang === "ru" ? (ru || en) : (en || ru);
   }
 
   function descFor(item, lang) { return textFor(item, "desc", lang); }

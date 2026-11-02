@@ -3,6 +3,7 @@ require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/news_blocks.php';
 require_once __DIR__ . '/lib/translate.php';
 require_once __DIR__ . '/lib/telegram.php';
+require_once __DIR__ . '/lib/i18n_content.php';
 
 // Допустимые категории. Тот же список лежит в js/news.js — если добавляется
 // четвёртая, править надо оба места, иначе редактор предложит то, что сервер
@@ -288,5 +289,15 @@ if (!defined('TESTING')) {
     // подписчикам в Telegram, уже после ответа редактору.
     if ($status === 200 && read_row_id($body) === 0) {
         tg_after_news(db(), app_config(), (int)$payload['id'], intdiv($nowMs, 1000));
+    }
+
+    // Восемь языков сайта — тоже после ответа: Google на каждый язык
+    // отвечает отдельно, и редактор не должен ждать их всех
+    // (api/lib/i18n_content.php).
+    if ($status === 200) {
+        $id = (int)$payload['id'];
+        i18n_after_save(function (float $deadline) use ($id) {
+            i18n_job_news(db(), $id, 'i18n_google_for', $deadline);
+        });
     }
 }

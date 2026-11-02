@@ -13,6 +13,7 @@
   letter-spacing: .1cqw;
   text-shadow: 0 0 .55cqw rgba(203,120,255,.38), 0 .22cqw .3cqw rgba(0,0,0,.55);
 }
+.nw-title:lang(de), .nw-title:lang(fr), .nw-title:lang(es), .nw-title:lang(it), .nw-title:lang(pt), .nw-title:lang(pl), .nw-title:lang(tr) { font-family: var(--display); }
 
 .nw-feed { width: 84.63cqw; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 1.6cqw; }
 .nw-filters { width: 84.63cqw; margin-inline: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 1.6cqw; }

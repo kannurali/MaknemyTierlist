@@ -65,21 +65,124 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # не шлёт, превращал бы каждый запрос флуда в промах мимо кеша, то есть в PHP
 # и MySQL. Такие запросы LiteSpeed отбивает 403 сам, не запуская PHP.
 #
-# state.php и stock.php клиент зовёт без параметров вовсе, giveaways.php —
-# без них или с ?test=1 (тестовые розыгрыши), tierlist.php и promo.php — без
-# них или с ?rev=<число>.
+# state.php, stock.php и hunt.php клиент зовёт без параметров вовсе, giveaways.php —
+# без них или с ?test=1 (тестовые розыгрыши), promo.php — без них или с
+# ?rev=<число>, tierlist.php — так же. Страницы сайта добавляют последним
+# параметром язык: giveaways.php?test=1&lang=de, tierlist.php?rev=1&lang=de —
+# по адресу на язык, не больше.
 RewriteCond %{QUERY_STRING} .
-RewriteRule ^api/(state|stock)\.php$ - [F,L]
+RewriteRule ^api/(state|stock|hunt)\.php$ - [F,L]
 
-RewriteCond %{QUERY_STRING} !^(test=1)?$
+RewriteCond %{QUERY_STRING} !^((test=1&)?lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)|test=1)?$
 RewriteRule ^api/giveaways\.php$ - [F,L]
 
+RewriteCond %{QUERY_STRING} !^((rev=[0-9]{1,18}&)?lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)|rev=[0-9]{1,18})?$
+RewriteRule ^api/tierlist\.php$ - [F,L]
+
 RewriteCond %{QUERY_STRING} !^(rev=[0-9]{1,18})?$
-RewriteRule ^api/(tierlist|promo)\.php$ - [F,L]
+RewriteRule ^api/promo\.php$ - [F,L]
 
 # Хвост пути после .php (PATH_INFO): /api/state.php/<что угодно> исполнил бы
 # тот же state.php под новым ключом кеша. Ни одна ссылка сайта так не выглядит.
 RewriteRule \.php/ - [F,L]
+
+# ---------------------------------- Языки ----------------------------------
+# Русский живёт на адресах без приставки, остальные языки — под /<код>
+# (список совпадает с I18N_LANGS в api/lib/i18n.php, проверяет
+# tests/i18n_routes_test.php). Адрес с приставкой рероутится СРАЗУ на PHP-файл
+# раздела, а PHP узнаёт язык по REQUEST_URI, который после рероута остаётся
+# исходным. Рероут на адрес раздела (/en/tierlist → /tierlist) работал бы
+# только на Apache: тот прогоняет .htaccess после рероута ещё раз, а LiteSpeed
+# на бою — нет, и /tierlist без второго прохода отдавал 404 (2026-10-19).
+# Приставка снимается только у известных разделов — /en/api, /en/admin и
+# прочее отдают 404. Правовые страницы двуязычные на одном адресе, поэтому
+# /en/privacy уводится на /privacy: этот адрес вписан в карточку
+# OAuth-приложения Roblox.
+#
+# Автоопределение — только на адресах без приставки и только для внешнего
+# запроса: у внутреннего рероута /en/x → /x REDIRECT_STATUS уже выставлен, и
+# без этого условия он сам попал бы под редирект и зациклился. Выбор в меню
+# (кука nx_lang) важнее языка браузера; языки СНГ остаются на русском;
+# у каждого из языков сайта — своя версия (значение — константа, а не захват:
+# регистр заголовка Accept-Language бывает любым); остальные получают
+# английский. Боты не перенаправляются: Googlebot языка
+# не присылает и должен видеть каждую версию на её адресе. 302, а не 301:
+# браузер не должен запоминать перенаправление.
+#
+# Решение принимается здесь, а не в PHP: CacheLookup выше отдаёт страницу из
+# кеша LiteSpeed, не запуская PHP, а рероуты .htaccess исполняются раньше.
+RewriteCond %{HTTP_COOKIE} (^|;\s*)nx_lang=(ru|en|de|fr|es|it|pt|pl|tr|uk)(;|$)
+RewriteRule ^ - [E=NX_PICK:%2]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*(ru|kk|uz|ky|be|az|hy|ka|tg|tk)([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:ru]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*de([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:de]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*fr([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:fr]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*es([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:es]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*it([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:it]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*pt([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:pt]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*pl([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:pl]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*tr([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:tr]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*uk([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:uk]
+
+RewriteCond %{ENV:NX_PICK} ^$
+RewriteCond %{HTTP:Accept-Language} ^\s*[a-z]{2,3}([-_,;\s]|$) [NC]
+RewriteRule ^ - [E=NX_PICK:en]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
+RewriteCond %{ENV:NX_PICK} ^(en|de|fr|es|it|pt|pl|tr|uk)$
+RewriteRule ^$ /%1 [R=302,L]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteCond %{HTTP_USER_AGENT} !(bot|crawl|spider|slurp|preview|facebookexternalhit|vkshare|whatsapp|telegram|discord|skype|lighthouse) [NC]
+RewriteCond %{ENV:NX_PICK} ^(en|de|fr|es|it|pt|pl|tr|uk)$
+RewriteRule ^(tierlist|calculator|profile|chat|trading|trading/new|stock|support|giveaways|halloween|ads|news|news/[0-9]+)$ /%1/$1 [R=302,L]
+
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/$ /$1 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(.+)/$ /$1/$2 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(privacy|terms)$ /$2 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)$ /home.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/tierlist$ /index.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/calculator$ /calculator.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/profile$ /profile.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/chat$ /chat.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/trading$ /trading.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/trading/new$ /trade-new.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/stock$ /stock.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/support$ /support.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/giveaways$ /giveaways.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/halloween$ /halloween.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/ads$ /promote.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news$ /news.php [L]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news/([0-9]+)$ /news.php?id=$2 [L]
 
 # "/" отдаёт главную (home.php), а не тирлист: по макету это два разных
 # раздела, и в шапке они стоят отдельными пунктами. Явная директива, а не
@@ -212,6 +315,17 @@ RewriteRule ^giveaways\.php$ /giveaways [L,R=301]
 
 RewriteRule ^giveaways$ /giveaways.php [L]
 
+# ------------------------- Хэллоуинский ивент -------------------------
+# Spooky Tokens (api/lib/hunt.php). Слова event/promo в адресе не берём —
+# их режут блокировщики. Пути внутри halloween.php документ-относительные,
+# отсюда тот же приём, что у /stock.
+RewriteRule ^halloween/$ /halloween [L,R=301]
+
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^halloween\.php$ /halloween [L,R=301]
+
+RewriteRule ^halloween$ /halloween.php [L]
+
 # -------------------------------- Реклама --------------------------------
 # Условия для рекламодателей; в шапке на неё ведёт кнопка «Реклама». Адрес
 # /ads выбрал владелец (2026-10-17). Сверено на эту дату: EasyList, RU AdList,
@@ -321,7 +435,9 @@ RewriteRule ^admin/news/?$  /admin-news.php     [L]
 RewriteRule ^admin/promo/?$ /admin-promo.php    [L]
 RewriteRule ^admin/support/?$ /admin-support.php [L]
 RewriteRule ^admin/bans/?$  /admin-bans.php     [L]
+RewriteRule ^admin/chat-filter/?$ /admin-chat-filter.php [L]
 RewriteRule ^admin/giveaways/?$ /admin-giveaways.php [L]
+RewriteRule ^admin/hunt/?$ /admin-hunt.php [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 
 # Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому
@@ -341,12 +457,12 @@ Options -Indexes
 # Baseline security headers. `always` so they ride on error responses too.
 #
 # Content-Security-Policy. Главное в нём — script-src без 'unsafe-inline' и
-# 'unsafe-eval': исполняются только файлы с самого сайта, Метрика и Google
-# Analytics (gtag.js с www.googletagmanager.com). Если в
+# 'unsafe-eval': исполняются только файлы с самого сайта и Google Analytics
+# (gtag.js с www.googletagmanager.com). Если в
 # чат, объявление или профиль когда-нибудь пролезет разметка со скриптом или
 # onerror=, браузер её не исполнит, и чужой код не сможет действовать от
 # имени вошедшего админа. Поэтому на страницах нет ни одного встроенного
-# исполняемого <script>: счётчик Метрики — js/metrika.js, GA — js/ga.js, ревизия тирлиста и
+# исполняемого <script>: счётчик GA — js/ga.js, ревизия тирлиста и
 # id поста — <meta name="nx-rev"> и <meta name="nx-post">, флаг админки —
 # js/admin-flag.js. <script type="application/ld+json"> — данные, их CSP не
 # трогает. Проверяет всё это tests/csp_test.php.
@@ -355,13 +471,11 @@ Options -Indexes
 #     исполняет, а без этого пришлось бы переписать половину вёрстки.
 #   img-src — свои картинки, data:/blob: (PNG-экспорт html2canvas, кроп в
 #     редакторе новостей), аватары Roblox (те же домены, что пропускает
-#     roblox_avatar_ok()), адреса Метрики и GA. https://maknemy.com явно, потому что
+#     roblox_avatar_ok()), адреса GA. https://maknemy.com явно, потому что
 #     в данных тирлиста ссылки на картинки абсолютные.
-#   connect-src, frame-src, child-src — адреса Метрики и Вебвизора по её
-#     инструкции «Установка счетчика на сайт с CSP» (общий список адресов,
-#     https и wss). Пиксель yandex.ru/an/mapuid/… (сверка кук рекламной сети
-#     Яндекса, её на сайте нет) блокируется намеренно: статистике и Вебвизору
-#     он не нужен, а /privacy обещает, что профилей мы не строим.
+#   frame-src, child-src 'self' blob: — blob: остался от Вебвизора Яндекс
+#     Метрики (снята 2026-10-20). Своих blob-фреймов на сайте нет; убирать
+#     вместе с проверкой PNG-экспорта (html2canvas) и превью новостей.
 #   Google Analytics — адреса из инструкции Google «Use Content Security Policy»
 #     для GA4: скрипт с www.googletagmanager.com, хиты в *.google-analytics.com
 #     и *.analytics.google.com. Google Signals и рекламная персонализация в
@@ -373,7 +487,7 @@ Options -Indexes
 # продолжение строки в .htaccess. Сломается что-то на бою — закомментировать
 # эту строку, это полный откат.
 <IfModule mod_headers.c>
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://mc.yandex.ru https://yastatic.net https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://maknemy.com data: blob: https://rbxcdn.com https://*.rbxcdn.com https://roblox.com https://*.roblox.com https://mc.yandex.ru https://mc.yandex.az https://mc.yandex.by https://mc.yandex.co.il https://mc.yandex.com https://mc.yandex.com.am https://mc.yandex.com.ge https://mc.yandex.com.tr https://mc.yandex.ee https://mc.yandex.fr https://mc.yandex.kg https://mc.yandex.kz https://mc.yandex.lt https://mc.yandex.lv https://mc.yandex.md https://mc.yandex.tj https://mc.yandex.tm https://mc.yandex.uz https://mc.webvisor.com https://mc.webvisor.org https://yastatic.net https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://mc.yandex.ru https://mc.yandex.az https://mc.yandex.by https://mc.yandex.co.il https://mc.yandex.com https://mc.yandex.com.am https://mc.yandex.com.ge https://mc.yandex.com.tr https://mc.yandex.ee https://mc.yandex.fr https://mc.yandex.kg https://mc.yandex.kz https://mc.yandex.lt https://mc.yandex.lv https://mc.yandex.md https://mc.yandex.tj https://mc.yandex.tm https://mc.yandex.uz https://mc.webvisor.com https://mc.webvisor.org https://yastatic.net wss://mc.yandex.ru wss://mc.yandex.az wss://mc.yandex.by wss://mc.yandex.co.il wss://mc.yandex.com wss://mc.yandex.com.am wss://mc.yandex.com.ge wss://mc.yandex.com.tr wss://mc.yandex.ee wss://mc.yandex.fr wss://mc.yandex.kg wss://mc.yandex.kz wss://mc.yandex.lt wss://mc.yandex.lv wss://mc.yandex.md wss://mc.yandex.tj wss://mc.yandex.tm wss://mc.yandex.uz wss://mc.webvisor.com wss://mc.webvisor.org https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src 'self' blob: https://mc.yandex.ru; child-src 'self' blob: https://mc.yandex.ru; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://maknemy.com data: blob: https://rbxcdn.com https://*.rbxcdn.com https://roblox.com https://*.roblox.com https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"

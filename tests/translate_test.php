@@ -421,4 +421,54 @@ test('saving an unchanged, fully translated post sends nothing to Google', funct
     assert_eq(0, $p2['translated']);
 });
 
+// ------------------------------ Любой язык ------------------------------
+
+test('the request goes to the language it is asked for, English by default', function () {
+    parse_str((string)parse_url(tr_endpoint('de'), PHP_URL_QUERY), $q);
+    assert_eq(['ru', 'de', 'gtx'], [$q['sl'], $q['tl'], $q['client']]);
+    parse_str((string)parse_url(tr_endpoint(), PHP_URL_QUERY), $q);
+    assert_eq('en', $q['tl']);
+});
+
+test('units: strings and formatted paragraphs come back translated in one request', function () {
+    $calls = [];
+    $out = tr_translate_units([
+        'title' => ['ru' => 'Заголовок — новый', 'spans' => false],
+        'b0'    => ['ru' => [tr_s('Новый '), tr_s('фрукт', ['b' => true])], 'spans' => true],
+    ], fake_translator($calls), far_future());
+    assert_eq(1, count($calls), 'one batch');
+    assert_eq('EN:Заголовок — новый', $out['title']);
+    assert_eq([tr_s('EN:Новый '), tr_s('фрукт', ['b' => true])], $out['b0']);
+});
+
+test('units: broken tags fall back to span-by-span, failures stay null', function () {
+    $calls = [];
+    $broken = function (string $text) use (&$calls): ?string {
+        $calls[] = $text;
+        if (strpos($text, '<x') !== false) { return 'Lost <x1>tags'; }
+        $out = [];
+        foreach (explode(TR_SEP, $text) as $p) { $out[] = 'T:' . $p; }
+        return implode(TR_SEP, $out);
+    };
+    $out = tr_translate_units([
+        'b0' => ['ru' => [tr_s('Новый '), tr_s('фрукт', ['b' => true])], 'spans' => true],
+    ], $broken, far_future());
+    assert_eq([tr_s('T:Новый '), tr_s('T:фрукт', ['b' => true])], $out['b0']);
+
+    $down = function (string $text): ?string { return null; };
+    $out = tr_translate_units([
+        'title' => ['ru' => 'Заголовок', 'spans' => false],
+        'b0'    => ['ru' => [tr_s('Абзац')], 'spans' => true],
+    ], $down, far_future());
+    assert_eq(['title' => null, 'b0' => null], $out);
+});
+
+test('units: code inside a paragraph is kept as it was', function () {
+    $calls = [];
+    $out = tr_translate_units([
+        'b0' => ['ru' => [tr_s('Код '), tr_s('/redeem X', ['c' => true])], 'spans' => true],
+    ], fake_translator($calls), far_future());
+    assert_eq([tr_s('EN:Код '), tr_s('/redeem X', ['c' => true])], $out['b0']);
+});
+
 run_tests();

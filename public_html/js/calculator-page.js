@@ -16,7 +16,7 @@
   const tx = (key, vars) => I18N.t(key, lang, vars);
 
   function fmtNum(n) {
-    return Math.round(n).toLocaleString(lang === "en" ? "en-US" : "ru-RU");
+    return Math.round(n).toLocaleString(I18N.locale(lang));
   }
 
   let catalog = [];

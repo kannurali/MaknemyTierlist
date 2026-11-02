@@ -366,6 +366,36 @@ CREATE TABLE IF NOT EXISTS tg_channels (
   updated_at BIGINT UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Посты розыгрышей в каналах и премиум-эмодзи бота. Для боевой базы —
+-- docs/migrations/2026-10-27-giveaway-posts.sql, там же пояснения к полям.
+CREATE TABLE IF NOT EXISTS giveaway_posts (
+  giveaway_id INT UNSIGNED    NOT NULL,
+  chat_id     BIGINT          NOT NULL,
+  message_id  INT UNSIGNED    NOT NULL DEFAULT 0,
+  posted_at   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  results_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (giveaway_id, chat_id),
+  KEY idx_results (results_at, message_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Люди, вступившие в розыгрыш кнопкой в канале, без аккаунта сайта. Для
+-- боевой базы — docs/migrations/2026-10-28-giveaway-tg-entry.sql.
+CREATE TABLE IF NOT EXISTS tg_people (
+  chat_id     BIGINT          NOT NULL PRIMARY KEY,
+  name        VARCHAR(80)     NOT NULL DEFAULT '',
+  username    VARCHAR(32)     NOT NULL DEFAULT '',
+  lang        VARCHAR(5)      NOT NULL DEFAULT 'ru',
+  roblox_nick VARCHAR(20)     NOT NULL DEFAULT '',
+  await_gw    INT UNSIGNED    NOT NULL DEFAULT 0,
+  updated_at  BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tg_emoji (
+  emoji      VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
+  emoji_id   VARCHAR(24)     NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Лайки только вошедшим, один на аккаунт: кто уже голосовал за тирлист
 -- ('tierlist') или за пост ('news:<id>'). Счётчики остаются в likes.count и
 -- news.likes. Для боевой базы — docs/migrations/2026-10-14-like-votes.sql.
@@ -374,4 +404,156 @@ CREATE TABLE IF NOT EXISTS like_votes (
   target     VARCHAR(32)     NOT NULL,
   created_at BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (user_id, target)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Переводы новостей, розыгрышей и описаний предметов на языки сайта (кроме
+-- EN новостей и розыгрышей — тот в своих колонках). Поля и смысл колонок —
+-- в docs/migrations/2026-10-20-i18n-texts.sql, логика —
+-- public_html/api/lib/i18n_content.php.
+CREATE TABLE IF NOT EXISTS i18n_texts (
+  kind       VARCHAR(8)      NOT NULL,
+  ref_id     VARCHAR(40)     NOT NULL,
+  field      VARCHAR(16)     NOT NULL,
+  lang       CHAR(2)         NOT NULL,
+  src_hash   CHAR(40)        NOT NULL,
+  text       MEDIUMTEXT      NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (kind, ref_id, field, lang)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==========================================================================
+--  Хэллоуинский ивент Spooky Tokens (api/lib/hunt.php). Для боевой базы —
+--  docs/migrations/2026-10-30-hunt.sql.
+-- ==========================================================================
+
+-- --------------------------------------------------------------------------
+--  Сезон ивента
+-- --------------------------------------------------------------------------
+-- status: draft → live → drawn. starts_at — полночь по Москве дня 1, дальше
+-- 7 суток. sales_end_at — до какого момента продаются билеты (не раньше конца
+-- семи дней), draw_at — когда итоги (текст на странице).
+-- login_json — 7 наград за вход по дням, hours_json — 2 награды за час и два
+-- часа на сайте в сутки. Цена билета = половина всех наград, билетов 2.
+-- prizes_json — [{name, count, icon}], как у розыгрышей.
+-- titles_json — {login:{ru,en}, hours:{ru,en}}: тексты двух титулов.
+-- claim_days — сколько дней победитель может подтвердить выигрыш.
+CREATE TABLE IF NOT EXISTS hunts (
+  id           INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  slug         VARCHAR(40)     NOT NULL DEFAULT '',
+  status       VARCHAR(8)      NOT NULL DEFAULT 'draft',
+  title_ru     VARCHAR(120)    NOT NULL DEFAULT '',
+  title_en     VARCHAR(120)    NOT NULL DEFAULT '',
+  rules_ru     TEXT            NULL,
+  rules_en     TEXT            NULL,
+  starts_at    BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  sales_end_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  draw_at      BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  login_json   VARCHAR(255)    NOT NULL DEFAULT '',
+  hours_json   VARCHAR(255)    NOT NULL DEFAULT '',
+  prizes_json  TEXT            NULL,
+  claim_days   INT UNSIGNED    NOT NULL DEFAULT 7,
+  titles_json  TEXT            NULL,
+  created_at   BIGINT UNSIGNED NOT NULL,
+  updated_at   BIGINT UNSIGNED NOT NULL,
+  drawn_at     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_status (status, starts_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Кошелёк участника — кеш журнала, меняется в той же транзакции
+-- --------------------------------------------------------------------------
+-- balance — что можно потратить, earned — всего собрано (при тратах не
+-- уменьшается), tickets — сколько билетов куплено.
+CREATE TABLE IF NOT EXISTS hunt_wallets (
+  hunt_id  INT UNSIGNED    NOT NULL,
+  user_id  BIGINT UNSIGNED NOT NULL,
+  balance  INT             NOT NULL DEFAULT 0,
+  earned   INT UNSIGNED    NOT NULL DEFAULT 0,
+  tickets  INT UNSIGNED    NOT NULL DEFAULT 0,
+  first_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  last_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (hunt_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Журнал наград и трат
+-- --------------------------------------------------------------------------
+-- ref — login:<день>, hour:<день>:<1|2>, ticket:<номер>. Уникальный ключ
+-- (hunt_id, user_id, ref) не даёт начислить одну награду дважды.
+CREATE TABLE IF NOT EXISTS hunt_ledger (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hunt_id    INT UNSIGNED    NOT NULL,
+  user_id    BIGINT UNSIGNED NOT NULL,
+  delta      INT             NOT NULL,
+  kind       VARCHAR(8)      NOT NULL DEFAULT '',
+  ref        VARCHAR(64)     NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  UNIQUE KEY uq_ref (hunt_id, user_id, ref),
+  KEY idx_kind (hunt_id, user_id, kind)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Время на сайте по дням ивента
+-- --------------------------------------------------------------------------
+-- secs — сколько засчитано за день (не больше 7200), beat_at — время
+-- последнего пульса любой вкладки человека.
+CREATE TABLE IF NOT EXISTS hunt_time (
+  hunt_id INT UNSIGNED     NOT NULL,
+  user_id BIGINT UNSIGNED  NOT NULL,
+  day     TINYINT UNSIGNED NOT NULL,
+  secs    INT UNSIGNED     NOT NULL DEFAULT 0,
+  beat_at BIGINT UNSIGNED  NOT NULL DEFAULT 0,
+  PRIMARY KEY (hunt_id, user_id, day)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Билеты лутереи. id — номер билета («#0042»)
+-- --------------------------------------------------------------------------
+-- seq — 1 или 2: какой по счёту билет у человека. UNIQUE (hunt_id, user_id,
+-- seq) — гонка двух покупок не превысит лимит. draw_pos — место в очереди
+-- итогов, по ней «Перевыбрать» отдаёт приз следующему.
+CREATE TABLE IF NOT EXISTS hunt_tickets (
+  id          INT UNSIGNED     NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hunt_id     INT UNSIGNED     NOT NULL,
+  user_id     BIGINT UNSIGNED  NOT NULL,
+  seq         TINYINT UNSIGNED NOT NULL,
+  created_at  BIGINT UNSIGNED  NOT NULL,
+  void        TINYINT          NOT NULL DEFAULT 0,
+  void_reason VARCHAR(160)     NOT NULL DEFAULT '',
+  draw_pos    INT UNSIGNED     NOT NULL DEFAULT 0,
+  UNIQUE KEY uq_seq (hunt_id, user_id, seq),
+  KEY idx_hunt (hunt_id, draw_pos)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Выигрыши: won → confirmed → queued → given; expired; redrawn
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS hunt_wins (
+  id         INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hunt_id    INT UNSIGNED    NOT NULL,
+  user_id    BIGINT UNSIGNED NOT NULL,
+  ticket_id  INT UNSIGNED    NOT NULL,
+  prize_idx  SMALLINT        NOT NULL DEFAULT 0,
+  prize_name VARCHAR(120)    NOT NULL DEFAULT '',
+  prize_icon VARCHAR(80)     NOT NULL DEFAULT '',
+  status     VARCHAR(10)     NOT NULL DEFAULT 'won',
+  deadline   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  note       VARCHAR(255)    NOT NULL DEFAULT '',
+  created_at BIGINT UNSIGNED NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL,
+  UNIQUE KEY uq_ticket (hunt_id, ticket_id),
+  KEY idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Титулы: все 7 наград за вход → login, все 14 часовых → hours
+-- --------------------------------------------------------------------------
+-- Остаются навсегда, видны в профиле, чате и трейдинге. Текст — titles_json
+-- своего сезона.
+CREATE TABLE IF NOT EXISTS hunt_titles (
+  user_id    BIGINT UNSIGNED NOT NULL,
+  hunt_id    INT UNSIGNED    NOT NULL,
+  kind       VARCHAR(8)      NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (user_id, hunt_id, kind)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

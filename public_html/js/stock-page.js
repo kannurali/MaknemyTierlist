@@ -83,7 +83,7 @@
   }
 
   function price(n) {
-    return "$" + Number(n).toLocaleString(lang === "en" ? "en-US" : "ru-RU");
+    return "$" + Number(n).toLocaleString(i18n ? i18n.locale(lang) : "ru-RU");
   }
 
   function catalog() {

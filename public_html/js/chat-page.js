@@ -4,6 +4,7 @@
 
   var LANG_KEY = 'nexus-lang-v1';
   var i18n = window.I18N;
+  function siteUrl(path) { return i18n && i18n.url ? i18n.url(path) : path; }
 
   var $ = function (id) { return document.getElementById(id); };
   var list      = $('ctList');
@@ -47,6 +48,21 @@
     return badge;
   }
 
+  function titleChips(user) {
+    if (!user || !user.titles || !user.titles.length) { return null; }
+    var ru = (document.documentElement.lang || 'ru') === 'ru';
+    var box = document.createElement('span');
+    box.className = 'nx-titles';
+    user.titles.forEach(function (t) {
+      var chip = document.createElement('span');
+      chip.className = 'nx-title';
+      chip.setAttribute('data-kind', t.kind);
+      chip.textContent = ru ? t.title.ru : t.title.en;
+      box.appendChild(chip);
+    });
+    return box;
+  }
+
   function copyAllowed(node) {
     var el = node && node.nodeType === 1 ? node : (node ? node.parentElement : null);
     return !!(el && el.closest && el.closest(COPY_OK));
@@ -77,7 +93,7 @@
   var EMOJI = '😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🤫 🤔 🤐 🤨 😐 😑 😶 😶‍🌫️ 😏 😒 🙄 😬 😮‍💨 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊';
 
 
-  function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
+  function lang() { return i18n ? i18n.pageLang() : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
   function when(sec) {
     var d = new Date(sec * 1000);
@@ -140,6 +156,8 @@
       handle.className = 'ct-handle';
       handle.textContent = t.peer.handle;
       meta.appendChild(handle);
+      var chips = titleChips(t.peer);
+      if (chips) { meta.appendChild(chips); }
 
       var st = document.createElement('span');
       st.className = 'ct-status';
@@ -180,7 +198,7 @@
 
     var a = document.createElement('a');
     a.className = 'ct-peer-link';
-    a.href = PROFILE_PATH + '?id=' + encodeURIComponent(peer.id);
+    a.href = siteUrl(PROFILE_PATH + '?id=' + encodeURIComponent(peer.id));
     a.textContent = peer.nick;
     var logo = nickLogo(peer);
     if (logo) { a.appendChild(logo); }
@@ -192,6 +210,8 @@
       if (sel && !sel.isCollapsed && sel.containsNode(a, true)) { e.preventDefault(); }
     });
     roomTitle.appendChild(a);
+    var peerChips = titleChips(peer);
+    if (peerChips) { roomTitle.appendChild(peerChips); }
   }
 
   var emojiBtn   = $('ctEmojiBtn');
@@ -301,10 +321,15 @@
   }
 
   var STICKER_RE = /^\[sticker:([A-Za-z0-9_-]{1,40})\]$/;
+  var LINK_CUT = '[link]';
 
   var items = [];
   var itemsById = Object.create(null);
   var itemsState = '';
+
+  function showBody(body) {
+    return String(body).split(LINK_CUT).join('[' + tx('chat.linkRemoved', 'ссылка удалена') + ']');
+  }
 
   function stickerId(body) {
     var m = STICKER_RE.exec(typeof body === 'string' ? body : '');
@@ -348,7 +373,7 @@
 
   function previewText(body) {
     var id = stickerId(body);
-    if (!id) { return body; }
+    if (!id) { return showBody(body); }
     if (!itemsSettled()) { loadItems(); }
     var it = itemsById[id];
     return tx('chat.sticker', 'Стикер') + (it && it.name ? ': ' + it.name : '');
@@ -741,7 +766,7 @@
     } else {
       var body = document.createElement('p');
       body.className = 'ct-body';
-      body.textContent = m.body;
+      body.textContent = showBody(m.body);
       msg.appendChild(body);
     }
 
@@ -1022,7 +1047,7 @@
   }
 
   function banDate(sec) {
-    return new Date(sec * 1000).toLocaleString(lang() === 'en' ? 'en-GB' : 'ru-RU', {
+    return new Date(sec * 1000).toLocaleString(i18n ? i18n.locale() : 'ru-RU', {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   }

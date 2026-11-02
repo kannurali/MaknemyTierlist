@@ -57,16 +57,12 @@
     savedKind: ""
   };
 
-  function lang() { return document.documentElement.lang === "en" ? "en" : "ru"; }
+  function lang() { return root.I18N ? root.I18N.pageLang() : "ru"; }
 
   function t(key, vars) { return root.I18N ? root.I18N.t(key, lang(), vars) : key; }
 
   function plural(n) {
-    if (lang() === "en") { return n === 1 ? "one" : "many"; }
-    var a = n % 10, b = n % 100;
-    if (a === 1 && b !== 11) { return "one"; }
-    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) { return "few"; }
-    return "many";
+    return root.I18N ? root.I18N.plural(n) : "many";
   }
 
   function unitWord(unit, n) { return t("gw.notify." + UNIT_KEY[unit] + "." + plural(n)); }
@@ -74,7 +70,7 @@
   function placeWord(n) { return t("gw.notify.place." + plural(n)); }
 
   function num(n) {
-    try { return n.toLocaleString(lang() === "en" ? "en-US" : "ru-RU"); } catch (_) { return String(n); }
+    try { return n.toLocaleString(root.I18N ? root.I18N.locale() : "ru-RU"); } catch (_) { return String(n); }
   }
 
   function post(body) {

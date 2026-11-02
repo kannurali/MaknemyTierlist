@@ -1142,11 +1142,6 @@
   color: #fff;
 }
 .pm-order p:last-child { margin-bottom: 0; }
-.pm-order .pm-order-all {
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--pm-text);
-}
 
 @media (max-width: 1100px) {
   .pm-branch { opacity: calc(var(--b-o, 1) * .6); }

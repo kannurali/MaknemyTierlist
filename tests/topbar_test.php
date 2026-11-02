@@ -14,7 +14,7 @@ $PUB  = $ROOT . '/public_html';
 function top_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 /** Разметка шапки без комментариев: в комментариях рядом с кнопками разобрано,
@@ -152,7 +152,7 @@ test('профиль — кнопка data-soon внутри плашки нав
 // js/topbar.js по ответу /api/session.php превращает во вход через Roblox
 // или в меню пользователя.
 test('у каждой кнопки data-soon есть подпись и ключ перевода', function () use ($PUB, $PAGES) {
-    $i18n = top_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true(strpos($i18n, '"topbar.soon"') !== false, 'ключ topbar.soon в словаре');
     foreach ($PAGES as $f) {
         $s = top_header($PUB, $f);
@@ -210,7 +210,7 @@ test('шапка липкая, и её высота живёт одним зна
 // 2026-10-10, компьютер — 2026-10-14). Язычок — единственная дорога к
 // разделам, поэтому проверяем и кнопку, и связку с плашкой.
 test('у шапки есть язычок, связанный с плашкой разделов', function () use ($PUB, $PAGES) {
-    $i18n = top_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['topbar.showNav', 'topbar.hideNav'] as $key) {
         assert_true(strpos($i18n, '"' . $key . '"') !== false, "ключ $key в словаре");
     }
@@ -360,7 +360,7 @@ test('кнопка перед Telegram ведёт на /giveaways, «Рекла�
         assert_true(strpos($s, '<span class="mk-pill-text" data-i18n="nav.promote">Реклама</span>') !== false,
             "$f: подпись раздела переводится");
     }
-    $i18n = top_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_eq(2, preg_match_all('/"nav\.promote":\s+"[^"]+"/', $i18n), '«Реклама» на обоих языках');
     assert_eq(2, preg_match_all('/"nav\.giveaways":\s+"[^"]+"/', $i18n), '«Розыгрыши» на обоих языках');
 
@@ -435,31 +435,20 @@ test('чат — рабочая ссылка на /chat перед профил�
 // вешают обработчик на #langSwitch, когда js/topbar.js ещё не загружен
 // (он defer). topbar.js переносит тот же узел в меню — обработчики едут
 // вместе с ним, а CSS прячет его в шапке, пока перенос не случился.
-test('переключатель языка — в меню аватара, а не в шапке', function () use ($PUB, $PAGES6) {
+// С PR 2 мультиязычности (2026-10-20) язык выбирается в листе разделов:
+// кнопка «Язык ▾» раскрывает список всех языков. Лист открывается и гостю, а
+// меню аватара гостю недоступно — поэтому язык ушёл оттуда.
+test('выбор языка — меню «Язык ▾» в листе разделов', function () use ($PUB, $PAGES6) {
     foreach ($PAGES6 as $f) {
-        $head = top_header($PUB, $f);
-        assert_true((bool)preg_match('/<div class="mk-top-lang lang-switch" id="langSwitch"/', $head),
-            "$f: разметка переключателя на месте — её забирает topbar.js");
-        // Обе половинки видны всегда: из одной кнопки не понять, какие языки
-        // вообще есть (см. историю правок в design-page.css).
-        assert_true((bool)preg_match('/data-lang="ru"/', $head), "$f: половинка RU");
-        assert_true((bool)preg_match('/data-lang="en"/', $head), "$f: половинка EN");
-        // Второй копии остаться не должно: обработчики ищут #langSwitch по id,
-        // и вторая пара молча перестала бы работать.
         $page = preg_replace('/<!--.*?-->/s', '', top_read($PUB . '/' . $f));
-        assert_eq(1, substr_count($page, 'id="langSwitch"'), "$f: переключатель один на страницу");
+        assert_eq(1, substr_count($page, '<li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>'), "$f: меню в листе разделов");
+        assert_eq(false, strpos($page, 'class="mk-top-lang'), "$f: старых чипов нет");
     }
-
-    $css = top_read($PUB . '/css/topbar.css');
-    assert_true(strpos($css, '.mk-top .mk-top-lang { display: none; }') !== false,
-        'в шапке переключатель не показывается');
     $js = top_read($PUB . '/js/topbar.js');
-    assert_true(strpos($js, 'var langBox = document.getElementById("langSwitch");') !== false,
-        'topbar.js находит переключатель');
-    assert_true(strpos($js, 'lang.appendChild(langBox);') !== false,
-        'и переносит его в меню аватара');
-    assert_true(strpos($js, '"lang.switch": "Язык интерфейса"') !== false,
-        'подпись в меню на случай неподъехавшего словаря');
+    assert_true(strpos($js, 'var langMenu = document.getElementById("langSwitch");') !== false, 'topbar.js находит меню');
+    assert_true(strpos($js, 'function setLangOpen(on) {') !== false, 'открывает и закрывает список');
+    assert_true(strpos($js, 'e.key !== "Escape"') !== false, 'закрывает по Escape');
+    assert_eq(false, strpos($js, 'langBox'), 'в меню аватара язык больше не переносится');
 });
 
 // --------------------------------------------------------------------------

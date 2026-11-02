@@ -1,0 +1,162 @@
+-- ==========================================================================
+--  Хэллоуинский ивент Spooky Tokens (api/lib/hunt.php)
+--  Спека: docs/superpowers/specs/2026-10-30-spooky-tokens-design.md
+--
+--  Выполнить один раз на боевой базе после мержа (phpMyAdmin → SQL).
+--  Повторный запуск безопасен: CREATE TABLE IF NOT EXISTS, а сезон 2026
+--  вставляется, только если его ещё нет. После запуска ивент сразу идёт.
+-- ==========================================================================
+
+-- --------------------------------------------------------------------------
+--  Сезон ивента
+-- --------------------------------------------------------------------------
+-- status: draft → live → drawn. starts_at — полночь по Москве дня 1, дальше
+-- 7 суток. sales_end_at — до какого момента продаются билеты (не раньше конца
+-- семи дней), draw_at — когда итоги (текст на странице).
+-- login_json — 7 наград за вход по дням, hours_json — 2 награды за час и два
+-- часа на сайте в сутки. Цена билета = половина всех наград, билетов 2.
+-- prizes_json — [{name, count, icon}], как у розыгрышей.
+-- titles_json — {login:{ru,en}, hours:{ru,en}}: тексты двух титулов.
+-- claim_days — сколько дней победитель может подтвердить выигрыш.
+CREATE TABLE IF NOT EXISTS hunts (
+  id           INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  slug         VARCHAR(40)     NOT NULL DEFAULT '',
+  status       VARCHAR(8)      NOT NULL DEFAULT 'draft',
+  title_ru     VARCHAR(120)    NOT NULL DEFAULT '',
+  title_en     VARCHAR(120)    NOT NULL DEFAULT '',
+  rules_ru     TEXT            NULL,
+  rules_en     TEXT            NULL,
+  starts_at    BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  sales_end_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  draw_at      BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  login_json   VARCHAR(255)    NOT NULL DEFAULT '',
+  hours_json   VARCHAR(255)    NOT NULL DEFAULT '',
+  prizes_json  TEXT            NULL,
+  claim_days   INT UNSIGNED    NOT NULL DEFAULT 7,
+  titles_json  TEXT            NULL,
+  created_at   BIGINT UNSIGNED NOT NULL,
+  updated_at   BIGINT UNSIGNED NOT NULL,
+  drawn_at     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  KEY idx_status (status, starts_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Кошелёк участника — кеш журнала, меняется в той же транзакции
+-- --------------------------------------------------------------------------
+-- balance — что можно потратить, earned — всего собрано (при тратах не
+-- уменьшается), tickets — сколько билетов куплено.
+CREATE TABLE IF NOT EXISTS hunt_wallets (
+  hunt_id  INT UNSIGNED    NOT NULL,
+  user_id  BIGINT UNSIGNED NOT NULL,
+  balance  INT             NOT NULL DEFAULT 0,
+  earned   INT UNSIGNED    NOT NULL DEFAULT 0,
+  tickets  INT UNSIGNED    NOT NULL DEFAULT 0,
+  first_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  last_at  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (hunt_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Журнал наград и трат
+-- --------------------------------------------------------------------------
+-- ref — login:<день>, hour:<день>:<1|2>, ticket:<номер>. Уникальный ключ
+-- (hunt_id, user_id, ref) не даёт начислить одну награду дважды.
+CREATE TABLE IF NOT EXISTS hunt_ledger (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hunt_id    INT UNSIGNED    NOT NULL,
+  user_id    BIGINT UNSIGNED NOT NULL,
+  delta      INT             NOT NULL,
+  kind       VARCHAR(8)      NOT NULL DEFAULT '',
+  ref        VARCHAR(64)     NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  UNIQUE KEY uq_ref (hunt_id, user_id, ref),
+  KEY idx_kind (hunt_id, user_id, kind)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Время на сайте по дням ивента
+-- --------------------------------------------------------------------------
+-- secs — сколько засчитано за день (не больше 7200), beat_at — время
+-- последнего пульса любой вкладки человека.
+CREATE TABLE IF NOT EXISTS hunt_time (
+  hunt_id INT UNSIGNED     NOT NULL,
+  user_id BIGINT UNSIGNED  NOT NULL,
+  day     TINYINT UNSIGNED NOT NULL,
+  secs    INT UNSIGNED     NOT NULL DEFAULT 0,
+  beat_at BIGINT UNSIGNED  NOT NULL DEFAULT 0,
+  PRIMARY KEY (hunt_id, user_id, day)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Билеты лутереи. id — номер билета («#0042»)
+-- --------------------------------------------------------------------------
+-- seq — 1 или 2: какой по счёту билет у человека. UNIQUE (hunt_id, user_id,
+-- seq) — гонка двух покупок не превысит лимит. draw_pos — место в очереди
+-- итогов, по ней «Перевыбрать» отдаёт приз следующему.
+CREATE TABLE IF NOT EXISTS hunt_tickets (
+  id          INT UNSIGNED     NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hunt_id     INT UNSIGNED     NOT NULL,
+  user_id     BIGINT UNSIGNED  NOT NULL,
+  seq         TINYINT UNSIGNED NOT NULL,
+  created_at  BIGINT UNSIGNED  NOT NULL,
+  void        TINYINT          NOT NULL DEFAULT 0,
+  void_reason VARCHAR(160)     NOT NULL DEFAULT '',
+  draw_pos    INT UNSIGNED     NOT NULL DEFAULT 0,
+  UNIQUE KEY uq_seq (hunt_id, user_id, seq),
+  KEY idx_hunt (hunt_id, draw_pos)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Выигрыши: won → confirmed → queued → given; expired; redrawn
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS hunt_wins (
+  id         INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  hunt_id    INT UNSIGNED    NOT NULL,
+  user_id    BIGINT UNSIGNED NOT NULL,
+  ticket_id  INT UNSIGNED    NOT NULL,
+  prize_idx  SMALLINT        NOT NULL DEFAULT 0,
+  prize_name VARCHAR(120)    NOT NULL DEFAULT '',
+  prize_icon VARCHAR(80)     NOT NULL DEFAULT '',
+  status     VARCHAR(10)     NOT NULL DEFAULT 'won',
+  deadline   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  note       VARCHAR(255)    NOT NULL DEFAULT '',
+  created_at BIGINT UNSIGNED NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL,
+  UNIQUE KEY uq_ticket (hunt_id, ticket_id),
+  KEY idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Титулы: все 7 наград за вход → login, все 14 часовых → hours
+-- --------------------------------------------------------------------------
+-- Остаются навсегда, видны в профиле, чате и трейдинге. Текст — titles_json
+-- своего сезона.
+CREATE TABLE IF NOT EXISTS hunt_titles (
+  user_id    BIGINT UNSIGNED NOT NULL,
+  hunt_id    INT UNSIGNED    NOT NULL,
+  kind       VARCHAR(8)      NOT NULL,
+  created_at BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (user_id, hunt_id, kind)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Сезон Хэллоуина 2026 (решение владельца 31.10.2026)
+-- --------------------------------------------------------------------------
+-- Старт 31 октября 00:00 МСК (1793394000), 7 дней: токены копятся до
+-- 7 ноября 00:00 МСК, потом их получить нельзя. Билеты продаются ещё сутки —
+-- до 8 ноября 00:00 МСК, итоги сами 8 ноября в 01:00 МСК (время итогов можно
+-- сдвинуть в /admin/hunt). Один приз — Hellfire Gas, один победитель; картинка
+-- из тирлиста. Титулы выдаются сами: за все 7 входов и за все 14 часовых
+-- наград. Сезон сразу опубликован (live). Повторный запуск второй не создаёт.
+INSERT INTO hunts (slug, status, title_ru, title_en, rules_ru, rules_en, starts_at, sales_end_at, draw_at,
+                   login_json, hours_json, prizes_json, claim_days, titles_json, created_at, updated_at)
+SELECT 'halloween-2026', 'live', 'Spooky Tokens', 'Spooky Tokens',
+       'Токены нельзя передать или продать. Победитель подтверждает выигрыш на этой странице за 7 дней, для связи нужен Telegram.',
+       'Tokens cannot be transferred or sold. The winner confirms the prize on this page within 7 days; Telegram is needed to get in touch.',
+       1793394000, 1794085200, 1794088800,
+       '[10,15,20,25,30,35,40]', '[15,20]',
+       '[{"name":"Hellfire Gas","count":1,"icon":"/images/aca91791385fbe7baeeae61a5699e27778971b9a.png"}]', 7,
+       '{"login":{"ru":"Ночной дозор","en":"Night Watch"},"hours":{"ru":"Хранитель склепа","en":"Crypt Keeper"}}',
+       UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM hunts WHERE slug = 'halloween-2026');

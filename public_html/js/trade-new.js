@@ -150,7 +150,7 @@
       });
       const d = await r.json().catch(() => null);
       if (r.ok && d && d.ok) {
-        location.assign("/trading?posted=" + encodeURIComponent(d.id));
+        location.assign(I18N.url("/trading?posted=" + encodeURIComponent(d.id)));
         return;
       }
       if (r.status === 401) {

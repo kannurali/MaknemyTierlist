@@ -49,7 +49,8 @@
 // сам отписался от розыгрышей на /giveaways (gw_prefs, lib/gw_prefs.php). Там
 // же подписчик выбирает напоминания: за сколько до итогов и за сколько мест до
 // лимита (раздел «Напоминания подписчикам»). О победе — каждому победителю.
-// Связывается с победителем владелец сам.
+// Связывается с победителем владелец сам. Ещё бот публикует розыгрыш постом
+// в отмеченные каналы и дописывает туда итоги (раздел «Пост в канале»).
 //
 // Тестовый розыгрыш (колонка test) — чтобы проверить всё вживую, не трогая
 // посетителей. В /api/giveaways.php его нет, поэтому ни окна, ни карточки на
@@ -86,6 +87,8 @@ require_once __DIR__ . '/telegram.php';
 require_once __DIR__ . '/gw_prefs.php';
 require_once __DIR__ . '/news_blocks.php';
 require_once __DIR__ . '/translate.php';
+require_once __DIR__ . '/i18n_content.php';
+require_once __DIR__ . '/gw_tg.php';
 
 const GW_TITLE_MAX       = 120;
 const GW_PRIZES_MAX      = 20;
@@ -205,6 +208,16 @@ function gw_validate(array $in): array {
         if (!in_array($id, $channels, true)) { $channels[] = $id; }
     }
 
+    // Каналы, куда бот публикует пост розыгрыша (раздел «Пост в канале»).
+    $posts = [];
+    $raw = $in['posts'] ?? [];
+    if (!nb_is_list($raw) || count($raw) > GW_CHANNELS_MAX) { return $fail('bad posts'); }
+    foreach ($raw as $c) {
+        $id = gw_chat_id($c);
+        if ($id === null) { return $fail('bad posts'); }
+        if (!in_array($id, $posts, true)) { $posts[] = $id; }
+    }
+
     $conds = [];
     $raw = $in['conds'] ?? [];
     if (!nb_is_list($raw) || count($raw) > GW_CONDS_MAX) { return $fail('bad conds'); }
@@ -258,6 +271,7 @@ function gw_validate(array $in): array {
         'prizes_json'   => json_encode($prizes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         'channels'      => $channels,
         'channels_json' => json_encode($channels),
+        'posts'         => $posts,
         'conds'         => $conds,
         'ends_at'       => (int)$ends,
         'max_entries'   => (int)$max,
@@ -590,23 +604,30 @@ function gw_entry_counts(PDO $pdo, array $ids): array {
     return $out;
 }
 
-// Победители розыгрышей: [id розыгрыша => [{prize, id, name, display, avatar}]].
+// Победители розыгрышей: [id розыгрыша => [{prize, id, name, display, avatar, tg}]].
+// tg — участник из Telegram без аккаунта сайта: name — его @ник в Telegram,
+// display — имя там же.
 function gw_winners(PDO $pdo, array $ids): array {
     if (!$ids) { return []; }
+    $hasTg = gw_has_tg_entry($pdo);
     $st = $pdo->query(
-        'SELECT e.giveaway_id, e.user_id, e.prize, u.username, u.display_name, u.avatar_url
-           FROM giveaway_entries e LEFT JOIN users u ON u.roblox_id = e.user_id
+        'SELECT e.giveaway_id, e.user_id, e.prize, u.username, u.display_name, u.avatar_url'
+            . ($hasTg ? ', p.name AS p_name, p.username AS p_user' : '') . '
+           FROM giveaway_entries e LEFT JOIN users u ON u.roblox_id = e.user_id'
+            . ($hasTg ? ' LEFT JOIN tg_people p ON p.chat_id = e.chat_id' : '') . '
           WHERE e.prize IS NOT NULL AND e.giveaway_id IN (' . implode(',', array_map('intval', $ids)) . ')
           ORDER BY e.prize, e.joined_at'
     );
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $tg = gw_is_tg_uid($r['user_id']);
         $out[(int)$r['giveaway_id']][] = [
             'prize'   => (int)$r['prize'],
             'id'      => (string)$r['user_id'],
-            'name'    => (string)($r['username'] ?? ''),
-            'display' => (string)($r['display_name'] ?? ''),
-            'avatar'  => (string)($r['avatar_url'] ?? ''),
+            'name'    => (string)(($tg ? $r['p_user'] ?? '' : $r['username']) ?? ''),
+            'display' => (string)(($tg ? $r['p_name'] ?? '' : $r['display_name']) ?? ''),
+            'avatar'  => $tg ? '' : (string)($r['avatar_url'] ?? ''),
+            'tg'      => $tg,
         ];
     }
     return $out;
@@ -692,6 +713,32 @@ function gw_public_list(PDO $pdo, int $now, bool $withTest = false): array {
         return $out;
     };
     return ['live' => $map($liveRows), 'past' => $map($pastRows)];
+}
+
+// Список для окна и страницы на одном языке (?lang=). Переводы из таблицы
+// нужны только восьми языкам: EN розыгрыша — в колонках.
+function gw_localize_list(PDO $pdo, array $list, string $lang): array {
+    $ids = array_merge(array_column($list['live'], 'id'), array_column($list['past'], 'id'));
+    $rows = in_array($lang, I18N_CONTENT_LANGS, true) ? i18n_rows($pdo, 'gw', $lang, $ids) : [];
+    foreach (['live', 'past'] as $k) {
+        foreach ($list[$k] as $i => $g) {
+            $list[$k][$i] = i18n_gw_localize($g, $lang, $rows[(string)$g['id']] ?? []);
+        }
+    }
+    return $list;
+}
+
+// Места с текстом у розыгрыша в базе — для фонового перевода. Номера
+// условий те же, что у gw_public_item(): оба идут по gw_conds().
+function gw_i18n_load(PDO $pdo, int $id): array {
+    $row = gw_load($pdo, $id);
+    if (!$row) { return []; }
+    return [(string)$id => i18n_units_gw((string)$row['title_ru'], gw_decode_blocks($row['body_json']), gw_conds($row['conds_json'] ?? null))];
+}
+
+function gw_i18n_job(PDO $pdo, int $id, callable $requestFor, float $deadline): array {
+    $load = function () use ($pdo, $id): array { return gw_i18n_load($pdo, $id); };
+    return i18n_fill($pdo, 'gw', $load, I18N_CONTENT_LANGS, $requestFor, $deadline);
 }
 
 // Где человек уже участвует среди идущих розыгрышей — для окна: оно не
@@ -789,6 +836,9 @@ function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int
     $st = $pdo->prepare('SELECT user_id FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :c');
     $st->execute([':g' => $id, ':c' => $chat]);
     $owner = $st->fetchColumn();
+    // Тот же Telegram уже вступил кнопкой в канале, без аккаунта (gw_tg.php),
+    // — это тот же человек, и он участвует.
+    if ($owner !== false && gw_is_tg_uid($owner)) { return [200, ['ok' => true, 'joined' => true]]; }
     if ($owner !== false && (string)$owner !== $me) { return [409, ['ok' => false, 'error' => 'tg_used']]; }
 
     $channels = gw_checked_channels($row);
@@ -909,6 +959,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     if ($r['max_entries'] > 0 && !$hasMax) { return [409, ['ok' => false, 'error' => 'max_migrate']]; }
     $hasDrop = gw_has_drop($pdo);
     if (!$r['drop_unsub'] && !$hasDrop) { return [409, ['ok' => false, 'error' => 'drop_migrate']]; }
+    $hasPosts = gw_has_posts($pdo);
+    if ($r['posts'] && !$hasPosts) { return [409, ['ok' => false, 'error' => 'posts_migrate']]; }
 
     $old = null;
     if ($id > 0) {
@@ -975,6 +1027,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         )->execute($cols + [':now2' => $now]);
         $id = (int)$pdo->lastInsertId();
     }
+    // Без поля posts (старая админка) план постов не трогается.
+    if ($hasPosts && array_key_exists('posts', $body)) { gw_posts_plan($pdo, $id, $r['posts']); }
     return [200, ['ok' => true, 'id' => $id, 'translate_failed' => $failed]];
 }
 
@@ -1021,6 +1075,8 @@ function gw_delete(PDO $pdo, int $id): array {
     $pdo->prepare('DELETE FROM giveaway_entries WHERE giveaway_id = :id')->execute([':id' => $id]);
     $pdo->prepare('DELETE FROM giveaway_links WHERE giveaway_id = :id')->execute([':id' => $id]);
     $pdo->prepare('DELETE FROM giveaway_subs WHERE giveaway_id = :id')->execute([':id' => $id]);
+    // Вышедший пост остаётся в канале — его владелец убирает сам.
+    if (gw_has_posts($pdo)) { $pdo->prepare('DELETE FROM giveaway_posts WHERE giveaway_id = :id')->execute([':id' => $id]); }
     $pdo->prepare('DELETE FROM giveaways WHERE id = :id')->execute([':id' => $id]);
     return [200, ['ok' => true]];
 }
@@ -1055,12 +1111,23 @@ function gw_draw(PDO $pdo, array $cfg, callable $send, int $id, int $now, ?calla
 
     $hasLeft  = gw_has_left($pdo);
 
+    // Участник из Telegram без аккаунта сайта (gw_tg.php): его Telegram —
+    // в самой строке участия, язык — в tg_people.
+    $hasTg = gw_has_tg_entry($pdo);
     $st = $pdo->prepare(
-        'SELECT e.user_id, l.chat_id, l.lang FROM giveaway_entries e LEFT JOIN tg_links l ON l.user_id = e.user_id
+        'SELECT e.user_id, e.chat_id AS e_chat, l.chat_id, l.lang' . ($hasTg ? ', p.lang AS p_lang' : '') . '
+           FROM giveaway_entries e LEFT JOIN tg_links l ON l.user_id = e.user_id'
+            . ($hasTg ? ' LEFT JOIN tg_people p ON p.chat_id = e.chat_id' : '') . '
           WHERE e.giveaway_id = :g' . gw_active_sql($pdo) . ' ORDER BY e.joined_at, e.user_id'
     );
     $st->execute([':g' => $id]);
     $pool = $st->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($pool as $i => $cand) {
+        if ($cand['chat_id'] === null && gw_is_tg_uid($cand['user_id'])) {
+            $pool[$i]['chat_id'] = $cand['e_chat'];
+            $pool[$i]['lang'] = $cand['p_lang'] ?? 'ru';
+        }
+    }
 
     for ($i = count($pool) - 1; $i > 0; $i--) {
         $j = $rand($i + 1);
@@ -1139,12 +1206,15 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
     // Отписавшиеся — в конце списка, с датой отписки: это след того, что они
     // вступали подписанными.
     $hasLeft = gw_has_left($pdo);
+    $hasTg = gw_has_tg_entry($pdo);
     $st = $pdo->prepare(
         'SELECT e.user_id, e.chat_id, e.joined_at, e.prize, e.src, ' . ($hasLeft ? 'e.left_at' : '0 AS left_at') . ',
-                u.username, u.display_name, u.avatar_url, l.tg_name
+                u.username, u.display_name, u.avatar_url, l.tg_name'
+                . ($hasTg ? ', p.name AS p_name, p.username AS p_user, p.roblox_nick AS p_nick' : '') . '
            FROM giveaway_entries e
            LEFT JOIN users u ON u.roblox_id = e.user_id
-           LEFT JOIN tg_links l ON l.user_id = e.user_id
+           LEFT JOIN tg_links l ON l.user_id = e.user_id'
+           . ($hasTg ? ' LEFT JOIN tg_people p ON p.chat_id = e.chat_id' : '') . '
           WHERE e.giveaway_id = :g
           ORDER BY CASE WHEN e.prize IS NULL THEN 1 ELSE 0 END, e.prize, '
             . ($hasLeft ? 'CASE WHEN e.left_at = 0 THEN 0 ELSE 1 END, ' : '') . 'e.joined_at DESC
@@ -1153,12 +1223,19 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
     $st->execute([':g' => $id]);
     $entries = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $e) {
+        // Участник из Telegram без аккаунта сайта: имя и @ник оттуда, ник в
+        // Roblox — если победил и прислал боту.
+        $tgOnly = gw_is_tg_uid($e['user_id']);
+        $tgUser = $tgOnly ? (string)($e['p_user'] ?? '') : '';
         $entries[] = [
             'id'        => (string)$e['user_id'],
-            'name'      => (string)($e['username'] ?? ''),
-            'display'   => (string)($e['display_name'] ?? ''),
-            'avatar'    => (string)($e['avatar_url'] ?? ''),
-            'tg'        => (string)($e['tg_name'] ?? ''),
+            'name'      => $tgOnly ? '' : (string)($e['username'] ?? ''),
+            'display'   => $tgOnly ? (string)($e['p_name'] ?? '') : (string)($e['display_name'] ?? ''),
+            'avatar'    => $tgOnly ? '' : (string)($e['avatar_url'] ?? ''),
+            'tg'        => $tgOnly ? ($tgUser !== '' ? '@' . $tgUser : (string)($e['p_name'] ?? '')) : (string)($e['tg_name'] ?? ''),
+            'tg_only'   => $tgOnly,
+            'tg_user'   => $tgUser,
+            'nick'      => $tgOnly ? (string)($e['p_nick'] ?? '') : '',
             'joined_at' => (int)$e['joined_at'],
             'prize'     => $e['prize'] === null ? null : (int)$e['prize'],
             'src'       => (string)$e['src'],
@@ -1195,6 +1272,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'left'         => $left,
         'rows'         => gw_drops_unsub($row) ? $count + $left : $count,
         'max_entries'  => gw_max($row),
+        'posts'        => gw_admin_posts($pdo, $row),
         'list'         => $entries,
     ];
 }
@@ -1236,6 +1314,32 @@ function gw_admin_channels(PDO $pdo): array {
         ];
     }
     return $out;
+}
+
+// Посты розыгрыша для админки: [{chat, posted, url, results}]. Нет таблицы —
+// null, и раздела «Пост в Telegram» в админке нет.
+function gw_admin_posts(PDO $pdo, array $row): ?array {
+    if (!gw_has_posts($pdo)) { return null; }
+    $posts = gw_posts($pdo, (int)$row['id']);
+    $channels = gw_channels($pdo, array_keys($posts));
+    $out = [];
+    foreach ($posts as $chat => $p) {
+        $c = $channels[$chat] ?? null;
+        $out[] = [
+            'chat'    => (string)$chat,
+            'posted'  => (int)$p['message_id'] > 0,
+            'url'     => $c ? gw_post_url($c, (int)$p['message_id']) : '',
+            'results' => (int)$p['results_at'] > 0,
+        ];
+    }
+    return $out;
+}
+
+// Каналы последнего розыгрыша с постом — их админка отмечает у нового.
+function gw_post_last(PDO $pdo): array {
+    if (!gw_has_posts($pdo)) { return []; }
+    $st = $pdo->query('SELECT chat_id FROM giveaway_posts WHERE giveaway_id = (SELECT MAX(giveaway_id) FROM giveaway_posts) ORDER BY chat_id');
+    return array_map('strval', $st->fetchAll(PDO::FETCH_COLUMN));
 }
 
 // --------------------------------------------------------------------------
@@ -1531,11 +1635,13 @@ function gw_announce(PDO $pdo, callable $send, array $row, ?callable $sleep = nu
         return 0;
     }
     $id = (int)$row['id'];
-    return tg_send_rows($pdo, $send, $rows, function (string $lang) use ($row, $id): array {
+    $map = gw_emoji_map($pdo);
+    return tg_send_rows($pdo, gw_send_fancy($send, $map), $rows, function (string $lang) use ($row, $id, $map): array {
+        $text = gw_announce_text($row, $lang);
         return [
-            gw_announce_text($row, $lang),
+            $text,
             [[$lang === 'en' ? 'Join' : 'Участвовать', gw_link($id, true, gw_is_test($row))]],
-            gw_preview($row),
+            gw_preview($row) + array_diff_key(gw_text_emoji(['text' => $text], $map), ['text' => 1]),
         ];
     }, $sleep);
 }
@@ -1544,12 +1650,20 @@ function gw_announce(PDO $pdo, callable $send, array $row, ?callable $sleep = nu
 function gw_notify_winners(PDO $pdo, callable $send, array $row, array $winners, ?callable $sleep = null): int {
     $sleep = $sleep ?? function (int $us): void { usleep($us); };
     $prizes = gw_decode_list($row['prizes_json']);
+    $map = gw_emoji_map($pdo);
+    $send = gw_send_fancy($send, $map);
     $sent = 0;
     foreach ($winners as $i => $w) {
         $lang = tg_lang($w['lang']);
         $prize = (string)($prizes[$w['prize']]['name'] ?? '');
-        $msg = tg_message_buttons((int)$w['chat_id'], gw_win_text($row, $prize, $lang),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'], false, gw_is_test($row))]]);
+        // Участник из Telegram без аккаунта сайта: бот просит ник в Roblox.
+        // Не запускал бота — сообщение не дойдёт, он придёт по кнопке «Забрать
+        // приз» под постом (gw_tg.php).
+        $text = gw_is_tg_uid($w['user_id'] ?? '') && gw_has_tg_entry($pdo)
+            ? gw_tg_won_text($pdo, $row, $prize, (int)$w['chat_id'], $lang)
+            : gw_win_text($row, $prize, $lang);
+        $msg = gw_text_emoji(tg_message_buttons((int)$w['chat_id'], $text,
+            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'], false, gw_is_test($row))]]), $map);
         if ($i > 0) { $sleep(TG_BROADCAST_GAP); }
         if (tg_after_send($pdo, (int)$w['chat_id'], $send('sendMessage', $msg))) { $sent++; }
     }
@@ -1585,6 +1699,758 @@ function gw_after_draw(PDO $pdo, array $cfg, array $row, array $winners, ?callab
 }
 
 // --------------------------------------------------------------------------
+//  Пост в канале
+// --------------------------------------------------------------------------
+//
+// Идущий розыгрыш бот публикует в каналы, отмеченные у него в админке
+// («Пост в Telegram»), — по посту в каждый. Пост собран из того же, что
+// карточка на сайте: баннер над текстом (превью ссылки, как у рассылки о
+// старте), название, описание с оформлением, призы, условия и срок итогов, а
+// под ним кнопка «Участвовать» на карточку розыгрыша. Нажавший её помечен
+// как пришедший из канала (src ch) — это видно в отчёте рекламодателю.
+//
+// Пока розыгрыш идёт, каждое сохранение в админке правит пост: поменяли
+// приз или срок — в канале то же самое. После итогов бот переписывает пост:
+// победители по призам и сколько было участников, кнопка ведёт на итоги.
+// Именно правка, а не новый пост: победители оказываются там, где люди
+// нажимали «Участвовать».
+//
+// Текст — HTML-разметка Telegram (parse_mode HTML), всё от людей проходит
+// через gw_html(). Язык поста — русский: каналы владельца русскоязычные.
+// Сообщение, а не фото с подписью: у подписи предел 1024 знака, а список
+// победителей бывает на полсотни строк, у сообщения — 4096.
+//
+// Отметили канал у черновика — пост выйдет при публикации; у идущего —
+// сразу при сохранении. Не вышел (Telegram не ответил) — выйдет при
+// следующем сохранении. Вышедший пост галочкой не снимается: удалить
+// сообщение старше 48 часов бот не может, и итоги допишутся туда. Удалили
+// пост в канале руками — бот это узнает при правке и забудет пост.
+//
+// Нет таблицы giveaway_posts (миграция 2026-10-27-giveaway-posts.sql) —
+// раздела в админке нет, остальное работает как раньше.
+
+const GW_POST_LANG = 'ru';
+// Предел сообщения — 4096 знаков без разметки. Считаем с разметкой: запас.
+const GW_POST_MAX = 4000;
+// Описание в посте не длиннее этого: призы, условия и срок важнее.
+const GW_POST_BODY_MAX = 1500;
+// Победителей больше — список свёрнут, разворачивается нажатием.
+const GW_POST_FOLD = 10;
+
+function gw_has_posts(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT 1 FROM giveaway_posts LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// Посты розыгрыша по каналам: [chat_id => строка giveaway_posts].
+function gw_posts(PDO $pdo, int $id): array {
+    $st = $pdo->prepare('SELECT * FROM giveaway_posts WHERE giveaway_id = :g ORDER BY chat_id');
+    $st->execute([':g' => $id]);
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $out[(int)$r['chat_id']] = $r; }
+    return $out;
+}
+
+// Отмеченные в админке каналы: новые — в план, снятые до выхода поста — из
+// плана. Вышедший пост остаётся.
+function gw_posts_plan(PDO $pdo, int $id, array $chats): void {
+    $have = gw_posts($pdo, $id);
+    $add = $pdo->prepare('INSERT INTO giveaway_posts (giveaway_id, chat_id) VALUES (:g, :c)');
+    foreach ($chats as $c) {
+        if (!isset($have[$c])) { $add->execute([':g' => $id, ':c' => $c]); }
+    }
+    $del = $pdo->prepare('DELETE FROM giveaway_posts WHERE giveaway_id = :g AND chat_id = :c AND message_id = 0');
+    foreach (array_keys($have) as $c) {
+        if (!in_array($c, $chats, true)) { $del->execute([':g' => $id, ':c' => $c]); }
+    }
+}
+
+// Ссылка на пост: у публичного канала t.me/имя/номер, у приватного
+// t.me/c/<id без -100>/номер — откроется у подписчиков.
+function gw_post_url(array $channel, int $messageId): string {
+    if ($messageId <= 0) { return ''; }
+    if ((string)$channel['username'] !== '') { return 'https://t.me/' . $channel['username'] . '/' . $messageId; }
+    $id = (string)$channel['chat_id'];
+    if (strpos($id, '-100') !== 0) { return ''; }
+    return 'https://t.me/c/' . substr($id, 4) . '/' . $messageId;
+}
+
+// Кнопка поста: карточка розыгрыша с пометкой -ch — страница запомнит, что
+// человек пришёл из канала.
+function gw_post_link(int $id, bool $test): string {
+    return TG_SITE . '/giveaways' . ($test ? '?test' : '') . '#g' . $id . '-ch';
+}
+
+// Ссылка на сайт строкой в конце поста — там, где под постом кнопка бота.
+// Второй кнопкой её не ставим: Telegram (Desktop, iOS, Android) выводит
+// кнопку в полосе закреплённого сообщения, только если у сообщения ровно
+// один ряд с одной кнопкой.
+function gw_post_site_html(string $url, string $text): string {
+    return "\n\n" . '<a href="' . gw_html($url) . '">' . gw_html($text) . ' ↗</a>';
+}
+
+function gw_html(string $s): string {
+    return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+// Кусок описания с оформлением карточки: жирный, курсив, подчёркнутый,
+// зачёркнутый, спойлер, код и ссылки. Внутри кода Telegram другого
+// оформления не принимает — у кода оно опускается.
+function gw_spans_html(array $spans): string {
+    $tags = ['b' => 'b', 'i' => 'i', 'u' => 'u', 'st' => 's', 'sp' => 'tg-spoiler'];
+    $out = '';
+    foreach ($spans as $sp) {
+        $t = gw_html((string)$sp['s']);
+        if ($t === '') { continue; }
+        if (!empty($sp['c'])) {
+            $t = '<code>' . $t . '</code>';
+        } else {
+            foreach ($tags as $flag => $tag) {
+                if (!empty($sp[$flag])) { $t = '<' . $tag . '>' . $t . '</' . $tag . '>'; }
+            }
+        }
+        if (isset($sp['href']) && nb_is_safe_href($sp['href'])) {
+            $t = '<a href="' . gw_html($sp['href']) . '">' . $t . '</a>';
+        }
+        $out .= $t;
+    }
+    return $out;
+}
+
+// Блок описания на языке поста; пустой русский — английский.
+function gw_block_html(array $b): string {
+    $pick = function (array $ru, array $en): array { return tr_spans_empty($ru) ? $en : $ru; };
+    if ($b['t'] === 'p') { return trim(gw_spans_html($pick($b['ru'], $b['en']))); }
+    if ($b['t'] === 'quote') {
+        $in = trim(gw_spans_html($pick($b['ru'], $b['en'])));
+        if ($in === '') { return ''; }
+        return '<blockquote' . (!empty($b['collapsible']) ? ' expandable' : '') . '>' . $in . '</blockquote>';
+    }
+    if ($b['t'] === 'list') {
+        $lines = [];
+        foreach ($b['items'] as $it) {
+            $t = trim(gw_spans_html($pick($it['ru'], $it['en'])));
+            if ($t === '') { continue; }
+            $lines[] = (!empty($b['ordered']) ? (count($lines) + 1) . '. ' : '• ') . $t;
+        }
+        return implode("\n", $lines);
+    }
+    return '';
+}
+
+// Описание целыми блоками, пока влезает в GW_POST_BODY_MAX: обрезанный
+// посередине блок оставил бы незакрытый тег.
+function gw_body_html(array $blocks): string {
+    $parts = [];
+    $len = 0;
+    foreach ($blocks as $b) {
+        $html = gw_block_html($b);
+        if ($html === '') { continue; }
+        if ($len + mb_strlen($html) > GW_POST_BODY_MAX) {
+            if ($parts) { $parts[] = '…'; }
+            break;
+        }
+        $parts[] = $html;
+        $len += mb_strlen($html) + 2;
+    }
+    return implode("\n\n", $parts);
+}
+
+// Условия: каналы — по ссылке этого розыгрыша (кто подпишется по ней,
+// попадёт в отчёт рекламодателю), подписаны @именем, как в постах
+// рандомайзеров; у приватного канала имени нет — название. Свои условия —
+// текст и ссылка. Входа на сайт тут нет: в Telegram участвуют кнопкой под
+// постом (gw_tg.php), так решил владелец. Условий нет — пусто, и блока
+// «Условия для участия» в посте нет.
+function gw_post_conds(PDO $pdo, array $row): string {
+    $id = (int)$row['id'];
+    $links = gw_links($pdo, [$id])[$id] ?? [];
+    $chIds = array_map('intval', gw_decode_list($row['channels_json']));
+    $channels = gw_channels($pdo, $chIds);
+    $lines = [];
+    foreach ($chIds as $cid) {
+        $c = $channels[$cid] ?? null;
+        if (!$c) { continue; }
+        $url = $links[$cid] ?? gw_channel_url($c);
+        $name = (string)$c['username'] !== '' ? '@' . $c['username'] : ((string)$c['title'] !== '' ? (string)$c['title'] : 'канал');
+        $lines[] = $url !== '' ? '<a href="' . gw_html($url) . '">' . gw_html($name) . '</a>' : gw_html($name);
+    }
+    foreach (gw_conds($row['conds_json'] ?? null) as $c) {
+        $btn = $c['btn_ru'] !== '' ? $c['btn_ru'] : 'Подписаться';
+        $lines[] = gw_html($c['ru']) . ' — <a href="' . gw_html($c['url']) . '">' . gw_html($btn) . '</a>';
+    }
+    return implode("\n", $lines);
+}
+
+// Когда итоги, для поста: «31 октября в 12:00 МСК» или, у розыгрыша «по
+// числу участников», «когда участников станет 1000».
+function gw_post_when(array $row): string {
+    if (gw_no_deadline($row)) { return 'когда участников станет ' . gw_max($row); }
+    $d = (new DateTimeImmutable('@' . (int)$row['ends_at']))->setTimezone(new DateTimeZone(GW_TZ));
+    return $d->format('j') . ' ' . GW_MONTHS_RU[(int)$d->format('n') - 1] . ' в ' . $d->format('H:i') . ' МСК'
+        . gw_max_note($row, GW_POST_LANG);
+}
+
+// Пост идущего розыгрыша — по образцу постов рандомайзеров, который прислал
+// владелец (RandomGodBot): заголовок капсом, приз, сколько победителей,
+// условия списком @каналов, срок итогов, пожелание удачи. Описание из
+// админки — между заголовком и призом. Под постом кнопка бота — в конце
+// ссылка «Участвовать на сайте». $map — премиум-эмодзи (gw_emoji_map()).
+function gw_post_text(PDO $pdo, array $row, array $map = []): string {
+    $prizes = gw_decode_list($row['prizes_json']);
+    $lines = [];
+    foreach ($prizes as $p) {
+        $lines[] = '<b>' . gw_html((string)$p['name']) . '</b>' . ((int)$p['count'] > 1 ? ' × ' . (int)$p['count'] : '');
+    }
+    $slots = gw_slots_total($row);
+    $title = mb_strtoupper(gw_title($row, GW_POST_LANG));
+    if (!preg_match('/[.!?…]\z/u', $title)) { $title .= '!'; }
+    $body = gw_body_html(gw_decode_blocks($row['body_json']));
+    $conds = gw_post_conds($pdo, $row);
+    $site = gw_has_tg_entry($pdo) ? gw_post_site_html(gw_post_link((int)$row['id'], gw_is_test($row)), 'Участвовать на сайте') : '';
+    return gw_fancy_html((gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
+        . '🌟 <b>' . gw_html($title) . '</b>'
+        . ($body !== '' ? "\n\n" . $body : '')
+        . "\n\n🤩 <b>" . (count($prizes) > 1 ? 'Призы:' : 'Приз:') . "</b>\n" . implode("\n", $lines)
+        . "\n\n🏆 " . ($slots === 1 ? 'Победитель будет <b>только один</b>.' : 'Победителей будет <b>' . $slots . '</b>.')
+        . ($conds !== '' ? "\n\n<b>Условия для участия:</b>\n" . $conds : '')
+        . "\n\n🔜 <b>Итоги — " . gw_html(gw_post_when($row)) . '.</b>'
+        . "\n\nЖелаем всем удачи! 🍀" . $site, $map);
+}
+
+// Победитель в посте: ник на сайте и логин Roblox, если они разные (не
+// только регистром). Без @: Telegram сделал бы из логина ссылку на чужой
+// аккаунт с тем же именем. Участник из Telegram — имя и его же @ник там.
+function gw_winner_label(array $w): string {
+    $name = (string)$w['name'];
+    $display = (string)$w['display'];
+    if (!empty($w['tg'])) {
+        if ($name === '') { return $display !== '' ? $display : 'участник из Telegram'; }
+        return ($display !== '' ? $display . ' ' : '') . '(@' . $name . ')';
+    }
+    if ($display === '') { return $name !== '' ? $name : 'id ' . $w['id']; }
+    if ($name === '' || mb_strtolower($display) === mb_strtolower($name)) { return $display; }
+    return $display . ' (' . $name . ')';
+}
+
+// Пост после итогов: победители по призам. Не влезли все — хвост «и ещё N».
+// $site — ссылка на итоги строкой в конце, когда кнопка под постом —
+// «Забрать приз».
+function gw_post_results_text(PDO $pdo, array $row, array $map = [], string $site = ''): string {
+    $id = (int)$row['id'];
+    $byPrize = [];
+    foreach (gw_winners($pdo, [$id])[$id] ?? [] as $w) { $byPrize[$w['prize']][] = $w; }
+    $count = gw_entry_counts($pdo, [$id])[$id] ?? 0;
+    $head = (gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
+        . '🎉 <b>Итоги: ' . gw_html(gw_title($row, GW_POST_LANG)) . '</b>';
+    $foot = "\n\n👥 Участников: " . $count;
+    if (!$byPrize) { return gw_fancy_html($head . "\n\nПобедителей нет: никто не выполнил условия." . $foot, $map); }
+    $foot .= "\nПоздравляем! Бот уже написал победителям." . ($site !== '' ? gw_post_site_html($site, 'Итоги на сайте') : '');
+
+    $budget = GW_POST_MAX - mb_strlen($head . $foot) - 200;
+    $lines = [];
+    $used = 0;
+    $total = 0;
+    $shown = 0;
+    $full = false;
+    foreach (gw_decode_list($row['prizes_json']) as $k => $p) {
+        if (empty($byPrize[$k])) { continue; }
+        $total += count($byPrize[$k]);
+        if ($full) { continue; }
+        $prize = '<b>' . gw_html((string)$p['name']) . '</b>';
+        $group = [];
+        foreach ($byPrize[$k] as $n => $w) {
+            $line = ($n + 1) . '. ' . gw_html(gw_winner_label($w));
+            $add = mb_strlen($line) + 1 + ($group ? 0 : mb_strlen($prize) + 1);
+            if ($used + $add > $budget) { $full = true; break; }
+            $group[] = $line;
+            $used += $add;
+        }
+        if ($group) {
+            $lines[] = $prize;
+            $lines = array_merge($lines, $group);
+            $shown += count($group);
+        }
+    }
+    if ($total > $shown) { $lines[] = '…и ещё ' . ($total - $shown) . ' — все победители на сайте'; }
+    return gw_fancy_html($head . "\n\n🏆 <b>Победители</b>\n<blockquote" . ($total > GW_POST_FOLD ? ' expandable' : '') . '>'
+        . implode("\n", $lines) . '</blockquote>' . $foot, $map);
+}
+
+// Поля sendMessage / editMessageText поста: текст, баннер над ним, кнопки.
+// $keyboard — своя кнопка (участие в Telegram, «Забрать приз»); без него —
+// кнопка-ссылка на сайт.
+function gw_post_params(array $row, string $text, bool $results, array $map = [], ?array $keyboard = null): array {
+    $id = (int)$row['id'];
+    if ($keyboard === null) {
+        $keyboard = [[$results
+            ? gw_button($map, '🏆', 'Итоги на сайте', gw_link($id, false, gw_is_test($row)))
+            : gw_button($map, '🎁', 'Участвовать', gw_post_link($id, gw_is_test($row)))]];
+    }
+    return ['text' => $text, 'parse_mode' => 'HTML', 'reply_markup' => ['inline_keyboard' => $keyboard]] + gw_preview($row);
+}
+
+// Кнопка под постом идущего розыгрыша; на «Участвовать» — число участников,
+// как у рандомайзеров. Есть tg_people — участие прямо в Telegram (gw_tg.php),
+// нет — кнопка-ссылка на сайт. Кнопка одна, чтобы была видна и в закрепе
+// (gw_post_site_html()).
+function gw_post_keyboard(PDO $pdo, array $row, array $map, int $count): array {
+    $tail = $count > 0 ? ' (' . $count . ')' : '';
+    if (gw_has_tg_entry($pdo)) { return gw_tg_post_buttons($row, $map, $tail); }
+    return [[gw_button($map, '🎁', 'Участвовать' . $tail, gw_post_link((int)$row['id'], gw_is_test($row)))]];
+}
+
+// Число на кнопке обновляется не чаще раза в столько секунд на розыгрыш:
+// правка каждого вступления упёрлась бы в ограничения Telegram.
+const GW_POST_COUNT_EVERY = 60;
+
+/**
+ * Обновить число участников на кнопке под постами идущих розыгрышей, где
+ * оно изменилось, — не чаще GW_POST_COUNT_EVERY секунд на розыгрыш. Какое
+ * число показано и когда — в файле во временной папке: таблица ради этого
+ * не нужна, а потеря файла стоит одной лишней правки. $only — один
+ * розыгрыш (только что кто-то вступил). Сколько постов поправлено.
+ */
+function gw_post_counts(PDO $pdo, callable $send, int $now, ?int $only = null, ?string $statePath = null): int {
+    if (!gw_has_posts($pdo)) { return 0; }
+    $st = $pdo->prepare(
+        "SELECT p.giveaway_id, p.chat_id, p.message_id FROM giveaway_posts p JOIN giveaways g ON g.id = p.giveaway_id
+          WHERE g.status = 'live' AND p.message_id > 0 AND p.results_at = 0" . ($only !== null ? ' AND p.giveaway_id = :g' : '')
+    );
+    $st->execute($only !== null ? [':g' => $only] : []);
+    $posts = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $posts[(int)$r['giveaway_id']][] = $r; }
+    if (!$posts) { return 0; }
+
+    $fh = @fopen($statePath ?? sys_get_temp_dir() . '/maknemy-gw-counts.json', 'c+');
+    if ($fh === false || !flock($fh, LOCK_EX | LOCK_NB)) { return 0; }
+    $edited = 0;
+    try {
+        $state = json_decode((string)stream_get_contents($fh), true);
+        $state = is_array($state) ? $state : [];
+        $counts = gw_entry_counts($pdo, array_keys($posts));
+        $map = gw_emoji_map($pdo);
+        $fancy = gw_send_fancy($send, $map);
+        foreach ($posts as $id => $list) {
+            $n = $counts[$id] ?? 0;
+            $was = $state[$id] ?? null;
+            if (is_array($was) && (int)$was[1] === $n) { continue; }
+            if (is_array($was) && $now - (int)$was[0] < GW_POST_COUNT_EVERY) { continue; }
+            $row = gw_load($pdo, $id);
+            if (!$row) { continue; }
+            $kb = ['inline_keyboard' => gw_post_keyboard($pdo, $row, $map, $n)];
+            foreach ($list as $p) {
+                $res = $fancy('editMessageReplyMarkup', ['chat_id' => (int)$p['chat_id'], 'message_id' => (int)$p['message_id'], 'reply_markup' => $kb]);
+                if (gw_post_edit_state($res) === 'ok') { $edited++; }
+            }
+            $state[$id] = [$now, $n];
+        }
+        ftruncate($fh, 0);
+        rewind($fh);
+        fwrite($fh, (string)json_encode($state));
+    } finally {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
+    return $edited;
+}
+
+// После ответа посетителю или вебхуку: число на кнопке под постами.
+function gw_after_counts(PDO $pdo, array $cfg, int $now, ?int $only = null, ?callable $send = null): void {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg)) { return; }
+    tg_finish_response();
+    try {
+        gw_post_counts($pdo, $send ?? tg_http($tg['token']), $now, $only);
+    } catch (Throwable $e) {
+        error_log('giveaway counts: ' . $e->getMessage());
+    }
+}
+
+// Ответ Telegram на правку: ok — 'ok'; «не изменилось» — тоже ok; поста
+// больше нет (удалили в канале) — 'gone'; молчит — 'down'; иначе 'fail'.
+function gw_post_edit_state(?array $res): string {
+    if ($res === null) { return 'down'; }
+    if (!empty($res['ok'])) { return 'ok'; }
+    $d = (string)($res['description'] ?? '');
+    if (strpos($d, 'message is not modified') !== false) { return 'ok'; }
+    if (strpos($d, 'message to edit not found') !== false || strpos($d, 'MESSAGE_ID_INVALID') !== false) { return 'gone'; }
+    return 'fail';
+}
+
+/**
+ * Привести посты идущего розыгрыша к его виду: где поста ещё нет — выпустить,
+ * где есть — поправить. Черновик и закончившийся не трогаются (итоги —
+ * gw_post_results()). ['posted' => n, 'edited' => n, 'failed' => [канал, …]].
+ */
+function gw_post_sync(PDO $pdo, callable $send, array $row, int $now): array {
+    $out = ['posted' => 0, 'edited' => 0, 'failed' => []];
+    if ($row['status'] !== 'live' || !gw_has_posts($pdo)) { return $out; }
+    $id = (int)$row['id'];
+    $posts = gw_posts($pdo, $id);
+    if (!$posts) { return $out; }
+    $channels = gw_channels($pdo, array_keys($posts));
+    $map = gw_emoji_map($pdo);
+    $send = gw_send_fancy($send, $map);
+    $text = gw_post_text($pdo, $row, $map);
+    $keyboard = gw_post_keyboard($pdo, $row, $map, gw_entry_counts($pdo, [$id])[$id] ?? 0);
+    foreach ($posts as $chat => $p) {
+        if ((int)$p['results_at'] > 0) { continue; }
+        $c = $channels[$chat] ?? null;
+        $name = $c && (string)$c['title'] !== '' ? (string)$c['title'] : (string)$chat;
+        $params = ['chat_id' => $chat] + gw_post_params($row, $text, false, $map, $keyboard);
+        $mid = (int)$p['message_id'];
+        if ($mid > 0) {
+            $state = gw_post_edit_state($send('editMessageText', $params + ['message_id' => $mid]));
+            if ($state === 'ok') { $out['edited']++; continue; }
+            if ($state === 'gone') {
+                $pdo->prepare('DELETE FROM giveaway_posts WHERE giveaway_id = :g AND chat_id = :c')->execute([':g' => $id, ':c' => $chat]);
+            }
+            $out['failed'][] = $name;
+            continue;
+        }
+        if (!$c || (int)$c['is_admin'] !== 1) { $out['failed'][] = $name; continue; }
+        $res = $send('sendMessage', $params);
+        $newId = is_array($res) && !empty($res['ok']) ? (int)($res['result']['message_id'] ?? 0) : 0;
+        if ($newId <= 0) { $out['failed'][] = $name; continue; }
+        $pdo->prepare('UPDATE giveaway_posts SET message_id = :m, posted_at = :t WHERE giveaway_id = :g AND chat_id = :c AND message_id = 0')
+            ->execute([':m' => $newId, ':t' => $now, ':g' => $id, ':c' => $chat]);
+        $out['posted']++;
+    }
+    return $out;
+}
+
+/**
+ * Дописать итоги в вышедшие посты разыгранного розыгрыша. Возвращает, сколько
+ * не вышло из-за молчания Telegram: их повторит следующий проход автоитогов.
+ * Отказ Telegram (пост удалили) окончательный — пост больше не трогаем.
+ * $bot — имя бота: если среди победителей есть участники из Telegram, под
+ * постом кнопка «Забрать приз» (gw_tg.php), а ссылка на итоги — в тексте.
+ */
+function gw_post_results(PDO $pdo, callable $send, array $row, int $now, string $bot = ''): int {
+    if ($row['status'] !== 'drawn' || !gw_has_posts($pdo)) { return 0; }
+    $id = (int)$row['id'];
+    $st = $pdo->prepare('SELECT chat_id, message_id FROM giveaway_posts WHERE giveaway_id = :g AND message_id > 0 AND results_at = 0');
+    $st->execute([':g' => $id]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    if (!$rows) { return 0; }
+    $map = gw_emoji_map($pdo);
+    $send = gw_send_fancy($send, $map);
+    $keyboard = null;
+    $site = '';
+    if ($bot !== '' && gw_has_tg_entry($pdo) && gw_tg_has_winners($pdo, $id)) {
+        $keyboard = [[gw_tg_prize_button($row, $bot)]];
+        $site = gw_link($id, false, gw_is_test($row));
+    }
+    $text = gw_post_results_text($pdo, $row, $map, $site);
+    $mark = $pdo->prepare('UPDATE giveaway_posts SET results_at = :t WHERE giveaway_id = :g AND chat_id = :c');
+    $failed = 0;
+    foreach ($rows as $r) {
+        $params = ['chat_id' => (int)$r['chat_id'], 'message_id' => (int)$r['message_id']] + gw_post_params($row, $text, true, $map, $keyboard);
+        if (gw_post_edit_state($send('editMessageText', $params)) === 'down') { $failed++; continue; }
+        $mark->execute([':t' => $now, ':g' => $id, ':c' => (int)$r['chat_id']]);
+    }
+    return $failed;
+}
+
+// Разыгранные розыгрыши, в чьи посты итоги ещё не дописаны.
+function gw_post_due_ids(PDO $pdo): array {
+    if (!gw_has_posts($pdo)) { return []; }
+    return array_map('intval', $pdo->query(
+        "SELECT DISTINCT p.giveaway_id FROM giveaway_posts p JOIN giveaways g ON g.id = p.giveaway_id
+          WHERE g.status = 'drawn' AND p.message_id > 0 AND p.results_at = 0 ORDER BY p.giveaway_id"
+    )->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function gw_has_post_due(PDO $pdo): bool {
+    try {
+        return (bool)gw_post_due_ids($pdo);
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// --------------------------------------------------------------------------
+//  Премиум-эмодзи
+// --------------------------------------------------------------------------
+//
+// Бот ставит премиум-эмодзи (custom emoji Telegram) вместо обычных. Владелец
+// в /admin/giveaways ведёт список «обычный эмодзи → id премиум-эмодзи»,
+// сколько угодно строк, в том числе из своего набора. Где в посте канала или
+// в сообщении бота о розыгрыше встречается обычный эмодзи из списка — в
+// шаблоне (GW_EMOJI_TEMPLATE), в названии, описании, призах, условиях, —
+// Telegram показывает вместо него премиум. На сайте остаётся обычный: сайт
+// премиум-эмодзи Telegram не умеет. Эмодзи шаблона на кнопке под постом —
+// иконкой кнопки. id узнают так: прислать эмодзи боту в личку, он ответит
+// (gw_emoji_reply()).
+//
+// Где Telegram их покажет, решает Telegram (Bot API, «Formatting options»):
+// в личке, группе и супергруппе — если у владельца бота есть Telegram
+// Premium; в канале — только если у бота куплен дополнительный ник на
+// Fragment. Бусты канала тут ни при чём. Где нельзя — виден обычный эмодзи,
+// он всегда лежит внутри запасным. Если Telegram не подставит его, а откажет
+// в отправке, сообщение уходит повторно без премиум-эмодзи
+// (gw_send_fancy()): ни пост, ни рассылка не теряются.
+//
+// Нет таблицы tg_emoji (миграция 2026-10-27-giveaway-posts.sql) — всё
+// обычными эмодзи.
+
+// Эмодзи шаблона поста и сообщений — подсказка админке, что стоит добавить.
+const GW_EMOJI_TEMPLATE = [
+    '🌟' => 'заголовок поста',
+    '🎁' => 'кнопка «Участвовать», сообщение о старте',
+    '🤩' => 'приз',
+    '🏆' => 'сколько победителей, победители, кнопка «Итоги на сайте»',
+    '🔜' => 'срок итогов',
+    '🍀' => '«Желаем всем удачи!»',
+    '🎉' => 'итоги в посте, поздравление победителю',
+    '👥' => 'число участников в итогах',
+    '✅' => '«Вы участвуете»',
+];
+// Сколько строк в списке и сколько премиум-эмодзи в одном сообщении: у
+// Telegram на сообщение есть предел, лишние остаются обычными.
+const GW_EMOJI_MAX = 100;
+const GW_EMOJI_PER_MESSAGE = 100;
+
+function gw_has_emoji(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT 1 FROM tg_emoji LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function gw_emoji_id_ok($v): bool {
+    return is_string($v) && preg_match('/^[0-9]{1,24}\z/', $v) === 1;
+}
+
+// Эмодзи для сравнения: без пробелов по краям и без невидимого «покажи
+// цветным» (U+FE0F) — в тексте он то есть, то нет.
+function gw_emoji_norm(string $s): string {
+    return preg_replace('/\x{FE0F}/u', '', trim($s)) ?? '';
+}
+
+// Годится ли как эмодзи: не пусто, не длиннее 8 знаков, без букв, пробелов
+// и разметки, и хотя бы один знак не ASCII. Иначе строка «а → id» заменила
+// бы все буквы «а» в посте.
+function gw_emoji_char_ok(string $s): bool {
+    $n = mb_strlen($s);
+    return $n >= 1 && $n <= 8
+        && preg_match('/[\p{L}\s<>&"\']/u', $s) !== 1
+        && preg_match('/[^\x00-\x7F]/u', $s) === 1;
+}
+
+// Список из админки: [обычный эмодзи (без U+FE0F) => id]. Нет таблицы — пусто.
+function gw_emoji_map(PDO $pdo): array {
+    try {
+        $rows = $pdo->query('SELECT emoji, emoji_id FROM tg_emoji ORDER BY emoji')->fetchAll(PDO::FETCH_NUM);
+    } catch (PDOException $e) {
+        return [];
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $char = gw_emoji_norm((string)$r[0]);
+        if (gw_emoji_char_ok($char) && gw_emoji_id_ok((string)$r[1])) { $out[$char] = (string)$r[1]; }
+    }
+    return $out;
+}
+
+// Регулярка, находящая в тексте эмодзи из списка: после каждого знака
+// разрешён U+FE0F, длинные (составные) — раньше коротких.
+function gw_emoji_regex(array $map): string {
+    $chars = array_keys($map);
+    usort($chars, function ($a, $b) { return mb_strlen($b) <=> mb_strlen($a) ?: strcmp($a, $b); });
+    $alts = [];
+    foreach ($chars as $c) {
+        $p = '';
+        foreach (preg_split('//u', (string)$c, -1, PREG_SPLIT_NO_EMPTY) as $cp) { $p .= preg_quote($cp, '~') . '\x{FE0F}?'; }
+        $alts[] = $p;
+    }
+    return '~' . implode('|', $alts) . '~u';
+}
+
+// HTML поста: эмодзи из списка в тексте → <tg-emoji> с обычным внутри.
+// Внутри тегов и внутри кода (там Telegram оформления не принимает) не
+// трогается.
+function gw_fancy_html(string $html, array $map): string {
+    if (!$map) { return $html; }
+    $re = gw_emoji_regex($map);
+    $left = GW_EMOJI_PER_MESSAGE;
+    $code = 0;
+    $parts = preg_split('~(<[^>]*>)~u', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+    foreach ($parts as $i => $part) {
+        if ($part === '' ) { continue; }
+        if ($part[0] === '<') {
+            if (preg_match('~^<(code|pre)\b~i', $part)) { $code++; }
+            elseif (preg_match('~^</(code|pre)>~i', $part)) { $code = max(0, $code - 1); }
+            continue;
+        }
+        if ($code > 0 || $left <= 0) { continue; }
+        $parts[$i] = preg_replace_callback($re, function ($m) use ($map, &$left) {
+            $id = $map[gw_emoji_norm($m[0])] ?? null;
+            if ($id === null || $left <= 0) { return $m[0]; }
+            $left--;
+            return '<tg-emoji emoji-id="' . $id . '">' . $m[0] . '</tg-emoji>';
+        }, $part) ?? $part;
+    }
+    return implode('', $parts);
+}
+
+// Кнопка-ссылка с эмодзи: есть в списке — иконкой, нет — в надписи.
+function gw_button(array $map, string $char, string $text, string $url): array {
+    if (isset($map[$char])) { return ['text' => $text, 'url' => $url, 'icon_custom_emoji_id' => $map[$char]]; }
+    return ['text' => $char . ' ' . $text, 'url' => $url];
+}
+
+// Длина в единицах UTF-16 — так Telegram считает смещения сущностей.
+function gw_utf16_len(string $s): int {
+    return intdiv(strlen(mb_convert_encoding($s, 'UTF-16LE', 'UTF-8')), 2);
+}
+
+function gw_utf16_cut(string $s, int $offset, int $length): string {
+    $u = mb_convert_encoding($s, 'UTF-16LE', 'UTF-8');
+    return mb_convert_encoding(substr($u, $offset * 2, $length * 2), 'UTF-8', 'UTF-16LE');
+}
+
+// Сообщение простым текстом: каждый эмодзи из списка становится премиум
+// (сущность custom_emoji поверх него). Сам текст не меняется.
+function gw_text_emoji(array $msg, array $map): array {
+    $text = (string)($msg['text'] ?? '');
+    if (!$map || $text === '' || !preg_match_all(gw_emoji_regex($map), $text, $m, PREG_OFFSET_CAPTURE)) { return $msg; }
+    $entities = [];
+    foreach ($m[0] as $hit) {
+        if (count($entities) >= GW_EMOJI_PER_MESSAGE) { break; }
+        $id = $map[gw_emoji_norm($hit[0])] ?? null;
+        if ($id === null) { continue; }
+        $entities[] = [
+            'type'            => 'custom_emoji',
+            'offset'          => gw_utf16_len(substr($text, 0, $hit[1])),
+            'length'          => gw_utf16_len($hit[0]),
+            'custom_emoji_id' => $id,
+        ];
+    }
+    if ($entities) { $msg['entities'] = $entities; }
+    return $msg;
+}
+
+// То же сообщение без премиум-эмодзи: обычные остаются на своих местах.
+function gw_plain(array $params, array $map): array {
+    if (isset($params['text'])) {
+        $params['text'] = preg_replace('~<tg-emoji emoji-id="[0-9]+">(.*?)</tg-emoji>~su', '$1', (string)$params['text']) ?? $params['text'];
+    }
+    unset($params['entities']);
+    $chars = array_flip($map);
+    foreach ($params['reply_markup']['inline_keyboard'] ?? [] as $i => $row) {
+        foreach ($row as $j => $b) {
+            if (!isset($b['icon_custom_emoji_id'])) { continue; }
+            $char = $chars[$b['icon_custom_emoji_id']] ?? null;
+            unset($b['icon_custom_emoji_id']);
+            if ($char !== null) { $b['text'] = $char . ' ' . $b['text']; }
+            $params['reply_markup']['inline_keyboard'][$i][$j] = $b;
+        }
+    }
+    return $params;
+}
+
+// Отказ Telegram из-за премиум-эмодзи (бот не вправе их ставить сюда).
+function gw_emoji_refused(?array $res): bool {
+    if (!is_array($res) || !empty($res['ok']) || (int)($res['error_code'] ?? 0) !== 400) { return false; }
+    return preg_match('~emoji|entit|icon~i', (string)($res['description'] ?? '')) === 1;
+}
+
+// $send, который при отказе из-за премиум-эмодзи повторяет то же без них — и
+// дальше сразу шлёт без них, чтобы рассылка не спотыкалась на каждом.
+function gw_send_fancy(callable $send, array $map): callable {
+    if (!$map) { return $send; }
+    $refused = false;
+    return function (string $method, array $params) use ($send, $map, &$refused): ?array {
+        if ($refused) { return $send($method, gw_plain($params, $map)); }
+        $res = $send($method, $params);
+        if (!gw_emoji_refused($res)) { return $res; }
+        $refused = true;
+        return $send($method, gw_plain($params, $map));
+    };
+}
+
+/**
+ * Премиум-эмодзи в личке боту → в ответ их id, чтобы вставить в админку.
+ * Отвечает любому: id эмодзи не секрет. null — премиум-эмодзи в сообщении
+ * нет, им займётся обычный разбор (tg_handle_update()).
+ */
+function gw_emoji_reply(array $update): ?array {
+    $msg = $update['message'] ?? null;
+    if (!is_array($msg) || ($msg['chat']['type'] ?? '') !== 'private' || !is_int($msg['chat']['id'] ?? null)) { return null; }
+    $found = [];
+    $text = is_string($msg['text'] ?? null) ? $msg['text'] : '';
+    foreach (is_array($msg['entities'] ?? null) ? $msg['entities'] : [] as $e) {
+        if (!is_array($e) || ($e['type'] ?? '') !== 'custom_emoji' || !gw_emoji_id_ok($e['custom_emoji_id'] ?? null)) { continue; }
+        $found[$e['custom_emoji_id']] = gw_utf16_cut($text, (int)($e['offset'] ?? 0), (int)($e['length'] ?? 0));
+    }
+    $st = $msg['sticker'] ?? null;
+    if (is_array($st) && gw_emoji_id_ok($st['custom_emoji_id'] ?? null)) {
+        $found[$st['custom_emoji_id']] = is_string($st['emoji'] ?? null) ? $st['emoji'] : '';
+    }
+    if (!$found) { return null; }
+
+    // Каждая строка — сам эмодзи (премиум поверх запасного) и его id.
+    $out = "id премиум-эмодзи:\n";
+    $entities = [];
+    foreach ($found as $id => $plain) {
+        $id = (string)$id;
+        if ($plain !== '') {
+            $entities[] = ['type' => 'custom_emoji', 'offset' => gw_utf16_len($out), 'length' => gw_utf16_len($plain), 'custom_emoji_id' => $id];
+            $out .= $plain . ' ';
+        }
+        $entities[] = ['type' => 'code', 'offset' => gw_utf16_len($out), 'length' => strlen($id)];
+        $out .= $id . "\n";
+    }
+    $out .= "\nВ /admin/giveaways → «Премиум-эмодзи бота» добавьте строку: обычный эмодзи слева, id справа.";
+    return ['method' => 'sendMessage', 'chat_id' => $msg['chat']['id'], 'text' => $out, 'entities' => $entities];
+}
+
+// Для админки: {list: [{emoji, id}], template: [{emoji, where}]}. Нет
+// таблицы — null, и раздела «Премиум-эмодзи бота» нет.
+function gw_admin_emoji(PDO $pdo): ?array {
+    if (!gw_has_emoji($pdo)) { return null; }
+    $list = [];
+    foreach (gw_emoji_map($pdo) as $char => $id) { $list[] = ['emoji' => (string)$char, 'id' => $id]; }
+    $tpl = [];
+    foreach (GW_EMOJI_TEMPLATE as $char => $where) { $tpl[] = ['emoji' => $char, 'where' => $where]; }
+    return ['list' => $list, 'template' => $tpl];
+}
+
+// Сохранить список из админки целиком: [{emoji, id}, …]. Чего в нём нет —
+// снова обычный эмодзи.
+function gw_emoji_save(PDO $pdo, $rows, int $now): array {
+    if (!gw_has_emoji($pdo)) { return [409, ['ok' => false, 'error' => 'posts_migrate']]; }
+    if (!nb_is_list($rows) || count($rows) > GW_EMOJI_MAX) { return [400, ['ok' => false, 'error' => 'bad emoji']]; }
+    $clean = [];
+    foreach ($rows as $r) {
+        $char = is_array($r) && is_string($r['emoji'] ?? null) ? gw_emoji_norm($r['emoji']) : '';
+        $id = is_array($r) && is_string($r['id'] ?? null) ? trim($r['id']) : '';
+        if (!gw_emoji_char_ok($char) || !gw_emoji_id_ok($id)) { return [400, ['ok' => false, 'error' => 'bad emoji']]; }
+        if (isset($clean[$char])) { return [400, ['ok' => false, 'error' => 'dup emoji']]; }
+        $clean[$char] = $id;
+    }
+    $pdo->beginTransaction();
+    try {
+        $pdo->exec('DELETE FROM tg_emoji');
+        $add = $pdo->prepare('INSERT INTO tg_emoji (emoji, emoji_id, updated_at) VALUES (:e, :id, :t)');
+        foreach ($clean as $char => $id) { $add->execute([':e' => (string)$char, ':id' => $id, ':t' => $now]); }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        throw $e;
+    }
+    return [200, ['ok' => true, 'emoji' => gw_admin_emoji($pdo)]];
+}
+
+// --------------------------------------------------------------------------
 //  Автоитоги
 // --------------------------------------------------------------------------
 
@@ -1616,6 +2482,8 @@ function gw_has_due(PDO $pdo, int $now): bool {
  */
 function gw_draw_due(PDO $pdo, array $cfg, callable $send, int $now, ?callable $sleep = null, ?callable $rand = null): array {
     $out = ['drawn' => 0, 'failed' => 0];
+    $tried = [];
+    $bot = (string)tg_config($cfg)['name'];
     foreach (gw_due_ids($pdo, $now) as $id) {
         [$s, , $winners, $gone] = gw_draw($pdo, $cfg, $send, $id, $now, $rand);
         if ($s !== 200) {
@@ -1624,8 +2492,16 @@ function gw_draw_due(PDO $pdo, array $cfg, callable $send, int $now, ?callable $
             continue;
         }
         $out['drawn']++;
-        if ($winners) { gw_notify_winners($pdo, $send, gw_load($pdo, $id), $winners, $sleep); }
+        $row = gw_load($pdo, $id);
+        // Пост в канале — раньше поздравлений: тех может быть полсотни с паузами.
+        $out['failed'] += gw_post_results($pdo, $send, $row, $now, $bot);
+        $tried[$id] = true;
+        if ($winners) { gw_notify_winners($pdo, $send, $row, $winners, $sleep); }
         if ($gone) { gw_left_send($pdo, $send, $gone, $now, $sleep); }
+    }
+    // Посты, в которые итоги не дописались прошлый раз (Telegram молчал).
+    foreach (gw_post_due_ids($pdo) as $id) {
+        if (!isset($tried[$id])) { $out['failed'] += gw_post_results($pdo, $send, gw_load($pdo, $id), $now, $bot); }
     }
     return $out;
 }
@@ -1937,9 +2813,11 @@ function gw_after_places(PDO $pdo, array $cfg, array $note, int $now, ?callable 
 // карточки и вступил на /giveaways — у участника src «c-» + место, так в
 // отчёте видно, какое место приводит участников. Показы и переходы каждого
 // места копятся в gw_card_stats (api/gw_stat.php).
-const GW_CARD_PLACES = ['tier', 'trade', 'calc', 'stock', 'news'];
+const GW_CARD_PLACES = ['tier', 'trade', 'calc', 'stock', 'news', 'hunt'];
 
-const GW_SOURCES = ['tg', 'pop', 'page', 'c-tier', 'c-trade', 'c-calc', 'c-stock', 'c-news'];
+// ch — перешёл на сайт по кнопке поста в Telegram-канале (раздел «Пост в
+// канале»); cb — вступил кнопкой под постом прямо в Telegram (gw_tg.php).
+const GW_SOURCES = ['tg', 'ch', 'cb', 'pop', 'page', 'c-tier', 'c-trade', 'c-calc', 'c-stock', 'c-news', 'c-hunt'];
 
 function gw_src($v): string {
     return is_string($v) && in_array($v, GW_SOURCES, true) ? $v : '';
@@ -2436,10 +3314,11 @@ function gw_after_join(PDO $pdo, array $cfg, array $note, ?callable $send = null
     tg_finish_response();
     try {
         $lang = tg_lang($note['lang']);
-        $msg = tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang, !empty($note['last'])),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]);
+        $map = gw_emoji_map($pdo);
+        $msg = gw_text_emoji(tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang, !empty($note['last'])),
+            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]), $map);
         $chat = (int)$note['chat_id'];
-        tg_after_send($pdo, $chat, ($send ?? tg_http($tg['token']))('sendMessage', $msg));
+        tg_after_send($pdo, $chat, gw_send_fancy($send ?? tg_http($tg['token']), $map)('sendMessage', $msg));
     } catch (Throwable $e) {
         error_log('giveaway joined: ' . $e->getMessage());
     }

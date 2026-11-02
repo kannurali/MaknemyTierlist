@@ -14,7 +14,7 @@ $PUB  = $ROOT . '/public_html';
 function read_file_or_fail(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // --------------------------------------------------------------------------
@@ -322,21 +322,14 @@ test('на телефоне фон прибит к экрану и не раст
 // Раньше на телефоне вторая кнопка пряталась через :has(), и на ленте это
 // делало переключатель мёртвым: её обработчик (news-page.js) про схлопывание
 // не знал и включал тот же язык, который уже выбран.
-test('на телефоне язык переключается двумя кнопками, как на компьютере', function () use ($PUB) {
-    $css = read_file_or_fail($PUB . '/css/design-page.css');
-    assert_eq(0, preg_match('/\.lang-switch[^{]*\{[^}]*display: none;/s', $css),
-        'ни одна кнопка языка не прячется');
-    assert_eq(0, substr_count($css, '.lang-switch:has('), 'схлопывания пары быть не должно');
-    // Обе кнопки есть в разметке обеих страниц с переключателем.
+test('меню языков есть на тирлисте и ленте и не прячется на телефоне', function () use ($PUB) {
+    $css = read_file_or_fail($PUB . '/css/topbar.css');
+    // [hidden] у списка — это закрытое состояние, а не спрятанное меню.
+    assert_eq(0, preg_match('/\.mk-lang(?![^{,]*\[hidden\])[^{,]*\{[^}]*display: none;/s', $css), 'меню языка не прячется');
     foreach (['/index.php', '/news.php'] as $page) {
         $html = read_file_or_fail($PUB . $page);
-        assert_eq(1, substr_count($html, 'data-lang="ru"'), $page . ' — кнопка RU');
-        assert_eq(1, substr_count($html, 'data-lang="en"'), $page . ' — кнопка EN');
+        assert_eq(1, substr_count($html, '<?= i18n_lang_menu() ?>'), $page . ' — меню языка');
     }
-    // На ленте клик по кнопке обязан ставить её собственный язык.
-    $np = read_file_or_fail($PUB . '/js/news-page.js');
-    assert_true(strpos($np, 'b.addEventListener("click", () => applyLang(b.dataset.lang));') !== false,
-        'обработчик ленты на месте');
 });
 
 // --------------------------------------------------------------------------
@@ -711,6 +704,12 @@ test('нижняя полоса рекламы подключена на лен�
         assert_true(is_file($PUB . '/assets/promo/giveaway-' . $slot . '.webp'),
             "макет розыгрыша для слота $slot должен лежать в репозитории");
     }
+    // Хэллоуинский мега-розыгрыш — то же правило, без окна.
+    assert_true(strpos($promo, 'var HOUSE_HALLOWEEN') !== false, 'хэллоуинский розыгрыш объявлен в js/promo.js');
+    foreach (['strip', 'rail', 'dock'] as $slot) {
+        assert_true(is_file($PUB . '/assets/promo/halloween-gw-' . $slot . '.webp'),
+            "макет хэллоуинского розыгрыша для слота $slot должен лежать в репозитории");
+    }
     // После розыгрыша свободные места занимает телеграм-канал, и его макеты
     // лежат там же и по той же причине.
     assert_true(strpos($promo, 'var HOUSE_CHANNEL') !== false, 'канал объявлен в js/promo.js');
@@ -728,7 +727,7 @@ test('нижняя полоса рекламы подключена на лен�
     // Playerok и Starvell — платные размещения, и живут они там же, где свои
     // кампании: в коде с макетами в репозитории. Отличие одно — список
     // страниц: Playerok — тирлист ("tierlist") и калькулятор ("calc"),
-    // Starvell с 19 октября — трейдинг ("trading").
+    // Starvell с 19 по 25 октября — трейдинг ("trading").
     assert_true(strpos($promo, 'var PLAYEROK') !== false, 'Playerok объявлен в js/promo.js');
     assert_true(strpos($promo, 'pages: ["tierlist", "calc"]') !== false,
         'Playerok привязан к тирлисту и калькулятору, иначе он разольётся по всему сайту');
@@ -739,7 +738,7 @@ test('нижняя полоса рекламы подключена на лен�
     assert_true(strpos($promo, 'var STARVELL') !== false, 'Starvell объявлен в js/promo.js');
     assert_true(strpos($promo, 'pages: ["trading"]') !== false,
         'Starvell привязан к трейдингу, иначе он разольётся по всему сайту');
-    foreach (['strip', 'rail', 'dock', 'dock-mini', 'popup'] as $slot) {
+    foreach (['strip', 'rail', 'dock', 'popup'] as $slot) {
         assert_true(is_file($PUB . '/assets/promo/starvell-' . $slot . '.webp'),
             "макет Starvell для $slot должен лежать в репозитории");
     }
@@ -817,7 +816,7 @@ test('полосу внизу можно свернуть в мини-строк
     assert_true(strpos($css, '@media (max-width: 640px)') !== false, 'тот же порог телефона');
     assert_true(strpos($css, 'prefers-reduced-motion') !== false, 'без анимации для тех, кто её отключил');
 
-    $i18n = read_file_or_fail($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     foreach (['promo.dockCollapse', 'promo.dockExpand'] as $key) {
         assert_true(substr_count($i18n, '"' . $key . '"') === 2, "$key: подпись на двух языках");
     }

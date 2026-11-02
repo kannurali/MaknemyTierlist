@@ -31,7 +31,7 @@
     error: false
   };
 
-  const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: () => "/profile", linkNick: !peer });
+  const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: () => I18N.url("/profile"), linkNick: !peer });
 
   function renderQuota() {
     if (!quotaEl) return;

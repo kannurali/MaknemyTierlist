@@ -1143,7 +1143,6 @@ body.ptn-locked { overflow: hidden; }
 
   .tb-group.filters { flex-wrap: wrap; flex: 1 1 100%; gap: 6px; }
   .filters .tb-label { width: 100%; margin-bottom: 2px; }
-  .lang-switch { margin-left: auto; }
   .chip { padding: 7px 12px; }
   .btn { padding: 9px 12px; }
 

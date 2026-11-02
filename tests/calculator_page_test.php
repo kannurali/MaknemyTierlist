@@ -14,7 +14,7 @@ $PUB  = $ROOT . '/public_html';
 function calc_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // --------------------------------------------------------------------------
@@ -217,7 +217,7 @@ test('все локальные ассеты калькулятора сущес
 
 test('все calc.* ключи, использованные в разметке, определены в i18n.js', function () use ($PUB) {
     $calc = calc_read($PUB . '/calculator.php');
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     preg_match_all('/data-i18n(?:-title|-label|-placeholder)?="(calc\.[a-zA-Z]+)"/', $calc, $m);
     assert_true(count($m[1]) > 5, 'на странице должно быть больше пяти calc.* ключей в разметке');
     foreach (array_unique($m[1]) as $key) {
@@ -265,7 +265,7 @@ test('на доске нет органов управления, которых
 test('пустой слот при наведении показывает рамку и «Выбрать» из словаря', function () use ($PUB) {
     $css  = calc_read($PUB . '/css/calculator.css');
     $js   = calc_read($PUB . '/js/calculator-page.js');
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true(strpos($css, 'content: attr(data-pick)') !== false, 'надпись слота берётся из data-pick');
     assert_true(strpos($css, '.tc-slot.is-empty:hover::after') !== false, 'надпись видна при наведении');
     assert_true(strpos($js, 'btn.dataset.pick = tx("calc.slotPick")') !== false, 'JS кладёт надпись из словаря');
@@ -328,7 +328,7 @@ test('у значка вердикта своё лицо на каждое со�
 });
 
 test('заголовок карточки вердикта переведён на оба языка', function () use ($PUB) {
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     $js   = calc_read($PUB . '/js/calculator-page.js');
     foreach (['calc.verdictWinTitle', 'calc.verdictFairTitle', 'calc.verdictLoseTitle'] as $key) {
         assert_eq(2, substr_count($i18n, '"' . $key . '"'), "ключ $key должен быть и в ru, и в en");
@@ -360,38 +360,17 @@ test('палитра объявлена и для каталога: он леж�
         'палитра должна объявляться и на .tc-cat-backdrop');
 });
 
-// Переключатель языка живёт в base.css и одинаков на калькуляторе, тирлисте
-// и в ленте. Половинки когда-то скруглялись каждая сама — у активной справа
-// оставалось скругление, у соседней слева был прямой угол, и на стыке торчала
-// ступенька: пара читалась двумя кнопками вместо одного выбора.
-test('переключатель языка — один сегментированный контрол, а не два чипа', function () use ($PUB) {
-    $css = calc_read($PUB . '/css/base.css');
-    assert_true((bool)preg_match('/\.lang-switch \{[^}]*border-radius: 999px;[^}]*background: rgba\(0, 0, 0, 0\.536\)/su', $css),
-        'у пары должна быть общая дорожка');
-    assert_true(strpos($css, '.lang-switch .chip:first-child') === false,
-        'половинки не должны скруглять свои внешние углы сами');
-    assert_true(strpos($css, '.lang-switch .chip:last-child') === false,
-        'половинки не должны скруглять свои внешние углы сами');
-    assert_true((bool)preg_match('/\.lang-switch \.chip\.active \{[^}]*linear-gradient\(255deg/su', $css),
-        'выбранная половина — та же градиентная пилюля, что у кнопок шапки');
-
-    // Место переключателя — меню аватара в общей шапке, а не полоса под
-    // ней: раньше он стоял на каждой странице по-своему (в тулбаре тирлиста
-    // и ленты, в .tc-extras калькулятора), и три места разъезжались при
-    // каждой правке. В самой шапке его тоже больше нет — место ушло под
-    // «Сток» (решение владельца, 2026-10-02). Разметку держит тест
-    // topbar_test.php, здесь — стили.
-    $tb = calc_read($PUB . '/css/topbar.css');
-    assert_true(strpos($tb, '.mk-top .mk-top-lang { display: none; }') !== false,
-        'в шапке переключатель не виден');
-    assert_true((bool)preg_match('/\.mk-user-lang \{/u', $tb),
-        'у переключателя в меню аватара своя геометрия');
-
-    // Старое место обязано исчезнуть целиком: правило, оставшееся без
-    // разметки, — это следующий разработчик, который правит мёртвый CSS.
-    $dp = calc_read($PUB . '/css/design-page.css');
-    assert_true(strpos($dp, '.toolbar .lang-switch') === false,
-        'правил переключателя в панели фильтров больше быть не должно');
+// С PR 2 мультиязычности язык выбирается меню «Язык ▾» в листе разделов
+// (tests/topbar_test.php). Прежний переключатель RU/EN и все его места —
+// base.css, тулбар тирлиста, меню аватара — убраны: правило без разметки —
+// это следующий разработчик, который правит мёртвый CSS.
+test('стилей прежнего переключателя RU/EN не осталось', function () use ($PUB) {
+    foreach (['base.css', 'styles.css', 'design-page.css', 'topbar.css'] as $f) {
+        $css = calc_read($PUB . '/css/' . $f);
+        assert_eq(false, strpos($css, '.lang-switch'), "$f: .lang-switch");
+        assert_eq(false, strpos($css, '.mk-top-lang'), "$f: .mk-top-lang");
+        assert_eq(false, strpos($css, '.mk-user-lang'), "$f: .mk-user-lang");
+    }
 });
 
 // Борта калькулятора увеличены по просьбе владельца. Расти им есть куда
@@ -595,7 +574,7 @@ test('в каталоге фильтр тирлиста: пять кнопок �
 
 test('подписи фильтра каталога есть в словаре на обоих языках', function () use ($PUB) {
     $calc = calc_read($PUB . '/calculator.php');
-    $i18n = calc_read($PUB . '/js/i18n.js');
+    $i18n = i18n_source();
     assert_true((bool)preg_match('/<div class="tc-cat-filters".*?<\/div>/s', $calc, $m), 'группа кнопок фильтра');
     preg_match_all('/data-i18n(?:-title|-label)?="([a-zA-Z.]+)"/', $m[0], $keys);
     assert_eq(11, count(array_unique($keys[1])), 'подпись и подсказка у каждой из пяти кнопок и название группы');

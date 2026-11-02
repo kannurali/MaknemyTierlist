@@ -722,4 +722,55 @@ test('any OTHER missing column is still a hard failure', function () {
     assert_throws(function () use ($pdo) { handle_news($pdo); });
 });
 
+// ------------------------------ Язык страницы ------------------------------
+
+function news_seed_blocks(PDO $pdo): int {
+    $blocks = [['t' => 'p', 'ru' => [['s' => 'Абзац']], 'en' => [['s' => 'Paragraph']]]];
+    $pdo->prepare(
+        "INSERT INTO news (category, title_ru, title_en, body_ru, body_en, body_json, published_at)
+         VALUES ('game', 'Заголовок', 'Title', 'Абзац', 'Paragraph', :j, 1000)"
+    )->execute([':j' => json_encode(['v' => 1, 'blocks' => $blocks], JSON_UNESCAPED_UNICODE)]);
+    return (int)$pdo->lastInsertId();
+}
+
+test('?lang=de serves the German translation, the rest falls back to EN, one language only', function () {
+    $pdo = test_db();
+    $id = news_seed_blocks($pdo);
+    i18n_put($pdo, 'news', (string)$id, 'title', 'de', i18n_hash('Заголовок'), 'Überschrift', 1);
+    [$status, $p] = handle_news($pdo, 'de');
+    assert_eq(200, $status);
+    $post = $p['posts'][0];
+    assert_eq(['', 'Überschrift'], [$post['title_ru'], $post['title_en']]);
+    assert_eq([[], [['s' => 'Paragraph']]], [$post['body_json']['blocks'][0]['ru'], $post['body_json']['blocks'][0]['en']]);
+    assert_eq(['', 'Paragraph'], [$post['body_ru'], $post['body_en']]);
+});
+
+test('?lang=ru serves Russian only; no language keeps both for the editor', function () {
+    $pdo = test_db();
+    news_seed_blocks($pdo);
+    $ru = handle_news($pdo, 'ru')[1]['posts'][0];
+    assert_eq(['Заголовок', ''], [$ru['title_ru'], $ru['title_en']]);
+    $both = handle_news($pdo)[1]['posts'][0];
+    assert_eq(['Заголовок', 'Title'], [$both['title_ru'], $both['title_en']]);
+    assert_eq([['s' => 'Paragraph']], $both['body_json']['blocks'][0]['en']);
+});
+
+test('?lang= works before the migration, with the EN fallback', function () {
+    $pdo = test_db();
+    $pdo->exec('DROP TABLE i18n_texts');
+    news_seed_blocks($pdo);
+    [$status, $p] = handle_news($pdo, 'fr');
+    assert_eq(200, $status);
+    assert_eq('Title', $p['posts'][0]['title_en']);
+});
+
+test('deleting a post removes its translations', function () {
+    $pdo = test_db();
+    $id = news_seed_blocks($pdo);
+    i18n_put($pdo, 'news', (string)$id, 'title', 'de', i18n_hash('Заголовок'), 'Überschrift', 1);
+    [$status] = handle_news_delete($pdo, ['id' => $id]);
+    assert_eq(200, $status);
+    assert_eq(0, (int)$pdo->query("SELECT COUNT(*) FROM i18n_texts")->fetchColumn());
+});
+
 run_tests();

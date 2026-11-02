@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/roblox_oauth.php';
+require_once __DIR__ . '/hunt_titles.php';
 
 // Профиль игрока — общая часть для api/profile-stats.php и api/profile-about.php.
 //

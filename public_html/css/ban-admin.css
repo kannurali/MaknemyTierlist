@@ -95,3 +95,33 @@
   .bn-form .bn-select { flex: 1 1 auto; }
   .bn-form .adm-btn { flex: 1 1 auto; }
 }
+
+.cf-chips { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid var(--adm-edge);
+  border-radius: 999px;
+  background: var(--adm-panel);
+  overflow-wrap: anywhere;
+}
+.cf-chip-x { margin: 0; display: inline-flex; }
+.cf-chip-x button {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--adm-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.cf-chip-x button:hover { background: rgba(255, 90, 82, .16); color: #ffb3ad; }
+.cf-add { margin-bottom: 8px; }
+.cf-hint { margin-bottom: 12px; }
+.cf-hint code { font-size: 12px; }
+.cf-ban { flex: 0 0 auto; text-decoration: none; }
+.cf-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

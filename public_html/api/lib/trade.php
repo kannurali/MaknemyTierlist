@@ -399,7 +399,7 @@ function trade_authors(PDO $pdo, array $ids, int $now): array {
             'dislikes' => (int)($r['dislikes'] ?? 0),
         ];
     }
-    return $out;
+    return hunt_titles_attach($pdo, $out);
 }
 
 /** Строки trade_offers → то, что уезжает наружу. Без автора — пропуск. */

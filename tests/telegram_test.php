@@ -523,7 +523,7 @@ test('установка вебхука отдаёт адрес сайта и с
     assert_eq('https://maknemy.com/api/tg_webhook.php', $log[0][1]['url']);
     assert_eq(tg_webhook_secret(TG_TOKEN), $log[0][1]['secret_token']);
     // my_chat_member — каналы для условий розыгрышей (api/lib/giveaway.php).
-    assert_eq(['message', 'my_chat_member', 'chat_member'], $log[0][1]['allowed_updates']);
+    assert_eq(['message', 'my_chat_member', 'chat_member', 'callback_query'], $log[0][1]['allowed_updates']);
 
     // Права по умолчанию: Telegram сам включит их, когда бота добавят админом.
     $rights = array_values(array_filter($log, function ($c) { return $c[0] === 'setMyDefaultAdministratorRights'; }));

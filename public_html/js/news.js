@@ -38,7 +38,7 @@
     var tEn = String(post.title_en || "").trim();
     var bRu = String(post.body_ru  || "").trim();
     var bEn = String(post.body_en  || "").trim();
-    return lang === "en"
+    return lang !== "ru"
       ? { title: tEn || tRu, body: bEn || bRu }
       : { title: tRu || tEn, body: bRu || bEn };
   }

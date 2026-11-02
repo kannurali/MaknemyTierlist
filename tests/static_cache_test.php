@@ -18,7 +18,7 @@ const SC_IMMUTABLE = 'public, max-age=31536000, immutable';
 function sc_read(string $path): string {
     $s = @file_get_contents($path);
     if ($s === false) throw new RuntimeException("не читается: $path");
-    return $s;
+    return i18n_flatten($s);
 }
 
 // Все файлы с данными расширениями. images/ пропускается: там загрузки

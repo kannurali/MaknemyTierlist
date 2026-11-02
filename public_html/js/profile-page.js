@@ -7,6 +7,7 @@
 
   var i18n = window.I18N;
   var auth = window.MKAuth;
+  function siteUrl(path) { return i18n && i18n.url ? i18n.url(path) : path; }
 
   function $(id) { return document.getElementById(id); }
 
@@ -22,7 +23,7 @@
 
   var savedAbout = aboutInput ? aboutInput.value : '';
 
-  function lang() { return document.documentElement.lang === 'en' ? 'en' : 'ru'; }
+  function lang() { return window.I18N ? window.I18N.pageLang() : 'ru'; }
   function tx(key, fallback) { return i18n ? i18n.t(key, lang()) : fallback; }
 
   function syncMenuLabel() {
@@ -140,7 +141,7 @@
     if (swap) {
       swap.addEventListener('click', function () {
         leaving();
-        auth.switchAccount('/profile');
+        auth.switchAccount(siteUrl('/profile'));
       });
     }
   } else {

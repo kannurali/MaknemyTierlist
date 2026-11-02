@@ -42,6 +42,8 @@ if (!defined('TESTING')) {
     // подписчикам, ждавшим «осталось N мест», уходит напоминание. Занял
     // последнее место — тут же подводятся итоги.
     if (!empty($result[2])) { gw_after_join(db(), $cfg, $result[2]); }
+    // Число участников на кнопке под постом в канале.
+    if (!empty($result[2])) { gw_after_counts(db(), $cfg, time(), (int)$result[2]['row']['id']); }
     if (!empty($result[2]) && empty($result[2]['last'])) { gw_after_places(db(), $cfg, $result[2], time()); }
     if (!empty($result[2]['last'])) { gw_after_due(db(), $cfg, time()); }
 }

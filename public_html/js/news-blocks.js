@@ -132,7 +132,7 @@
   }
 
   function blockText(b, lang) {
-    var self = lang === "en" ? "en" : "ru";
+    var self = lang === "ru" ? "ru" : "en";
     var other = self === "ru" ? "en" : "ru";
     if (b.t === "p" || b.t === "quote") { return spansText(b[self], b[other]); }
     if (b.t === "code") { return String(b[self] || b[other] || ""); }
@@ -172,7 +172,7 @@
   }
 
   function langKeys(lang) {
-    return lang === "en" ? { self: "en", other: "ru" } : { self: "ru", other: "en" };
+    return lang === "ru" ? { self: "ru", other: "en" } : { self: "en", other: "ru" };
   }
 
   function pickSpans(holder, keySelf, keyOther) {

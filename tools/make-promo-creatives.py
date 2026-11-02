@@ -19,9 +19,9 @@ creature's fur, around y=900) smears by ~5 px at display size.
 
 Starvell: since PR #132 every rail box takes the creative's own aspect ratio
 (PROMO.fitBox), so the 300x1200 rail is kept as delivered.  Starvell also sends
-a collapsed-dock face ("Mobile mini", 810x224), written as dockMini.  It is not
-the 640x80 the admin panel asks for: the mini row shows it with object-fit:
-contain at most 48 px tall, so it sits centred with the dock background beside it.
+a collapsed-dock face ("Mobile mini", 810x224); it is not converted.  At most
+48 px tall its tagline is unreadable, so the folded bar shows the dock creative
+as a thumbnail next to the line promo.starvellDockText, the way Playerok does.
 
 The source PNGs are not in the repository: they are the advertiser's originals
 and weigh ~2 MB together.  Point --src at the directory holding them (searched
@@ -56,7 +56,6 @@ ADVERTISERS = {
         "strip": (1200, 300, 1200, 300, 400000),
         "rail": (300, 1200, 300, 1200, 300000),
         "dock": (640, 200, 640, 200, 200000),
-        "dockMini": (810, 224, 810, 224, 100000),
         "popup": (800, 800, 800, 800, 400000),
     },
 }

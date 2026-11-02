@@ -116,7 +116,7 @@ function admin_render_public_page(string $file): ?string {
     }
     $html = ob_get_clean();
     if ($html === false || trim($html) === '') { return null; }
-    // Счётчик Метрики снимается здесь, а не в вызывающих admin*.php: раньше
+    // Счётчик статистики снимается здесь, а не в вызывающих admin*.php: раньше
     // он вырезался только в admin.php, и появление второй админ-страницы
     // (/admin/news) молча вернуло бы клики редактора в статистику сайта.
     // Здесь это свойство всей конструкции «админка исполняет публичную
@@ -125,7 +125,7 @@ function admin_render_public_page(string $file): ?string {
 }
 
 // Top bar shared by every panel. $active is 'tier', 'news', 'promo',
-// 'giveaways', 'support' or 'bans'. Модератор видит две вкладки — обращения и баны: других страниц
+// 'giveaways', 'support', 'bans' or 'filter'. Модератор видит три вкладки — обращения, баны и фильтр чата: других страниц
 // ему не открыть.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
@@ -136,12 +136,15 @@ function admin_nav(string $active): string {
             'news'    => ['/admin/news', 'Новости'],
             'promo'   => ['/admin/promo', 'Реклама'],
             'giveaways' => ['/admin/giveaways', 'Розыгрыши'],
+            'hunt'    => ['/admin/hunt', 'Ивент'],
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
+            'filter'  => ['/admin/chat-filter', 'Фильтр чата'],
         ]
         : [
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
+            'filter'  => ['/admin/chat-filter', 'Фильтр чата'],
         ];
     $links = '';
     foreach ($tabs as $key => [$href, $label]) {

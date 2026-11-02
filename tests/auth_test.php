@@ -108,7 +108,7 @@ test('шапка показывает отказ забаненному на о�
     $top = file_get_contents("$pub/topbar.js");
     assert_true(strpos($top, '/[?&]login=([a-z]+(?:-[0-9]+)?)/') !== false, 'флаг читается вместе со сроком');
     assert_true(strpos($top, '/^banned(?:-([0-9]+))?$/') !== false, 'topbar.js ловит оба вида');
-    $i18n = file_get_contents("$pub/i18n.js");
+    $i18n = i18n_source();
     foreach (['user.banned', 'user.bannedUntil'] as $k) {
         assert_eq(2, substr_count($i18n, "\"$k\":"), "$k: ru и en");
         assert_eq(1, substr_count($top, "\"$k\":"), "$k: запасной текст в topbar.js");

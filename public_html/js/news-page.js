@@ -391,7 +391,7 @@
   async function load() {
     showState("news.loading", false);
     try {
-      const r = await fetch("/api/news.php", { cache: "no-store" });
+      const r = await fetch("/api/news.php" + (window.NX_ADMIN_PAGE === true ? "" : "?lang=" + lang), { cache: "no-store" });
       if (!r.ok) { throw new Error("http " + r.status); }
       const data = await r.json();
       posts = Array.isArray(data.posts) ? data.posts : [];
@@ -435,7 +435,7 @@
   let copyStatusEl = null;
 
   async function copyPostLink(post, btn) {
-    const url = "https://maknemy.com/news/" + post.id;
+    const url = "https://maknemy.com" + I18N.url("/news/" + post.id);
     let ok = false;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {

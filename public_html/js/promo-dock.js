@@ -7,6 +7,7 @@
   var ro = null;
   var lastEl = null;
   var lastDoc = null;
+  var lastPage = null;
   var bound = false;
 
   function t(key, fallback) {
@@ -187,10 +188,11 @@
 
     lastEl = el;
     lastDoc = doc || null;
+    lastPage = page || null;
 
     if (MQ && !bound) {
       bound = true;
-      var onChange = function () { if (lastEl) { render(lastEl, lastDoc); } };
+      var onChange = function () { if (lastEl) { render(lastEl, lastDoc, lastPage); } };
       if (MQ.addEventListener) { MQ.addEventListener("change", onChange); }
       else if (MQ.addListener) { MQ.addListener(onChange); }
     }

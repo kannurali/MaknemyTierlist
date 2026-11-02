@@ -223,6 +223,19 @@ test('og_tierlist_meta names the top tier and folds in the date', function () {
     assert_eq('Dragon (1B), Kitsune', $meta['description']);
 });
 
+test('og_tierlist_meta speaks the page language', function () {
+    $summary = ['tierLabel' => 'S', 'date' => '17.02.2026', 'items' => [['name' => 'Dragon', 'value' => '1B']]];
+    $was = $_SERVER['REQUEST_URI'] ?? null;
+    $_SERVER['REQUEST_URI'] = '/de/tierlist';
+    $meta = og_tierlist_meta($summary);
+    $_SERVER['REQUEST_URI'] = '/en/tierlist';
+    $en = og_tierlist_meta($summary);
+    $_SERVER['REQUEST_URI'] = $was;
+    assert_eq('Maknemy Tier List — S-Tier vom 17.02.2026', $meta['title']);
+    assert_eq('Dragon (1B)', $meta['description'], 'item names stay as in the game');
+    assert_true(strpos($en['title'], 'тир') === false, 'no Russian on the English page: ' . $en['title']);
+});
+
 test('og_tierlist_meta falls back to the generic title when the top tier has no label', function () {
     $meta = og_tierlist_meta(['tierLabel' => '', 'date' => '', 'items' => [['name' => 'X', 'value' => '']]]);
     assert_eq('Maknemy Tier List — трейд-ценности Blox Fruits', $meta['title']);
