@@ -200,6 +200,7 @@ $ADMIN_PHP   = __DIR__ . '/../public_html/admin.php';
 $SUPPORT_PHP = __DIR__ . '/../public_html/admin-support.php';
 $BANS_PHP    = __DIR__ . '/../public_html/admin-bans.php';
 $CHAT_FILTER_PHP = __DIR__ . '/../public_html/admin-chat-filter.php';
+$PUB_PHOTOS = __DIR__ . '/../public_html/admin-chat-photos.php';
 
 // Чужому панель отвечает тем же, что LiteSpeed на maknemy.com отдаёт на
 // несуществующий адрес: 1251 байт, два из них — CR. Ни кнопки входа, ни
@@ -310,6 +311,31 @@ test('/admin/chat-filter: вкладка есть у обеих ролей', fun
         if ($r === null) { return; }
         assert_true(strpos($r['html'], 'href="/admin/chat-filter"') !== false, "у $uid");
     }
+});
+
+test('/admin/chat-photos: анониму и игроку 404, модератору страница без скриптов', function () use ($PUB_PHOTOS) {
+    assert_host_404(admin_run_as($PUB_PHOTOS, ''), 'аноним');
+    assert_host_404(admin_run_as($PUB_PHOTOS, '100'), 'игрок');
+
+    foreach (['1', '2'] as $uid) {
+        $r = admin_run_as($PUB_PHOTOS, $uid, '/admin/chat-photos?done=removed');
+        if ($r === null) { return; }
+        assert_true($r['done'], "страница отдана целиком, $uid");
+        $html = $r['html'];
+        assert_true(strpos($html, '<h1 class="bn-title">Жалобы на фото') !== false, 'заголовок');
+        assert_true(strpos($html, 'class="adm-nav-tab is-active" href="/admin/chat-photos"') !== false, 'своя вкладка');
+        assert_true(strpos($html, 'docs/migrations/2026-11-02-chat-photos.sql') !== false, 'без таблицы подсказка');
+        assert_true(strpos($html, 'Фото удалено.') !== false, 'итог из ?done=');
+        assert_eq(false, strpos($html, '<script'), 'страница без скриптов');
+    }
+});
+
+test('решение по жалобе — только модератор и только POST', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/api/chat_photo_review.php');
+    assert_true(strpos($src, 'require_moderator();') !== false, 'require_moderator');
+    assert_true(strpos($src, 'require_post();') !== false, 'только POST');
+    $route = file_get_contents(__DIR__ . '/../public_html/.htaccess');
+    assert_true(strpos($route, '/admin-chat-photos.php') !== false, 'адрес в .htaccess');
 });
 
 test('/api/chat_filter.php правит только админ', function () {

@@ -198,7 +198,7 @@ echo <<<HTML
 <title>Баны — панель управления</title>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
-<link rel="stylesheet" href="/css/ban-admin.css?v=2" />
+<link rel="stylesheet" href="/css/ban-admin.css?v=3" />
 </head>
 <body class="bn-admin">
 {$nav}

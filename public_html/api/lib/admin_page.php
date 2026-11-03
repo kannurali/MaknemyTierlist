@@ -140,11 +140,13 @@ function admin_nav(string $active): string {
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
             'filter'  => ['/admin/chat-filter', 'Фильтр чата'],
+            'photos'  => ['/admin/chat-photos', 'Жалобы на фото'],
         ]
         : [
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
             'filter'  => ['/admin/chat-filter', 'Фильтр чата'],
+            'photos'  => ['/admin/chat-photos', 'Жалобы на фото'],
         ];
     $links = '';
     foreach ($tabs as $key => [$href, $label]) {

@@ -378,6 +378,8 @@ function tg_text(string $key, string $lang): string {
             'openChat'=> 'Открыть чат',
             'support' => 'Новое обращение в поддержку от %s',
             'openTickets' => 'Открыть обращения',
+            'photoReport' => 'Жалоба на фото в чате от %s',
+            'openReports' => 'Открыть жалобы',
             'prices'  => 'Обновились цены в тирлисте',
             'pricesMore'   => '…и ещё %d',
             'openTierlist' => 'Открыть тирлист',
@@ -394,6 +396,8 @@ function tg_text(string $key, string $lang): string {
             'openChat'=> 'Open chat',
             'support' => 'New support request from %s',
             'openTickets' => 'Open requests',
+            'photoReport' => 'Chat photo reported by %s',
+            'openReports' => 'Open reports',
             'prices'  => 'Tier list prices updated',
             'pricesMore'   => '…and %d more',
             'openTierlist' => 'Open tier list',
@@ -549,6 +553,19 @@ function tg_notify_chat(PDO $pdo, array $tg, callable $send, string $senderId, i
  * модератор.
  */
 function tg_notify_support(PDO $pdo, array $tg, callable $send, string $authorId): int {
+    return tg_notify_staff($pdo, $tg, $send, $authorId, '🆘', 'support', 'openTickets', '/admin/support');
+}
+
+/**
+ * Жалоба на фото → модераторам и админам: жалобу может разобрать любой из них, а
+ * ждать её разбора нельзя. Картинка в бота не уходит, только ссылка на панель.
+ */
+function tg_notify_photo_report(PDO $pdo, array $tg, callable $send, string $authorId): int {
+    return tg_notify_staff($pdo, $tg, $send, $authorId, '📷', 'photoReport', 'openReports', '/admin/chat-photos');
+}
+
+function tg_notify_staff(PDO $pdo, array $tg, callable $send, string $authorId,
+                         string $icon, string $textKey, string $buttonKey, string $path): int {
     if (!tg_enabled($tg) || !$tg['moderators'] || !tg_ready($pdo)) { return 0; }
 
     $in = implode(',', array_fill(0, count($tg['moderators']), '?'));
@@ -565,9 +582,9 @@ function tg_notify_support(PDO $pdo, array $tg, callable $send, string $authorId
         $chatId = (int)$l['chat_id'];
         $res = $send('sendMessage', tg_message(
             $chatId,
-            '🆘 ' . sprintf(tg_text('support', $lang), $who),
-            tg_text('openTickets', $lang),
-            TG_SITE . '/admin/support'
+            $icon . ' ' . sprintf(tg_text($textKey, $lang), $who),
+            tg_text($buttonKey, $lang),
+            TG_SITE . $path
         ));
         if (tg_after_send($pdo, $chatId, $res)) { $sent++; }
     }
@@ -837,6 +854,18 @@ function tg_after_support(PDO $pdo, array $cfg, string $authorId): void {
         tg_notify_support($pdo, $tg, tg_http($tg['token']), $authorId);
     } catch (Throwable $e) {
         error_log('tg support notify: ' . $e->getMessage());
+    }
+}
+
+function tg_after_photo_report(PDO $pdo, array $cfg, string $reporterId): void {
+    $tg = tg_config($cfg);
+    $tg['moderators'] = array_values(array_unique(array_merge($tg['moderators'], config_id_list($cfg, 'admin_ids'))));
+    if (!tg_enabled($tg) || !$tg['moderators']) { return; }
+    tg_finish_response();
+    try {
+        tg_notify_photo_report($pdo, $tg, tg_http($tg['token']), $reporterId);
+    } catch (Throwable $e) {
+        error_log('tg photo report notify: ' . $e->getMessage());
     }
 }
 

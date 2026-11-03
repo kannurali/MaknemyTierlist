@@ -14,6 +14,10 @@ return [
     'admin_ids' => [],
     // Absolute path to the writable images directory.
     'images_dir' => __DIR__ . '/public_html/images',
+    // Фото из чатов. Каталог обязан лежать ВНЕ веб-корня: файлы отдаёт только
+    // api/chat_photo.php после проверки доступа. По умолчанию — chat-photos
+    // рядом с этим файлом.
+    // 'chat_photos_dir' => __DIR__ . '/chat-photos',
 
     // --- Roblox OAuth (вход посетителей) -------------------------------
     // Пустой client_id или secret = вход выключен: api/roblox_start.php

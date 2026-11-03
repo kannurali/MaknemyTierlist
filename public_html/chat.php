@@ -46,7 +46,7 @@ header('Cache-Control: no-cache, must-revalidate');
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=12" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/chat.css?v=13" /><?php else: ?><link rel="stylesheet" href="css/chat.css?v=13" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=4" />
 
@@ -237,6 +237,24 @@ header('Cache-Control: no-cache, must-revalidate');
             <ul class="ct-sticker-grid" id="ctStickerGrid"></ul>
           </div>
 
+          <button class="ct-photo-btn" type="button" id="ctPhotoBtn" hidden
+                  data-i18n-label="chat.photoAttach" aria-label="<?= ta('chat.photoAttach') ?>"
+                  data-i18n-title="chat.photoAttach" title="<?= ta('chat.photoAttach') ?>">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="m4.5 17.5 4.7-4.4a1.5 1.5 0 0 1 2 0l2.3 2.1 1.6-1.5a1.5 1.5 0 0 1 2 0l2.4 2.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <input id="ctPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+
+          <div class="ct-photo-draft" id="ctPhotoDraft" role="group"
+               data-i18n-label="chat.photoAttach" aria-label="<?= ta('chat.photoAttach') ?>" hidden>
+            <img class="ct-photo-draft-img" id="ctPhotoDraftImg" alt="" />
+            <p class="ct-photo-draft-hint" data-i18n="chat.photoHint"><?= te('chat.photoHint') ?></p>
+            <p class="ct-photo-draft-note" id="ctPhotoDraftNote" role="status" aria-live="polite"></p>
+            <div class="ct-photo-draft-row">
+              <button class="ct-photo-draft-cancel" type="button" id="ctPhotoCancel" data-i18n="chat.photoCancel"><?= te('chat.photoCancel') ?></button>
+              <button class="ct-photo-draft-send" type="button" id="ctPhotoSend" data-i18n="chat.photoSend"><?= te('chat.photoSend') ?></button>
+            </div>
+          </div>
+
           <label class="ct-sr-only" for="ctInput" data-i18n="chat.inputLabel"><?= te('chat.inputLabel') ?></label>
           <input class="ct-input" id="ctInput" type="text" autocomplete="off"
                  maxlength="2000" data-i18n-placeholder="chat.placeholder"
@@ -269,6 +287,13 @@ header('Cache-Control: no-cache, must-revalidate');
 
     <p class="ct-empty" id="ctEmpty" hidden></p>
   </main>
+
+    <div class="ct-lightbox" id="ctLightbox" role="dialog" aria-modal="true"
+         data-i18n-label="chat.photo" aria-label="<?= ta('chat.photo') ?>" hidden>
+      <button class="ct-lightbox-close" type="button" id="ctLightboxClose"
+              data-i18n-label="chat.photoClose" aria-label="<?= ta('chat.photoClose') ?>">✕</button>
+      <img class="ct-lightbox-img" id="ctLightboxImg" alt="" />
+    </div>
 
     <div class="tc-cat-backdrop" id="tcCatalogBackdrop" hidden>
       <div class="tc-cat" role="dialog" aria-modal="true" aria-labelledby="tcCatalogTitle" id="tcCatalog">
@@ -339,7 +364,7 @@ header('Cache-Control: no-cache, must-revalidate');
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/chat-page.js?v=22" defer></script>
+  <script src="js/chat-page.js?v=23" defer></script>
 
 
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>

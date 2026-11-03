@@ -76,6 +76,10 @@ legal_page_open(
         <li><b>Текст «о себе».</b> Пишете его вы сами на своей странице
         профиля, и он показывается другим вошедшим посетителям, открывшим ваш
         профиль. Стереть можно там же, очистив поле.</li>
+        <li><b>Фото в чатах.</b> Фото, которое вы отправляете собеседнику, мы
+        пересобираем без метаданных, в том числе без геопозиции. Видят его только
+        участники диалога. Модератор видит фото, только если получатель на него
+        пожаловался.</li>
         <li><b>Время последнего посещения.</b> Пока вы ходите по сайту
         вошедшим, мы обновляем отметку времени — не чаще раза в минуту. По ней
         на странице профиля показывается, в сети человек или нет, и эту отметку
@@ -119,6 +123,8 @@ legal_page_open(
       <ul>
         <li>Запись о вошедшем — пока вы не попросите её удалить.</li>
         <li>Ключ входа — до выхода или 180 дней с последнего посещения.</li>
+        <li>Фото в чатах — 30 дней. Фото с неразобранной жалобой — пока жалобу не
+        разберут.</li>
         <li>Хеш IP для ограничения частоты — до одного часа.</li>
         <li>Журналы веб-сервера — по правилам хостинг-провайдера.</li>
         <li>Статистика Google Analytics — по правилам Google.</li>
@@ -193,6 +199,9 @@ legal_page_open(
         <li><b>Browser storage</b> (localStorage). Your interface language, a
         cache of advertising material and a marker that the ad popup was shown.
         All of it stays in your browser and is never sent to our server.</li>
+        <li><b>Chat photos.</b> A photo you send in a chat is rebuilt without its
+        metadata, including location. Only the people in that chat can see it. A
+        moderator sees a photo only if its recipient reports it.</li>
         <li><b>Likes.</b> Only logged-in visitors can like, one like per account.
         So when you like the tier list or a news post, we store a marker of it
         next to your Roblox ID. Other visitors only see the total number of
@@ -233,6 +242,8 @@ legal_page_open(
       <ul>
         <li>Your login record — until you ask us to delete it.</li>
         <li>The login key — until you log out, or 180 days after your last visit.</li>
+        <li>Chat photos — 30 days. A photo with an open report — until the report
+        is reviewed.</li>
         <li>The IP hash used for rate limiting — up to one hour.</li>
         <li>Web server logs — per our hosting provider's rules.</li>
         <li>Google Analytics statistics — per Google's rules.</li>

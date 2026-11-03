@@ -22,6 +22,7 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
             'ok' => true, 'ready' => chat_ready($pdo), 'authed' => false,
             'me' => '', 'threads' => [], 'thread' => 0, 'messages' => [], 'review' => null,
             'unread' => 0,
+            'photos' => false,
             'tg' => tg_status($pdo, $tg, ''),
         ]];
     }
@@ -51,7 +52,7 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
     // у меня нет.
     if ($thread !== 0 && !chat_is_member($pdo, $me, $thread)) { $thread = 0; }
 
-    $messages = $thread ? chat_messages($pdo, $me, $thread) : [];
+    $messages = $thread ? chat_messages($pdo, $me, $thread, $now) : [];
 
     // Ветку, которую отдаём, человек сейчас видит: отметка «прочитано» и «в
     // диалоге». По ней бот в Telegram молчит, пока человек здесь. Фоновая
@@ -77,6 +78,7 @@ function handle_chat(PDO $pdo, array $session, ?string $threadRaw, int $now, arr
         'messages' => $messages,
         'review'   => $thread ? chat_my_review($pdo, $me, $thread) : null,
         'unread'   => count($unread),
+        'photos'   => chat_photo_ready($pdo),
         'tg'       => tg_status($pdo, $tg, $me),
     ]];
 }

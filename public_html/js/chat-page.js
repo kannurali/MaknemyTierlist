@@ -78,7 +78,7 @@
     if (!copyAllowed(e.target) || e.target.nodeName === 'IMG') { e.preventDefault(); }
   });
 
-  var state = { me: '', threads: [], thread: 0, ready: false, authed: false, messages: [], mod: false };
+  var state = { me: '', threads: [], thread: 0, ready: false, authed: false, messages: [], mod: false, photos: false };
 
   var drafts = {};
   var offerRef = {};
@@ -271,7 +271,7 @@
 
   function emojiOpen(next) {
     if (!emojiBtn || !emojiPanel) { return; }
-    if (next) { buildEmoji(); stickersOpen(false); }
+    if (next) { buildEmoji(); stickersOpen(false); draftShut(); }
     emojiPanel.hidden = !next;
     emojiBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
   }
@@ -372,6 +372,7 @@
   }
 
   function previewText(body) {
+    if (photoId(body)) { return tx('chat.photo', 'Фото'); }
     var id = stickerId(body);
     if (!id) { return showBody(body); }
     if (!itemsSettled()) { loadItems(); }
@@ -482,6 +483,7 @@
     if (!stickerBtn || !stickerPanel) { return; }
     if (next) {
       emojiOpen(false);
+      draftShut();
       loadItems();
       renderStickerGrid();
     }
@@ -559,6 +561,301 @@
       stickersOpen(false);
     });
   }
+
+  var PHOTO_RE = /^\[photo:(\d{1,18})\]$/;
+  var PHOTO_SIDE = 1280;
+  var PHOTO_ERRORS = {
+    need_reply: ['chat.photoNeedReply', 'Фото можно отправить, когда собеседник вам ответит.'],
+    reported: ['chat.photoBlocked', 'На ваше фото пожаловались. Новые фото сюда можно будет отправить после проверки.'],
+    daily_limit: ['chat.photoLimit', 'На сегодня лимит фото исчерпан. Попробуйте завтра.'],
+    too_big: ['chat.photoTooBig', 'Файл слишком большой.'],
+    bad_image: ['chat.photoBad', 'Не удалось прочитать картинку. Подойдут JPG, PNG и WebP.'],
+    rate_limited: ['chat.tooFast', 'Слишком часто. Подождите немного.']
+  };
+
+  var revealed = Object.create(null);
+
+  var photoBtn    = $('ctPhotoBtn');
+  var photoInput  = $('ctPhotoInput');
+  var draft       = $('ctPhotoDraft');
+  var draftImg    = $('ctPhotoDraftImg');
+  var draftNote   = $('ctPhotoDraftNote');
+  var draftSend   = $('ctPhotoSend');
+  var draftCancel = $('ctPhotoCancel');
+  var draftBlob   = null;
+  var draftUrl    = '';
+  var draftBusy   = false;
+
+  var lightbox   = $('ctLightbox');
+  var lightImg   = $('ctLightboxImg');
+  var lightClose = $('ctLightboxClose');
+  var lightFrom  = null;
+
+  function photoId(body) {
+    var m = PHOTO_RE.exec(typeof body === 'string' ? body : '');
+    return m ? m[1] : '';
+  }
+
+  function photoUrl(id, thumb) {
+    return '/api/chat_photo.php?id=' + encodeURIComponent(id) + (thumb ? '&t=1' : '');
+  }
+
+  function photoError(code) {
+    var known = PHOTO_ERRORS[code];
+    return known ? tx(known[0], known[1]) : tx('chat.photoFailed', 'Фото не отправилось. Попробуйте ещё раз.');
+  }
+
+  function msgKey(m) {
+    var p = m.photo;
+    return String(m.id) + (p ? (p.gone ? ':gone' : (p.reported ? ':reported' : ':live')) : '');
+  }
+
+  function fillPhoto(card) {
+    var id = card.dataset.photo;
+    var mine = card.dataset.mine === '1';
+    card.textContent = '';
+
+    if (card.dataset.state !== 'live') {
+      var note = document.createElement('p');
+      note.className = 'ct-photo-note';
+      note.textContent = card.dataset.state === 'reported'
+        ? tx('chat.photoReported', 'Жалоба отправлена, фото скрыто')
+        : tx('chat.photoGone', 'Фото удалено');
+      card.appendChild(note);
+      return;
+    }
+
+    var open = mine || revealed[id];
+    var frame = document.createElement('button');
+    frame.type = 'button';
+    frame.className = 'ct-photo-frame' + (open ? '' : ' is-hidden');
+    frame.style.setProperty('--ct-ar', card.dataset.ratio);
+    frame.setAttribute('aria-label', open ? tx('chat.photo', 'Фото') : tx('chat.photoShow', 'Показать фото'));
+
+    var img = document.createElement('img');
+    img.className = 'ct-photo-img';
+    img.src = photoUrl(id, !open);
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.draggable = false;
+    frame.appendChild(img);
+
+    if (!open) {
+      var cue = document.createElement('span');
+      cue.className = 'ct-photo-cue';
+      cue.textContent = tx('chat.photoShow', 'Показать фото');
+      frame.appendChild(cue);
+    }
+    card.appendChild(frame);
+
+    if (!mine) {
+      var report = document.createElement('button');
+      report.type = 'button';
+      report.className = 'ct-photo-report';
+      report.textContent = tx('chat.photoReport', 'Пожаловаться');
+      card.appendChild(report);
+    }
+  }
+
+  async function reportPhoto(card, button) {
+    if (!window.confirm(tx('chat.photoReportAsk', 'Пожаловаться на это фото? Оно скроется у вас, а модератор его проверит.'))) { return; }
+    button.disabled = true;
+    var r = await post('/api/chat_photo_report.php', { id: Number(card.dataset.photo) });
+    button.disabled = false;
+    if (r.ok && r.data && r.data.ok) {
+      card.dataset.state = 'reported';
+      fillPhoto(card);
+      load(state.thread, true);
+      return;
+    }
+    roomEmpty.hidden = false;
+    roomEmpty.textContent = (r.data && r.data.error === 'rate_limited')
+      ? tx('chat.tooFast', 'Слишком часто. Подождите немного.')
+      : tx('chat.photoReportFailed', 'Жалоба не отправилась. Попробуйте ещё раз.');
+  }
+
+  function lightOpen(id, from) {
+    lightFrom = from;
+    lightImg.src = photoUrl(id, false);
+    lightbox.hidden = false;
+    lightClose.focus();
+  }
+
+  function lightShut() {
+    if (lightbox.hidden) { return; }
+    lightbox.hidden = true;
+    lightImg.removeAttribute('src');
+    if (lightFrom && lightFrom.isConnected) { lightFrom.focus(); }
+    lightFrom = null;
+  }
+
+  log.addEventListener('click', function (e) {
+    var card = e.target.closest ? e.target.closest('.ct-photo') : null;
+    if (!card) { return; }
+    var report = e.target.closest('.ct-photo-report');
+    if (report) {
+      reportPhoto(card, report);
+      return;
+    }
+    var frame = e.target.closest('.ct-photo-frame');
+    if (!frame) { return; }
+    if (frame.classList.contains('is-hidden')) {
+      revealed[card.dataset.photo] = true;
+      fillPhoto(card);
+      card.querySelector('.ct-photo-frame').focus();
+      return;
+    }
+    lightOpen(card.dataset.photo, frame);
+  });
+
+  lightbox.addEventListener('click', function (e) {
+    if (e.target !== lightImg) { lightShut(); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { lightShut(); }
+  });
+
+  function draftShut() {
+    if (!draft || draftBusy) { return; }
+    draft.hidden = true;
+    draftBlob = null;
+    draftImg.removeAttribute('src');
+    draftNote.textContent = '';
+    if (draftUrl) {
+      URL.revokeObjectURL(draftUrl);
+      draftUrl = '';
+    }
+  }
+
+  function photoShrink(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('decode'));
+      };
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth;
+        var h = img.naturalHeight;
+        if (!w || !h) {
+          reject(new Error('decode'));
+          return;
+        }
+        var scale = Math.min(1, PHOTO_SIDE / Math.max(w, h));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(w * scale));
+        canvas.height = Math.max(1, Math.round(h * scale));
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(function (blob) {
+          if (blob) { resolve(blob); } else { reject(new Error('encode')); }
+        }, 'image/jpeg', 0.9);
+      };
+      img.src = url;
+    });
+  }
+
+  async function draftOpen(file) {
+    emojiOpen(false);
+    stickersOpen(false);
+    draftShut();
+    photoBtn.classList.add('is-busy');
+    var blob = null;
+    try {
+      blob = await photoShrink(file);
+    } catch (e) {
+      roomEmpty.hidden = false;
+      roomEmpty.textContent = photoError('bad_image');
+    }
+    photoBtn.classList.remove('is-busy');
+    if (!blob) { return; }
+    roomEmpty.hidden = state.messages.length > 0;
+    draftBlob = blob;
+    draftUrl = URL.createObjectURL(blob);
+    draftImg.src = draftUrl;
+    draftNote.textContent = '';
+    draft.hidden = false;
+    draftSend.focus();
+  }
+
+  async function draftSubmit() {
+    var sentThread = state.thread;
+    if (!draftBlob || draftBusy || !sentThread) { return; }
+    draftBusy = true;
+    draftSend.disabled = true;
+    draftNote.textContent = '';
+
+    var form = new FormData();
+    form.append('thread', String(sentThread));
+    if (offerRef[sentThread]) { form.append('offer', String(offerRef[sentThread])); }
+    form.append('photo', draftBlob, 'photo.jpg');
+
+    var ok = false;
+    var data = null;
+    try {
+      var res = await fetch('/api/chat_photo_send.php', { method: 'POST', body: form });
+      ok = res.ok;
+      try { data = await res.json(); } catch (e) {  }
+    } catch (e) {
+      ok = false;
+    }
+
+    draftBusy = false;
+    draftSend.disabled = false;
+
+    if (!ok || !data || !data.ok) {
+      draftNote.textContent = photoError(data && data.error);
+      return;
+    }
+    delete offerRef[sentThread];
+    draftShut();
+    if (state.thread !== sentThread) { return; }
+    place(data.message);
+    roomEmpty.hidden = true;
+    log.scrollTop = log.scrollHeight;
+    keepDrafts();
+    load(sentThread, true);
+  }
+
+  photoBtn.addEventListener('click', function () {
+    var answered = state.messages.some(function (m) { return !m.mine; });
+    if (!answered) {
+      roomEmpty.hidden = false;
+      roomEmpty.textContent = photoError('need_reply');
+      return;
+    }
+    photoInput.click();
+  });
+
+  photoInput.addEventListener('change', function () {
+    var file = photoInput.files && photoInput.files[0];
+    photoInput.value = '';
+    if (file) { draftOpen(file); }
+  });
+
+  draftSend.addEventListener('click', draftSubmit);
+
+  draftCancel.addEventListener('click', function () {
+    draftShut();
+    photoBtn.focus();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || draft.hidden || draftBusy) { return; }
+    draftShut();
+    photoBtn.focus();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (draft.hidden || draft.contains(e.target) || photoBtn.contains(e.target)) { return; }
+    draftShut();
+  });
 
   var notifyBox   = $('ctNotify');
   var bell        = $('ctBell');
@@ -694,7 +991,7 @@
     var shown = log.querySelectorAll('.ct-msg');
     if (!shown.length || shown.length > messages.length) { return -1; }
     for (var i = 0; i < shown.length; i++) {
-      if (shown[i].dataset.id !== String(messages[i].id)) { return -1; }
+      if (shown[i].dataset.key !== msgKey(messages[i])) { return -1; }
     }
     return shown.length;
   }
@@ -752,11 +1049,24 @@
 
   function bubble(m) {
     var sticker = stickerId(m.body);
+    var photo = photoId(m.body);
     var msg = document.createElement(sticker ? 'div' : 'li');
     msg.className = 'ct-msg' + (m.mine ? ' is-mine' : '');
     msg.dataset.id = String(m.id);
+    msg.dataset.key = msgKey(m);
 
-    if (sticker) {
+    if (photo) {
+      msg.classList.add('is-photo');
+      var info = m.photo || { gone: true };
+      var shot = document.createElement('div');
+      shot.className = 'ct-photo';
+      shot.dataset.photo = photo;
+      shot.dataset.mine = m.mine ? '1' : '0';
+      shot.dataset.state = info.gone ? 'gone' : (info.reported ? 'reported' : 'live');
+      shot.dataset.ratio = info.w && info.h ? String(info.w / info.h) : '1';
+      fillPhoto(shot);
+      msg.appendChild(shot);
+    } else if (sticker) {
       msg.classList.add('is-sticker');
       var card = document.createElement('div');
       card.className = 'ct-sticker';
@@ -822,7 +1132,7 @@
         document.dispatchEvent(new CustomEvent('mk:unread', { detail: d.unread || 0 }));
       }
 
-      var sig = JSON.stringify([d.thread, d.threads, d.messages, d.ready, d.authed, d.tg]);
+      var sig = JSON.stringify([d.thread, d.threads, d.messages, d.ready, d.authed, d.tg, d.photos]);
       if (quiet && sig === lastSig) { return; }
       lastSig = sig;
 
@@ -833,6 +1143,9 @@
       state.thread   = d.thread || 0;
       state.messages = d.messages || [];
       state.mod      = !!d.mod;
+      state.photos   = !!d.photos;
+      photoBtn.hidden = !state.photos;
+      if (!quiet) { draftShut(); }
 
       setTg(d.tg);
 
@@ -1236,6 +1549,7 @@
       var open = state.threads.filter(function (t) { return t.id === state.thread; })[0];
       renderRoom(state.messages, open ? open.peer : null, true);
       log.querySelectorAll('.ct-sticker').forEach(fillSticker);
+      log.querySelectorAll('.ct-photo').forEach(fillPhoto);
       if (stickerPanel && !stickerPanel.hidden) { renderStickerGrid(); }
       renderBell();
       if (banPanel && !banPanel.hidden) { renderBan(); }
