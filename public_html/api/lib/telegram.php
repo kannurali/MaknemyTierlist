@@ -139,6 +139,9 @@ function tg_http(string $token): callable {
 //
 // CURLOPT_POST строго раньше полей: поставленный после массива, он молча сбрасывает
 // multipart, и запрос уходит пустым.
+//
+// Превью с адресом Telegram забирает с сайта прямо во время вызова, поэтому такому
+// сообщению нужно столько же времени, сколько загрузке.
 function tg_http_options(array $params): array {
     $files = $params['_files'] ?? [];
     unset($params['_files']);
@@ -148,7 +151,7 @@ function tg_http_options(array $params): array {
             CURLOPT_POST       => true,
             CURLOPT_POSTFIELDS => json_encode($params, $json),
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT    => TG_HTTP_TIMEOUT,
+            CURLOPT_TIMEOUT    => isset($params['link_preview_options']['url']) ? TG_UPLOAD_TIMEOUT : TG_HTTP_TIMEOUT,
         ];
     }
     $post = [];
