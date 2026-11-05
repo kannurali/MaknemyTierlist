@@ -761,6 +761,13 @@ function stock_notify(PDO $pdo, array $tg, callable $send, string $kind, array $
     return $sent;
 }
 
+// Новая смена — в каналы темы stock, все фрукты: отметки людей тут ни при чём.
+function stock_post(PDO $pdo, callable $send, string $kind, array $stock, int $now, ?callable $sleep = null): int {
+    if (!$stock['fruits']) { return 0; }
+    $text = stock_tg_text($kind, $stock['fruits'], $stock['ends'], $now, 'ru');
+    return tg_route_post($pdo, $send, 'stock', [['sendMessage', tg_route_params($text, stock_text('open', 'ru'), '/stock')]], $now, $sleep);
+}
+
 // Сообщение стока не разобралось — сказать админам, подключившим Telegram.
 function stock_alert_admins(PDO $pdo, array $cfg, array $tg, callable $send): int {
     $ids = config_id_list($cfg, 'admin_ids');
@@ -791,6 +798,11 @@ function stock_pull_and_notify(PDO $pdo, array $cfg, int $now, ?callable $get = 
     $send = $send ?? tg_http($tg['token']);
     $res['sent'] = 0;
     foreach ($res['new'] as $kind => $s) {
+        try {
+            stock_post($pdo, $send, $kind, $s, $now, $sleep);
+        } catch (Throwable $e) {
+            error_log('stock post: ' . $e->getMessage());
+        }
         $res['sent'] += stock_notify($pdo, $tg, $send, $kind, $s, $now, $sleep);
     }
     if ($res['unparsed']) { stock_alert_admins($pdo, $cfg, $tg, $send); }

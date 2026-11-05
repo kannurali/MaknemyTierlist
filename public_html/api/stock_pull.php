@@ -15,6 +15,9 @@
 // cPanel /usr/local/bin/php бывает CGI-сборкой, и из cron она запускается с
 // PHP_SAPI = 'cgi-fcgi', но без REQUEST_METHOD.
 //
+// Заодно cron выпускает посты об ивенте в каналы (hunt_post_tick в
+// api/lib/hunt.php): начало ивента — это дата, а не чьё-то действие на сайте.
+//
 // Два прохода одновременно не идут: если прошлый ещё ждёт Discord или
 // Telegram (рассылка на сотни человек тянется дольше минуты), новый сразу
 // выходит.
@@ -26,6 +29,7 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
 
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/stock.php';
+require_once __DIR__ . '/lib/hunt.php';
 
 $lock = @fopen(sys_get_temp_dir() . '/maknemy-stock-pull.lock', 'c');
 if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) { exit(0); }
@@ -33,6 +37,11 @@ if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) { exit(0); }
 $res = stock_pull_and_notify(db(), app_config(), time(), null, null, null, in_array('-f', $argv ?? [], true));
 if (empty($res['ok']) && ($res['error'] ?? '') !== 'off') {
     error_log('stock pull: ' . ($res['error'] ?? 'unknown'));
+}
+try {
+    $res['event_posts'] = hunt_post_tick(db(), app_config(), time());
+} catch (Throwable $e) {
+    error_log('hunt post: ' . $e->getMessage());
 }
 if (in_array('-v', $argv ?? [], true)) {
     echo json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;

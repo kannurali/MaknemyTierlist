@@ -732,6 +732,21 @@ function hunt_my_titles(PDO $pdo, string $uid): array {
  * призов, с номером билета: страница вытягивает их по одному. tickets —
  * сколько билетов в барабане (без аннулированных).
  */
+function hunt_public_winners(PDO $pdo, int $hid): array {
+    $winners = [];
+    $st = $pdo->prepare("SELECT w.prize_idx, w.prize_name, w.prize_icon, w.user_id, w.ticket_id, u.username, u.display_name
+                           FROM hunt_wins w LEFT JOIN users u ON u.roblox_id = w.user_id
+                          WHERE w.hunt_id = :h AND w.status NOT IN ('expired', 'redrawn') ORDER BY w.prize_idx, w.id");
+    $st->execute([':h' => $hid]);
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $w) {
+        $winners[] = ['prize' => ['idx' => (int)$w['prize_idx'], 'name' => (string)$w['prize_name'], 'icon' => (string)$w['prize_icon']],
+            'ticket_no' => hunt_ticket_no((int)$w['ticket_id']),
+            'user' => ['id' => (string)$w['user_id'], 'username' => (string)($w['username'] ?? ''),
+                       'display_name' => (string)($w['display_name'] ?? '')]];
+    }
+    return $winners;
+}
+
 function hunt_public(PDO $pdo, int $now, array $cfg = []): array {
     if (!hunt_ready($pdo)) { return ['hunt' => null]; }
     $hunt = hunt_current($pdo, $now);
@@ -740,19 +755,7 @@ function hunt_public(PDO $pdo, int $now, array $cfg = []): array {
     $hid = (int)$hunt['id'];
     $phase = hunt_phase($hunt, $now);
 
-    $winners = [];
-    if ($phase === 'drawn') {
-        $st = $pdo->prepare("SELECT w.prize_idx, w.prize_name, w.prize_icon, w.user_id, w.ticket_id, u.username, u.display_name
-                               FROM hunt_wins w LEFT JOIN users u ON u.roblox_id = w.user_id
-                              WHERE w.hunt_id = :h AND w.status NOT IN ('expired', 'redrawn') ORDER BY w.prize_idx, w.id");
-        $st->execute([':h' => $hid]);
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $w) {
-            $winners[] = ['prize' => ['idx' => (int)$w['prize_idx'], 'name' => (string)$w['prize_name'], 'icon' => (string)$w['prize_icon']],
-                'ticket_no' => hunt_ticket_no((int)$w['ticket_id']),
-                'user' => ['id' => (string)$w['user_id'], 'username' => (string)($w['username'] ?? ''),
-                           'display_name' => (string)($w['display_name'] ?? '')]];
-        }
-    }
+    $winners = $phase === 'drawn' ? hunt_public_winners($pdo, $hid) : [];
 
     $tk = $pdo->prepare('SELECT COUNT(*) FROM hunt_tickets WHERE hunt_id = :h AND void = 0');
     $tk->execute([':h' => $hid]);
@@ -785,6 +788,100 @@ function hunt_public(PDO $pdo, int $now, array $cfg = []): array {
         ],
         'winners' => $winners,
     ];
+}
+
+// --------------------------------------------------------------------------
+//  Посты об ивенте в каналы
+// --------------------------------------------------------------------------
+//
+// Два поста: старт и итоги. Их выпускает cron (api/stock_pull.php, первые 15
+// минут каждого часа): начало ивента — это наступившая дата, а не чьё-то
+// действие. Что уже вышло, помнит строка маршрута (last_ref).
+
+// Пост к месту только первые сутки: галочка, поставленная на середине ивента,
+// не должна объявлять его начало.
+const HUNT_POST_FRESH = 86400;
+
+function hunt_post_title(array $hunt): string {
+    return tg_route_h(tg_clean_line((string)$hunt['title_ru'], 120));
+}
+
+// Правила те же, что на странице ивента (hunt.rules.* в lang/ru.json, renderRules
+// в js/hunt-page.js), и свои строки из админки.
+function hunt_post_rules(array $hunt): array {
+    $login = hunt_login_rewards($hunt);
+    $hours = hunt_hour_rewards($hunt);
+    $rules = [
+        'Каждый из ' . HUNT_DAYS . ' дней вход на сайт приносит награду дня: от ' . ($login[0] ?? 0)
+            . ' в первый день до ' . ($login[count($login) - 1] ?? 0) . ' в последний.',
+        'Каждый день час на сайте приносит ещё ' . ($hours[0] ?? 0) . ', два часа — ещё ' . ($hours[1] ?? 0) . '.',
+        'Максимум за ивент — ' . hunt_cap($hunt) . '. Билет стоит ' . hunt_price($hunt) . ', билетов не больше ' . HUNT_TICKET_LIMIT . '.',
+        'Дни считаются по московскому времени. Пропущенный день не вернуть.',
+        'Токены получают только зарегистрированные — вход через Roblox.',
+    ];
+    foreach (preg_split('~\R+~u', (string)($hunt['rules_ru'] ?? '')) ?: [] as $line) {
+        if (trim($line) !== '') { $rules[] = trim($line); }
+    }
+    return $rules;
+}
+
+// Куски HTML поста о старте.
+function hunt_post_start_blocks(array $hunt): array {
+    $blocks = ['🎉 <b>Начался ивент «' . hunt_post_title($hunt) . '»</b>'];
+    $rules = [];
+    foreach (hunt_post_rules($hunt) as $line) { $rules[] = '• ' . tg_route_h($line); }
+    $blocks[] = "📜 <b>Правила</b>\n" . implode("\n", $rules);
+    $prizes = [];
+    foreach (gw_prizes($hunt['prizes_json'] ?? null) as $p) {
+        $prizes[] = '• ' . tg_route_h(tg_clean_line($p['name'], 120)) . ($p['count'] > 1 ? ' × ' . $p['count'] : '');
+    }
+    if ($prizes) { $blocks[] = "🎁 <b>Призы</b>\n" . implode("\n", $prizes); }
+    $when = '🎟 Билеты — до ' . tg_route_h(gw_date((int)$hunt['sales_end_at'], 'ru'));
+    if ((int)$hunt['draw_at'] > 0) { $when .= "\n🏆 Итоги — " . tg_route_h(gw_date((int)$hunt['draw_at'], 'ru')); }
+    $blocks[] = $when;
+    return $blocks;
+}
+
+// Куски HTML поста с итогами: все победители. Логин без @: иначе Telegram сделает
+// ссылку на чужой аккаунт.
+function hunt_post_results_blocks(PDO $pdo, array $hunt): array {
+    $blocks = ['🏆 <b>Итоги ивента «' . hunt_post_title($hunt) . '»</b>'];
+    $lines = [];
+    foreach (hunt_public_winners($pdo, (int)$hunt['id']) as $w) {
+        $u = $w['user'];
+        $who = $u['display_name'] !== '' ? $u['display_name'] : $u['username'];
+        $lines[] = '• ' . tg_route_h(tg_clean_line($w['prize']['name'], 120)) . ' — ' . tg_route_h(tg_clean_line($who, 64));
+    }
+    if ($lines) { $blocks[] = implode("\n", $lines); }
+    return $blocks;
+}
+
+/**
+ * Какой пост сейчас к месту: [метка для last_ref, куски HTML] или null.
+ */
+function hunt_post_due(PDO $pdo, array $hunt, int $now): ?array {
+    $phase = hunt_phase($hunt, $now);
+    $id = (int)$hunt['id'];
+    if ($phase === 'open' && $now - (int)$hunt['starts_at'] < HUNT_POST_FRESH) {
+        return ["hunt:$id:start", hunt_post_start_blocks($hunt)];
+    }
+    if ($phase === 'drawn' && $now - (int)$hunt['drawn_at'] < HUNT_POST_FRESH) {
+        return ["hunt:$id:results", hunt_post_results_blocks($pdo, $hunt)];
+    }
+    return null;
+}
+
+// Проход cron → в скольких чатах вышел пост. $send и $sleep подставляют тесты.
+function hunt_post_tick(PDO $pdo, array $cfg, int $now, ?callable $send = null, ?callable $sleep = null): int {
+    $tg = tg_config($cfg);
+    if (!tg_enabled($tg) || !hunt_ready($pdo) || !tg_routes_ready($pdo)) { return 0; }
+    $hunt = hunt_current($pdo, $now);
+    if (!$hunt) { return 0; }
+    $due = hunt_post_due($pdo, $hunt, $now);
+    if ($due === null) { return 0; }
+    [$ref, $blocks] = $due;
+    $calls = tg_route_text_calls($blocks, 'Открыть ивент', '/halloween');
+    return tg_route_post($pdo, $send ?? tg_http($tg['token']), 'events', $calls, $now, $sleep, $ref);
 }
 
 // Ближайшее, куда стоит позвать: won — есть выигрыш, ждёт подтверждения;

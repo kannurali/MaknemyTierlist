@@ -1335,9 +1335,13 @@ function gw_admin_posts(PDO $pdo, array $row): ?array {
     return $out;
 }
 
-// Каналы последнего розыгрыша с постом — их админка отмечает у нового.
+// Что админка отмечает у нового розыгрыша: каналы темы «Розыгрыши» с вкладки
+// «Каналы». До миграции tg_routes — каналы последнего розыгрыша с постом.
 function gw_post_last(PDO $pdo): array {
     if (!gw_has_posts($pdo)) { return []; }
+    if (tg_routes_ready($pdo)) {
+        return array_map(function (array $r): string { return (string)$r['chat_id']; }, tg_routes_for($pdo, 'giveaways'));
+    }
     $st = $pdo->query('SELECT chat_id FROM giveaway_posts WHERE giveaway_id = (SELECT MAX(giveaway_id) FROM giveaway_posts) ORDER BY chat_id');
     return array_map('strval', $st->fetchAll(PDO::FETCH_COLUMN));
 }

@@ -1,0 +1,45 @@
+.ch-help {
+  margin: 10px 0 18px;
+  padding-left: 18px;
+  color: var(--adm-muted);
+  font-size: 13px;
+}
+.ch-help li { margin: 3px 0; }
+.ch-help b { color: var(--adm-text); font-weight: 600; }
+
+.ch-warn { margin: 0; color: #ff9a8f; font-size: 13px; }
+
+.ch-topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.ch-topic {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--adm-edge);
+  border-radius: 8px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.ch-topic:has(input:checked) { border-color: var(--adm-cyan); }
+.ch-topic-row { display: flex; align-items: center; gap: 8px; }
+.ch-topic input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--adm-cyan); }
+.ch-topic small { font-size: 12px; line-height: 1.3; }
+.ch-topic small a { color: inherit; }
+.ch-fail { color: #ff9a8f; }
+
+.ch-save {
+  position: sticky;
+  bottom: 0;
+  margin-top: 14px;
+  padding: 10px 0;
+  background: var(--adm-bg);
+}
+
+.ch-add { margin-top: 16px; }
+.ch-add a { color: var(--adm-cyan); }

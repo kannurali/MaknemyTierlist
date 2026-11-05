@@ -439,6 +439,7 @@ RewriteRule ^admin/chat-filter/?$ /admin-chat-filter.php [L]
 RewriteRule ^admin/chat-photos/?$ /admin-chat-photos.php [L]
 RewriteRule ^admin/giveaways/?$ /admin-giveaways.php [L]
 RewriteRule ^admin/hunt/?$ /admin-hunt.php [L]
+RewriteRule ^admin/channels/?$ /admin-channels.php [L]
 RewriteRule ^admin/logout/?$ /admin-logout.php  [L]
 
 # Прежний адрес панели рекламы. Правило стоит до отдачи файлов, поэтому

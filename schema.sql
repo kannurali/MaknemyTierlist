@@ -366,6 +366,21 @@ CREATE TABLE IF NOT EXISTS tg_channels (
   updated_at BIGINT UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Что бот сам публикует в каком канале — вкладка «Каналы». Для боевой базы —
+-- docs/migrations/2026-11-05-tg-routes.sql, там же пояснения к полям.
+CREATE TABLE IF NOT EXISTS tg_routes (
+  chat_id   BIGINT          NOT NULL,
+  topic     VARCHAR(16)     NOT NULL,
+  posted_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  failed_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  error     VARCHAR(190)    NOT NULL DEFAULT '',
+  msg_id    BIGINT          NOT NULL DEFAULT 0,
+  msg_log   MEDIUMTEXT      NULL,
+  last_ref  VARCHAR(64)     NOT NULL DEFAULT '',
+  PRIMARY KEY (chat_id, topic),
+  KEY idx_topic (topic)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Посты розыгрышей в каналах и премиум-эмодзи бота. Для боевой базы —
 -- docs/migrations/2026-10-27-giveaway-posts.sql, там же пояснения к полям.
 CREATE TABLE IF NOT EXISTS giveaway_posts (
