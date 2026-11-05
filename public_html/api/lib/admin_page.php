@@ -125,7 +125,7 @@ function admin_render_public_page(string $file): ?string {
 }
 
 // Top bar shared by every panel. $active is 'tier', 'news', 'promo',
-// 'giveaways', 'support', 'bans' or 'filter'. Модератор видит три вкладки — обращения, баны и фильтр чата: других страниц
+// 'giveaways', 'channels', 'support', 'bans' or 'filter'. Модератор видит три вкладки — обращения, баны и фильтр чата: других страниц
 // ему не открыть.
 // Logout is a plain form POST, not a fetch: it has to work identically on the
 // tier editor (which loads app.js) and on the ad panel (which does not).
@@ -137,6 +137,7 @@ function admin_nav(string $active): string {
             'promo'   => ['/admin/promo', 'Реклама'],
             'giveaways' => ['/admin/giveaways', 'Розыгрыши'],
             'hunt'    => ['/admin/hunt', 'Ивент'],
+            'channels' => ['/admin/channels', 'Каналы'],
             'support' => ['/admin/support', 'Обращения'],
             'bans'    => ['/admin/bans', 'Баны'],
             'filter'  => ['/admin/chat-filter', 'Фильтр чата'],

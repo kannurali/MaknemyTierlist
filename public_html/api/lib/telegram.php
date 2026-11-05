@@ -29,6 +29,7 @@
 // PHP 7.4: без match, без str_contains, без именованных аргументов.
 
 require_once __DIR__ . '/chat.php';
+require_once __DIR__ . '/tg_routes.php';
 
 const TG_API  = 'https://api.telegram.org/bot';
 // Адрес сайта для кнопок и вебхука. Задан явно, а не собран из
@@ -741,6 +742,16 @@ function tg_price_number(string $v): ?float {
  * все предметы разом, поэтому молчим и здесь.
  */
 function tg_price_changes(array $old, array $new): array {
+    $out = [];
+    foreach (tg_price_moves($old, $new) as $c) {
+        unset($c['id']);
+        $out[] = $c;
+    }
+    return $out;
+}
+
+// То же с id предмета: по нему посты в каналах склеивают сохранения подряд.
+function tg_price_moves(array $old, array $new): array {
     $before = [];
     foreach (tg_tier_items($old) as $it) { $before[$it['id']] = $it['value']; }
     if (!$before) { return []; }
@@ -759,7 +770,7 @@ function tg_price_changes(array $old, array $new): array {
             $b = tg_price_number($it['value']);
             if ($a !== null && $b !== null && $a == $b) { continue; }
         }
-        $out[] = ['name' => $it['name'], 'from' => $was === '' ? null : $was, 'to' => $it['value']];
+        $out[] = ['id' => $it['id'], 'name' => $it['name'], 'from' => $was === '' ? null : $was, 'to' => $it['value']];
     }
     return $out;
 }
@@ -810,14 +821,20 @@ function tg_notify_prices(PDO $pdo, array $tg, callable $send, array $changes, ?
     }, $sleep);
 }
 
-// Новый пост → всем, кто не выключил новости. $now — секунды.
-function tg_notify_news(PDO $pdo, array $tg, callable $send, int $newsId, int $now, ?callable $sleep = null): int {
+// Пост новостей, если о нём стоит сообщать; null — поста нет или он задним
+// числом. $now — секунды, published_at — миллисекунды.
+function tg_news_fresh(PDO $pdo, int $newsId, int $now): ?array {
     $st = $pdo->prepare('SELECT id, title_ru, title_en, body_ru, body_en, published_at FROM news WHERE id = :id');
     $st->execute([':id' => $newsId]);
     $post = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$post || (int)$post['published_at'] < ($now - TG_NEWS_FRESH) * 1000) { return null; }
+    return $post;
+}
+
+// Новый пост → всем, кто не выключил новости. $now — секунды.
+function tg_notify_news(PDO $pdo, array $tg, callable $send, int $newsId, int $now, ?callable $sleep = null): int {
+    $post = tg_news_fresh($pdo, $newsId, $now);
     if (!$post) { return 0; }
-    // published_at — миллисекунды.
-    if ((int)$post['published_at'] < ($now - TG_NEWS_FRESH) * 1000) { return 0; }
 
     return tg_broadcast($pdo, $tg, $send, 'news', function (string $lang) use ($post): array {
         return [tg_news_text($post, $lang), [
@@ -870,16 +887,23 @@ function tg_after_photo_report(PDO $pdo, array $cfg, string $reporterId): void {
 }
 
 // Админка сохранила тирлист. $old — состояние из базы до сохранения.
-// $send и $sleep подставляют тесты; на бою — настоящий Telegram.
-function tg_after_prices(PDO $pdo, array $cfg, array $old, array $new, ?callable $send = null, ?callable $sleep = null): void {
+// Сначала посты в каналы (по одному на чат), потом личная рассылка: она долгая.
+// $send, $sleep и $now подставляют тесты; на бою — настоящий Telegram.
+function tg_after_prices(PDO $pdo, array $cfg, array $old, array $new, ?callable $send = null, ?callable $sleep = null, ?int $now = null): void {
     $tg = tg_config($cfg);
     if (!tg_enabled($tg)) { return; }
-    $changes = tg_price_changes($old, $new);
+    $changes = tg_price_moves($old, $new);
     if (!$changes) { return; }
     tg_finish_response();
     tg_long_run();
+    $send = $send ?? tg_http($tg['token']);
     try {
-        tg_notify_prices($pdo, $tg, $send ?? tg_http($tg['token']), $changes, $sleep);
+        tg_route_prices($pdo, $send, $changes, $now ?? time(), $sleep);
+    } catch (Throwable $e) {
+        error_log('tg prices post: ' . $e->getMessage());
+    }
+    try {
+        tg_notify_prices($pdo, $tg, $send, $changes, $sleep);
     } catch (Throwable $e) {
         error_log('tg prices notify: ' . $e->getMessage());
     }
@@ -891,8 +915,14 @@ function tg_after_news(PDO $pdo, array $cfg, int $newsId, int $now, ?callable $s
     if (!tg_enabled($tg)) { return; }
     tg_finish_response();
     tg_long_run();
+    $send = $send ?? tg_http($tg['token']);
     try {
-        tg_notify_news($pdo, $tg, $send ?? tg_http($tg['token']), $newsId, $now, $sleep);
+        tg_route_news($pdo, $send, $newsId, $now, $sleep);
+    } catch (Throwable $e) {
+        error_log('tg news post: ' . $e->getMessage());
+    }
+    try {
+        tg_notify_news($pdo, $tg, $send, $newsId, $now, $sleep);
     } catch (Throwable $e) {
         error_log('tg news notify: ' . $e->getMessage());
     }

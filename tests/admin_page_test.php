@@ -338,6 +338,34 @@ test('решение по жалобе — только модератор и т
     assert_true(strpos($route, '/admin-chat-photos.php') !== false, 'адрес в .htaccess');
 });
 
+$CHANNELS_PHP = __DIR__ . '/../public_html/admin-channels.php';
+
+test('/admin/channels: анониму, игроку и модератору не открывается, админ видит вкладку', function () use ($CHANNELS_PHP) {
+    assert_host_404(admin_run_as($CHANNELS_PHP, ''), 'аноним');
+    assert_host_404(admin_run_as($CHANNELS_PHP, '100'), 'игрок');
+
+    $mod = admin_run_as($CHANNELS_PHP, '2');
+    if ($mod === null) { return; }
+    assert_eq(false, strpos($mod['html'], '<h1 class="bn-title">Каналы'), 'модератору страницы нет');
+
+    $r = admin_run_as($CHANNELS_PHP, '1', '/admin/channels?done=not_ready');
+    if ($r === null) { return; }
+    assert_true($r['done'], 'страница отдана целиком');
+    $html = $r['html'];
+    assert_true(strpos($html, '<h1 class="bn-title">Каналы') !== false, 'заголовок');
+    assert_true(strpos($html, 'class="adm-nav-tab is-active" href="/admin/channels"') !== false, 'своя вкладка подсвечена');
+    assert_true(strpos($html, 'docs/migrations/2026-11-05-tg-routes.sql') !== false, 'без таблицы — какую миграцию запустить');
+    assert_eq(false, strpos($html, '<script'), 'страница без скриптов');
+});
+
+test('/api/tg_routes.php правит только админ', function () {
+    $src = file_get_contents(__DIR__ . '/../public_html/api/tg_routes.php');
+    assert_true(strpos($src, 'require_admin();') !== false, 'require_admin');
+    assert_true(strpos($src, 'require_post();') !== false, 'только POST');
+    $route = file_get_contents(__DIR__ . '/../public_html/.htaccess');
+    assert_true(strpos($route, '/admin-channels.php') !== false, 'адрес в .htaccess');
+});
+
 test('/api/chat_filter.php правит только админ', function () {
     $src = file_get_contents(__DIR__ . '/../public_html/api/chat_filter.php');
     assert_true(strpos($src, 'require_admin();') !== false, 'require_admin');
