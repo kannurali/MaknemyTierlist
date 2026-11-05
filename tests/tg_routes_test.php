@@ -307,6 +307,9 @@ test('транспорт: обычный вызов — JSON, с файлом �
     assert_true(!isset($post['_files']), 'служебное поле не уходит');
     assert_true(!isset($o[CURLOPT_HTTPHEADER]), 'заголовок multipart ставит curl');
     assert_eq(TG_UPLOAD_TIMEOUT, $o[CURLOPT_TIMEOUT]);
+    assert_eq(TG_HTTP_TIMEOUT, tg_http_options(['text' => 'x', 'link_preview_options' => ['is_disabled' => true]])[CURLOPT_TIMEOUT]);
+    assert_eq(TG_UPLOAD_TIMEOUT, tg_http_options(['text' => 'x', 'link_preview_options' => ['url' => 'https://x.test/a.jpg']])[CURLOPT_TIMEOUT],
+        'превью Telegram забирает с сайта во время вызова');
     $keys = array_keys($o);
     assert_true(array_search(CURLOPT_POST, $keys, true) < array_search(CURLOPT_POSTFIELDS, $keys, true),
         'CURLOPT_POST раньше полей: иначе curl сбрасывает multipart и запрос уходит пустым');
@@ -662,30 +665,203 @@ test('новость с картинкой и коротким текстом: �
     r_root_drop($root);
 });
 
-test('новость с картинкой и длинным текстом: фото, следом текст целиком', function () {
+function r_preview(string $url): array {
+    return ['url' => TG_SITE . $url, 'prefer_large_media' => true, 'show_above_text' => true];
+}
+
+test('новость с картинкой и длинным текстом: одно сообщение, картинка над текстом', function () {
     $p = r_db();
     $root = r_root([R_IMG1]);
     $long = str_repeat('Длинное предложение новости. ', 60);
     $id = r_news($p, R_NOW * 1000, [r_p('Начало'), r_img(R_IMG1, 'Подпись к картинке'), r_p($long)], '', R_IMG1);
     $log = r_news_post($p, $id, $root);
-    assert_eq(['sendPhoto', 'sendMessage'], array_column($log, 'method'));
-    assert_true(!isset($log[0]['caption']), 'без подписи');
-    assert_true(strpos($log[1]['text'], trim($long)) !== false, 'текст целиком');
-    assert_true(strpos($log[1]['text'], "Начало\n\n<i>Подпись к картинке</i>\n\nДлинное") !== false, 'подпись на своём месте');
-    assert_true(isset($log[1]['reply_markup']), 'кнопка под текстом');
+    assert_eq(['sendMessage'], array_column($log, 'method'), 'картинка и текст не разделены');
+    assert_eq(r_preview(R_IMG1), $log[0]['link_preview_options']);
+    assert_true(strpos($log[0]['text'], trim($long)) !== false, 'текст целиком');
+    assert_true(strpos($log[0]['text'], "Начало\n\n<i>Подпись к картинке</i>\n\nДлинное") !== false, 'подпись на своём месте');
+    assert_eq(TG_SITE . '/news/' . $id, $log[0]['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка под текстом');
+    assert_eq('', r_row($p, R_A, 'news')['error']);
     r_root_drop($root);
 });
 
-test('новость с альбомом: все картинки альбомом, текст с кнопкой следом', function () {
+test('новость: текст длиннее сообщения — картинка над первой частью, кнопка под последней', function () {
+    $p = r_db();
+    $root = r_root([R_IMG1]);
+    $blocks = [r_img(R_IMG1)];
+    for ($i = 0; $i < 60; $i++) { $blocks[] = r_p("Абзац $i. " . str_repeat('слово ', 50)); }
+    $id = r_news($p, R_NOW * 1000, $blocks, '', R_IMG1);
+    $log = r_news_post($p, $id, $root);
+    assert_true(count($log) > 1, 'частей несколько');
+    assert_eq(array_fill(0, count($log), 'sendMessage'), array_column($log, 'method'));
+    assert_eq(r_preview(R_IMG1), $log[0]['link_preview_options']);
+    assert_eq(['is_disabled' => true], $log[1]['link_preview_options'], 'картинка не повторяется');
+    assert_true(!isset($log[0]['reply_markup']) && isset($log[count($log) - 1]['reply_markup']));
+    $all = implode("\n", array_column($log, 'text'));
+    for ($i = 0; $i < 60; $i++) { assert_true(strpos($all, "Абзац $i.") !== false, "абзац $i"); }
+    r_root_drop($root);
+});
+
+test('новость: длинный текст и несколько картинок — первая над текстом, остальные следом', function () {
+    $p = r_db();
+    $root = r_root([R_IMG1, R_IMG2]);
+    $long = str_repeat('Длинное предложение новости. ', 60);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_IMG1), r_p($long), r_img(R_IMG2)], '', R_IMG1);
+    $log = r_news_post($p, $id, $root);
+    assert_eq(['sendMessage', 'sendPhoto'], array_column($log, 'method'));
+    assert_eq(r_preview(R_IMG1), $log[0]['link_preview_options']);
+    assert_true(isset($log[0]['reply_markup']), 'кнопка у текста');
+    assert_eq($root . R_IMG2, $log[1]['_files']['photo'], 'вторая картинка файлом');
+    r_root_drop($root);
+
+    $urls = [];
+    for ($i = 0; $i < 3; $i++) { $urls[] = '/images/' . str_pad((string)$i, 40, 'b') . '.jpg'; }
+    $p = r_db();
+    $root = r_root($urls);
+    $id = r_news($p, R_NOW * 1000, [r_album($urls), r_p($long)], '', $urls[0]);
+    $log = r_news_post($p, $id, $root);
+    assert_eq(['sendMessage', 'sendMediaGroup'], array_column($log, 'method'));
+    assert_eq(2, count($log[1]['media']), 'первой в альбоме нет: она над текстом');
+    assert_true(!isset($log[1]['media'][0]['caption']), 'подпись не нужна: текст уже вышел');
+    r_root_drop($root);
+});
+
+test('новость: длинный текст, картинки нет на диске — фото адресом и текст, превью не обещаем', function () {
+    $p = r_db();
+    $long = str_repeat('Длинное предложение новости. ', 60);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_IMG1), r_p($long)], '', R_IMG1);
+    $log = r_news_post($p, $id);
+    assert_eq(['sendPhoto', 'sendMessage'], array_column($log, 'method'));
+    assert_eq(TG_SITE . R_IMG1, $log[0]['photo']);
+    assert_eq(['is_disabled' => true], $log[1]['link_preview_options']);
+});
+
+test('новость: сообщение с превью отвергнуто — картинка файлом перед тем же текстом, причина видна', function () {
+    $p = r_db();
+    r_route($p, R_A, 'news');
+    $root = r_root([R_IMG1]);
+    $long = str_repeat('Длинное предложение новости. ', 60);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_IMG1), r_p($long)], '', R_IMG1);
+    $log = [];
+    $n = 70;
+    $send = r_tg($log, function (string $m, array $params) use (&$n): array {
+        if (isset($params['link_preview_options']['url'])) {
+            return ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: WEBPAGE_CURL_FAILED'];
+        }
+        return ['ok' => true, 'result' => ['message_id' => $n++]];
+    });
+    assert_eq(1, tg_route_news($p, $send, $id, R_NOW, r_quiet(), $root));
+    assert_eq(['sendMessage', 'sendPhoto', 'sendMessage'], array_column($log, 'method'));
+    assert_eq($root . R_IMG1, $log[1]['_files']['photo']);
+    assert_eq(['is_disabled' => true], $log[2]['link_preview_options']);
+    assert_true(strpos($log[2]['text'], trim($long)) !== false, 'текст целиком');
+    assert_true(isset($log[2]['reply_markup']), 'кнопка на месте');
+    $row = r_row($p, R_A, 'news');
+    assert_eq(70, (int)$row['msg_id']);
+    assert_eq('Картинка не вышла: Bad Request: WEBPAGE_CURL_FAILED', $row['error']);
+    r_root_drop($root);
+});
+
+test('новость: Telegram не ответил на сообщение с превью — второй раз не шлём, пост мог выйти', function () {
+    $p = r_db();
+    r_route($p, R_A, 'news');
+    $root = r_root([R_IMG1]);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_IMG1), r_p(str_repeat('слово ', 400))], '', R_IMG1);
+    $log = [];
+    $send = r_tg($log, function (): ?array { return null; });
+    assert_eq(0, tg_route_news($p, $send, $id, R_NOW, r_quiet(), $root));
+    assert_eq(['sendMessage'], array_column($log, 'method'));
+    assert_true((int)r_row($p, R_A, 'news')['failed_at'] > 0, 'сбой виден');
+    r_root_drop($root);
+});
+
+test('новость: бот без прав и превью — причина в тексте, а не в картинке', function () {
+    $p = r_db();
+    r_route($p, R_A, 'news');
+    $root = r_root([R_IMG1]);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_IMG1), r_p(str_repeat('слово ', 400))], '', R_IMG1);
+    $log = [];
+    $send = r_tg($log, function (): array { return ['ok' => false, 'error_code' => 403, 'description' => 'Forbidden']; });
+    assert_eq(0, tg_route_news($p, $send, $id, R_NOW, r_quiet(), $root));
+    assert_eq(['sendMessage', 'sendPhoto', 'sendMessage'], array_column($log, 'method'));
+    assert_eq('Forbidden', r_row($p, R_A, 'news')['error']);
+    r_root_drop($root);
+});
+
+test('новость: WebP в превью — JPEG-копия рядом, она же при повторе; копии не вышло — фото перед текстом', function () {
+    if (!function_exists('imagewebp')) { return; }
+    $jpg = substr(R_WEBP, 0, -5) . '.jpg';
+    $p = r_db();
+    $root = r_root();
+    $im = imagecreatetruecolor(4, 4);
+    imagewebp($im, $root . R_WEBP);
+    imagedestroy($im);
+    $long = str_repeat('Длинное предложение новости. ', 60);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_WEBP), r_p($long)], '', R_WEBP);
+    $log = r_news_post($p, $id, $root);
+    assert_eq(['sendMessage'], array_column($log, 'method'));
+    assert_eq(r_preview($jpg), $log[0]['link_preview_options']);
+    assert_eq('image/jpeg', getimagesize($root . $jpg)['mime'], 'на сайте лежит JPEG');
+    file_put_contents($root . $jpg, 'уже есть');
+    assert_eq($jpg, tg_route_preview_url(R_WEBP, $root));
+    assert_eq('уже есть', file_get_contents($root . $jpg), 'готовая копия не пересоздаётся');
+    r_root_drop($root);
+
+    $p = r_db();
+    $root = r_root([R_WEBP]);
+    $id = r_news($p, R_NOW * 1000, [r_img(R_WEBP), r_p($long)], '', R_WEBP);
+    $log = r_news_post($p, $id, $root);
+    assert_eq(['sendPhoto', 'sendMessage'], array_column($log, 'method'), 'файл не читается как картинка');
+    assert_true(!is_file($root . $jpg), 'пустой копии нет');
+    r_root_drop($root);
+});
+
+test('новость с альбомом и коротким текстом: один пост, подпись у альбома, ссылка вместо кнопки', function () {
     $p = r_db();
     $root = r_root([R_IMG1, R_IMG2]);
     $id = r_news($p, R_NOW * 1000, [r_album([R_IMG1, R_IMG2]), r_p('Текст')], '', R_IMG1);
     $log = r_news_post($p, $id, $root);
-    assert_eq(['sendMediaGroup', 'sendMessage'], array_column($log, 'method'));
-    assert_eq([['type' => 'photo', 'media' => 'attach://p0'], ['type' => 'photo', 'media' => 'attach://p1']], $log[0]['media']);
+    assert_eq(['sendMediaGroup'], array_column($log, 'method'), 'картинки и текст не разделены');
+    $caption = "📰 <b>Заголовок</b>\n\nТекст\n\n" . '<a href="' . TG_SITE . '/news/' . $id . '">Читать на сайте</a>';
+    assert_eq([
+        ['type' => 'photo', 'media' => 'attach://p0', 'caption' => $caption, 'parse_mode' => 'HTML'],
+        ['type' => 'photo', 'media' => 'attach://p1'],
+    ], $log[0]['media']);
     assert_eq(['p0' => $root . R_IMG1, 'p1' => $root . R_IMG2], $log[0]['_files']);
-    assert_true(isset($log[1]['reply_markup']));
     assert_eq(100, (int)r_row($p, R_A, 'news')['msg_id'], 'альбом отвечает списком сообщений');
+    r_root_drop($root);
+});
+
+test('новость: альбом с подписью отвергнут — текст с кнопкой всё равно выходит', function () {
+    $p = r_db();
+    r_route($p, R_A, 'news');
+    $root = r_root([R_IMG1, R_IMG2]);
+    $id = r_news($p, R_NOW * 1000, [r_album([R_IMG1, R_IMG2]), r_p('Текст')], '', R_IMG1);
+    $log = [];
+    $send = r_tg($log, function (string $m): array {
+        if ($m === 'sendMediaGroup') { return ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: IMAGE_PROCESS_FAILED']; }
+        return ['ok' => true, 'result' => ['message_id' => 56]];
+    });
+    assert_eq(1, tg_route_news($p, $send, $id, R_NOW, r_quiet(), $root));
+    assert_eq(['sendMediaGroup', 'sendMessage'], array_column($log, 'method'));
+    assert_true(strpos($log[1]['text'], 'Текст') !== false);
+    assert_true(isset($log[1]['reply_markup']));
+    assert_eq('Картинка не вышла: Bad Request: IMAGE_PROCESS_FAILED', r_row($p, R_A, 'news')['error']);
+    r_root_drop($root);
+});
+
+test('новость: ссылка на сайт считается в пределе подписи альбома', function () {
+    $linkLen = mb_strlen("\n\nЧитать на сайте");
+    $head = mb_strlen("📰 Заголовок\n\n");
+    $fits = TG_ROUTE_CAPTION_MAX - $linkLen - $head;
+
+    $p = r_db();
+    $root = r_root([R_IMG1, R_IMG2]);
+    $id = r_news($p, R_NOW * 1000, [r_album([R_IMG1, R_IMG2]), r_p(str_repeat('я', $fits))], '', R_IMG1);
+    assert_eq(['sendMediaGroup'], array_column(r_news_post($p, $id, $root), 'method'), 'ровно в предел');
+
+    $p = r_db();
+    $id = r_news($p, R_NOW * 1000, [r_album([R_IMG1, R_IMG2]), r_p(str_repeat('я', $fits + 1))], '', R_IMG1);
+    assert_eq(['sendMessage', 'sendPhoto'], array_column(r_news_post($p, $id, $root), 'method'), 'на знак больше');
     r_root_drop($root);
 });
 
@@ -695,8 +871,9 @@ test('новость: много картинок — альбомы по 10, о
     $p = r_db();
     $id = r_news($p, R_NOW * 1000, [r_album(array_slice($urls, 0, 10)), r_img($urls[10]), r_img($urls[0]), r_p('Текст')], '', $urls[0]);
     $log = r_news_post($p, $id);
-    assert_eq(['sendMediaGroup', 'sendPhoto', 'sendMessage'], array_column($log, 'method'));
+    assert_eq(['sendMediaGroup', 'sendPhoto'], array_column($log, 'method'));
     assert_eq(10, count($log[0]['media']));
+    assert_true(strpos($log[0]['media'][0]['caption'], 'Текст') !== false, 'текст подписью к первому альбому');
     assert_eq(TG_SITE . $urls[10], $log[1]['photo'], 'файла нет — адрес на сайте');
 });
 
@@ -704,7 +881,7 @@ test('новость: картинка, которой нет на диске, �
     $p = r_db();
     $id = r_news($p, R_NOW * 1000, [r_album([R_IMG1, R_IMG2])], '', R_IMG1);
     $log = r_news_post($p, $id);
-    assert_eq(['type' => 'photo', 'media' => TG_SITE . R_IMG1], $log[0]['media'][0]);
+    assert_eq(TG_SITE . R_IMG1, $log[0]['media'][0]['media']);
     assert_true(!isset($log[0]['_files']));
 });
 
