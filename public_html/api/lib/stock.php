@@ -177,7 +177,7 @@ function stock_parse_text(string $text): array {
         }
         if ($kind === null) { continue; }
         if ($ts !== null) {
-            $out[$kind]['ends'] = $ts;
+            $out[$kind]['ends'] = stock_snap($ts);
             continue;
         }
         if (!preg_match('/^[^A-Za-z`]*([A-Za-z][A-Za-z\'\- ]{0,30}?)\s*[•·]\s*[^0-9`]*`?\s*(\d[\d,. ]{0,14})/u', $clean, $m)) {
@@ -196,6 +196,20 @@ function stock_parse_text(string $text): array {
         if (!$out[$k]['fruits']) { unset($out[$k]); }
     }
     return $out;
+}
+
+// Сток в игре меняется ровно в начале часа: обычный — каждые 4 часа, Mirage —
+// каждые 2. Vulcan же пишет время смены с собственным опозданием — 20:00:12 у
+// обычного и 20:01:12 у Mirage, — и без этого таймер Mirage на странице
+// отставал на минуту (замечание владельца). Метка не дальше 10 минут от
+// начала часа приводится к нему; метка дальше — не похожа на смену в начале
+// часа и остаётся как есть. Применяется и к уже сохранённым меткам
+// (stock_read), чтобы старые строки в базе не показывали прежнее время.
+const STOCK_SNAP = 600;
+
+function stock_snap(int $ts): int {
+    $hour = (int)round($ts / 3600) * 3600;
+    return abs($ts - $hour) <= STOCK_SNAP ? $hour : $ts;
 }
 
 function stock_parse_message(array $msg): array {
@@ -247,7 +261,7 @@ function stock_read(PDO $pdo): array {
         $fruits = json_decode((string)$r['fruits'], true);
         $out[$r['kind']] = [
             'fruits'     => is_array($fruits) ? $fruits : [],
-            'ends'       => (int)$r['ends_at'] > 0 ? (int)$r['ends_at'] : null,
+            'ends'       => (int)$r['ends_at'] > 0 ? stock_snap((int)$r['ends_at']) : null,
             'seen'       => (int)$r['seen_at'],
             'message_id' => (string)$r['message_id'],
         ];
