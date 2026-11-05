@@ -46,6 +46,7 @@ const TG_CODE_TTL = 900;
 const TG_VIEWING = 25;
 
 const TG_HTTP_TIMEOUT = 4;
+const TG_UPLOAD_TIMEOUT = 30;
 
 // --------------------------------------------------------------------------
 //  Настройки
@@ -119,13 +120,9 @@ function tg_http(string $token): callable {
     return function (string $method, array $params) use ($token): ?array {
         if (!function_exists('curl_init')) { return null; }
         $ch = curl_init(TG_API . $token . '/' . $method);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        curl_setopt_array($ch, tg_http_options($params) + [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 3,
-            CURLOPT_TIMEOUT        => TG_HTTP_TIMEOUT,
             CURLOPT_FOLLOWLOCATION => false,
         ]);
         $raw = curl_exec($ch);
@@ -134,6 +131,30 @@ function tg_http(string $token): callable {
         $d = json_decode($raw, true);
         return is_array($d) ? $d : null;
     };
+}
+
+// Как передать поля запроса. Обычно это JSON. С файлами (_files: [имя поля =>
+// путь], картинки постов в каналах) только multipart, и загрузке нужно больше
+// времени, чем короткому вызову.
+//
+// CURLOPT_POST строго раньше полей: поставленный после массива, он молча сбрасывает
+// multipart, и запрос уходит пустым.
+function tg_http_options(array $params): array {
+    $files = $params['_files'] ?? [];
+    unset($params['_files']);
+    $json = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+    if (!$files) {
+        return [
+            CURLOPT_POST       => true,
+            CURLOPT_POSTFIELDS => json_encode($params, $json),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT    => TG_HTTP_TIMEOUT,
+        ];
+    }
+    $post = [];
+    foreach ($params as $k => $v) { $post[$k] = is_array($v) ? json_encode($v, $json) : (string)$v; }
+    foreach ($files as $name => $path) { $post[$name] = new CURLFile($path, '', basename($path)); }
+    return [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $post, CURLOPT_TIMEOUT => TG_UPLOAD_TIMEOUT];
 }
 
 // Ответ Telegram на отправку. 403 — человек заблокировал бота или удалил
@@ -696,8 +717,8 @@ function tg_tierlist_state(PDO $pdo): array {
     return is_array($d) ? $d : [];
 }
 
-// Предметы тирлиста — [id, имя, цена] по порядку тиров. Состояние присылает
-// админка, поэтому каждое поле проверяется, а не берётся на веру.
+// Предметы тирлиста — [id, имя, цена, тип, спрос] по порядку тиров. Состояние
+// присылает админка, поэтому каждое поле проверяется, а не берётся на веру.
 function tg_tier_items(array $state): array {
     $out = [];
     $tiers = is_array($state['tiers'] ?? null) ? $state['tiers'] : [];
@@ -710,7 +731,12 @@ function tg_tier_items(array $state): array {
             $name  = is_string($it['name'] ?? null) ? $it['name'] : '';
             $value = $it['value'] ?? '';
             $value = is_string($value) || is_int($value) || is_float($value) ? (string)$value : '';
-            $out[] = ['id' => $id, 'name' => tg_clean_line($name, 64), 'value' => tg_clean_line($value, 24)];
+            $type   = is_string($it['type'] ?? null) ? $it['type'] : '';
+            $demand = is_string($it['demand'] ?? null) && isset(TG_ROUTE_DEMAND[$it['demand']]) ? $it['demand'] : '';
+            $out[] = [
+                'id' => $id, 'name' => tg_clean_line($name, 64), 'value' => tg_clean_line($value, 24),
+                'type' => $type, 'demand' => $demand,
+            ];
         }
     }
     return $out;
@@ -742,16 +768,6 @@ function tg_price_number(string $v): ?float {
  * все предметы разом, поэтому молчим и здесь.
  */
 function tg_price_changes(array $old, array $new): array {
-    $out = [];
-    foreach (tg_price_moves($old, $new) as $c) {
-        unset($c['id']);
-        $out[] = $c;
-    }
-    return $out;
-}
-
-// То же с id предмета: по нему посты в каналах склеивают сохранения подряд.
-function tg_price_moves(array $old, array $new): array {
     $before = [];
     foreach (tg_tier_items($old) as $it) { $before[$it['id']] = $it['value']; }
     if (!$before) { return []; }
@@ -770,7 +786,7 @@ function tg_price_moves(array $old, array $new): array {
             $b = tg_price_number($it['value']);
             if ($a !== null && $b !== null && $a == $b) { continue; }
         }
-        $out[] = ['id' => $it['id'], 'name' => $it['name'], 'from' => $was === '' ? null : $was, 'to' => $it['value']];
+        $out[] = ['name' => $it['name'], 'from' => $was === '' ? null : $was, 'to' => $it['value']];
     }
     return $out;
 }
@@ -824,7 +840,7 @@ function tg_notify_prices(PDO $pdo, array $tg, callable $send, array $changes, ?
 // Пост новостей, если о нём стоит сообщать; null — поста нет или он задним
 // числом. $now — секунды, published_at — миллисекунды.
 function tg_news_fresh(PDO $pdo, int $newsId, int $now): ?array {
-    $st = $pdo->prepare('SELECT id, title_ru, title_en, body_ru, body_en, published_at FROM news WHERE id = :id');
+    $st = $pdo->prepare('SELECT * FROM news WHERE id = :id');
     $st->execute([':id' => $newsId]);
     $post = $st->fetch(PDO::FETCH_ASSOC);
     if (!$post || (int)$post['published_at'] < ($now - TG_NEWS_FRESH) * 1000) { return null; }
@@ -892,18 +908,18 @@ function tg_after_photo_report(PDO $pdo, array $cfg, string $reporterId): void {
 function tg_after_prices(PDO $pdo, array $cfg, array $old, array $new, ?callable $send = null, ?callable $sleep = null, ?int $now = null): void {
     $tg = tg_config($cfg);
     if (!tg_enabled($tg)) { return; }
-    $changes = tg_price_moves($old, $new);
-    if (!$changes) { return; }
+    $post = tg_route_changes($old, $new);
+    if (!$post) { return; }
     tg_finish_response();
     tg_long_run();
     $send = $send ?? tg_http($tg['token']);
     try {
-        tg_route_prices($pdo, $send, $changes, $now ?? time(), $sleep);
+        tg_route_prices($pdo, $send, $post, $now ?? time(), $sleep);
     } catch (Throwable $e) {
         error_log('tg prices post: ' . $e->getMessage());
     }
     try {
-        tg_notify_prices($pdo, $tg, $send, $changes, $sleep);
+        tg_notify_prices($pdo, $tg, $send, tg_price_changes($old, $new), $sleep);
     } catch (Throwable $e) {
         error_log('tg prices notify: ' . $e->getMessage());
     }
@@ -917,7 +933,10 @@ function tg_after_news(PDO $pdo, array $cfg, int $newsId, int $now, ?callable $s
     tg_long_run();
     $send = $send ?? tg_http($tg['token']);
     try {
-        tg_route_news($pdo, $send, $newsId, $now, $sleep);
+        if (tg_routes_for($pdo, 'news')) {
+            require_once __DIR__ . '/tg_news_post.php';
+            tg_route_news($pdo, $send, $newsId, $now, $sleep);
+        }
     } catch (Throwable $e) {
         error_log('tg news post: ' . $e->getMessage());
     }

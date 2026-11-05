@@ -801,55 +801,77 @@ function hunt_public(PDO $pdo, int $now, array $cfg = []): array {
 // Пост к месту только первые сутки: галочка, поставленная на середине ивента,
 // не должна объявлять его начало.
 const HUNT_POST_FRESH = 86400;
-// Сообщение Telegram — до 4096 знаков, призов бывает много.
-const HUNT_POST_WINNERS = 30;
 
 function hunt_post_title(array $hunt): string {
-    return tg_clean_line((string)$hunt['title_ru'], 120);
+    return tg_route_h(tg_clean_line((string)$hunt['title_ru'], 120));
 }
 
-function hunt_post_start_text(array $hunt): string {
-    $lines = ['🎉 Начался ивент «' . hunt_post_title($hunt) . '»'];
+// Правила те же, что на странице ивента (hunt.rules.* в lang/ru.json, renderRules
+// в js/hunt-page.js), и свои строки из админки.
+function hunt_post_rules(array $hunt): array {
+    $login = hunt_login_rewards($hunt);
+    $hours = hunt_hour_rewards($hunt);
+    $rules = [
+        'Каждый из ' . HUNT_DAYS . ' дней вход на сайт приносит награду дня: от ' . ($login[0] ?? 0)
+            . ' в первый день до ' . ($login[count($login) - 1] ?? 0) . ' в последний.',
+        'Каждый день час на сайте приносит ещё ' . ($hours[0] ?? 0) . ', два часа — ещё ' . ($hours[1] ?? 0) . '.',
+        'Максимум за ивент — ' . hunt_cap($hunt) . '. Билет стоит ' . hunt_price($hunt) . ', билетов не больше ' . HUNT_TICKET_LIMIT . '.',
+        'Дни считаются по московскому времени. Пропущенный день не вернуть.',
+        'Токены получают только зарегистрированные — вход через Roblox.',
+    ];
+    foreach (preg_split('~\R+~u', (string)($hunt['rules_ru'] ?? '')) ?: [] as $line) {
+        if (trim($line) !== '') { $rules[] = trim($line); }
+    }
+    return $rules;
+}
+
+// Куски HTML поста о старте.
+function hunt_post_start_blocks(array $hunt): array {
+    $blocks = ['🎉 <b>Начался ивент «' . hunt_post_title($hunt) . '»</b>'];
+    $rules = [];
+    foreach (hunt_post_rules($hunt) as $line) { $rules[] = '• ' . tg_route_h($line); }
+    $blocks[] = "📜 <b>Правила</b>\n" . implode("\n", $rules);
     $prizes = [];
     foreach (gw_prizes($hunt['prizes_json'] ?? null) as $p) {
-        $prizes[] = '• ' . tg_clean_line($p['name'], 120) . ($p['count'] > 1 ? ' × ' . $p['count'] : '');
+        $prizes[] = '• ' . tg_route_h(tg_clean_line($p['name'], 120)) . ($p['count'] > 1 ? ' × ' . $p['count'] : '');
     }
-    if ($prizes) { $lines[] = ''; $lines[] = '🎁 Призы:'; $lines = array_merge($lines, $prizes); }
-    $lines[] = '';
-    $lines[] = '🎟 Билеты — до ' . gw_date((int)$hunt['sales_end_at'], 'ru');
-    return implode("\n", $lines);
+    if ($prizes) { $blocks[] = "🎁 <b>Призы</b>\n" . implode("\n", $prizes); }
+    $when = '🎟 Билеты — до ' . tg_route_h(gw_date((int)$hunt['sales_end_at'], 'ru'));
+    if ((int)$hunt['draw_at'] > 0) { $when .= "\n🏆 Итоги — " . tg_route_h(gw_date((int)$hunt['draw_at'], 'ru')); }
+    $blocks[] = $when;
+    return $blocks;
 }
 
-function hunt_post_results_text(PDO $pdo, array $hunt): string {
-    $lines = ['🏆 Итоги ивента «' . hunt_post_title($hunt) . '»'];
-    $wins = hunt_public_winners($pdo, (int)$hunt['id']);
-    if ($wins) { $lines[] = ''; }
-    foreach (array_slice($wins, 0, HUNT_POST_WINNERS) as $w) {
+// Куски HTML поста с итогами: все победители. Логин без @: иначе Telegram сделает
+// ссылку на чужой аккаунт.
+function hunt_post_results_blocks(PDO $pdo, array $hunt): array {
+    $blocks = ['🏆 <b>Итоги ивента «' . hunt_post_title($hunt) . '»</b>'];
+    $lines = [];
+    foreach (hunt_public_winners($pdo, (int)$hunt['id']) as $w) {
         $u = $w['user'];
         $who = $u['display_name'] !== '' ? $u['display_name'] : $u['username'];
-        $lines[] = '• ' . tg_clean_line($w['prize']['name'], 120) . ' — ' . tg_clean_line($who, 64);
+        $lines[] = '• ' . tg_route_h(tg_clean_line($w['prize']['name'], 120)) . ' — ' . tg_route_h(tg_clean_line($who, 64));
     }
-    $more = count($wins) - HUNT_POST_WINNERS;
-    if ($more > 0) { $lines[] = sprintf(tg_text('pricesMore', 'ru'), $more); }
-    return implode("\n", $lines);
+    if ($lines) { $blocks[] = implode("\n", $lines); }
+    return $blocks;
 }
 
 /**
- * Какой пост сейчас к месту: [метка для last_ref, текст] или null.
+ * Какой пост сейчас к месту: [метка для last_ref, куски HTML] или null.
  */
 function hunt_post_due(PDO $pdo, array $hunt, int $now): ?array {
     $phase = hunt_phase($hunt, $now);
     $id = (int)$hunt['id'];
     if ($phase === 'open' && $now - (int)$hunt['starts_at'] < HUNT_POST_FRESH) {
-        return ["hunt:$id:start", hunt_post_start_text($hunt)];
+        return ["hunt:$id:start", hunt_post_start_blocks($hunt)];
     }
     if ($phase === 'drawn' && $now - (int)$hunt['drawn_at'] < HUNT_POST_FRESH) {
-        return ["hunt:$id:results", hunt_post_results_text($pdo, $hunt)];
+        return ["hunt:$id:results", hunt_post_results_blocks($pdo, $hunt)];
     }
     return null;
 }
 
-// Проход cron → сколько постов вышло. $send и $sleep подставляют тесты.
+// Проход cron → в скольких чатах вышел пост. $send и $sleep подставляют тесты.
 function hunt_post_tick(PDO $pdo, array $cfg, int $now, ?callable $send = null, ?callable $sleep = null): int {
     $tg = tg_config($cfg);
     if (!tg_enabled($tg) || !hunt_ready($pdo) || !tg_routes_ready($pdo)) { return 0; }
@@ -857,9 +879,9 @@ function hunt_post_tick(PDO $pdo, array $cfg, int $now, ?callable $send = null, 
     if (!$hunt) { return 0; }
     $due = hunt_post_due($pdo, $hunt, $now);
     if ($due === null) { return 0; }
-    [$ref, $text] = $due;
-    $params = tg_route_params($text, 'Открыть ивент', '/halloween');
-    return tg_route_post($pdo, $send ?? tg_http($tg['token']), 'events', $params, $now, $sleep, $ref);
+    [$ref, $blocks] = $due;
+    $calls = tg_route_text_calls($blocks, 'Открыть ивент', '/halloween');
+    return tg_route_post($pdo, $send ?? tg_http($tg['token']), 'events', $calls, $now, $sleep, $ref);
 }
 
 // Ближайшее, куда стоит позвать: won — есть выигрыш, ждёт подтверждения;

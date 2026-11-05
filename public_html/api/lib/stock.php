@@ -765,7 +765,7 @@ function stock_notify(PDO $pdo, array $tg, callable $send, string $kind, array $
 function stock_post(PDO $pdo, callable $send, string $kind, array $stock, int $now, ?callable $sleep = null): int {
     if (!$stock['fruits']) { return 0; }
     $text = stock_tg_text($kind, $stock['fruits'], $stock['ends'], $now, 'ru');
-    return tg_route_post($pdo, $send, 'stock', tg_route_params($text, stock_text('open', 'ru'), '/stock'), $now, $sleep);
+    return tg_route_post($pdo, $send, 'stock', [['sendMessage', tg_route_params($text, stock_text('open', 'ru'), '/stock')]], $now, $sleep);
 }
 
 // Сообщение стока не разобралось — сказать админам, подключившим Telegram.
