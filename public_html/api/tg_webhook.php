@@ -2,6 +2,7 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/telegram.php';
 require_once __DIR__ . '/lib/giveaway.php';
+require_once __DIR__ . '/lib/cm/cm.php';
 
 // Вебхук бота — сюда Telegram присылает всё, что люди пишут боту.
 // Адрес и секрет сообщает Telegram кнопка на /admin/support (api/tg_setup.php).
@@ -13,6 +14,10 @@ require_once __DIR__ . '/lib/giveaway.php';
 // Отвечаем всегда 200 и сразу: на любой другой код Telegram повторяет
 // доставку, и одна ошибка базы превращалась бы в очередь повторов. Ответ на
 // сообщение уходит прямо в теле — Telegram выполняет его как вызов API.
+//
+// Сообщения групп и кнопки «cm:» — чат-менеджер (api/lib/cm/,
+// docs/chat-manager.md): 200 уходит сразу, вызовы Telegram — после, ошибка
+// модуля пишется в лог и остальное не задевает.
 
 function tg_webhook_authorized(array $tg, array $server): bool {
     if (!tg_enabled($tg)) { return false; }
@@ -30,12 +35,23 @@ if (!defined('TESTING')) {
         exit;
     }
 
+    $update = read_json_body();
+    if (cm_wants_update($update, $tg['name'])) {
+        json_out(['ok' => true]);
+        tg_finish_response();
+        try {
+            cm_handle_update(db(), app_config(), tg_http($tg['token']), $update, time());
+        } catch (Throwable $e) {
+            error_log('cm: ' . $e->getMessage());
+        }
+        exit;
+    }
+
     $reply = null;
     $invite = null;
     $left = [];
     $joined = null;
     try {
-        $update = read_json_body();
         // Нажали «Участвовать» под постом розыгрыша в канале — участие прямо
         // в Telegram, ответ всплывающим окном (api/lib/gw_tg.php).
         $joined = gw_tg_callback(db(), app_config(), tg_http($tg['token']), $update, time());
@@ -62,4 +78,14 @@ if (!defined('TESTING')) {
     if ($joined) { gw_tg_after(db(), app_config(), $joined['after'], time()); }
     if ($invite !== null) { gw_after_channel(db(), app_config(), $invite, time()); }
     if ($left) { gw_after_member(db(), app_config(), $left, time()); }
+    // Бота добавили в группу или убрали, человек вошёл или вышел — тот же
+    // апдейт нужен и чат-менеджеру: знакомство с группой, приветствие.
+    if (isset($update['my_chat_member']) || isset($update['chat_member'])) {
+        tg_finish_response();
+        try {
+            cm_on_membership(db(), app_config(), tg_http($tg['token']), $update, time());
+        } catch (Throwable $e) {
+            error_log('cm member: ' . $e->getMessage());
+        }
+    }
 }
