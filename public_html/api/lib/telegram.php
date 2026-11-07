@@ -1022,8 +1022,10 @@ function tg_setup_webhook(callable $send, string $token): bool {
         // админка розыгрышей узнаёт каналы. chat_member — кто вступил в
         // такой канал по ссылке розыгрыша и кто вышел (api/lib/giveaway.php).
         // callback_query — нажали «Участвовать» под постом розыгрыша
-        // (api/lib/gw_tg.php).
-        'allowed_updates'      => ['message', 'my_chat_member', 'chat_member', 'callback_query'],
+        // (api/lib/gw_tg.php) или кнопку чат-менеджера (api/lib/cm/).
+        // edited_message — чат-менеджер проверяет и правки: спамеры
+        // дописывают ссылку уже после отправки.
+        'allowed_updates'      => ['message', 'edited_message', 'my_chat_member', 'chat_member', 'callback_query'],
         'drop_pending_updates' => true,
         'max_connections'      => 5,
     ]);
@@ -1034,6 +1036,8 @@ function tg_setup_webhook(callable $send, string $token): bool {
     ]);
     // Права, которые Telegram сам включит, когда бота добавляют админом.
     $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(true), 'for_channels' => true]);
-    $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(false)]);
+    // В группах чат-менеджеру нужно ещё удалять сообщения. Розыгрышам это
+    // право не нужно, поэтому в TG_CHANNEL_RIGHTS его нет.
+    $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(false) + ['can_delete_messages' => true]]);
     return is_array($res) && !empty($res['ok']);
 }
