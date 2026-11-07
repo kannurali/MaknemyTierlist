@@ -231,8 +231,10 @@ function cm_reply_of(array $msg): ?array {
 /**
  * Цель команды по старшинству: ответ → упоминание без ника → @ник / t.me/ник →
  * id. Найденная цель вырезается из $args (кроме ответа). Перед целью может
- * стоять ранг («+модер 2 @ник») — он остаётся в $args. null — цели нет; если
- * ник незнаком, $why = 'unknown'. При неудаче $args не меняется.
+ * стоять ранг («+модер 2 @ник») — он остаётся в $args. Цифра любая, не только
+ * 0–4: «+модер 5 @ник» должен дойти до ответа «укажите ранг 0–4», а не
+ * споткнуться о цель. null — цели нет; если ник незнаком, $why = 'unknown'.
+ * При неудаче $args не меняется.
  */
 function cm_target(PDO $pdo, array $msg, string &$args, ?string &$why = null): ?array {
     $why = null;
@@ -253,7 +255,7 @@ function cm_target(PDO $pdo, array $msg, string &$args, ?string &$why = null): ?
     }
     $orig = $args;
     $lead = '';
-    if (preg_match('~^([0-4])\s+~', $args, $lm)) {
+    if (preg_match('~^(\d)\s+~', $args, $lm)) {
         $lead = $lm[1];
         $args = substr($args, strlen($lm[0]));
     }
