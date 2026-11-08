@@ -43,7 +43,8 @@ function cm_cmd_purge(array $ctx, array $cmd): void {
 
 function cm_mass_candidates(array $ctx, string $kind, int $param, int $limit): array {
     $now = (int)$ctx['now'];
-    $where = 'chat_id = :c AND left_at = 0 AND lvl = 0';
+    $where = 'chat_id = :c AND left_at = 0 AND lvl = 0 AND user_id NOT IN
+        (SELECT user_id FROM cm_members WHERE chat_id IN (' . cm_in(cm_rank_chats($ctx)) . ') AND lvl >= 1)';
     $p = [':c' => (int)$ctx['chat']['chat_id']];
     if ($kind === 'i') {
         $where .= ' AND last_seen > 0 AND last_seen < :t';
