@@ -3,7 +3,7 @@
 
   var tg = window.Telegram && window.Telegram.WebApp;
   var root = document.getElementById("ta");
-  if (!root) { return; }
+  if (!root || window.NX_TG_PAGE) { return; }
 
   var API = "api/gw_tg_app.php";
   var ALL = "https://maknemy.com/giveaways";

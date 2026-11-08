@@ -58,8 +58,9 @@ if (!defined('TESTING')) {
         // Прислали боту премиум-эмодзи — он отвечает их id для админки
         // розыгрышей (раздел «Премиум-эмодзи» в api/lib/giveaway.php).
         // «Забрать приз» и ник в Roblox от победителя — gw_tg_bot_reply().
+        // «тирлист», «/stock» в личке — кнопка в мини-приложение (tg_pages.php).
         $reply = $joined['reply'] ?? gw_emoji_reply($update) ?? gw_tg_bot_reply(db(), $update, time())
-            ?? tg_handle_update(db(), $update, time());
+            ?? tg_handle_update(db(), $update, time(), $tg['name']);
         // Бота добавили в канал или убрали — список каналов для условий
         // розыгрышей (api/lib/giveaway.php). Ссылку-приглашение приватного
         // канала просим уже после ответа Telegram. Добавившему бот сразу

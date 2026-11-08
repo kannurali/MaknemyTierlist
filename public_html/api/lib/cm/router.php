@@ -237,3 +237,13 @@ function cm_cmd_id(array $ctx, array $cmd): void {
     }
     cm_reply($ctx, $text);
 }
+
+// «тирлист», «сток», «/stock» … — кнопка, которая открывает раздел сайта в
+// мини-приложении (api/lib/tg_pages.php). Ответ не удаляется: кнопкой
+// пользуются и потом.
+function cm_cmd_site(array $ctx, array $cmd): void {
+    $key = TG_PAGE_WORDS[$cmd['phrase']] ?? '';
+    if ($key === '') { return; }
+    $url = tg_page_link((string)$ctx['bot'], $key);
+    cm_reply($ctx, TG_PAGES[$key][1], false, ['buttons' => [[['text' => TG_PAGES[$key][2], 'url' => $url]]]]);
+}

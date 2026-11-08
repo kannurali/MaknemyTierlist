@@ -382,4 +382,46 @@ test('таймер чужого чата гаснет', function () {
     assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_timers WHERE done_at = 0')->fetchColumn(), 'второй раз не возьмётся');
 });
 
+// Разделы сайта кнопкой в мини-приложение (api/lib/tg_pages.php).
+test('«сток», «/stock@бот», «тир лист» — кнопка в мини-приложение, ответ не удаляется', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(7, 'Сток'), $log);
+    $p = cm_calls($log, 'sendMessage')[0][1];
+    assert_eq(TG_PAGES['stock'][1], $p['text']);
+    assert_eq([[['text' => 'Открыть сток', 'url' => 'https://t.me/' . CM_BOT . '?startapp=stock']]], $p['reply_markup']['inline_keyboard']);
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'кнопка остаётся в чате');
+    rt_run($pdo, cm_gmsg(7, '/stock@' . CM_BOT), $log);
+    rt_run($pdo, cm_gmsg(7, 'тир лист'), $log);
+    rt_run($pdo, cm_gmsg(7, '/calc'), $log);
+    $urls = array_map(function ($c) { return $c[1]['reply_markup']['inline_keyboard'][0][0]['url']; }, cm_calls($log, 'sendMessage'));
+    assert_eq(['https://t.me/' . CM_BOT . '?startapp=stock', 'https://t.me/' . CM_BOT . '?startapp=stock',
+               'https://t.me/' . CM_BOT . '?startapp=tierlist', 'https://t.me/' . CM_BOT . '?startapp=calc'], $urls);
+});
+
+test('разделы сайта: в речи и у чужого бота молчим, «дк сайт 6» выключает', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(7, 'сток сегодня норм'), $log);
+    rt_run($pdo, cm_gmsg(7, '/stock@OtherBot'), $log);
+    rt_run($pdo, rt_foreign(7, 'сток'), $log);
+    assert_eq([], cm_calls($log, 'sendMessage'));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк сайт 6');
+    $n = count(cm_calls($log, 'sendMessage'));
+    rt_run($pdo, cm_gmsg(7, 'сток'), $log);
+    assert_eq($n, count(cm_calls($log, 'sendMessage')), 'раздел выключен');
+    assert_eq(true, strpos(cm_plain(cm_help_text()), 'тирлист · сток') !== false, 'в помощи');
+});
+
+test('слова разделов у чат-менеджера и у лички — одни и те же', function () {
+    $cm = [];
+    foreach (CM_COMMANDS as $phrase => $def) {
+        if ($def[0] === 'site') { $cm[] = $phrase; }
+    }
+    $words = array_keys(TG_PAGE_WORDS);
+    sort($cm);
+    sort($words);
+    assert_eq($words, $cm);
+});
+
 run_tests();

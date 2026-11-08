@@ -30,6 +30,7 @@
 
 require_once __DIR__ . '/chat.php';
 require_once __DIR__ . '/tg_routes.php';
+require_once __DIR__ . '/tg_pages.php';
 
 const TG_API  = 'https://api.telegram.org/bot';
 // Адрес сайта для кнопок и вебхука. Задан явно, а не собран из
@@ -460,8 +461,11 @@ function tg_message_buttons(int $chatId, string $text, array $buttons): array {
  *
  * Только личные чаты: в группу бота могут добавить, и привязывать чат группы
  * к аккаунту сайта нельзя — уведомления читали бы все её участники.
+ *
+ * «тирлист», «/stock» и другие разделы сайта (api/lib/tg_pages.php) — кнопка
+ * в мини-приложение; $bot — имя бота для ссылки t.me/<бот>?startapp=….
  */
-function tg_handle_update(PDO $pdo, array $update, int $now): ?array {
+function tg_handle_update(PDO $pdo, array $update, int $now, string $bot = ''): ?array {
     $msg = $update['message'] ?? null;
     if (!is_array($msg)) { return null; }
     $chat = $msg['chat'] ?? null;
@@ -484,6 +488,11 @@ function tg_handle_update(PDO $pdo, array $update, int $now): ?array {
     if (preg_match('~^/stop(?:@\w+)?\z~', $text)) {
         $pdo->prepare('DELETE FROM tg_links WHERE chat_id = :c')->execute([':c' => $chatId]);
         return ['method' => 'sendMessage'] + tg_message($chatId, tg_text('stopped', $lang));
+    }
+
+    $page = tg_page_from_text($text, $bot);
+    if ($page !== null) {
+        return ['method' => 'sendMessage'] + tg_message($chatId, TG_PAGES[$page][1], TG_PAGES[$page][2], tg_page_link($bot, $page));
     }
 
     return ['method' => 'sendMessage']
@@ -1029,11 +1038,15 @@ function tg_setup_webhook(callable $send, string $token): bool {
         'drop_pending_updates' => true,
         'max_connections'      => 5,
     ]);
-    $send('setMyCommands', ['commands' => [['command' => 'stop', 'description' => 'Отключить уведомления']]]);
+    // Меню команд: разделы сайта (кнопка в мини-приложение, tg_pages.php) и
+    // /stop в личке; в группах — только разделы.
+    $pages = tg_page_commands();
+    $send('setMyCommands', ['commands' => array_merge($pages, [['command' => 'stop', 'description' => 'Отключить уведомления']])]);
     $send('setMyCommands', [
-        'commands'      => [['command' => 'stop', 'description' => 'Turn notifications off']],
+        'commands'      => array_merge($pages, [['command' => 'stop', 'description' => 'Turn notifications off']]),
         'language_code' => 'en',
     ]);
+    $send('setMyCommands', ['commands' => $pages, 'scope' => ['type' => 'all_group_chats']]);
     // Права, которые Telegram сам включит, когда бота добавляют админом.
     $send('setMyDefaultAdministratorRights', ['rights' => tg_default_rights(true), 'for_channels' => true]);
     // В группах чат-менеджеру нужно ещё удалять сообщения. Розыгрышам это
