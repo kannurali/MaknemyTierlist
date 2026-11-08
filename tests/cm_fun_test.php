@@ -236,8 +236,15 @@ test('РП: ответом и @ником, форма глагола по пол
     cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'убить');
     assert_eq('🔪 U7 убил Петя', cm_last_text($log));
     assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'не удаляется');
-    assert_eq(14, count(CM_RP));
-    foreach (array_keys(CM_RP) as $p) { assert_eq('rp', CM_COMMANDS[$p][0], $p); }
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'шлепнуть');
+    assert_eq('👋 U7 шлёпнул Петя', cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'дать леща');
+    assert_eq('🐟 U7 дал леща Петя', cm_last_text($log));
+    assert_eq(20, count(CM_RP));
+    foreach (array_keys(CM_RP) as $p) { assert_eq(['rp', 'рп', 0], array_slice(CM_COMMANDS[$p], 0, 3), $p); }
+    assert_eq(11, count(CM_RP18));
+    foreach (array_keys(CM_RP18) as $p) { assert_eq(['rp', CM_ADULT, 6], array_slice(CM_COMMANDS[$p], 0, 3), $p); }
+    assert_eq([], array_intersect_key(CM_RP, CM_RP18), 'слово — только в одном списке');
 });
 
 test('РП: себе нельзя, ботам — только обнять и похвалить, без цели — подсказка', function () {
@@ -297,6 +304,199 @@ test('дк рп 6 выключает РП; без таблиц этапа 3 — 
     $pdo->exec('DROP TABLE cm_offers');
     cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'обнять');
     assert_eq(cm_t('not_ready2'), cm_last_text($log));
+});
+
+// --------------------------------------------------------------------------
+//  18+
+// --------------------------------------------------------------------------
+
+test('18+: по умолчанию выключены — ответ с точкой и ответом на сообщение, иначе молча', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    assert_eq(false, cm_section_on(cm_chat_row($pdo, CM_CHAT), CM_ADULT));
+    assert_eq(false, fn_run($pdo, $log, 7, '!выебать', fn_reply()), 'выключено — дальше в фильтры');
+    assert_eq(cm_t('adult_off'), cm_last_text($log));
+    assert_eq(false, fn_run($pdo, $log, 7, 'отсосать', fn_reply()));
+    assert_eq(cm_t('adult_off'), cm_last_text($log), 'ответом без точки — тоже пояснение');
+    assert_eq(false, fn_run($pdo, $log, 7, 'послать @petya'));
+    assert_eq(cm_t('adult_off'), cm_last_text($log));
+    $n = count(cm_calls($log, 'sendMessage'));
+    assert_eq(false, fn_run($pdo, $log, 7, 'трахнуть'), 'без цели — обычная речь');
+    assert_eq(false, fn_run($pdo, $log, 7, 'послать бы всё', fn_reply()));
+    assert_eq($n, count(cm_calls($log, 'sendMessage')));
+    assert_eq(false, fn_run($pdo, $log, CM_OWNER, '!выебать', fn_reply()), 'и создателю, пока не включил');
+    assert_eq(false, strpos(cm_plain(cm_help_text()), 'выебать'), 'в помощи по умолчанию слов нет');
+});
+
+test('18+: включает только создатель («дк 18+ 0»), выключает «дк 18+ 6» и «дк сброс»', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    cm_lvl($pdo, 7, 4);
+    assert_eq(false, fn_run($pdo, $log, 7, '!дк 18+ 0'), 'старшему админу «дк» нельзя');
+    assert_eq(cm_t('no_rank', ['need' => 5]), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк 18+ 0');
+    assert_eq(cm_t('access_done', ['section' => '18+', 'level' => 0]), cm_last_text($log));
+    assert_eq(true, fn_run($pdo, $log, 8, 'выебать', fn_reply()));
+    assert_eq('😏 U8 выебал(а) Петя', cm_last_text($log));
+    cm_profile_put($pdo, 8, 'gender', 'f', CM_NOW);
+    assert_eq(true, fn_run($pdo, $log, 8, '!отсосать @petya'));
+    assert_eq('🍌 U8 отсосала у Петя', cm_last_text($log));
+    assert_eq(true, fn_run($pdo, $log, 8, 'выебать', fn_reply(555, 'Бот', ['is_bot' => true])));
+    assert_eq(cm_t('target_bot'), cm_last_text($log));
+    assert_eq(true, fn_run($pdo, $log, 8, 'помощь'));
+    assert_eq(true, strpos(cm_last_text($log), '🔞 18+ — выебать · трахнуть') !== false, 'включили — в помощи список');
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк 18+ 6');
+    assert_eq(false, fn_run($pdo, $log, 8, '!выебать', fn_reply()));
+    assert_eq(cm_t('adult_off'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк 18+ 0');
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк сброс');
+    assert_eq(false, fn_run($pdo, $log, 8, '!выебать', fn_reply()), 'сброс — снова выключены');
+});
+
+// --------------------------------------------------------------------------
+//  Обращение «бот, …» и «когда»
+// --------------------------------------------------------------------------
+
+test('обращение «бот …» — как префикс; «ботик», «боты» и пустое — нет', function () {
+    $c = cm_parse('бот, кто герой?', CM_BOT);
+    assert_eq(['who', true, 'герой?'], [$c['handler'], $c['prefixed'], $c['args']]);
+    $c = cm_parse('Бот кто сегодня дежурит', CM_BOT);
+    assert_eq(['who', true, 'сегодня дежурит'], [$c['handler'], $c['prefixed'], $c['args']]);
+    $c = cm_parse('@MaknemyBot: когда лето', CM_BOT);
+    assert_eq(['when', true, 'лето'], [$c['handler'], $c['prefixed'], $c['args']]);
+    $c = cm_parse('бот монетка', CM_BOT);
+    assert_eq(['coin', true], [$c['handler'], $c['prefixed']]);
+    assert_eq(null, cm_parse('ботик кто герой', CM_BOT));
+    assert_eq(null, cm_parse('боты кто', CM_BOT));
+    assert_eq(null, cm_parse('бот', CM_BOT));
+    assert_eq(null, cm_parse('бот сломался', CM_BOT));
+    assert_eq(null, cm_parse('@OtherBot кто герой', CM_BOT));
+    $c = cm_parse('кто герой', CM_BOT);
+    assert_eq(false, $c['prefixed'], 'без обращения — как раньше');
+});
+
+test('«бот кто герой» — случайный участник, как «!кто»', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 8, 'petya', 'Петя');
+    $pdo->prepare('INSERT INTO cm_stats (chat_id, user_id, day, msgs) VALUES (:c, 8, 20260921, 3)')->execute([':c' => CM_CHAT]);
+    assert_eq(true, fn_run($pdo, $log, 7, 'бот кто герой?'));
+    assert_eq('🎯 Кто герой? Думаю, Петя.', cm_last_text($log));
+    assert_eq(false, fn_run($pdo, $log, 7, 'кто герой?'), 'без префикса и обращения — речь');
+});
+
+test('когда: случайный срок, только с префиксом или обращением; ответ постоянный', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = cm_ctx_for($pdo, $log, 7);
+    $ctx['rand'] = cm_seq([1, 7, 5, 5, 10, 50]);
+    cm_do($ctx, '!когда я стану богатым?');
+    assert_eq('🗓 Когда я стану богатым? Завтра.', cm_last_text($log));
+    cm_do($ctx, '!когда лето');
+    assert_eq('🗓 Когда лето? Через 5 дней.', cm_last_text($log));
+    cm_do($ctx, '!когда отпуск');
+    assert_eq('🗓 Когда отпуск? Никогда.', cm_last_text($log));
+    cm_do($ctx, '!когда пенсия');
+    assert_eq('🗓 Когда пенсия? Через 50 лет.', cm_last_text($log));
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'не удаляется');
+    cm_do($ctx, '!когда');
+    assert_eq(cm_t('when_usage'), cm_last_text($log));
+    assert_eq(false, fn_run($pdo, $log, 7, 'когда придёшь?'));
+    assert_eq(true, fn_run($pdo, $log, 7, 'бот, когда придёт обнова?'));
+    assert_eq(0, strpos(cm_last_text($log), '🗓 Когда придёт обнова? '));
+});
+
+// --------------------------------------------------------------------------
+//  Шипперим
+// --------------------------------------------------------------------------
+
+test('имя пары — из половинок имён', function () {
+    assert_eq('Ватя', cm_ship_name('Вася', 'Петя'));
+    assert_eq('Анолай', cm_ship_name('Анна Иванова', 'Николай'));
+    assert_eq('Malia', cm_ship_name('MAX', '🔥 Julia'), 'смайл пропускается — первое слово из букв');
+    assert_eq('', cm_ship_name('Я', 'Петя'), 'из одной буквы не собрать');
+});
+
+test('совместимость: та же пара в тот же день — то же число, порядок не важен', function () {
+    $p = cm_ship_percent(7, 20, CM_T2359);
+    assert_eq($p, cm_ship_percent(20, 7, CM_T2359));
+    assert_eq(crc32('7|20|20260921') % 101, $p);
+    assert_eq(crc32('7|20|20260922') % 101, cm_ship_percent(7, 20, CM_T0001));
+});
+
+test('шипперим: двое случайных из писавших за неделю, разные; ответ постоянный', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 7, 'vasya', 'Вася');
+    cm_person($pdo, 8, 'petya', 'Петя');
+    cm_person($pdo, 9, 'kolya', 'Коля');
+    $ins = $pdo->prepare('INSERT INTO cm_stats (chat_id, user_id, day, msgs) VALUES (:c, :u, 20260921, :m)');
+    $ins->execute([':c' => CM_CHAT, ':u' => 7, ':m' => 9]);
+    $ins->execute([':c' => CM_CHAT, ':u' => 8, ':m' => 5]);
+    $ins->execute([':c' => CM_CHAT, ':u' => 9, ':m' => 1]);
+    $asked = [];
+    $ctx = cm_ctx_for($pdo, $log, 7);
+    $ctx['rand'] = function (int $min, int $max) use (&$asked): int {
+        $asked[] = [$min, $max];
+        return 1;
+    };
+    cm_do($ctx, 'шипперим');
+    assert_eq([[0, 2], [0, 1]], $asked, 'второй — из оставшихся');
+    $p = cm_ship_percent(8, 9, CM_NOW);
+    assert_eq("💘 Шипперим: Петя + Коля\n" . cm_ship_heart($p) . ' Совместимость: ' . $p . "%\n💑 Имя пары: Пеля", cm_last_text($log));
+    $send = cm_calls($log, 'sendMessage');
+    $ents = $send[count($send) - 1][1]['entities'] ?? [];
+    assert_eq(['text_mention', 'text_mention'], array_column($ents, 'type'), 'оба с упоминанием');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'не удаляется');
+    $ctx['rand'] = cm_seq([0, 0]);
+    cm_do($ctx, 'шипперим');
+    assert_eq(0, strpos(cm_last_text($log), '💘 Шипперим: Вася + Петя'), 'j ≥ i сдвигается — не тот же человек');
+});
+
+test('шипперим с целью: ответом — я и он, двумя никами — эти двое; себя и ботов — нет', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 8, 'petya', 'Петя');
+    cm_person($pdo, 9, 'kolya', 'Коля');
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(8, 'Петя')), 'шипперим');
+    assert_eq(0, strpos(cm_last_text($log), '💘 Шипперим: U7 + Петя'));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шипперим @petya');
+    assert_eq(0, strpos(cm_last_text($log), '💘 Шипперим: U7 + Петя'));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шипперим @petya и @kolya');
+    assert_eq(0, strpos(cm_last_text($log), '💘 Шипперим: Петя + Коля'));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шип @petya @kolya');
+    assert_eq(0, strpos(cm_last_text($log), '💘 Шипперим: Петя + Коля'));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шипперим @petya @petya');
+    assert_eq(cm_t('target_self'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шипперим @petya @nobody1');
+    assert_eq(cm_t('target_unknown'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(7, 'U7')), 'шипперим');
+    assert_eq(cm_t('target_self'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(555, 'Бот', ['is_bot' => true])), 'шипперим');
+    assert_eq(cm_t('target_bot'), cm_last_text($log));
+    cm_do(cm_ctx_for(cm_test_pdo(), $log, 7), 'шипперим');
+    assert_eq(cm_t('ship_empty'), cm_last_text($log));
+});
+
+test('шипперим без префикса: ровно команда или с никами, остальное — речь; дк отношения 6', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 8, 'petya', 'Петя');
+    cm_person($pdo, 9, 'kolya', 'Коля');
+    foreach (['шипперим', 'шип', 'шипперим @petya', 'шипперим @petya и @kolya'] as $text) {
+        assert_eq(true, fn_run($pdo, $log, 7, $text), $text);
+    }
+    assert_eq(true, fn_run($pdo, $log, 7, 'шипперим', fn_reply(8, 'Петя')));
+    $n = count(cm_calls($log, 'sendMessage'));
+    foreach (['шип у розы', 'шипперим всех подряд', "шипперим\nещё"] as $text) {
+        assert_eq(false, fn_run($pdo, $log, 7, $text), $text);
+    }
+    assert_eq($n, count(cm_calls($log, 'sendMessage')));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк отношения 6');
+    assert_eq(false, fn_run($pdo, $log, 7, '!шипперим'));
+    assert_eq(cm_t('cmd_off'), cm_last_text($log));
 });
 
 run_tests();

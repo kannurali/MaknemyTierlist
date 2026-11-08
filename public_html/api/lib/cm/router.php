@@ -156,7 +156,9 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
  *    ответ «нужен ранг», иначе молча, как обычная речь. Так «бан» ответом
  *    без точки не пропадает в тишине;
  *  - выключенная «дк … 6» — ответ только с префиксом: раздел выключили
- *    нарочно, и «монетка» без точки не должна каждый раз это повторять;
+ *    нарочно, и «монетка» без точки не должна каждый раз это повторять.
+ *    Раздел 18+ выключен по умолчанию — на нём ответ и ответом на сообщение
+ *    без точки (цель уже нашлась), иначе выглядит, что бот сломан;
  *  - команда из CM_BARE_ARGS без префикса — только если остаток строки без
  *    цели подходит под её шаблон (cm_bare_ok, parse.php);
  *  - команда из CM_PREFIX_ONLY без префикса — не команда («!кто»).
@@ -174,7 +176,11 @@ function cm_run_command(array $ctx, array $cmd): bool {
     $need = cm_need_level($ctx['chat'], $cmd['section'], (int)$cmd['level']);
     $loud = $cmd['prefixed'] || $cmd['target'] || $cmd['exact'];
     if ($need >= 6) {
-        if ($cmd['prefixed']) { cm_reply($ctx, cm_t('cmd_off')); }
+        if ($cmd['section'] === CM_ADULT) {
+            if ($loud) { cm_reply($ctx, cm_t('adult_off')); }
+        } elseif ($cmd['prefixed']) {
+            cm_reply($ctx, cm_t('cmd_off'));
+        }
         return false;
     }
     if ((int)$ctx['rank'] < $need) {
@@ -232,13 +238,16 @@ function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now
 
 // Помощь: заголовок, разделы под раскрывающейся цитатой (чат не заливает
 // простынёй) и ссылка на полную инструкцию. Как писать команды — на /bot.
+// Строка 18+ — только там, где создатель их включил: в остальных чатах (и на
+// сайте) этих слов нет.
 function cm_cmd_help(array $ctx, array $cmd): void {
-    cm_reply($ctx, cm_help_text(), false);
+    cm_reply($ctx, cm_help_text(cm_section_on($ctx['chat'], CM_ADULT)), false);
 }
 
-function cm_help_text(): string {
+function cm_help_text(bool $adult = false): string {
     $rows = [];
     foreach (CM_HELP as [$icon, $title, $cmds]) { $rows[] = $icon . ' ' . cm_bold($title) . ' — ' . $cmds; }
+    if ($adult) { $rows[] = '🔞 ' . cm_bold(CM_ADULT) . ' — ' . implode(' · ', array_keys(CM_RP18)); }
     return cm_bold(cm_t('help_title')) . "\n\n" . cm_mark('q', '', implode("\n", $rows)) . "\n\n" . cm_guide_line();
 }
 
