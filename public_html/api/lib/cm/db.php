@@ -37,6 +37,9 @@ const CM_DEFAULTS = [
     'dice_outcome'  => [],
     // чат Макнеми: только в таких бот работает (cm_ours ниже)
     'maknemy'       => false,
+    // чат Макнеми вне сети (тестовый): бот работает, но настройки, ранги,
+    // наказания и статистика у него свои (cm_net ниже)
+    'solo'          => false,
 ];
 
 function cm_enabled(array $cfg): bool {
@@ -123,10 +126,35 @@ function cm_private_chat(int $chatId): array {
     return $c;
 }
 
-function cm_settings_save(PDO $pdo, array &$chat, array $settings, int $now): void {
+// Ключи настроек, которые у каждого чата свои. Всё остальное (фильтры,
+// триггеры, приветствие, правила, «дк», варны…) в чатах сети общее —
+// решение владельца 08.11.2026. Исходы дуэлей и кубов — игровые, по чату.
+const CM_LOCAL_SETTINGS = ['report_code', 'raid_greet_at', 'call_at', 'duel_outcome', 'dice_outcome', 'maknemy', 'solo'];
+
+function cm_settings_shared(array $s): array {
+    return array_diff_key($s, array_flip(CM_LOCAL_SETTINGS));
+}
+
+// Сохранить настройки. В чате сети общие ключи переписываются во всех её
+// чатах — только если они изменились: отметка созыва или рейда не должна
+// затирать свежую правку соседа своей старой копией. $share = false —
+// только этот чат (вход в сеть: общие настройки он берёт у сети).
+function cm_settings_save(PDO $pdo, array &$chat, array $settings, int $now, bool $share = true): void {
+    $before = cm_settings_shared($chat['settings'] ?? []);
     $chat['settings'] = cm_settings($settings);
     $pdo->prepare('UPDATE cm_chats SET settings = :s, updated_at = :n WHERE chat_id = :c')
         ->execute([':s' => json_encode($chat['settings'], JSON_UNESCAPED_UNICODE), ':n' => $now, ':c' => (int)$chat['chat_id']]);
+    $shared = cm_settings_shared($chat['settings']);
+    if (!$share || !empty($chat['private']) || !cm_is_ours($chat) || $shared === $before) { return; }
+    $own = (int)$chat['chat_id'];
+    foreach (cm_net($pdo, $own) as $id) {
+        if ($id === $own) { continue; }
+        $row = cm_chat_row($pdo, $id);
+        if ($row === null) { continue; }
+        $pdo->prepare('UPDATE cm_chats SET settings = :s, updated_at = :n WHERE chat_id = :c')
+            ->execute([':s' => json_encode(cm_settings(array_merge($row['settings'], $shared)), JSON_UNESCAPED_UNICODE),
+                       ':n' => $now, ':c' => $id]);
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -138,18 +166,40 @@ function cm_settings_save(PDO $pdo, array &$chat, array $settings, int $now): vo
 // settings.maknemy не снимается. В чужой группе бот молчит, но не выходит:
 // там он может проверять подписку для условий розыгрыша.
 //
-// Чаты Макнеми — одна сеть: сообщения и репутация человека складываются по
-// всем (7 в трейд-чате и 9 в главном — 16).
+// Чаты Макнеми — одна сеть (решение владельца 08.11.2026): общие настройки,
+// ранги, наказания, заметки, таймеры, жалобы, награды, пары, браки и кланы;
+// сообщения и репутация складываются по всем (7 в трейд-чате и 9 в
+// главном — 16). По чату — только игры (дуэли, кубы, шахматы, РП, «кто …»)
+// и создатель (ранг 5). Тестовый чат держат вне сети отметкой solo.
 
 function cm_is_ours(array $chat): bool {
     return !empty($chat['settings']['maknemy']);
 }
 
+// Новый чат сети берёт её общие настройки и чат жалоб у последнего
+// изменённого чата сети, свои ключи (CM_LOCAL_SETTINGS) оставляет.
 function cm_mark_ours(PDO $pdo, array &$chat, int $now): void {
     if (cm_is_ours($chat) || !empty($chat['private'])) { return; }
     $s = $chat['settings'];
     $s['maknemy'] = true;
-    cm_settings_save($pdo, $chat, $s, $now);
+    $src = cm_net_source($pdo, (int)$chat['chat_id']);
+    if ($src !== null) {
+        $s = array_merge($s, cm_settings_shared($src['settings']));
+        $pdo->prepare('UPDATE cm_chats SET report_chat_id = :r WHERE chat_id = :c')
+            ->execute([':r' => $src['report_chat_id'], ':c' => (int)$chat['chat_id']]);
+        $chat['report_chat_id'] = $src['report_chat_id'];
+    }
+    cm_settings_save($pdo, $chat, $s, $now, false);
+}
+
+function cm_net_source(PDO $pdo, int $chatId): ?array {
+    $best = null;
+    foreach (cm_net($pdo, $chatId) as $id) {
+        if ($id === $chatId) { continue; }
+        $row = cm_chat_row($pdo, $id);
+        if ($row !== null && ($best === null || $row['updated_at'] > $best['updated_at'])) { $best = $row; }
+    }
+    return $best;
 }
 
 // Наш ли чат контекста. Создатель берётся из последнего cm_admins_refresh.
@@ -161,16 +211,40 @@ function cm_ours(array &$ctx): bool {
     return true;
 }
 
-// Все чаты Макнеми; $chatId (чат, откуда спросили) — в списке всегда.
+// Все чаты сети: наши, кроме solo. $chatId (чат, откуда спросили) — в списке
+// всегда; если он сам solo — только он.
 function cm_net(PDO $pdo, int $chatId): array {
     $ids = [$chatId];
     foreach ($pdo->query('SELECT chat_id, settings FROM cm_chats')->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $s = is_string($r['settings'] ?? null) ? json_decode($r['settings'], true) : null;
-        if (is_array($s) && ($s['maknemy'] ?? false) === true) { $ids[] = (int)$r['chat_id']; }
+        if (!is_array($s) || ($s['maknemy'] ?? false) !== true) { continue; }
+        if (($s['solo'] ?? false) === true) {
+            if ((int)$r['chat_id'] === $chatId) { return [$chatId]; }
+            continue;
+        }
+        $ids[] = (int)$r['chat_id'];
     }
     $ids = array_values(array_unique($ids));
     sort($ids);
     return $ids;
+}
+
+// Чаты, на которые действует команда в $chat: вся сеть для чата Макнеми,
+// иначе только он сам (личка, чужой чат; solo — см. cm_net).
+function cm_chat_scope(PDO $pdo, array $chat): array {
+    $chatId = (int)$chat['chat_id'];
+    if (!empty($chat['private']) || !cm_is_ours($chat)) { return [$chatId]; }
+    return cm_net($pdo, $chatId);
+}
+
+function cm_scope(array $ctx): array {
+    return cm_chat_scope($ctx['pdo'], $ctx['chat']);
+}
+
+// « во всех чатах Maknemy» — в ответах о том, что действует на всю сеть;
+// в одиночном чате пусто.
+function cm_net_word(array $ctx): string {
+    return count(cm_scope($ctx)) > 1 ? cm_t('net_word') : '';
 }
 
 // Чат или список чатов → «-100…,-100…» для IN (…). Числа — сразу в строке:

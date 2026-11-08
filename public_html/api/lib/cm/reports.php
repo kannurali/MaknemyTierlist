@@ -42,8 +42,9 @@ function cm_cmd_report(array $ctx, array $cmd): void {
         cm_reply($ctx, cm_t('report_staff'));
         return;
     }
-    $st = $pdo->prepare('SELECT COUNT(*) FROM cm_reports WHERE chat_id = :c AND reporter_id = :r AND created_at > :t');
-    $st->execute([':c' => $chat['chat_id'], ':r' => $ctx['actor'], ':t' => $now - CM_REPORT_GAP]);
+    $st = $pdo->prepare('SELECT COUNT(*) FROM cm_reports WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ')
+        AND reporter_id = :r AND created_at > :t');
+    $st->execute([':r' => $ctx['actor'], ':t' => $now - CM_REPORT_GAP]);
     if ((int)$st->fetchColumn() > 0) {
         cm_reply($ctx, cm_t('report_wait'));
         return;
@@ -104,12 +105,16 @@ function cm_report_callback(array $ctx, array $q, int $id, string $act): string 
 
 function cm_cmd_report_list(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
-    $st = $pdo->prepare("SELECT * FROM cm_reports WHERE chat_id = :c AND status = 'open' ORDER BY id DESC LIMIT 10");
-    $st->execute([':c' => $ctx['chat']['chat_id']]);
+    $st = $pdo->query("SELECT * FROM cm_reports WHERE chat_id IN (" . cm_in(cm_scope($ctx)) . ") AND status = 'open'
+        ORDER BY id DESC LIMIT 10");
     $lines = [];
+    $chats = [(int)$ctx['chat']['chat_id'] => $ctx['chat']];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $cid = (int)$r['chat_id'];
+        if (!array_key_exists($cid, $chats)) { $chats[$cid] = cm_chat_row($pdo, $cid); }
+        $src = $chats[$cid] ?? $ctx['chat'];
         $lines[] = '#' . (int)$r['id'] . ' · ' . cm_user_who($pdo, (int)$r['target_id'], true) . ' — '
-            . ((string)$r['reason'] !== '' ? $r['reason'] : '—') . ' ' . cm_msg_link($ctx['chat'], (int)$r['message_id']);
+            . ((string)$r['reason'] !== '' ? $r['reason'] : '—') . ' ' . cm_msg_link($src, (int)$r['message_id']);
     }
     cm_reply($ctx, $lines ? cm_t('reports_head') . "\n" . implode("\n", $lines) : cm_t('reports_empty'), false);
 }
@@ -142,8 +147,8 @@ function cm_cmd_report_bind(array $ctx, array $cmd): void {
         $s = $src['settings'];
         $s['report_code'] = null;
         cm_settings_save($pdo, $src, $s, (int)$ctx['now']);
-        $pdo->prepare('UPDATE cm_chats SET report_chat_id = :d WHERE chat_id = :c')
-            ->execute([':d' => (int)$ctx['chat']['chat_id'], ':c' => $src['chat_id']]);
+        $pdo->prepare('UPDATE cm_chats SET report_chat_id = :d WHERE chat_id IN (' . cm_in(cm_chat_scope($pdo, $src)) . ')')
+            ->execute([':d' => (int)$ctx['chat']['chat_id']]);
         cm_reply($ctx, cm_t('report_bound', ['chat' => $src['title']]), false);
         return;
     }
@@ -151,7 +156,7 @@ function cm_cmd_report_bind(array $ctx, array $cmd): void {
 }
 
 function cm_cmd_report_home(array $ctx, array $cmd): void {
-    $ctx['pdo']->prepare('UPDATE cm_chats SET report_chat_id = 0 WHERE chat_id = :c')->execute([':c' => $ctx['chat']['chat_id']]);
+    $ctx['pdo']->exec('UPDATE cm_chats SET report_chat_id = 0 WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ')');
     cm_reply($ctx, cm_t('report_home'), false);
 }
 
@@ -171,7 +176,7 @@ function cm_call_ids(array $ctx): array {
     $ids = array_merge([(int)$chat['owner_id'], (int)$chat['tg_owner_id']], $chat['admins']);
     $st = $ctx['pdo']->prepare('SELECT m.user_id FROM cm_members m
         JOIN (SELECT user_id, MAX(' . cm_rank_sql($chatId) . ') AS r FROM cm_members
-              WHERE chat_id IN (' . cm_in(cm_rank_chats($ctx)) . ') AND lvl > 0 GROUP BY user_id) n ON n.user_id = m.user_id
+              WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ') AND lvl > 0 GROUP BY user_id) n ON n.user_id = m.user_id
         WHERE m.chat_id = :c AND m.left_at = 0 AND n.r >= 1
         ORDER BY n.r DESC, m.user_id');
     $st->execute([':c' => $chatId]);

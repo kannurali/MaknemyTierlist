@@ -86,9 +86,9 @@ function cm_has_link(array $msg, array $domains): bool {
 //  Мат
 // --------------------------------------------------------------------------
 
-function cm_mat_rules(PDO $pdo, int $chatId): array {
-    $st = $pdo->prepare('SELECT word FROM cm_words WHERE chat_id = :c');
-    $st->execute([':c' => $chatId]);
+// Свои слова — общие для чатов сети: $chats — чат или список (cm_scope).
+function cm_mat_rules(PDO $pdo, $chats): array {
+    $st = $pdo->query('SELECT DISTINCT word FROM cm_words WHERE chat_id IN (' . cm_in($chats) . ')');
     return chat_filter_compile(array_merge(CM_MAT_WORDS, $st->fetchAll(PDO::FETCH_COLUMN)));
 }
 
@@ -170,7 +170,7 @@ function cm_filter_hit(array $ctx, array $msg): string {
         if (empty($f[$k])) { continue; }
         if ($k === 'links' && cm_has_link($msg, (array)$ctx['chat']['settings']['domains'])) { return $k; }
         if ($k === 'forwards' && cm_is_forward($msg)) { return $k; }
-        if ($k === 'mat' && $text !== '' && cm_has_mat($text, cm_mat_rules($ctx['pdo'], $chatId))) { return $k; }
+        if ($k === 'mat' && $text !== '' && cm_has_mat($text, cm_mat_rules($ctx['pdo'], cm_scope($ctx)))) { return $k; }
         if ($k === 'flood' && empty($ctx['edited'])
             && cm_is_flood($ctx['pdo'], $chatId, (int)($msg['from']['id'] ?? 0), $text, (array)$ctx['chat']['settings']['flood'], (int)$ctx['now'])) {
             return $k;
@@ -256,9 +256,14 @@ function cm_cmd_word_add(array $ctx, array $cmd): void {
     }
     $pdo = $ctx['pdo'];
     $chatId = (int)$ctx['chat']['chat_id'];
-    $st = $pdo->prepare('SELECT COUNT(*) FROM cm_words WHERE chat_id = :c');
-    $st->execute([':c' => $chatId]);
-    if ((int)$st->fetchColumn() >= CM_WORDS_MAX) {
+    $in = cm_in(cm_scope($ctx));
+    $st = $pdo->prepare("SELECT COUNT(*) FROM cm_words WHERE chat_id IN ($in) AND word = :w");
+    $st->execute([':w' => $w]);
+    if ((int)$st->fetchColumn() > 0) {
+        cm_reply($ctx, cm_t('word_exists', ['word' => $w]));
+        return;
+    }
+    if ((int)$pdo->query("SELECT COUNT(DISTINCT word) FROM cm_words WHERE chat_id IN ($in)")->fetchColumn() >= CM_WORDS_MAX) {
         cm_reply($ctx, cm_t('words_full', ['max' => CM_WORDS_MAX]));
         return;
     }
@@ -273,14 +278,13 @@ function cm_cmd_word_add(array $ctx, array $cmd): void {
 
 function cm_cmd_word_del(array $ctx, array $cmd): void {
     $w = mb_strtolower(trim($cmd['args']));
-    $st = $ctx['pdo']->prepare('DELETE FROM cm_words WHERE chat_id = :c AND word = :w');
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':w' => $w]);
+    $st = $ctx['pdo']->prepare('DELETE FROM cm_words WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ') AND word = :w');
+    $st->execute([':w' => $w]);
     cm_reply($ctx, cm_t($st->rowCount() > 0 ? 'word_removed' : 'word_missing', ['word' => $w]), $st->rowCount() === 0);
 }
 
 function cm_cmd_word_list(array $ctx, array $cmd): void {
-    $st = $ctx['pdo']->prepare('SELECT word FROM cm_words WHERE chat_id = :c ORDER BY word');
-    $st->execute([':c' => $ctx['chat']['chat_id']]);
+    $st = $ctx['pdo']->query('SELECT DISTINCT word FROM cm_words WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ') ORDER BY word');
     $words = $st->fetchAll(PDO::FETCH_COLUMN);
     cm_reply($ctx, $words ? cm_t('words_head') . "\n" . implode(', ', $words) : cm_t('words_empty'), false);
 }

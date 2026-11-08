@@ -311,10 +311,10 @@ function cm_botlike(array $t): bool {
 
 // +1 опыт паре $a и $b (в любом порядке), не больше CM_RP_XP_DAY в сутки по
 // Москве: новый день обнуляет счёт сегодняшнего. Не пара — ничего.
-function cm_couple_xp(PDO $pdo, int $chatId, int $a, int $b, int $now): void {
-    $st = $pdo->prepare('SELECT id FROM cm_couples WHERE chat_id = :c AND ended_at = 0
+function cm_couple_xp(PDO $pdo, $chats, int $a, int $b, int $now): void {
+    $st = $pdo->prepare('SELECT id FROM cm_couples WHERE chat_id IN (' . cm_in($chats) . ') AND ended_at = 0
         AND ((a_id = :a AND b_id = :b) OR (a_id = :b2 AND b_id = :a2))');
-    $st->execute([':c' => $chatId, ':a' => $a, ':b' => $b, ':a2' => $a, ':b2' => $b]);
+    $st->execute([':a' => $a, ':b' => $b, ':a2' => $a, ':b2' => $b]);
     $id = (int)$st->fetchColumn();
     if ($id === 0) { return; }
     $day = cm_day($now);
@@ -347,5 +347,5 @@ function cm_cmd_rp(array $ctx, array $cmd): void {
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
     cm_reply($ctx, cm_t('rp_done', ['emoji' => $rp[0], 'from' => cm_who_from($from),
         'verb' => $rp[$g === 'm' ? 1 : ($g === 'f' ? 2 : 3)], 'to' => $t['who']]), false);
-    if (!$bot) { cm_couple_xp($ctx['pdo'], (int)$ctx['chat']['chat_id'], $me, (int)$t['id'], (int)$ctx['now']); }
+    if (!$bot) { cm_couple_xp($ctx['pdo'], cm_scope($ctx), $me, (int)$t['id'], (int)$ctx['now']); }
 }

@@ -85,7 +85,7 @@ function cm_profile_lines(array $ctx, int $userId, string $name): array {
         $coins = cm_coins_get($pdo, $userId)['coins'];
         if ($coins > 0) { $lines[] = cm_t('profile_coins', ['coins' => cm_num($coins)]); }
     }
-    $awards = cm_awards_active($pdo, $chatId, $userId, $now);
+    $awards = cm_awards_active($pdo, cm_scope($ctx), $userId, $now);
     if ($awards) { $lines[] = cm_t('profile_awards', ['list' => cm_awards_brief($awards)]); }
     if (cm_ready3($pdo)) { $lines = array_merge($lines, cm_profile_lines3($ctx, $userId)); }
     $lines[] = cm_t('profile_warns', ['n' => cm_warns_active($ctx, $userId), 'limit' => (int)$chat['settings']['warns']['limit']]);
@@ -109,18 +109,18 @@ function cm_profile_lines3(array $ctx, int $userId): array {
     $chatId = (int)$chat['chat_id'];
     $out = [];
     if (cm_section_on($chat, 'отношения')) {
-        $c = cm_couple_of($pdo, $chatId, $userId);
+        $c = cm_couple_of($pdo, cm_scope($ctx), $userId);
         if ($c !== null) {
             $out[] = cm_t('profile_couple', ['name' => cm_user_who($pdo, cm_partner($c, $userId), true), 'lvl' => cm_couple_level($c['xp'])]);
         }
-        $m = cm_marriage_of($pdo, $chatId, $userId);
+        $m = cm_marriage_of($pdo, cm_scope($ctx), $userId);
         if ($m !== null) {
             $out[] = cm_t('profile_marriage', ['name' => cm_user_who($pdo, cm_partner($m, $userId), true),
                 'days' => cm_days_text((int)$ctx['now'] - $m['since'])]);
         }
     }
     if (cm_section_on($chat, 'кланы')) {
-        $cl = cm_clan_of($pdo, $chatId, $userId);
+        $cl = cm_clan_of($pdo, cm_scope($ctx), $userId);
         if ($cl !== null) { $out[] = cm_t('profile_clan', ['name' => $cl['name']]); }
     }
     if (cm_section_on($chat, 'игры')) {
