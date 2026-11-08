@@ -448,6 +448,26 @@ body:has(.hn.is-typing) .hn-toasts { opacity: 0; }
   box-shadow: inset 0 0 0 1px rgba(205, 110, 255, .9);
   color: #f0d4ff;
 }
+.nx-title[data-kind="frost"] {
+  padding-left: 7px;
+  background: linear-gradient(120deg, #06182a 0%, #0c2e4a 55%, #113c5e 100%);
+  box-shadow: inset 0 0 0 1px rgba(160, 228, 255, .8), 0 0 10px rgba(90, 190, 255, .28);
+  color: #c6f2ff;
+  text-shadow: 0 0 6px rgba(130, 220, 255, .65);
+}
+.nx-titles .nx-title[data-kind="frost"]::before {
+  width: 1.6em;
+  height: 1em;
+  border-radius: 0;
+  background: url("../assets/design/logo-mk.png") center / contain no-repeat;
+  filter: drop-shadow(0 0 2px rgba(150, 225, 255, .9));
+}
+.nx-title[data-kind="hellfire"] {
+  background: linear-gradient(120deg, #3d0006 0%, #7a000f 55%, #a30016 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 70, 80, .85), 0 0 10px rgba(190, 0, 20, .35);
+  color: #ffe1e3;
+}
+.nx-titles .nx-title[data-kind="hellfire"]::before { background-color: #2a0004; }
 .ct-meta > .nx-titles { margin-top: 2px; }
 @media (max-width: 760px) {
   .ct-room-title .nx-titles { gap: 3px; margin-top: 4px; }
@@ -1984,6 +2004,10 @@ body > .hn-page { flex: 1 0 auto; }
 
 .hn-page[data-phase="loading"] .hn-steps,
 .hn-page[data-phase="none"] .hn-steps { opacity: .55; }
+.hn-page[data-phase="drawn"] .hn-steps,
+.hn-page[data-phase="drawn"] .hn-purse,
+.hn-page[data-phase="drawn"] .hn-guest,
+.hn-page[data-phase="drawn"] .hn-play { display: none; }
 
 @media (max-width: 900px) {
   .hn-hero-in { padding: 36px 20px 28px; }

@@ -312,6 +312,49 @@ test('титулы едут с человеком в чате и трейдин�
     assert_eq('Watcher', hunt_title_text(['ru' => 'Дозорный', 'en' => 'Watcher'], 'de'));
 });
 
+// 08.11.2026, слово владельца: ивент закрыт, выдача титулов закончена, а
+// владельцу и разработчику даны оба титула ивента и по личному — владельцу
+// «Frost General — maknemy owner» без перевода, разработчику «Шут преисподней».
+test('выданные титулы: владелец и разработчик — личный первым и оба титула ивента', function () {
+    $owner = '2841062255';
+    $dev = '8755256557';
+    $p = ht_db();
+    $h = ht_hunt($p, ['status' => 'drawn', 'titles_json' => json_encode(['login' => ['ru' => 'Дозорный', 'en' => 'Watcher']])]);
+    ht_user($p, $owner, 'maknemy');
+    ht_user($p, $dev, 'thefool');
+    $frost = ['ru' => 'Frost General — maknemy owner', 'en' => 'Frost General — maknemy owner'];
+    $all = hunt_titles_for($p, [$owner, $dev, '1']);
+    assert_eq([['kind' => 'frost', 'title' => $frost],
+               ['kind' => 'login', 'title' => ['ru' => 'Дозорный', 'en' => 'Watcher']],
+               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours']]], $all[$owner], 'тексты ивента — из сезона');
+    assert_eq(['hellfire', 'login', 'hours'], array_column($all[$dev], 'kind'));
+    assert_eq(['ru' => 'Шут преисподней', 'en' => 'Jester of the Underworld'], $all[$dev][0]['title']);
+    assert_eq(false, isset($all['1']), 'остальным ничего не выдано');
+    assert_eq('Frost General — maknemy owner', hunt_title_text($all[$owner][0]['title'], 'de'), 'Frost General не переводится');
+
+    ht_insert($p, 'hunt_titles', ['user_id' => $dev, 'hunt_id' => $h, 'kind' => 'hours', 'created_at' => ht_at(7)]);
+    assert_eq(['hellfire', 'hours', 'login'], array_column(hunt_titles_for($p, [$dev])[$dev], 'kind'),
+        'заработанный титул не дублируется');
+    assert_eq(['frost', 'login', 'hours'], array_column(chat_users_by_id($p, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'в чате');
+    assert_eq(3, count(trade_authors($p, [$dev], ht_at(9))[$dev]['titles']), 'в трейдинге');
+    assert_eq(['frost', 'login', 'hours'], array_column(hunt_my_titles($p, $owner), 'kind'), 'на /halloween — «получен»');
+
+    $bare = test_db();
+    $bare->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)')
+         ->execute([$owner, 'maknemy', 'Maknemy', '', 1, 1]);
+    assert_eq([['kind' => 'frost', 'title' => $frost], ['kind' => 'login', 'title' => HUNT_TITLES_DEFAULT['login']],
+               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours']]],
+        chat_users_by_id($bare, [$owner], ht_at(9))[$owner]['titles'], 'без таблиц ивента — тексты по умолчанию');
+});
+
+test('плашки выданных титулов: ледяной текст с лого владельца, кроваво-красный шут', function () {
+    $css = file_get_contents(HT_ROOT . '/public_html/css/hunt.css');
+    assert_true(strpos($css, '.nx-title[data-kind="frost"] {') !== false, 'у Frost General своя плашка');
+    assert_true(strpos($css, 'url("../assets/design/logo-mk.png")') !== false, 'со знаком владельца');
+    assert_true(strpos($css, '.nx-title[data-kind="hellfire"] {') !== false, 'у шута своя плашка');
+    assert_true(is_file(HT_ROOT . '/public_html/assets/design/logo-mk.png'));
+});
+
 // --------------------------------------------------------------------------
 //  Билеты
 // --------------------------------------------------------------------------
@@ -560,6 +603,33 @@ test('session.php: поле hunt, награда за вход, гость и з
     assert_eq(null, hunt_session_field(test_db(), [], $u, ht_at(1)), 'таблиц нет — null, а не ошибка');
     $p->exec("UPDATE hunts SET status = 'draft'");
     assert_eq(null, hunt_session_field($p, [], $u, ht_at(1)), 'черновик — null');
+});
+
+test('ивент закончен: счётчика нет, кроме победителя с неподтверждённым призом', function () {
+    $p = ht_db();
+    $h = ht_hunt($p);
+    $win = ht_user($p, '1', 'ann');
+    $lose = ht_user($p, '2', 'bob');
+    ht_tickets($p, $h, [$win]);
+    ht_give($p, $h, $lose, 420);
+    $late = ht_start() + 9 * HT_DAY;
+    assert_eq('won', hunt_session_field($p, [], $win, $late)['next'], 'победителя зовут подтвердить');
+    assert_eq('drawn', hunt_load($p, $h)['status']);
+    assert_eq(null, hunt_session_field($p, [], $lose, $late), 'остальным счётчик не нужен');
+    assert_eq(409, hunt_buy_ticket($p, [], $lose, 1, $late)[0], 'билет не купить');
+    $wid = (int)$p->query('SELECT id FROM hunt_wins')->fetchColumn();
+    $p->exec("UPDATE hunt_wins SET status = 'confirmed' WHERE id = $wid");
+    assert_eq(null, hunt_session_field($p, [], $win, $late), 'подтвердил — счётчик ушёл');
+
+    $page = file_get_contents(HT_ROOT . '/public_html/halloween.php');
+    assert_true(strpos($page, '<div class="hn-grid hn-play">') !== false, 'время на сайте и билеты — в одном блоке');
+    $css = file_get_contents(HT_ROOT . '/public_html/css/hunt.css');
+    foreach (['hn-steps', 'hn-purse', 'hn-guest', 'hn-play'] as $cls) {
+        assert_true(strpos($css, '.hn-page[data-phase="drawn"] .' . $cls) !== false, "после итогов .$cls спрятан");
+    }
+    $js = file_get_contents(HT_ROOT . '/public_html/js/hunt-page.js');
+    assert_true(strpos($js, 'over ? "hunt.titles.over" : "hunt.titles.lead"') !== false, 'у титулов — «выдача завершена»');
+    assert_true(strpos(file_get_contents(HT_ROOT . '/public_html/lang/ru.json'), '"hunt.titles.over": "Выдача титулов завершена.') !== false);
 });
 
 test('hunt_act раздаёт действия, hunt_me гостю — login', function () {

@@ -1422,6 +1422,12 @@ test('знак у ника подписан: Владелец и Разрабо�
     assert_true((bool)preg_match('~"nick\.designer":\s*"Designer"~', $i18n), 'по-английски Designer');
     assert_eq(['src' => '/assets/design/logo-bolt.png', 'role' => 'designer'], nick_logo('3964875859'),
         'у дизайнера (DANIKtyda) — молния');
+    assert_eq(['src' => '/assets/design/logo-glh.png', 'role' => 'economy'], nick_logo('3444182117'),
+        'у Love_Peroxide — «N», марка GLH');
+    assert_true((bool)preg_match('~"nick\.economy":\s*"Министр экономики БФ"~u', $i18n), 'Love_Peroxide — Министр экономики БФ');
+    foreach (NICK_LOGOS as $logo) {
+        assert_true(is_file($PUB . $logo['src']), 'знак лежит на сайте: ' . $logo['src']);
+    }
 
     foreach (['trade-cards.js', 'chat-page.js', 'topbar.js'] as $f) {
         $js = pf_read($PUB . '/js/' . $f);

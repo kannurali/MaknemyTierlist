@@ -11,6 +11,8 @@
 // прозрачных полей квадратной версии: иначе знак выходил бы ниже букв ника.
 // The Fool (Roblox kan_nurali) — шут. Дизайнер сайта (Roblox DANIKtyda,
 // в подвале — DANIKTOR) — молния, та же, что стоит в тирлисте.
+// Love_Peroxide (Roblox chelovek5541) — «Министр экономики БФ», знак — «N»,
+// новая марка GLH (та же, что у тира GLH в тирлисте).
 // Ключи — roblox_id, пути абсолютные:
 // скрипты вставляют их на страницах вроде /trading/new, где относительный
 // путь уехал бы в /trading/assets/….
@@ -22,6 +24,7 @@ const NICK_LOGOS = [
     '2841062255' => ['src' => '/assets/design/logo-mk.png',   'role' => 'owner'],
     '8755256557' => ['src' => '/assets/design/logo-fool.png', 'role' => 'developer'],
     '3964875859' => ['src' => '/assets/design/logo-bolt.png', 'role' => 'designer'],
+    '3444182117' => ['src' => '/assets/design/logo-glh.png',  'role' => 'economy'],
 ];
 
 /** Знак у ника этого игрока — ['src' => путь, 'role' => роль], либо null. */

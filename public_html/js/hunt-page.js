@@ -1198,6 +1198,11 @@
     var list = $("hnTitleList");
     list.textContent = "";
     var days = H.days || 7;
+    var over = H.phase === "drawn";
+    var lead = $("hnTitlesLead");
+    var leadKey = over ? "hunt.titles.over" : "hunt.titles.lead";
+    lead.setAttribute("data-i18n", leadKey);
+    lead.textContent = t(leadKey);
     var have = {};
     (me && me.titles ? me.titles : []).forEach(function (x) { have[x.kind] = true; });
     ["login", "hours"].forEach(function (kind) {
@@ -1215,11 +1220,13 @@
       chip.setAttribute("data-kind", kind);
       chips.appendChild(chip);
       li.appendChild(chips);
-      if (logged()) {
-        li.appendChild(el("span", "hn-title-prog", have[kind] ? t("hunt.titles.have") : t("hunt.titles.progress", { n: n, total: total })));
+      if (have[kind]) {
+        li.appendChild(el("span", "hn-title-prog", t("hunt.titles.have")));
+      } else if (logged() && !over) {
+        li.appendChild(el("span", "hn-title-prog", t("hunt.titles.progress", { n: n, total: total })));
       }
       li.appendChild(el("p", "hn-title-cond", t(kind === "login" ? "hunt.titles.login" : "hunt.titles.hours", { n: total })));
-      if (logged()) {
+      if (logged() && (have[kind] || !over)) {
         var bar = el("span", "hn-title-bar");
         bar.setAttribute("aria-hidden", "true");
         var f = el("span");
