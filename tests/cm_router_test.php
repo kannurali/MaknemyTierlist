@@ -165,7 +165,7 @@ test('помощь, кто я, id', function () {
     rt_run($pdo, cm_gmsg(7, 'помощь'), $log);
     assert_eq(cm_t('help'), cm_last_text($log));
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
-    assert_eq('Ваш ранг: 0 — участник. Варны: 0/3.', cm_last_text($log));
+    assert_eq(0, strpos(cm_last_text($log), "👤 U7\nРанг: 0 — участник\n"), 'кто я — профиль');
     rt_run($pdo, cm_gmsg(7, 'id', ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 20, 'first_name' => 'Вася']]]), $log);
     assert_eq(true, strpos(cm_last_text($log), 'Вася: 20') !== false);
 });

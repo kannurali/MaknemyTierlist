@@ -180,7 +180,14 @@ function cm_cmd_help(array $ctx, array $cmd): void {
     cm_reply($ctx, cm_t('help'), false);
 }
 
+// «кто я» — свой профиль (profile.php). Пока нет таблиц этапа 2 — ранг и
+// варны, как в этапе 1.
 function cm_cmd_whoami(array $ctx, array $cmd): void {
+    if (cm_ready2($ctx['pdo'])) {
+        $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
+        cm_reply($ctx, implode("\n", cm_profile_lines($ctx, (int)$ctx['actor'], cm_display_name($from))), false);
+        return;
+    }
     $r = (int)$ctx['rank'];
     cm_reply($ctx, cm_t('whoami', ['n' => $r, 'rank' => CM_RANK_NAMES[$r], 'warns' => cm_warns_active($ctx, (int)$ctx['actor']),
         'limit' => (int)$ctx['chat']['settings']['warns']['limit']]));

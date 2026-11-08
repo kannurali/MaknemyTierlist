@@ -76,6 +76,16 @@ const CM_COMMANDS = [
     '+награда'           => ['award_add', 'награды', 3, false, true],
     '-награда'           => ['award_del', 'награды', 3, false, false],
     'награды'            => ['awards_show', null, 0, false, false],
+    'профиль'            => ['profile', null, 0, false, false],
+    'кто ты'             => ['profile_of', null, 0, false, true],
+    '+пол'               => ['profile_set', 'анкета', 0, false, false],
+    '+город'             => ['profile_set', 'анкета', 0, false, false],
+    '+др'                => ['profile_set', 'анкета', 0, false, false],
+    '+о себе'            => ['profile_set', 'анкета', 0, false, false],
+    '-пол'               => ['profile_clear', 'анкета', 0, true, false],
+    '-город'             => ['profile_clear', 'анкета', 0, true, false],
+    '-др'                => ['profile_clear', 'анкета', 0, true, false],
+    '-о себе'            => ['profile_clear', 'анкета', 0, true, false],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -94,6 +104,8 @@ const CM_BARE_ARGS = [
     'stats_me'    => '~^$~',
     'rep_show'    => '~^$~',
     'awards_show' => '~^$~',
+    'profile'     => '~^$~',
+    'profile_of'  => '~^$~',
 ];
 
 function cm_bare_ok(array $ctx, array $cmd): bool {
