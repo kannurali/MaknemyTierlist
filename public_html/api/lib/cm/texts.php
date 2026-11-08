@@ -193,6 +193,16 @@ const CM_TEXTS = [
     'rep_top_head'     => '⭐ Лучшая репутация:',
     'rep_top_line'     => '{n}. {name} — {score}',
     'rep_top_empty'    => 'Репутации пока ни у кого нет.',
+    // награды
+    'award_usage'      => 'Так: «+награда 3 @ник причина» или «+награда 5 @ник на 30 дней причина». Степень 1–8, причина — до 100 символов.',
+    'award_done'       => '{icon} {name} получает награду {level}-й степени: {reason}{until}',
+    'award_until'      => ' (до {date} МСК)',
+    'award_full'       => 'У {name} уже {max} наград — больше нельзя.',
+    'award_removed'    => 'Награда #{id} снята.',
+    'award_missing'    => 'Действующей награды #{id} нет.',
+    'awards_head'      => '🏅 Награды {name}:',
+    'awards_none'      => 'У {name} наград нет.',
+    'awards_more'      => ' и ещё {n}',
     // общие команды
     'whoami'           => 'Ваш ранг: {n} — {rank}. Варны: {warns}/{limit}.',
     'id_text'          => "ID чата: {chat}\nВаш ID: {me}",

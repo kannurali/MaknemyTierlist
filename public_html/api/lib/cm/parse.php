@@ -73,6 +73,9 @@ const CM_COMMANDS = [
     '-реп'               => ['rep_minus', 'репутация', 0, false, true],
     'репа'               => ['rep_show', 'репутация', 0, false, false],
     'топ репы'           => ['rep_top', 'репутация', 0, true, false],
+    '+награда'           => ['award_add', 'награды', 3, false, true],
+    '-награда'           => ['award_del', 'награды', 3, false, false],
+    'награды'            => ['awards_show', null, 0, false, false],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -90,6 +93,7 @@ const CM_BARE_ARGS = [
     'stats_top'   => '~^(?:(?:[0-9]{1,2}|день|неделя|месяц|все)(?: +|$)){0,2}$~u',
     'stats_me'    => '~^$~',
     'rep_show'    => '~^$~',
+    'awards_show' => '~^$~',
 ];
 
 function cm_bare_ok(array $ctx, array $cmd): bool {
