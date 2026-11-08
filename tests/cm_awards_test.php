@@ -131,6 +131,83 @@ test('ранг: выдают с 3, «дк награды 2» — с 2; смот�
     assert_eq(true, $run(7, 'награды'), 'выключили выдачу — смотреть можно');
 });
 
+test('«Наградить» ответом, причина строкой ниже: 1-я степень, работает без точки', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $reply = ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]];
+    $text = "Наградить\nЛучший трейдер недели";
+    assert_eq(true, cm_run_command(cm_ctx_for($pdo, $log, CM_OWNER, $text, $reply), cm_parse($text, CM_BOT)));
+    assert_eq('🎗 Петя получает награду 1-й степени: Лучший трейдер недели', cm_last_text($log));
+    $text = "наградить 5\nЗа помощь\n  новичкам ";
+    cm_run_command(cm_ctx_for($pdo, $log, CM_OWNER, $text, $reply), cm_parse($text, CM_BOT));
+    assert_eq('🥇 Петя получает награду 5-й степени: За помощь новичкам', cm_last_text($log), 'строки причины — в одну');
+    $r = $pdo->query('SELECT level, reason, by_id, until_at FROM cm_awards ORDER BY id')->fetchAll(PDO::FETCH_NUM);
+    assert_eq([[1, 'Лучший трейдер недели', CM_OWNER, 0], [5, 'За помощь новичкам', CM_OWNER, 0]],
+        array_map(function ($x) { return [(int)$x[0], (string)$x[1], (int)$x[2], (int)$x[3]]; }, $r));
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'объявление не удаляется');
+});
+
+test('«Наградить» с @ником, степенью и сроком; причина в первой строке, если второй нет', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    $ctx = cm_ctx_for($pdo, $log, CM_OWNER);
+    cm_do($ctx, "наградить 3 @petya на 30 дней\nСтарожил");
+    assert_eq('🥉 Петя получает награду 3-й степени: Старожил (до ' . cm_date(CM_NOW + 2592000) . ' МСК)', cm_last_text($log));
+    cm_do($ctx, "наградить @petya\nна память");
+    assert_eq('🎗 Петя получает награду 1-й степени: на память', cm_last_text($log));
+    cm_do($ctx, 'наградить @petya 2 За турнир');
+    assert_eq('🏅 Петя получает награду 2-й степени: За турнир', cm_last_text($log));
+    cm_do($ctx, 'наградить @petya 100 побед');
+    assert_eq('🎗 Петя получает награду 1-й степени: 100 побед', cm_last_text($log), '«100» — не степень');
+    assert_eq(4, aw_count($pdo));
+});
+
+test('«Наградить»: подсказки и отказы', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $reply = ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]];
+    $ctx = cm_ctx_for($pdo, $log, CM_OWNER, '', $reply);
+    foreach (['наградить', "наградить\n   ", 'наградить 3', "наградить 9\nпричина", "наградить лишнее\nпричина",
+              "наградить\n" . str_repeat('я', 101)] as $bad) {
+        cm_do($ctx, $bad);
+        assert_eq(cm_t('award_give_usage'), cm_last_text($log), $bad);
+    }
+    cm_do($ctx, "наградить на 400 дней\nпричина");
+    assert_eq(cm_t('term_bad'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), "!наградить\nпричина");
+    assert_eq(cm_t('need_target'), cm_last_text($log));
+    $self = ['reply_to_message' => ['message_id' => 71, 'from' => ['id' => CM_OWNER, 'first_name' => 'Owner']]];
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER, '', $self), "наградить\nсебе");
+    assert_eq(cm_t('target_self'), cm_last_text($log));
+    $bot = ['reply_to_message' => ['message_id' => 72, 'from' => ['id' => 555, 'is_bot' => true, 'first_name' => 'Бот']]];
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER, '', $bot), "наградить\nботу");
+    assert_eq(cm_t('target_bot'), cm_last_text($log));
+    assert_eq(0, aw_count($pdo));
+});
+
+test('«Наградить»: с ранга 3 («дк награды» общий с +награда); без цели без точки — не команда', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_lvl($pdo, 10, 2);
+    cm_lvl($pdo, 11, 3);
+    $reply = ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]];
+    $run = function (int $actor, string $text, array $extra = []) use ($pdo, &$log): bool {
+        return cm_run_command(cm_ctx_for($pdo, $log, $actor, $text, $extra), cm_parse($text, CM_BOT));
+    };
+    $run(10, "наградить\nрано", $reply);
+    assert_eq(cm_t('no_rank', ['need' => 3]), cm_last_text($log));
+    $run(11, "наградить\nвовремя", $reply);
+    assert_eq('🎗 Петя получает награду 1-й степени: вовремя', cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк награды 2');
+    $run(10, "наградить 2\nтеперь можно", $reply);
+    assert_eq('🏅 Петя получает награду 2-й степени: теперь можно', cm_last_text($log));
+    $n = count(cm_calls($log, 'sendMessage'));
+    assert_eq(false, $run(7, "наградить бы его\nза это"), 'без цели и без точки — обычная речь');
+    assert_eq($n, count(cm_calls($log, 'sendMessage')), 'и молча');
+    assert_eq(2, aw_count($pdo));
+});
+
 test('нет таблиц этапа 2 — «ещё не настроено»', function () {
     $pdo = cm_test_pdo();
     $pdo->exec('DROP TABLE cm_stats');

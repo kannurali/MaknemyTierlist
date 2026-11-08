@@ -218,9 +218,21 @@ $pfTitle = $pfNick !== ''
           </a>
         </li>
         <li>
+          <a class="mk-pill" href="<?= u('/halloween') ?>">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 1.45L11.73 6.93L17.63 7.36L13.11 11.17L14.53 16.92L9.5 13.8L4.47 16.92L5.89 11.17L1.37 7.36L7.27 6.93L9.5 1.45Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.event"><?= te('nav.event') ?></span>
+          </a>
+        </li>
+        <li>
           <a class="mk-pill" href="<?= u('/ads') ?>">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M5.6 6.9V12.1M5.6 12.1L6.75 16.55C6.98 17.43 7.77 18.05 8.68 18.05C9.98 18.05 10.93 16.82 10.6 15.56L10.1 13.65M2.95 6.9H5.6L12.85 3.05C13.88 2.5 15.1 3.25 15.1 4.4V14.6C15.1 15.75 13.88 16.5 12.85 15.95L5.6 12.1H2.95C1.85 12.1 0.95 11.2 0.95 10.1V8.9C0.95 7.8 1.85 6.9 2.95 6.9ZM17.45 7.3C18.18 8.65 18.18 10.35 17.45 11.7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.promote"><?= te('nav.promote') ?></span>
+          </a>
+        </li>
+        <li>
+          <a class="mk-pill" href="<?= u('/support') ?>">
+            <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M1.9 10.45V9.5C1.9 5.3 5.3 1.9 9.5 1.9C13.7 1.9 17.1 5.3 17.1 9.5V10.45M16.15 15.2C16.15 16.78 14.88 18.05 13.3 18.05H10.45M4.75 11.4C4.75 10.88 4.33 10.45 3.8 10.45H2.85C1.8 10.45 0.95 11.3 0.95 12.35V13.3C0.95 14.35 1.8 15.2 2.85 15.2H3.8C4.33 15.2 4.75 14.78 4.75 14.25V11.4ZM14.25 11.4C14.25 10.88 14.68 10.45 15.2 10.45H16.15C17.2 10.45 18.05 11.3 18.05 12.35V13.3C18.05 14.35 17.2 15.2 16.15 15.2H15.2C14.68 15.2 14.25 14.78 14.25 14.25V11.4Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="mk-pill-text" data-i18n="nav.support"><?= te('nav.support') ?></span>
           </a>
         </li>
         <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
