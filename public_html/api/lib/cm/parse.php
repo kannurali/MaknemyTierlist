@@ -74,6 +74,7 @@ const CM_COMMANDS = [
     'репа'               => ['rep_show', 'репутация', 0, false, false],
     'топ репы'           => ['rep_top', 'репутация', 0, true, false],
     '+награда'           => ['award_add', 'награды', 3, false, true],
+    'наградить'          => ['award_give', 'награды', 3, false, true],
     '-награда'           => ['award_del', 'награды', 3, false, false],
     'награды'            => ['awards_show', null, 0, false, false],
     'профиль'            => ['profile', null, 0, false, false],

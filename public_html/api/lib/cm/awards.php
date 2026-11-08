@@ -40,45 +40,93 @@ function cm_awards_brief(array $list): string {
 //  Команды
 // --------------------------------------------------------------------------
 
-// «+награда 5 @ник на 30 дней причина». Срок — только после «на»: иначе
-// причина «100 побед» стала бы сроком в 100 минут.
-function cm_cmd_award_add(array $ctx, array $cmd): void {
-    if (!cm_need2($ctx)) { return; }
-    $args = $cmd['args'];
+// Цель для выдачи: не бот и не сам себе. null — ответ уже ушёл.
+function cm_award_target(array $ctx, string &$args): ?array {
     $t = cm_need_target($ctx, $args);
-    if ($t === null) { return; }
+    if ($t === null) { return null; }
     if (!empty($t['is_bot'])) {
         cm_reply($ctx, cm_t('target_bot'));
-        return;
+        return null;
     }
     if ((int)$t['id'] === (int)$ctx['actor']) {
         cm_reply($ctx, cm_t('target_self'));
-        return;
+        return null;
     }
+    return $t;
+}
+
+// Срок «на 30 дней» в начале $rest съедается; ответ — секунды, 0 — без срока
+// (или «навсегда»), -1 — срок вне пределов Telegram. Срок — только после
+// «на»: иначе причина «100 побед» стала бы сроком в 100 минут, а «на
+// память» без срока остаётся причиной.
+function cm_award_take_term(string &$rest): int {
+    if (!preg_match('~^на\s+~u', cm_norm($rest), $nm)) { return 0; }
+    $after = substr($rest, strlen($nm[0]));
+    $term = cm_take_term($after);
+    if ($term === null) { return 0; }
+    if ($term !== -1) { $rest = $after; }
+    return $term;
+}
+
+// «+награда 5 @ник на 30 дней причина» — всё одной строкой, степень
+// обязательна.
+function cm_cmd_award_add(array $ctx, array $cmd): void {
+    if (!cm_need2($ctx)) { return; }
+    $args = $cmd['args'];
+    $t = cm_award_target($ctx, $args);
+    if ($t === null) { return; }
     if (!preg_match('~^([1-8])(?![0-9])\s*(.*)$~su', trim($args), $m)) {
         cm_reply($ctx, cm_t('award_usage'));
         return;
     }
-    $level = (int)$m[1];
     $rest = $m[2];
-    $until = 0;
-    if (preg_match('~^на\s+~u', cm_norm($rest), $nm)) {
-        $after = substr($rest, strlen($nm[0]));
-        $term = cm_take_term($after);
-        if ($term === -1) {
-            cm_reply($ctx, cm_t('term_bad'));
-            return;
-        }
-        if ($term !== null) {
-            $rest = $after;
-            $until = $term > 0 ? (int)$ctx['now'] + $term : 0;
-        }
+    $term = cm_award_take_term($rest);
+    if ($term === -1) {
+        cm_reply($ctx, cm_t('term_bad'));
+        return;
     }
     $reason = trim($rest);
     if ($reason === '' || mb_strlen($reason) > CM_AWARD_REASON_MAX) {
         cm_reply($ctx, cm_t('award_usage'));
         return;
     }
+    cm_award_insert($ctx, $t, (int)$m[1], $term, $reason);
+}
+
+// «Наградить» (как у Ириса): ответом или с @ником, причина — строкой ниже.
+// В первой строке по желанию степень и срок: «наградить 5 @ник на 30 дней»;
+// без степени — 1-я. Второй строки нет — причина берётся из остатка первой,
+// а есть — в первой после цели, степени и срока ничего не остаётся. Строки
+// причины сливаются в одну: список наград построчный.
+function cm_cmd_award_give(array $ctx, array $cmd): void {
+    if (!cm_need2($ctx)) { return; }
+    $args = $cmd['args'];
+    $t = cm_award_target($ctx, $args);
+    if ($t === null) { return; }
+    $rest = trim($args);
+    $level = 1;
+    if (preg_match('~^([1-8])(?![0-9])\s*(.*)$~su', $rest, $m)) {
+        $level = (int)$m[1];
+        $rest = $m[2];
+    }
+    $term = cm_award_take_term($rest);
+    if ($term === -1) {
+        cm_reply($ctx, cm_t('term_bad'));
+        return;
+    }
+    $rest = trim($rest);
+    $body = trim((string)preg_replace('~\s+~u', ' ', $cmd['body']));
+    $reason = $body === '' ? $rest : ($rest === '' ? $body : '');
+    if ($reason === '' || mb_strlen($reason) > CM_AWARD_REASON_MAX) {
+        cm_reply($ctx, cm_t('award_give_usage'));
+        return;
+    }
+    cm_award_insert($ctx, $t, $level, $term, $reason);
+}
+
+// Записать награду и объявить; $term — секунды срока, 0 — бессрочно.
+function cm_award_insert(array $ctx, array $t, int $level, int $term, string $reason): void {
+    $until = $term > 0 ? (int)$ctx['now'] + $term : 0;
     $pdo = $ctx['pdo'];
     $chatId = (int)$ctx['chat']['chat_id'];
     if (count(cm_awards_active($pdo, $chatId, (int)$t['id'], (int)$ctx['now'])) >= CM_AWARDS_MAX) {

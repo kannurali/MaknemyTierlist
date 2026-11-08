@@ -262,7 +262,7 @@ test('кто я — профиль, и само сообщение уже пос
     $pdo = cm_test_pdo();
     $log = [];
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
-    assert_eq("👤 U7\nРанг: 0 — участник\nСообщений: 1 (сегодня 1), место 1\nВ чатах Maknemy с: 21.09.2026\nРепутация: 0\nВарны: 0/3",
+    assert_eq("👤 U7\nРанг: 0 — участник\nСообщений: 1 (сегодня 1), место 1\nВ чатах Maknemy с: 21.09.2026\nРепутация: 0\nВарны: 0/5",
         cm_last_text($log));
 });
 
@@ -274,7 +274,7 @@ test('без таблиц этапа 2: модерация как раньше',
     assert_eq(1, count(cm_calls($log, 'deleteMessage')));
     rt_run($pdo, cm_gmsg(7, '+', ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]]), $log);
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
-    assert_eq(['Ваш ранг: 0 — участник. Варны: 0/3.'], cm_texts($log));
+    assert_eq(['Ваш ранг: 0 — участник. Варны: 0/5.'], cm_texts($log));
 });
 
 test('кнопка приглашения этапа 3 идёт через вебхук', function () {

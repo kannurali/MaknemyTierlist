@@ -23,7 +23,7 @@ const CM_DEFAULTS = [
     'domains'       => [],
     'triggers'      => [],
     'access'        => [],
-    'warns'         => ['limit' => 3, 'ttl' => 2592000],
+    'warns'         => ['limit' => 5, 'ttl' => 2592000],
     'welcome'       => '',
     'rules'         => ['text' => '', 'entities' => []],
     'autodelete'    => true,
