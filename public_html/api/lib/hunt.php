@@ -981,6 +981,10 @@ function hunt_session_field(PDO $pdo, array $cfg, string $uid, int $now): ?array
         $hid = (int)$hunt['id'];
         $award = hunt_login_award($pdo, $hunt, $uid, $now);
         $wallet = hunt_wallet($pdo, $hid, $uid);
+        $next = hunt_next($hunt, $wallet, hunt_my_wins($pdo, $hid, $uid), $now);
+        // Ивент закончился: счётчик остаётся только у того, кто ещё не
+        // подтвердил выигрыш, — иначе звать на /halloween больше незачем.
+        if (hunt_phase($hunt, $now) === 'drawn' && $next !== 'won') { return null; }
         $day = hunt_day_n($hunt, $now);
         $secs = 0;
         if ($day > 0) {
@@ -1000,7 +1004,7 @@ function hunt_session_field(PDO $pdo, array $cfg, string $uid, int $now): ?array
             'full'       => $secs >= hunt_full_secs(),
             'gains'      => $award['gains'],
             'titles_new' => $award['titles_new'],
-            'next'       => hunt_next($hunt, $wallet, hunt_my_wins($pdo, $hid, $uid), $now),
+            'next'       => $next,
         ];
     } catch (PDOException $e) {
         return null;

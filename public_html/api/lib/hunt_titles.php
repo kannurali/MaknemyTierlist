@@ -12,6 +12,26 @@ const HUNT_TITLES_DEFAULT = [
     'hours' => ['ru' => 'Хранитель склепа', 'en' => 'Crypt Keeper'],
 ];
 
+// Титулы, выданные по слову владельца, — в коде, а не строками hunt_titles:
+// ивент закончен, выдачи больше нет, а владельцу и разработчику достались
+// оба его титула и по личному. Ключ — roblox_id (как в nick_logo.php).
+// Запись без title — титул ивента, текст берётся у последнего сезона, чтобы
+// правка в админке меняла его и здесь. Личный титул идёт первым; kind — вид
+// плашки в css/hunt.css (data-kind). «Frost General» не переводится — слово
+// владельца.
+const HUNT_TITLES_GRANTED = [
+    '2841062255' => [
+        ['kind' => 'frost', 'title' => ['ru' => 'Frost General — maknemy owner', 'en' => 'Frost General — maknemy owner']],
+        ['kind' => 'login'],
+        ['kind' => 'hours'],
+    ],
+    '8755256557' => [
+        ['kind' => 'hellfire', 'title' => ['ru' => 'Шут преисподней', 'en' => 'Jester of the Underworld']],
+        ['kind' => 'login'],
+        ['kind' => 'hours'],
+    ],
+];
+
 function hunt_json($json): array {
     if (!is_string($json) || $json === '') { return []; }
     $v = json_decode($json, true);
@@ -34,30 +54,66 @@ function hunt_titles_cfg(array $hunt): array {
 
 /**
  * Титулы людей пакетом: [user_id => [{kind, title:{ru,en}}, …]]; у кого нет —
- * ключа нет. Таблиц ещё нет (миграция не выполнена) — пусто: чат и лента от
- * этого не падают.
+ * ключа нет. Таблиц ещё нет (миграция не выполнена) — только выданные в коде:
+ * чат и лента от этого не падают.
  */
 function hunt_titles_for(PDO $pdo, array $uids): array {
     $uids = array_values(array_unique(array_filter(array_map('strval', $uids), function ($u) {
         return $u !== '' && ctype_digit($u);
     })));
     if (!$uids) { return []; }
+    $out = [];
     try {
         $in = implode(',', array_fill(0, count($uids), '?'));
         $st = $pdo->prepare("SELECT t.user_id, t.kind, h.titles_json FROM hunt_titles t
                                JOIN hunts h ON h.id = t.hunt_id
                               WHERE t.user_id IN ($in) ORDER BY t.created_at, t.kind");
         $st->execute($uids);
-        $out = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $kind = (string)$r['kind'];
             if (!in_array($kind, HUNT_TITLE_KINDS, true)) { continue; }
             $out[(string)$r['user_id']][] = ['kind' => $kind, 'title' => hunt_titles_cfg($r)[$kind]];
         }
-        return $out;
     } catch (PDOException $e) {
-        return [];
+        $out = [];
     }
+    return hunt_titles_granted($pdo, $uids, $out);
+}
+
+// Тексты титулов последнего сезона; нет таблицы или сезона — по умолчанию.
+function hunt_titles_latest(PDO $pdo): array {
+    try {
+        $row = $pdo->query("SELECT titles_json FROM hunts WHERE status IN ('live', 'drawn') ORDER BY id DESC LIMIT 1")
+            ->fetch(PDO::FETCH_ASSOC);
+        return hunt_titles_cfg($row ?: []);
+    } catch (PDOException $e) {
+        return hunt_titles_cfg([]);
+    }
+}
+
+// Дописать выданные в коде титулы (HUNT_TITLES_GRANTED): личный — первым,
+// титул ивента, который человек и так заработал, второй раз не добавляется.
+function hunt_titles_granted(PDO $pdo, array $uids, array $out): array {
+    $season = null;
+    foreach ($uids as $uid) {
+        $grants = HUNT_TITLES_GRANTED[$uid] ?? null;
+        if (!$grants) { continue; }
+        $earned = $out[$uid] ?? [];
+        $have = array_column($earned, 'kind');
+        $own = [];
+        $event = [];
+        foreach ($grants as $g) {
+            if (in_array($g['kind'], $have, true)) { continue; }
+            if (isset($g['title'])) {
+                $own[] = ['kind' => $g['kind'], 'title' => $g['title']];
+                continue;
+            }
+            if ($season === null) { $season = hunt_titles_latest($pdo); }
+            $event[] = ['kind' => $g['kind'], 'title' => $season[$g['kind']]];
+        }
+        $out[$uid] = array_merge($own, $earned, $event);
+    }
+    return $out;
 }
 
 // Дописать поле titles в список людей [id => человек].

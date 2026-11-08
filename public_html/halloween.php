@@ -45,7 +45,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=4" />
+<link rel="stylesheet" href="css/hunt.css?v=5" />
 <link rel="stylesheet" href="css/gw-card.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
@@ -247,7 +247,7 @@ page_lscache();
           <ol class="hn-days" id="hnDays"></ol>
         </section>
 
-        <div class="hn-grid">
+        <div class="hn-grid hn-play">
           <section class="hn-sec hn-today" id="hnToday" aria-labelledby="hnTodayTitle">
             <h2 class="hn-h2" id="hnTodayTitle" data-i18n="hunt.today.title"><?= te('hunt.today.title') ?></h2>
             <p class="hn-lead" data-i18n="hunt.today.lead"><?= te('hunt.today.lead') ?></p>
@@ -296,7 +296,7 @@ page_lscache();
         <div class="hn-grid">
           <section class="hn-sec hn-titles" aria-labelledby="hnTitlesTitle">
             <h2 class="hn-h2" id="hnTitlesTitle" data-i18n="hunt.titles.title"><?= te('hunt.titles.title') ?></h2>
-            <p class="hn-lead" data-i18n="hunt.titles.lead"><?= te('hunt.titles.lead') ?></p>
+            <p class="hn-lead" id="hnTitlesLead" data-i18n="hunt.titles.lead"><?= te('hunt.titles.lead') ?></p>
             <ul class="hn-title-list" id="hnTitleList"></ul>
           </section>
 
@@ -331,7 +331,7 @@ page_lscache();
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
-  <script src="js/hunt-page.js?v=4" fetchpriority="high"></script>
+  <script src="js/hunt-page.js?v=5" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=4" fetchpriority="high"></script>
 </body>
