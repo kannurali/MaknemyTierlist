@@ -572,3 +572,13 @@ CREATE TABLE IF NOT EXISTS hunt_titles (
   created_at BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (user_id, hunt_id, kind)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------------------------
+--  Главный титул: какой из титулов человек показывает у ника. Для боевой
+--  базы — docs/migrations/2026-11-08-title-pick.sql.
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS title_picks (
+  user_id    BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  kind       VARCHAR(16)     NOT NULL,
+  updated_at BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

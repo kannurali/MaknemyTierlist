@@ -129,6 +129,12 @@ function pf_fixture_db(string $file, array $tables = []): void {
     if (!empty($tables['newsOff'])) {
         $pdo->exec("INSERT INTO tg_prefs (user_id, prices, news) VALUES (900000001, 1, 0)");
     }
+    if (!empty($tables['picks'])) {
+        $pdo->exec('CREATE TABLE title_picks (user_id INTEGER NOT NULL PRIMARY KEY, kind TEXT NOT NULL, updated_at INTEGER NOT NULL)');
+        foreach ($tables['picks'] as $uid => $kind) {
+            $pdo->prepare('INSERT INTO title_picks (user_id, kind, updated_at) VALUES (?, ?, ?)')->execute([$uid, $kind, $now]);
+        }
+    }
 }
 
 // $extra — дополнительные ключи config.php (например admin_ids), $tables —
@@ -1155,9 +1161,10 @@ test('скрипт больше не собирает карточку', functio
     }
     assert_true(strpos($js, 'mk:profiledata') !== false, 'событие он всё ещё слушает');
     // Единственное, что осталось от карточки в скрипте, — переключение на
-    // гейт: по ответу эндпоинта и при 401 на сохранении «о себе».
+    // гейт: по ответу эндпоинта и при 401 на сохранении «о себе» и выборе
+    // главного титула.
     assert_true(strpos($js, 'function renderAuth(authed)') !== false, 'функция на месте');
-    assert_eq(3, substr_count($js, 'renderAuth'), 'объявление и два вызова, больше карточке нечего делать');
+    assert_eq(4, substr_count($js, 'renderAuth'), 'объявление и три вызова, больше карточке нечего делать');
 });
 
 // Аватара может не быть: у Roblox он не обязателен, а битый URL мы и сами
@@ -1534,6 +1541,50 @@ test('колокольчик профиля: ключи словаря и тел
     $phone = substr($css, strpos($css, '@media (max-width: 900px)'));
     assert_eq(1, preg_match('~\.pf-bell\s*\{[^}]*position:\s*static~', $phone), 'на телефоне колокольчик в строке статуса');
     assert_eq(1, preg_match('~\.pf-notify\s*\{[^}]*position:\s*static~', $phone), 'а панель — в потоке карточки');
+});
+
+// 08.11.2026, слово владельца: у ника один титул, все — отдельным списком в
+// профиле. Без таблиц ивента у владельца три выданных в коде титула.
+test('под ником один титул, все — в разделе «Титулы»; выбирать можно только у себя', function () use ($PUB) {
+    $self  = pf_render('2841062255', '');
+    $peer  = pf_render('900000001', '2841062255');
+    $none  = pf_render('900000001', '');
+    $pick  = pf_render('2841062255', '', [], ['picks' => ['2841062255' => 'hours']]);
+    assert_true($self !== null && $peer !== null && $none !== null && $pick !== null, 'страницы отрендерились');
+    if ($self === null || $peer === null || $none === null || $pick === null) { return; }
+
+    $head = function (string $html): array {
+        preg_match('~<p class="nx-titles pf-titles" id="pfTitleMain">(.*?)</p>~s', $html, $m);
+        preg_match_all('~data-kind="([a-z]+)"~', $m[1] ?? '', $k);
+        return $k[1];
+    };
+    assert_eq(['frost'], $head($self['html']), 'у себя под ником — личный');
+    assert_eq(['frost'], $head($peer['html']), 'и у чужого');
+    assert_eq(['hours'], $head($pick['html']), 'выбранный — вместо личного');
+
+    preg_match_all('~<button class="pf-tl-item" type="button" data-kind="([a-z]+)" aria-pressed="(true|false)">~', $self['html'], $b);
+    assert_eq(['frost', 'login', 'hours'], $b[1], 'в разделе все три, кнопками');
+    assert_eq(['true', 'false', 'false'], $b[2], 'главный нажат');
+    preg_match_all('~<button class="pf-tl-item" type="button" data-kind="([a-z]+)" aria-pressed="(true|false)">~', $pick['html'], $b);
+    assert_eq(['frost', 'login', 'hours'], $b[1], 'порядок от выбора не зависит');
+    assert_eq(['false', 'false', 'true'], $b[2]);
+    assert_true(strpos($self['html'], 'data-i18n="profile.titlesHint"') !== false, 'подсказка, как выбрать');
+    assert_true(strpos($self['html'], 'id="pfTlStatus"') !== false);
+
+    assert_eq(0, substr_count($peer['html'], '<button class="pf-tl-item"'), 'на чужом выбирать нельзя');
+    assert_eq(3, substr_count($peer['html'], '<span class="pf-tl-item">'), 'но список виден');
+    assert_eq(0, substr_count($peer['html'], 'profile.titlesHint'));
+    assert_eq(0, substr_count($none['html'], 'pf-tl'), 'без титулов раздела нет');
+    assert_eq(0, substr_count($none['html'], 'pfTitleMain'), 'и под ником пусто');
+
+    $order = [strpos($self['html'], 'id="pfChart"'), strpos($self['html'], 'id="pfTlTitle"'), strpos($self['html'], 'class="pf-about-title"')];
+    assert_true($order[0] < $order[1] && $order[1] < $order[2], 'раздел между графиком и «О себе»');
+
+    $css = file_get_contents($PUB . '/css/hunt.css');
+    assert_eq(1, preg_match('~@media \(max-width: 900px\)\s*\{[^@]*\.pf-tl-title,\s*\.pf-tl\s*\{\s*order:\s*5;~', $css), 'на телефоне — после графика');
+    $js = file_get_contents($PUB . '/js/profile-page.js');
+    assert_true(strpos($js, "'/api/title-pick.php'") !== false, 'выбор уходит в title-pick.php');
+    assert_true(is_file($PUB . '/api/title-pick.php'));
 });
 
 run_tests();

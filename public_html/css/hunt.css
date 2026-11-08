@@ -493,8 +493,158 @@ body:has(.hn.is-typing) .hn-toasts { opacity: 0; }
   line-height: 24px;
 }
 .pf-titles .nx-title::before { width: 20px; height: 20px; }
+.pf-tl-title {
+  margin: calc(20 * var(--u)) 0 0;
+  font-family: var(--display);
+  font-size: calc(30 * var(--u));
+  line-height: calc(35 * var(--u));
+  text-align: center;
+  text-transform: uppercase;
+  color: #fff;
+}
+.pf-tl {
+  position: relative;
+  width: calc(1053 * var(--u));
+  margin: calc(20 * var(--u)) auto 0;
+  padding: calc(30 * var(--u)) calc(40 * var(--u));
+  border-radius: calc(20 * var(--u));
+  background: var(--pf-fill);
+}
+.pf-tl::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--pf-grad);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+.pf-tl-hint {
+  margin: 0 0 calc(18 * var(--u));
+  font-family: var(--ui);
+  font-size: calc(17 * var(--u));
+  line-height: 1.3;
+  text-align: center;
+  color: rgba(255, 255, 255, .66);
+}
+.pf-tl-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px calc(14 * var(--u));
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
+}
+.pf-tl-row { display: flex; min-width: 0; max-width: 100%; }
+.pf-tl-item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.pf-tl-item .nx-titles { max-width: 100%; font-size: 14px; }
+.pf-tl-item .nx-title {
+  height: 28px;
+  padding-right: 13px;
+  font-size: 14px;
+  line-height: 28px;
+}
+.pf-tl-item .nx-title::before { width: 24px; height: 24px; }
+button.pf-tl-item {
+  position: relative;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14);
+  transition: background-color .2s ease, box-shadow .2s ease, transform .2s var(--ease-quick, ease);
+}
+button.pf-tl-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--pf-grad);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity .2s ease;
+  pointer-events: none;
+}
+button.pf-tl-item[aria-pressed="true"] {
+  background: rgba(255, 255, 255, .07);
+  box-shadow: 0 0 18px rgba(255, 255, 255, .07);
+}
+button.pf-tl-item[aria-pressed="true"]::after { opacity: 1; }
+button.pf-tl-item:active { transform: scale(.97); }
+button.pf-tl-item:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.pf-tl[aria-busy="true"] button.pf-tl-item { cursor: progress; }
+.pf-tl-mark {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  padding: 3px 10px 2px;
+  border-radius: 999px;
+  background: var(--pf-grad);
+  font-family: var(--display);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+  transform: translate(-50%, -50%);
+}
+.pf-tl-item[aria-pressed="false"] .pf-tl-mark { display: none; }
+.pf-tl-status {
+  margin: 14px 0 0;
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: center;
+  color: #ff8a9a;
+}
+.pf-tl-status:empty { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  button.pf-tl-item[aria-pressed="false"]:hover {
+    background: rgba(255, 255, 255, .07);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.pf-tl-item,
+  button.pf-tl-item::after { transition: none; }
+  button.pf-tl-item:active { transform: none; }
+}
 @media (max-width: 900px) {
   .pf-titles { order: 1; margin: 8px auto 10px; }
+  .pf-tl-title,
+  .pf-tl { order: 5; }
+  .pf-tl-title { margin-top: 22px; font-size: 19px; line-height: 1.2; }
+  .pf-tl {
+    width: auto;
+    margin: 12px 12px 0;
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+  .pf-tl-hint { margin-bottom: 12px; font-size: 13px; }
+  .pf-tl-list { gap: 16px 8px; }
+  .pf-tl-item { padding: 11px 12px; border-radius: 13px; }
+  .pf-tl-item .nx-title { height: 24px; padding-right: 11px; font-size: 13px; line-height: 24px; }
+  .pf-tl-item .nx-title::before { width: 20px; height: 20px; }
+  .pf-tl-mark { font-size: 11px; }
 }
 
 body.hn-bg { background: none; }

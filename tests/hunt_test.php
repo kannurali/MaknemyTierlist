@@ -10,6 +10,7 @@ require __DIR__ . '/../public_html/api/hunt_act.php';
 require __DIR__ . '/../public_html/api/hunt_admin.php';
 require __DIR__ . '/../public_html/api/session.php';
 require_once __DIR__ . '/../public_html/api/lib/chat.php';
+require __DIR__ . '/../public_html/api/title-pick.php';
 
 // Ивент Spooky Tokens — api/lib/hunt.php и его эндпоинты.
 //
@@ -209,7 +210,7 @@ test('все 7 входов дают титул ровно один раз', fun
     $a = hunt_login_award($p, $hunt, $u, ht_at(7));
     assert_eq([['kind' => 'login', 'title' => ['ru' => 'Ночной дозор', 'en' => 'Night Watch']]], $a['titles_new']);
     assert_eq(175, ht_wallet($p, $h, $u)['earned']);
-    assert_eq([['kind' => 'login', 'title' => ['ru' => 'Ночной дозор', 'en' => 'Night Watch']]], hunt_my_titles($p, $u));
+    assert_eq([['kind' => 'login', 'title' => ['ru' => 'Ночной дозор', 'en' => 'Night Watch'], 'main' => true]], hunt_my_titles($p, $u));
     assert_eq([], hunt_login_award($p, $hunt, $u, ht_at(7, 60))['titles_new'], 'повтор не даёт титул снова');
 });
 
@@ -293,18 +294,21 @@ test('пульс: гость, забаненный, вне семи дней', f
     assert_eq('closed', hunt_beat(test_db(), [], $u, ht_at(1))[1]['status'], 'таблиц нет');
 });
 
-test('титулы едут с человеком в чате и трейдинге; без таблиц — пусто', function () {
+test('у ника в чате и трейдинге один титул — главный; без таблиц — пусто', function () {
     $p = ht_db();
     $h = ht_hunt($p, ['titles_json' => json_encode(['login' => ['ru' => 'Дозорный', 'en' => 'Watcher']])]);
     $a = ht_user($p, '1', 'ann');
     $b = ht_user($p, '2', 'bob');
     ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'login', 'created_at' => ht_at(7)]);
     ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'hours', 'created_at' => ht_at(7, 1)]);
+    assert_eq([['kind' => 'login', 'title' => ['ru' => 'Дозорный', 'en' => 'Watcher'], 'main' => true],
+               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours'], 'main' => false]],
+        hunt_titles_for($p, [$a])[$a], 'все титулы, пустой текст — по умолчанию');
     $chat = chat_users_by_id($p, [$a, $b], ht_at(7));
-    assert_eq([['kind' => 'login', 'title' => ['ru' => 'Дозорный', 'en' => 'Watcher']],
-               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours']]], $chat[$a]['titles'], 'пустой текст — по умолчанию');
+    assert_eq([['kind' => 'login', 'title' => ['ru' => 'Дозорный', 'en' => 'Watcher'], 'main' => true]],
+        $chat[$a]['titles'], 'не выбирал — первый');
     assert_eq([], $chat[$b]['titles']);
-    assert_eq(2, count(trade_authors($p, [$a], ht_at(7))[$a]['titles']));
+    assert_eq(['login'], array_column(trade_authors($p, [$a], ht_at(7))[$a]['titles'], 'kind'));
     $bare = test_db();
     $bare->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)')
          ->execute(['1', 'ann', 'Ann', '', 1, 1]);
@@ -324,9 +328,9 @@ test('выданные титулы: владелец и разработчик 
     ht_user($p, $dev, 'thefool');
     $frost = ['ru' => 'Frost General — maknemy owner', 'en' => 'Frost General — maknemy owner'];
     $all = hunt_titles_for($p, [$owner, $dev, '1']);
-    assert_eq([['kind' => 'frost', 'title' => $frost],
-               ['kind' => 'login', 'title' => ['ru' => 'Дозорный', 'en' => 'Watcher']],
-               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours']]], $all[$owner], 'тексты ивента — из сезона');
+    assert_eq([['kind' => 'frost', 'title' => $frost, 'main' => true],
+               ['kind' => 'login', 'title' => ['ru' => 'Дозорный', 'en' => 'Watcher'], 'main' => false],
+               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours'], 'main' => false]], $all[$owner], 'тексты ивента — из сезона');
     assert_eq(['hellfire', 'login', 'hours'], array_column($all[$dev], 'kind'));
     assert_eq(['ru' => 'Шут преисподней', 'en' => 'Jester of the Underworld'], $all[$dev][0]['title']);
     assert_eq(false, isset($all['1']), 'остальным ничего не выдано');
@@ -335,16 +339,74 @@ test('выданные титулы: владелец и разработчик 
     ht_insert($p, 'hunt_titles', ['user_id' => $dev, 'hunt_id' => $h, 'kind' => 'hours', 'created_at' => ht_at(7)]);
     assert_eq(['hellfire', 'hours', 'login'], array_column(hunt_titles_for($p, [$dev])[$dev], 'kind'),
         'заработанный титул не дублируется');
-    assert_eq(['frost', 'login', 'hours'], array_column(chat_users_by_id($p, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'в чате');
-    assert_eq(3, count(trade_authors($p, [$dev], ht_at(9))[$dev]['titles']), 'в трейдинге');
+    assert_eq(['frost'], array_column(chat_users_by_id($p, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'в чате — личный');
+    assert_eq(['hellfire'], array_column(trade_authors($p, [$dev], ht_at(9))[$dev]['titles'], 'kind'), 'в трейдинге — личный');
     assert_eq(['frost', 'login', 'hours'], array_column(hunt_my_titles($p, $owner), 'kind'), 'на /halloween — «получен»');
 
     $bare = test_db();
     $bare->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)')
          ->execute([$owner, 'maknemy', 'Maknemy', '', 1, 1]);
-    assert_eq([['kind' => 'frost', 'title' => $frost], ['kind' => 'login', 'title' => HUNT_TITLES_DEFAULT['login']],
-               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours']]],
-        chat_users_by_id($bare, [$owner], ht_at(9))[$owner]['titles'], 'без таблиц ивента — тексты по умолчанию');
+    assert_eq([['kind' => 'frost', 'title' => $frost, 'main' => true], ['kind' => 'login', 'title' => HUNT_TITLES_DEFAULT['login'], 'main' => false],
+               ['kind' => 'hours', 'title' => HUNT_TITLES_DEFAULT['hours'], 'main' => false]],
+        hunt_titles_for($bare, [$owner])[$owner], 'без таблиц ивента — тексты по умолчанию');
+    assert_eq(['frost'], array_column(chat_users_by_id($bare, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'и чат не падает');
+});
+
+// 08.11.2026, слово владельца: у ника виден один титул, все — в профиле, там
+// же человек выбирает, какой показывать.
+test('главный титул: выбор в профиле меняет титул у ника, порядок списка тот же', function () {
+    $owner = '2841062255';
+    $p = ht_db();
+    $h = ht_hunt($p);
+    $a = ht_user($p, '1', 'ann');
+    ht_user($p, '2', 'bob');
+    ht_user($p, $owner, 'maknemy');
+    ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'login', 'created_at' => ht_at(7)]);
+    ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'hours', 'created_at' => ht_at(7, 1)]);
+
+    assert_eq('ok', hunt_title_pick($p, $a, 'hours', ht_at(9)));
+    $list = hunt_titles_for($p, [$a])[$a];
+    assert_eq(['login', 'hours'], array_column($list, 'kind'), 'порядок не прыгает');
+    assert_eq([false, true], array_column($list, 'main'));
+    assert_eq('hours', hunt_title_main($list)['kind']);
+    assert_eq(['hours'], array_column(chat_users_by_id($p, [$a], ht_at(9))[$a]['titles'], 'kind'), 'в чате');
+    assert_eq(['hours'], array_column(trade_authors($p, [$a], ht_at(9))[$a]['titles'], 'kind'), 'в трейдинге');
+
+    assert_eq('ok', hunt_title_pick($p, $a, 'login', ht_at(9, 5)));
+    assert_eq(1, (int)$p->query("SELECT COUNT(*) FROM title_picks WHERE user_id = 1")->fetchColumn(), 'выбор один');
+    assert_eq('login', hunt_title_main(hunt_titles_for($p, [$a])[$a])['kind']);
+
+    assert_eq('bad_kind', hunt_title_pick($p, $a, 'frost', ht_at(9)), 'чужой титул не выбрать');
+    assert_eq('bad_kind', hunt_title_pick($p, '2', 'login', ht_at(9)), 'без титулов выбирать нечего');
+    assert_eq('login', hunt_title_main(hunt_titles_for($p, [$a])[$a])['kind'], 'отказ выбор не трогает');
+
+    assert_eq('ok', hunt_title_pick($p, $owner, 'hours', ht_at(9)), 'выданный в коде — тоже');
+    assert_eq(['hours'], array_column(chat_users_by_id($p, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'вместо личного');
+
+    $p->prepare('UPDATE title_picks SET kind = ? WHERE user_id = ?')->execute(['hellfire', $a]);
+    assert_eq('login', hunt_title_main(hunt_titles_for($p, [$a])[$a])['kind'], 'выбранного титула нет — первый');
+    assert_eq(null, hunt_title_main([]));
+
+    $p->exec('DROP TABLE title_picks');
+    assert_eq('unavailable', hunt_title_pick($p, $a, 'hours', ht_at(9)), 'миграция не выполнена');
+    assert_eq(['frost'], array_column(chat_users_by_id($p, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'и без неё у ника первый');
+});
+
+test('title-pick.php: только своё, только свой титул', function () {
+    $p = ht_db();
+    $h = ht_hunt($p);
+    $a = ht_user($p, '1', 'ann');
+    ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'login', 'created_at' => ht_at(7)]);
+    ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'hours', 'created_at' => ht_at(7, 1)]);
+    $me = ['user_id' => $a];
+    assert_eq(401, handle_title_pick($p, [], 'hours', ht_at(9))[0], 'гость');
+    assert_eq(401, handle_title_pick($p, ['user_id' => '77'], 'hours', ht_at(9))[0], 'аккаунта нет');
+    assert_eq([400, 'bad_request'], [handle_title_pick($p, $me, ['x'], ht_at(9))[0], handle_title_pick($p, $me, ['x'], ht_at(9))[1]['error']]);
+    assert_eq([400, 'bad_kind'], [handle_title_pick($p, $me, 'frost', ht_at(9))[0], handle_title_pick($p, $me, 'frost', ht_at(9))[1]['error']]);
+    assert_eq([200, ['ok' => true, 'kind' => 'hours']], handle_title_pick($p, $me, 'hours', ht_at(9)));
+    assert_eq('hours', hunt_title_main(hunt_titles_for($p, [$a])[$a])['kind']);
+    $p->exec('DROP TABLE title_picks');
+    assert_eq([503, 'unavailable'], [handle_title_pick($p, $me, 'login', ht_at(9))[0], handle_title_pick($p, $me, 'login', ht_at(9))[1]['error']]);
 });
 
 test('плашки выданных титулов: ледяной текст с лого владельца, кроваво-красный шут', function () {

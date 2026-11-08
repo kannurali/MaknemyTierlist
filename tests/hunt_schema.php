@@ -36,4 +36,12 @@ function hunt_sqlite_tables(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS hunt_titles (
         user_id INTEGER NOT NULL, hunt_id INTEGER NOT NULL, kind TEXT NOT NULL, created_at INTEGER NOT NULL,
         PRIMARY KEY (user_id, hunt_id, kind))");
+    hunt_sqlite_title_picks($pdo);
+}
+
+// Выбор главного титула — docs/migrations/2026-11-08-title-pick.sql. Отдельно,
+// чтобы тест мог собрать базу ивента без неё (миграция ещё не выполнена).
+function hunt_sqlite_title_picks(PDO $pdo): void {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS title_picks (
+        user_id INTEGER NOT NULL PRIMARY KEY, kind TEXT NOT NULL, updated_at INTEGER NOT NULL)");
 }
