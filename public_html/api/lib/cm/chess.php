@@ -221,7 +221,7 @@ function cm_chess_view(PDO $pdo, array $g, int $uid, int $nowMs): array {
         'white' => cm_chess_person($pdo, $g['white_id']),
         'black' => cm_chess_person($pdo, $g['black_id']),
         'clock' => ['base' => $g['base_ms'], 'w' => $c['w'], 'b' => $c['b'], 'run' => $c['run']],
-        'first' => ($on && $plies < 2) ? ['side' => $turn, 'until' => $g['due_at']] : null,
+        'first' => ($on && $plies < 2) ? ['side' => $turn, 'until' => $g['due_at'], 'ms' => CM_CHESS_FIRST * 1000] : null,
         'draw' => $g['draw_by'] !== '' ? $g['draw_by'] : null,
         'status' => $g['status'], 'result' => $result, 'reason' => $g['reason'] !== '' ? $g['reason'] : null,
         'winner' => $result === '1-0' ? 'w' : ($result === '0-1' ? 'b' : null),

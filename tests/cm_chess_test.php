@@ -115,7 +115,7 @@ test('состояние: разрешённые ходы только ходя�
     $id = chs_start($pdo, $log);
     $g = cm_chess_get($pdo, $id);
     $w = cm_chess_view($pdo, $g, 7, CHS_T0 + 500);
-    assert_eq(['w', 'w', 20, null, null, ['side' => 'w', 'until' => CHS_T0 + 180000]],
+    assert_eq(['w', 'w', 20, null, null, ['side' => 'w', 'until' => CHS_T0 + 180000, 'ms' => 180000]],
         [$w['me'], $w['turn'], count($w['legal']), $w['last'], $w['clock']['run'], $w['first']]);
     assert_eq(['name' => 'U7', 'username' => 'user7'], $w['white']);
     assert_eq(['name' => 'Петя', 'username' => 'petya'], $w['black']);
