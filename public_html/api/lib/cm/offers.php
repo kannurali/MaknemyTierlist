@@ -126,7 +126,7 @@ function cm_games_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
         if ($ctx !== null) { cm_edit($ctx, (int)$o['msg_id'], cm_t('offer_expired')); }
         $n++;
     }
-    return $n;
+    return $n + cm_duel_tick($pdo, $cfg, $send, $now);
 }
 
 // --------------------------------------------------------------------------

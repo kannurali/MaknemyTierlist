@@ -264,6 +264,23 @@ test('кнопка приглашения этапа 3 идёт через ве�
     assert_eq('no', cm_offer_get($pdo, 1)['status']);
 });
 
+test('кнопка хода дуэли идёт через вебхук', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    rt_run($pdo, cm_gmsg(7, 'дуэль @petya'), $log);
+    $chat = ['id' => CM_CHAT, 'type' => 'supergroup', 'title' => 'Тестовый чат'];
+    $q = ['id' => 'q1', 'from' => ['id' => 20, 'first_name' => 'Петя'], 'data' => 'cm:p:1:y',
+          'message' => ['message_id' => cm_offer_get($pdo, 1)['msg_id'], 'chat' => $chat, 'text' => 'вызов']];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['callback_query' => $q], CM_NOW);
+    $q['from'] = ['id' => 30, 'first_name' => 'Чужой'];
+    $q['data'] = 'cm:d:1:s';
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['callback_query' => $q], CM_NOW);
+    $ans = array_map(function ($c) { return $c[1]['text']; }, cm_calls($log, 'answerCallbackQuery'));
+    assert_eq([cm_t('offer_accepted'), cm_t('not_yours')], $ans);
+    assert_eq('on', cm_duel_get($pdo, 1)['status']);
+});
+
 test('вебхук: правки сообщений и право удалять в группах', function () {
     $log = [];
     tg_setup_webhook(cm_rec($log), '123456789:AAHfakeTokenForTestsOnly_abcdefghij');

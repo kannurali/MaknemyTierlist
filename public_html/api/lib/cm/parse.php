@@ -109,6 +109,9 @@ const CM_COMMANDS = [
     'убить'              => ['rp', 'рп', 0, false, true],
     'кубы'               => ['dice', 'игры', 0, false, false],
     'кубы исход'         => ['dice_outcome', 'триггеры', 3, false, false],
+    'дуэль'              => ['duel', 'игры', 0, false, true],
+    'дуэли'              => ['duel_top', 'игры', 0, true, false],
+    'дуэли исход'        => ['duel_outcome', 'триггеры', 3, false, false],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -135,6 +138,7 @@ const CM_BARE_ARGS = [
     'ball'        => '~\S~u',
     'rp'          => '~^$~',
     'dice'        => '~^$~',
+    'duel'        => '~^$~',
 ];
 
 // Команды только с префиксом: без него это слово обычной речи («кто знает…»).
