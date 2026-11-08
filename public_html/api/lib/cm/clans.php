@@ -1,5 +1,7 @@
 <?php
-// Кланы (этап 3). Человек в чате — не больше чем в одном клане. Глава —
+// Кланы (этап 3), общие для чатов сети (решение владельца 08.11.2026): клан
+// и его участники хранятся с чатом, где клан создан, а ищутся по всей сети
+// ($chats — cm_scope). Человек — не больше чем в одном клане. Глава —
 // создатель; передачи главенства нет, и выйти глава не может — только
 // распустить клан («-клан»). Управляет кланом только глава. Рейтинг —
 // сообщения участников за 7 дней (cm_stats этапа 2), экономики нет. Уход из
@@ -35,18 +37,18 @@ function cm_clan_get(PDO $pdo, int $id): ?array {
 }
 
 // Клан по названию — без учёта регистра и ё/е.
-function cm_clan_by_name(PDO $pdo, int $chatId, string $name): ?array {
-    $st = $pdo->prepare('SELECT * FROM cm_clans WHERE chat_id = :c AND name_key = :k');
-    $st->execute([':c' => $chatId, ':k' => cm_norm($name)]);
+function cm_clan_by_name(PDO $pdo, $chats, string $name): ?array {
+    $st = $pdo->prepare('SELECT * FROM cm_clans WHERE chat_id IN (' . cm_in($chats) . ') AND name_key = :k ORDER BY id LIMIT 1');
+    $st->execute([':k' => cm_norm($name)]);
     $r = $st->fetch(PDO::FETCH_ASSOC);
     return $r ? cm_clan_decode($r) : null;
 }
 
 // Клан, в котором человек состоит; null — ни в каком.
-function cm_clan_of(PDO $pdo, int $chatId, int $userId): ?array {
+function cm_clan_of(PDO $pdo, $chats, int $userId): ?array {
     $st = $pdo->prepare('SELECT c.* FROM cm_clan_members m JOIN cm_clans c ON c.id = m.clan_id
-        WHERE m.chat_id = :c AND m.user_id = :u');
-    $st->execute([':c' => $chatId, ':u' => $userId]);
+        WHERE m.chat_id IN (' . cm_in($chats) . ') AND m.user_id = :u ORDER BY m.joined_at LIMIT 1');
+    $st->execute([':u' => $userId]);
     $r = $st->fetch(PDO::FETCH_ASSOC);
     return $r ? cm_clan_decode($r) : null;
 }
@@ -57,10 +59,11 @@ function cm_clan_size(PDO $pdo, int $clanId): int {
     return (int)$st->fetchColumn();
 }
 
-// Сообщения участников клана за неделю, сегодня включительно.
-function cm_clan_week(PDO $pdo, array $clan, int $now): int {
+// Сообщения участников клана за неделю, сегодня включительно, по всем
+// чатам сети ($chats).
+function cm_clan_week(PDO $pdo, array $clan, int $now, $chats): int {
     $st = $pdo->prepare('SELECT COALESCE(SUM(s.msgs), 0) FROM cm_clan_members m
-        JOIN cm_stats s ON s.chat_id = m.chat_id AND s.user_id = m.user_id AND s.day >= :d
+        JOIN cm_stats s ON s.chat_id IN (' . cm_in($chats) . ') AND s.user_id = m.user_id AND s.day >= :d
         WHERE m.clan_id = :k');
     $st->execute([':d' => cm_day_from($now, CM_CLAN_DAYS), ':k' => $clan['id']]);
     return (int)$st->fetchColumn();
@@ -85,7 +88,7 @@ function cm_clan_add_member(PDO $pdo, array $clan, int $userId, int $now): bool 
 
 // Клан, которым правит автор контекста; иначе — подсказка и null.
 function cm_clan_owned(array $ctx): ?array {
-    $c = cm_clan_of($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$ctx['actor']);
+    $c = cm_clan_of($ctx['pdo'], cm_scope($ctx), (int)$ctx['actor']);
     if ($c === null) {
         cm_reply($ctx, cm_t('clan_none_me'));
         return null;
@@ -102,7 +105,7 @@ function cm_clan_card(array $ctx, array $c): string {
     return cm_t('clan_info', ['name' => $c['name'], 'owner' => cm_user_who($pdo, $c['owner_id'], true),
             'n' => cm_clan_size($pdo, $c['id']), 'max' => CM_CLAN_MAX,
             'state' => cm_t($c['is_open'] ? 'clan_state_open' : 'clan_state_closed'),
-            'msgs' => cm_num(cm_clan_week($pdo, $c, (int)$ctx['now']))])
+            'msgs' => cm_num(cm_clan_week($pdo, $c, (int)$ctx['now'], cm_scope($ctx)))])
         . ($c['about'] !== '' ? cm_t('clan_about_line', ['about' => $c['about']]) : '');
 }
 
@@ -122,18 +125,22 @@ function cm_cmd_clan_add(array $ctx, array $cmd): void {
         return;
     }
     $pdo = $ctx['pdo'];
-    $chatId = (int)$ctx['chat']['chat_id'];
+    $chats = cm_scope($ctx);
     $me = (int)$ctx['actor'];
-    $mine = cm_clan_of($pdo, $chatId, $me);
+    $mine = cm_clan_of($pdo, $chats, $me);
     if ($mine !== null) {
         cm_reply($ctx, cm_t('clan_have_me', ['name' => $mine['name']]));
+        return;
+    }
+    if (cm_clan_by_name($pdo, $chats, $name) !== null) {
+        cm_reply($ctx, cm_t('clan_taken', ['name' => $name]));
         return;
     }
     $now = (int)$ctx['now'];
     try {
         $pdo->prepare("INSERT INTO cm_clans (chat_id, name, name_key, owner_id, about, is_open, called_at, created_at)
                        VALUES (:c, :n, :k, :o, '', 1, 0, :t)")
-            ->execute([':c' => $chatId, ':n' => $name, ':k' => cm_norm($name), ':o' => $me, ':t' => $now]);
+            ->execute([':c' => (int)$ctx['chat']['chat_id'], ':n' => $name, ':k' => cm_norm($name), ':o' => $me, ':t' => $now]);
     } catch (PDOException $e) {
         cm_reply($ctx, cm_t('clan_taken', ['name' => $name]));   // уникальный ключ (chat_id, name_key)
         return;
@@ -157,16 +164,16 @@ function cm_cmd_clan_del(array $ctx, array $cmd): void {
 function cm_cmd_clan_show(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
     $pdo = $ctx['pdo'];
-    $chatId = (int)$ctx['chat']['chat_id'];
+    $chats = cm_scope($ctx);
     $raw = trim($cmd['args']);
     if ($raw === '') {
-        $c = cm_clan_of($pdo, $chatId, (int)$ctx['actor']);
+        $c = cm_clan_of($pdo, $chats, (int)$ctx['actor']);
         if ($c === null) {
             cm_reply($ctx, cm_t('clan_none_me'));
             return;
         }
     } else {
-        $c = cm_clan_by_name($pdo, $chatId, cm_clan_name($raw));
+        $c = cm_clan_by_name($pdo, $chats, cm_clan_name($raw));
         if ($c === null) {
             cm_reply($ctx, cm_t('clan_missing', ['name' => mb_substr($raw, 0, 32)]));
             return;
@@ -179,13 +186,14 @@ function cm_cmd_clan_show(array $ctx, array $cmd): void {
 function cm_cmd_clan_top(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
     $pdo = $ctx['pdo'];
+    $in = cm_in(cm_scope($ctx));
     $st = $pdo->prepare('SELECT c.id, c.name, COALESCE(SUM(s.msgs), 0) AS n,
             (SELECT COUNT(*) FROM cm_clan_members mm WHERE mm.clan_id = c.id) AS members
         FROM cm_clans c
         LEFT JOIN cm_clan_members m ON m.clan_id = c.id
-        LEFT JOIN cm_stats s ON s.chat_id = m.chat_id AND s.user_id = m.user_id AND s.day >= :d
-        WHERE c.chat_id = :c GROUP BY c.id, c.name ORDER BY n DESC, c.id LIMIT ' . CM_CLAN_TOP);
-    $st->execute([':d' => cm_day_from((int)$ctx['now'], CM_CLAN_DAYS), ':c' => $ctx['chat']['chat_id']]);
+        LEFT JOIN cm_stats s ON s.chat_id IN (' . $in . ') AND s.user_id = m.user_id AND s.day >= :d
+        WHERE c.chat_id IN (' . $in . ') GROUP BY c.id, c.name ORDER BY n DESC, c.id LIMIT ' . CM_CLAN_TOP);
+    $st->execute([':d' => cm_day_from((int)$ctx['now'], CM_CLAN_DAYS)]);
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $i => $r) {
         $lines[] = cm_t('clans_line', ['n' => $i + 1, 'name' => (string)$r['name'], 'msgs' => cm_num((int)$r['n']),
@@ -198,13 +206,13 @@ function cm_cmd_clan_top(array $ctx, array $cmd): void {
 function cm_cmd_clan_join(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
     $pdo = $ctx['pdo'];
-    $chatId = (int)$ctx['chat']['chat_id'];
+    $chats = cm_scope($ctx);
     $raw = trim($cmd['args']);
     $name = cm_clan_name($raw);
-    $c = $name === '' ? null : cm_clan_by_name($pdo, $chatId, $name);
+    $c = $name === '' ? null : cm_clan_by_name($pdo, $chats, $name);
     if ($c === null) {
         $name = cm_clan_name((string)preg_replace('~^(?:в\s+)?клан\s+~iu', '', $raw));
-        $c = $name === '' ? null : cm_clan_by_name($pdo, $chatId, $name);
+        $c = $name === '' ? null : cm_clan_by_name($pdo, $chats, $name);
     }
     if ($name === '') {
         cm_reply($ctx, cm_t('clan_join_usage'));
@@ -215,7 +223,7 @@ function cm_cmd_clan_join(array $ctx, array $cmd): void {
         return;
     }
     $me = (int)$ctx['actor'];
-    $mine = cm_clan_of($pdo, $chatId, $me);
+    $mine = cm_clan_of($pdo, $chats, $me);
     if ($mine !== null) {
         cm_reply($ctx, cm_t('clan_have_me', ['name' => $mine['name']]));
         return;
@@ -239,7 +247,7 @@ function cm_cmd_clan_leave(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
     $pdo = $ctx['pdo'];
     $me = (int)$ctx['actor'];
-    $c = cm_clan_of($pdo, (int)$ctx['chat']['chat_id'], $me);
+    $c = cm_clan_of($pdo, cm_scope($ctx), $me);
     if ($c === null) {
         cm_reply($ctx, cm_t('clan_none_me'));
         return;
@@ -267,7 +275,7 @@ function cm_cmd_clan_invite(array $ctx, array $cmd): void {
         return;
     }
     $pdo = $ctx['pdo'];
-    if (cm_clan_of($pdo, $c['chat_id'], (int)$t['id']) !== null) {
+    if (cm_clan_of($pdo, cm_scope($ctx), (int)$t['id']) !== null) {
         cm_reply($ctx, cm_t('clan_them_in', ['name' => $t['tag']]));
         return;
     }
@@ -283,8 +291,8 @@ function cm_cmd_clan_invite(array $ctx, array $cmd): void {
 function cm_offer_yes_clan(array $ctx, array $o): string {
     $pdo = $ctx['pdo'];
     $c = cm_clan_get($pdo, $o['ref_id']);
-    if ($c === null || $c['chat_id'] !== $o['chat_id']) { return 'clan_gone'; }
-    if (cm_clan_of($pdo, $o['chat_id'], $o['to_id']) !== null) { return 'clan_busy'; }
+    if ($c === null || !in_array($c['chat_id'], cm_scope($ctx), true)) { return 'clan_gone'; }
+    if (cm_clan_of($pdo, cm_scope($ctx), $o['to_id']) !== null) { return 'clan_busy'; }
     if (cm_clan_size($pdo, $c['id']) >= CM_CLAN_MAX) { return 'clan_full_short'; }
     if (!cm_clan_add_member($pdo, $c, $o['to_id'], (int)$ctx['now'])) { return 'clan_busy'; }
     cm_edit($ctx, $o['msg_id'], cm_t('clan_joined', ['name' => cm_user_who($pdo, $o['to_id']), 'clan' => $c['name']]));
@@ -303,7 +311,7 @@ function cm_cmd_clan_kick(array $ctx, array $cmd): void {
         return;
     }
     $pdo = $ctx['pdo'];
-    $theirs = cm_clan_of($pdo, $c['chat_id'], (int)$t['id']);
+    $theirs = cm_clan_of($pdo, cm_scope($ctx), (int)$t['id']);
     if ($theirs === null || $theirs['id'] !== $c['id']) {
         cm_reply($ctx, cm_t('clan_not_member', ['name' => $t['tag']]));
         return;
@@ -351,7 +359,7 @@ function cm_cmd_clan_call(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
     $now = (int)$ctx['now'];
     $st = $pdo->prepare('SELECT m.user_id FROM cm_clan_members m
-        LEFT JOIN cm_members mb ON mb.chat_id = m.chat_id AND mb.user_id = m.user_id
+        LEFT JOIN cm_members mb ON mb.chat_id = ' . (int)$ctx['chat']['chat_id'] . ' AND mb.user_id = m.user_id
         WHERE m.clan_id = :k AND m.user_id <> :o AND (mb.left_at IS NULL OR mb.left_at = 0)
         ORDER BY m.joined_at, m.user_id LIMIT ' . CM_CLAN_CALL_MAX);
     $st->execute([':k' => $c['id'], ':o' => $c['owner_id']]);

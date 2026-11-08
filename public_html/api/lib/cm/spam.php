@@ -39,19 +39,27 @@ function cm_spam_has(PDO $pdo, int $uid): bool {
 
 // Забанить в других активных чатах Макнеми, где бот этого человека видел и где
 // фильтр «спамеры» включён. До 200 чатов за раз: Telegram пускает около 30
-// вызовов в секунду, а вызов идёт уже после ответа вебхуку.
+// вызовов в секунду, а вызов идёт уже после ответа вебхуку. Бан в чате сети
+// действует на всю сеть (punish.php), поэтому её чаты второй раз не трогаем:
+// $covered — чат команды и его сеть, потом каждая забаненная сеть. Число —
+// сколько чатов закрыто.
 function cm_spam_sweep(array $ctx, int $uid): int {
     $pdo = $ctx['pdo'];
+    $covered = cm_scope($ctx);
     $st = $pdo->prepare('SELECT m.chat_id FROM cm_members m JOIN cm_chats c ON c.chat_id = m.chat_id
-        WHERE m.user_id = :u AND m.left_at = 0 AND c.active = 1 AND m.chat_id <> :cur LIMIT 200');
-    $st->execute([':u' => $uid, ':cur' => (int)$ctx['chat']['chat_id']]);
+        WHERE m.user_id = :u AND m.left_at = 0 AND c.active = 1 AND m.chat_id NOT IN (' . cm_in($covered) . ')
+        ORDER BY m.chat_id LIMIT 200');
+    $st->execute([':u' => $uid]);
     $n = 0;
     foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $chatId) {
+        if (in_array((int)$chatId, $covered, true)) { continue; }
         $chat = cm_chat_row($pdo, (int)$chatId);
         if ($chat === null || !cm_is_ours($chat) || empty($chat['settings']['filters']['spam'])) { continue; }
         $c = $ctx;
         $c['chat'] = $chat;
-        if (cm_punish($c, $uid, 'ban', 0, cm_t('reason_spam'), 0) === '') { $n++; }
+        $scope = cm_scope($c);
+        $covered = array_merge($covered, $scope);
+        if (cm_punish($c, $uid, 'ban', 0, cm_t('reason_spam'), 0) === '') { $n += count($scope); }
     }
     return $n;
 }
@@ -84,7 +92,7 @@ function cm_cmd_spam_add(array $ctx, array $cmd): void {
     if (empty($ctx['chat']['private'])) {
         $done = cm_apply_actions($ctx, (int)$t['id'], (int)$t['msg_id'], cm_trigger_actions($ctx['chat'], 'spam'),
             cm_t('reason_spam'), (int)$ctx['actor']);
-        if ($done !== '') { $n++; }
+        if ($done !== '') { $n += count(cm_scope($ctx)); }
     }
     $n += cm_spam_sweep($ctx, (int)$t['id']);
     cm_reply($ctx, cm_t('spam_added', ['name' => $t['who'], 'n' => $n]), false);

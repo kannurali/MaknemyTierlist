@@ -1,6 +1,10 @@
 <?php
 // Наказания: варн, мут, кик, бан — в Telegram и в cm_punishments. Сроки
 // мута и бана снимает сам Telegram (until_date), cron для них не нужен.
+// В сети Макнеми (решение владельца 08.11.2026) мут и бан ставятся и
+// снимаются во всех её чатах (строка cm_punishments на каждый чат), варны
+// считаются по всей сети. Кик — только из чата, где он дан: это не
+// наказание со сроком, человек может вернуться.
 
 function cm_mute_perms(bool $can): array {
     return array_fill_keys(['can_send_messages', 'can_send_audios', 'can_send_documents', 'can_send_photos',
@@ -13,45 +17,67 @@ function cm_mute_perms(bool $can): array {
  * Варн — только запись; со сроком ($secs) он сам перестаёт считаться
  * (until_at, CM_WARN_LIVE). '' — вышло, иначе ключ ошибки (cm_tg_error).
  */
-function cm_punish(array $ctx, int $userId, string $kind, int $secs, string $reason, int $byId): string {
-    $chatId = (int)$ctx['chat']['chat_id'];
-    $now = (int)$ctx['now'];
-    $send = $ctx['send'];
-    $until = $secs > 0 ? $now + $secs : 0;
-    $res = ['ok' => true];
+function cm_punish_tg(callable $send, int $chatId, int $userId, string $kind, int $until): ?array {
     if ($kind === 'mute') {
-        $res = $send('restrictChatMember', ['chat_id' => $chatId, 'user_id' => $userId,
+        return $send('restrictChatMember', ['chat_id' => $chatId, 'user_id' => $userId,
             'permissions' => cm_mute_perms(false), 'use_independent_chat_permissions' => false, 'until_date' => $until]);
-    } elseif ($kind === 'ban' || $kind === 'kick') {
+    }
+    if ($kind === 'ban' || $kind === 'kick') {
         $res = $send('banChatMember', ['chat_id' => $chatId, 'user_id' => $userId,
             'until_date' => $kind === 'ban' ? $until : 0, 'revoke_messages' => false]);
         if ($kind === 'kick' && cm_ok($res)) {
             $send('unbanChatMember', ['chat_id' => $chatId, 'user_id' => $userId, 'only_if_banned' => true]);
         }
+        return $res;
     }
-    $err = cm_tg_error($res);
-    if ($err !== '') { return $err; }
-    $ctx['pdo']->prepare('INSERT INTO cm_punishments (chat_id, user_id, kind, reason, by_id, created_at, until_at, lifted_at, lifted_by)
-                          VALUES (:c, :u, :k, :r, :b, :n, :t, 0, 0)')
-        ->execute([':c' => $chatId, ':u' => $userId, ':k' => $kind, ':r' => mb_substr($reason, 0, 500), ':b' => $byId,
-                   ':n' => $now, ':t' => in_array($kind, ['mute', 'ban', 'warn'], true) ? $until : 0]);
-    if ($kind === 'ban' || $kind === 'kick') { cm_member_set($ctx['pdo'], $chatId, $userId, ['left_at' => $now]); }
+    return ['ok' => true];
+}
+
+// Свой чат — первым: его ошибка и есть ответ команды. Остальные чаты сети —
+// молча (там человека может не быть, у бота может не хватать прав).
+function cm_scope_own_first(array $ctx): array {
+    $chatId = (int)$ctx['chat']['chat_id'];
+    return array_merge([$chatId], array_values(array_diff(cm_scope($ctx), [$chatId])));
+}
+
+function cm_punish(array $ctx, int $userId, string $kind, int $secs, string $reason, int $byId): string {
+    $chatId = (int)$ctx['chat']['chat_id'];
+    $now = (int)$ctx['now'];
+    $until = $secs > 0 ? $now + $secs : 0;
+    $chats = ($kind === 'mute' || $kind === 'ban') ? cm_scope_own_first($ctx) : [$chatId];
+    foreach ($chats as $cid) {
+        $err = cm_tg_error(cm_punish_tg($ctx['send'], $cid, $userId, $kind, $until));
+        if ($err !== '') {
+            if ($cid === $chatId) { return $err; }
+            continue;
+        }
+        $ctx['pdo']->prepare('INSERT INTO cm_punishments (chat_id, user_id, kind, reason, by_id, created_at, until_at, lifted_at, lifted_by)
+                              VALUES (:c, :u, :k, :r, :b, :n, :t, 0, 0)')
+            ->execute([':c' => $cid, ':u' => $userId, ':k' => $kind, ':r' => mb_substr($reason, 0, 500), ':b' => $byId,
+                       ':n' => $now, ':t' => in_array($kind, ['mute', 'ban', 'warn'], true) ? $until : 0]);
+        if ($kind === 'ban' || $kind === 'kick') { cm_member_set($ctx['pdo'], $cid, $userId, ['left_at' => $now]); }
+    }
     return '';
 }
 
+// Снять мут или бан во всех чатах сети. Записи снимаются везде, даже где
+// Telegram ответил ошибкой (человека там нет): иначе они висели бы в списках.
 function cm_lift(array $ctx, int $userId, string $kind, int $byId): string {
     $chatId = (int)$ctx['chat']['chat_id'];
-    if ($kind === 'mute') {
-        $res = ($ctx['send'])('restrictChatMember', ['chat_id' => $chatId, 'user_id' => $userId,
-            'permissions' => cm_mute_perms(true), 'use_independent_chat_permissions' => false]);
-    } else {
-        $res = ($ctx['send'])('unbanChatMember', ['chat_id' => $chatId, 'user_id' => $userId, 'only_if_banned' => true]);
+    $chats = cm_scope_own_first($ctx);
+    foreach ($chats as $cid) {
+        if ($kind === 'mute') {
+            $res = ($ctx['send'])('restrictChatMember', ['chat_id' => $cid, 'user_id' => $userId,
+                'permissions' => cm_mute_perms(true), 'use_independent_chat_permissions' => false]);
+        } else {
+            $res = ($ctx['send'])('unbanChatMember', ['chat_id' => $cid, 'user_id' => $userId, 'only_if_banned' => true]);
+        }
+        $err = cm_tg_error($res);
+        if ($err !== '' && $cid === $chatId) { return $err; }
     }
-    $err = cm_tg_error($res);
-    if ($err !== '') { return $err; }
     $ctx['pdo']->prepare('UPDATE cm_punishments SET lifted_at = :n, lifted_by = :b
-                          WHERE chat_id = :c AND user_id = :u AND kind = :k AND lifted_at = 0')
-        ->execute([':n' => $ctx['now'], ':b' => $byId, ':c' => $chatId, ':u' => $userId, ':k' => $kind]);
+                          WHERE chat_id IN (' . cm_in($chats) . ') AND user_id = :u AND kind = :k AND lifted_at = 0')
+        ->execute([':n' => $ctx['now'], ':b' => $byId, ':u' => $userId, ':k' => $kind]);
     return '';
 }
 
@@ -83,8 +109,9 @@ function cm_warn_term_text(array $ctx, int $secs): string {
 }
 
 function cm_warns_active(array $ctx, int $userId): int {
-    $st = $ctx['pdo']->prepare('SELECT COUNT(*) FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND ' . CM_WARN_LIVE);
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $userId] + cm_warn_params($ctx));
+    $st = $ctx['pdo']->prepare('SELECT COUNT(*) FROM cm_punishments WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ')
+        AND user_id = :u AND ' . CM_WARN_LIVE);
+    $st->execute([':u' => $userId] + cm_warn_params($ctx));
     return (int)$st->fetchColumn();
 }
 
@@ -97,8 +124,8 @@ function cm_warn(array $ctx, int $userId, string $reason, int $byId, int $secs =
     $n = cm_warns_active($ctx, $userId);
     if ($n < $limit) { return ['', $n, $limit, '']; }
     $ctx['pdo']->prepare("UPDATE cm_punishments SET lifted_at = :n, lifted_by = 0
-        WHERE chat_id = :c AND user_id = :u AND kind = 'warn' AND lifted_at = 0")
-        ->execute([':n' => $ctx['now'], ':c' => $ctx['chat']['chat_id'], ':u' => $userId]);
+        WHERE chat_id IN (" . cm_in(cm_scope($ctx)) . ") AND user_id = :u AND kind = 'warn' AND lifted_at = 0")
+        ->execute([':n' => $ctx['now'], ':u' => $userId]);
     $actions = array_values(array_filter(cm_trigger_actions($ctx['chat'], 'warns'), function ($a) { return $a['kind'] !== 'warn'; }));
     return ['', $n, $limit, cm_apply_actions($ctx, $userId, 0, $actions, cm_t('reason_warn_limit'), 0)];
 }
@@ -214,7 +241,8 @@ function cm_punish_cmd(array $ctx, array $cmd, string $kind): void {
         $secs = (int)$term;
     }
     $reason = cm_reason($args, $cmd['body']);
-    $vars = ['name' => $t['who'], 'term' => cm_term_text($secs), 'reason' => cm_reason_line($reason)];
+    $vars = ['name' => $t['who'], 'term' => cm_term_text($secs), 'reason' => cm_reason_line($reason),
+             'net' => ($kind === 'mute' || $kind === 'ban') ? cm_net_word($ctx) : ''];
     if ($kind === 'warn') {
         $vars['wterm'] = cm_warn_term_text($ctx, $secs);
         [$err, $n, $limit, $after] = cm_warn($ctx, (int)$t['id'], $reason, (int)$ctx['actor'], $secs);
@@ -238,9 +266,9 @@ function cm_cmd_unwarn(array $ctx, array $cmd): void {
     $t = cm_need_target($ctx, $args);
     if ($t === null) { return; }
     $pdo = $ctx['pdo'];
-    $st = $pdo->prepare('SELECT id FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND ' . CM_WARN_LIVE
-        . ' ORDER BY id DESC LIMIT 1');
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $t['id']] + cm_warn_params($ctx));
+    $st = $pdo->prepare('SELECT id FROM cm_punishments WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ') AND user_id = :u AND '
+        . CM_WARN_LIVE . ' ORDER BY id DESC LIMIT 1');
+    $st->execute([':u' => $t['id']] + cm_warn_params($ctx));
     $id = $st->fetchColumn();
     if ($id === false) {
         cm_reply($ctx, cm_t('unwarn_none', ['name' => $t['tag']]));
@@ -262,8 +290,8 @@ function cm_cmd_unwarn_all(array $ctx, array $cmd): void {
         return;
     }
     $ctx['pdo']->prepare("UPDATE cm_punishments SET lifted_at = :n, lifted_by = :b
-        WHERE chat_id = :c AND user_id = :u AND kind = 'warn' AND lifted_at = 0")
-        ->execute([':n' => $ctx['now'], ':b' => $ctx['actor'], ':c' => $ctx['chat']['chat_id'], ':u' => $t['id']]);
+        WHERE chat_id IN (" . cm_in(cm_scope($ctx)) . ") AND user_id = :u AND kind = 'warn' AND lifted_at = 0")
+        ->execute([':n' => $ctx['now'], ':b' => $ctx['actor'], ':u' => $t['id']]);
     cm_reply($ctx, cm_t('unwarn_all_done', ['name' => $t['who'], 'n' => $n]), false);
 }
 
@@ -273,10 +301,11 @@ function cm_cmd_warns(array $ctx, array $cmd): void {
     $t = cm_target($pdo, $ctx['msg'], $args);
     $limit = (int)$ctx['chat']['settings']['warns']['limit'];
     $ttl = (int)$ctx['chat']['settings']['warns']['ttl'];
-    $p = [':c' => $ctx['chat']['chat_id']] + cm_warn_params($ctx);
+    $in = cm_in(cm_scope($ctx));
+    $p = cm_warn_params($ctx);
     $lines = [];
     if ($t !== null) {
-        $st = $pdo->prepare('SELECT reason, created_at, until_at FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND '
+        $st = $pdo->prepare("SELECT reason, created_at, until_at FROM cm_punishments WHERE chat_id IN ($in) AND user_id = :u AND "
             . CM_WARN_LIVE . ' ORDER BY id');
         $st->execute($p + [':u' => $t['id']]);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
@@ -287,7 +316,7 @@ function cm_cmd_warns(array $ctx, array $cmd): void {
         }
         $head = cm_t('warns_user_head', ['name' => $t['tag'], 'n' => count($lines), 'limit' => $limit]);
     } else {
-        $st = $pdo->prepare('SELECT user_id, COUNT(*) AS n FROM cm_punishments WHERE chat_id = :c AND ' . CM_WARN_LIVE
+        $st = $pdo->prepare("SELECT user_id, COUNT(*) AS n FROM cm_punishments WHERE chat_id IN ($in) AND " . CM_WARN_LIVE
             . ' GROUP BY user_id ORDER BY n DESC, user_id LIMIT 20');
         $st->execute($p);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
@@ -310,7 +339,7 @@ function cm_lift_cmd(array $ctx, array $cmd, string $kind): void {
         cm_reply_err($ctx, $err);
         return;
     }
-    cm_reply($ctx, cm_t($kind === 'mute' ? 'unmute_done' : 'unban_done', ['name' => $t['who']]), false);
+    cm_reply($ctx, cm_t($kind === 'mute' ? 'unmute_done' : 'unban_done', ['name' => $t['who'], 'net' => cm_net_word($ctx)]), false);
 }
 
 function cm_cmd_mutes(array $ctx, array $cmd): void { cm_active_list($ctx, 'mute', 'mutes_head'); }
@@ -318,9 +347,9 @@ function cm_cmd_bans(array $ctx, array $cmd): void { cm_active_list($ctx, 'ban',
 
 function cm_active_list(array $ctx, string $kind, string $head): void {
     $pdo = $ctx['pdo'];
-    $st = $pdo->prepare('SELECT user_id, until_at FROM cm_punishments WHERE chat_id = :c AND kind = :k AND lifted_at = 0
-        AND (until_at = 0 OR until_at > :n) ORDER BY id DESC LIMIT 40');
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':k' => $kind, ':n' => $ctx['now']]);
+    $st = $pdo->prepare('SELECT user_id, until_at FROM cm_punishments WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ')
+        AND kind = :k AND lifted_at = 0 AND (until_at = 0 OR until_at > :n) ORDER BY id DESC LIMIT 120');
+    $st->execute([':k' => $kind, ':n' => $ctx['now']]);
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $uid = (int)$r['user_id'];

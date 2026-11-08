@@ -11,10 +11,11 @@ const CM_AWARDS_BRIEF     = 5;
 
 // Действующие награды (не сняты, не истекли): старшие раньше, при равной
 // степени — новые раньше.
-function cm_awards_active(PDO $pdo, int $chatId, int $userId, int $now): array {
-    $st = $pdo->prepare('SELECT id, level, reason, until_at FROM cm_awards WHERE chat_id = :c AND user_id = :u
+// $chats — чат или список чатов сети (cm_scope): награды общие.
+function cm_awards_active(PDO $pdo, $chats, int $userId, int $now): array {
+    $st = $pdo->prepare('SELECT id, level, reason, until_at FROM cm_awards WHERE chat_id IN (' . cm_in($chats) . ') AND user_id = :u
         AND removed_at = 0 AND (until_at = 0 OR until_at > :n) ORDER BY level DESC, id DESC');
-    $st->execute([':c' => $chatId, ':u' => $userId, ':n' => $now]);
+    $st->execute([':u' => $userId, ':n' => $now]);
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $out[] = ['id' => (int)$r['id'], 'level' => (int)$r['level'], 'reason' => (string)$r['reason'], 'until_at' => (int)$r['until_at']];
@@ -129,7 +130,7 @@ function cm_award_insert(array $ctx, array $t, int $level, int $term, string $re
     $until = $term > 0 ? (int)$ctx['now'] + $term : 0;
     $pdo = $ctx['pdo'];
     $chatId = (int)$ctx['chat']['chat_id'];
-    if (count(cm_awards_active($pdo, $chatId, (int)$t['id'], (int)$ctx['now'])) >= CM_AWARDS_MAX) {
+    if (count(cm_awards_active($pdo, cm_scope($ctx), (int)$t['id'], (int)$ctx['now'])) >= CM_AWARDS_MAX) {
         cm_reply($ctx, cm_t('award_full', ['name' => $t['tag'], 'max' => CM_AWARDS_MAX]));
         return;
     }
@@ -145,9 +146,9 @@ function cm_cmd_award_del(array $ctx, array $cmd): void {
     if (!cm_need2($ctx)) { return; }
     $id = preg_match('~^#?([0-9]{1,9})$~', trim($cmd['args']), $m) ? (int)$m[1] : 0;
     $now = (int)$ctx['now'];
-    $st = $ctx['pdo']->prepare('UPDATE cm_awards SET removed_at = :n WHERE id = :id AND chat_id = :c
+    $st = $ctx['pdo']->prepare('UPDATE cm_awards SET removed_at = :n WHERE id = :id AND chat_id IN (' . cm_in(cm_scope($ctx)) . ')
         AND removed_at = 0 AND (until_at = 0 OR until_at > :n2)');
-    $st->execute([':n' => $now, ':id' => $id, ':c' => $ctx['chat']['chat_id'], ':n2' => $now]);
+    $st->execute([':n' => $now, ':id' => $id, ':n2' => $now]);
     $done = $st->rowCount() > 0;
     cm_reply($ctx, cm_t($done ? 'award_removed' : 'award_missing', ['id' => $id]), !$done);
 }
@@ -157,7 +158,7 @@ function cm_cmd_awards_show(array $ctx, array $cmd): void {
     $args = $cmd['args'];
     $t = cm_target_or_self($ctx, $args);
     if ($t === null) { return; }
-    $list = cm_awards_active($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'], (int)$ctx['now']);
+    $list = cm_awards_active($ctx['pdo'], cm_scope($ctx), (int)$t['id'], (int)$ctx['now']);
     if (!$list) {
         cm_reply($ctx, cm_t('awards_none', ['name' => $t['tag']]));
         return;

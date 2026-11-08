@@ -2,6 +2,8 @@
 // Таймеры: «таймер через 2ч» или «таймер 25.12 18:00» (МСК), со второй
 // строки — команда или текст. Срабатывают в cron (cm_timers_tick, cron.php)
 // и перепроверяют ранг автора: снятый модератор не выстрелит из прошлого.
+// Таймеры общие для чатов сети: список один, срабатывает таймер во всех её
+// чатах (решение владельца 08.11.2026).
 
 const CM_TIMERS_MAX      = 5;
 const CM_TIMER_MAX_AHEAD = 31622400;
@@ -39,8 +41,7 @@ function cm_cmd_timer_add(array $ctx, array $cmd): void {
     }
     $pdo = $ctx['pdo'];
     $chatId = (int)$ctx['chat']['chat_id'];
-    $st = $pdo->prepare('SELECT COUNT(*) FROM cm_timers WHERE chat_id = :c AND done_at = 0');
-    $st->execute([':c' => $chatId]);
+    $st = $pdo->query('SELECT COUNT(*) FROM cm_timers WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ') AND done_at = 0');
     if ((int)$st->fetchColumn() >= CM_TIMERS_MAX) {
         cm_reply($ctx, cm_t('timer_full', ['max' => CM_TIMERS_MAX]));
         return;
@@ -51,8 +52,8 @@ function cm_cmd_timer_add(array $ctx, array $cmd): void {
 }
 
 function cm_cmd_timer_list(array $ctx, array $cmd): void {
-    $st = $ctx['pdo']->prepare('SELECT id, run_at, body FROM cm_timers WHERE chat_id = :c AND done_at = 0 ORDER BY run_at');
-    $st->execute([':c' => $ctx['chat']['chat_id']]);
+    $st = $ctx['pdo']->query('SELECT id, run_at, body FROM cm_timers WHERE chat_id IN (' . cm_in(cm_scope($ctx)) . ')
+        AND done_at = 0 ORDER BY run_at, id');
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $first = explode("\n", (string)$r['body'])[0];
@@ -63,7 +64,8 @@ function cm_cmd_timer_list(array $ctx, array $cmd): void {
 
 function cm_cmd_timer_del(array $ctx, array $cmd): void {
     $id = preg_match('~^#?(\d{1,9})$~', trim($cmd['args']), $m) ? (int)$m[1] : 0;
-    $st = $ctx['pdo']->prepare('UPDATE cm_timers SET done_at = :n WHERE id = :id AND chat_id = :c AND done_at = 0');
-    $st->execute([':n' => $ctx['now'], ':id' => $id, ':c' => $ctx['chat']['chat_id']]);
+    $st = $ctx['pdo']->prepare('UPDATE cm_timers SET done_at = :n WHERE id = :id AND chat_id IN (' . cm_in(cm_scope($ctx)) . ')
+        AND done_at = 0');
+    $st->execute([':n' => $ctx['now'], ':id' => $id]);
     cm_reply($ctx, cm_t($st->rowCount() > 0 ? 'timer_removed' : 'timer_missing', ['id' => $id]), $st->rowCount() === 0);
 }

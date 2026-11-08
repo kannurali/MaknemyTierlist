@@ -33,20 +33,20 @@ test('не сотрудник базу не трогает; без префик�
     assert_eq(0, count(cm_calls($log, 'sendMessage')));
 });
 
+// -2001 — чат сети: бан сети его уже закрыл. -2002 и -2004 — чаты Макнеми вне
+// сети (solo): с фильтром баним обходом, без фильтра — нет. -2003 — чужой.
 test('+спамер: в базу, удалить и забанить здесь и в других чатах Макнеми с фильтром', function () {
     $pdo = cm_test_pdo();
     sp_staff($pdo);
     $log = [];
     cm_seed_chat($pdo, -2001, true);
-    cm_seed_chat($pdo, -2002, true);
     cm_seed_chat($pdo, -2003, false);
-    $b = cm_chat_row($pdo, -2002);
-    $s = $b['settings'];
-    $s['filters']['spam'] = false;
-    cm_settings_save($pdo, $b, $s, CM_NOW);
-    cm_member_touch($pdo, -2001, 20, CM_NOW);
-    cm_member_touch($pdo, -2002, 20, CM_NOW);
-    cm_member_touch($pdo, -2003, 20, CM_NOW);
+    foreach ([-2002 => true, -2004 => false] as $id => $on) {
+        $pdo->prepare('INSERT INTO cm_chats (chat_id, title, settings, added_at, updated_at) VALUES (:c, :t, :s, :n, :n)')
+            ->execute([':c' => $id, ':t' => 'Тест', ':s' => json_encode(['maknemy' => true, 'solo' => true,
+                'filters' => ['spam' => $on]]), ':n' => CM_NOW]);
+    }
+    foreach ([-2001, -2002, -2003, -2004] as $id) { cm_member_touch($pdo, $id, 20, CM_NOW); }
     $reply = ['message_id' => 77, 'from' => ['id' => 20, 'first_name' => 'Спамер']];
     $ctx = cm_ctx_for($pdo, $log, 500, '', ['reply_to_message' => $reply]);
     cm_do($ctx, '+спамер реклама казино');
@@ -54,8 +54,8 @@ test('+спамер: в базу, удалить и забанить здесь 
     assert_eq(['реклама казино', '900'], [$row['reason'], $row['added_by']]);
     assert_eq(77, cm_calls($log, 'deleteMessage')[0][1]['message_id']);
     $bans = array_map(function ($c) { return $c[1]['chat_id']; }, cm_calls($log, 'banChatMember'));
-    assert_eq([CM_CHAT, -2001], $bans, 'в чате с выключенным фильтром и в чужом не баним');
-    assert_eq(cm_t('spam_added', ['name' => 'Спамер', 'n' => 2]), cm_last_text($log));
+    assert_eq([CM_CHAT, -2001, -2002], $bans, 'сеть и solo с фильтром; solo без фильтра и чужой — нет');
+    assert_eq(cm_t('spam_added', ['name' => 'Спамер', 'n' => 3]), cm_last_text($log));
 });
 
 test('сотрудника и бота в базу не внести', function () {

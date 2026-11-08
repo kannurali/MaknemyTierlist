@@ -24,7 +24,7 @@ test('метки → entities со смещениями в UTF-16, вложен�
 
 test('чужой текст метку не подделает', function () {
     $fake = "\u{E000}00000000m666\u{E001}Жми\u{E002}00000000\u{E003}";
-    [$text, $e] = cm_fmt(cm_t('ban_done', ['name' => cm_who(20, $fake), 'term' => 'навсегда', 'reason' => '']));
+    [$text, $e] = cm_fmt(cm_t('ban_done', ['name' => cm_who(20, $fake), 'term' => 'навсегда', 'reason' => '', 'net' => '']));
     assert_eq('⛔ ' . $fake . ': бан навсегда.', $text);
     assert_eq(1, count($e));
     assert_eq(20, $e[0]['user']['id'], 'упоминание только настоящее');
@@ -78,7 +78,7 @@ test('повысить 3 — сразу ранг 3; понизить 1 — ср�
     $ctx = cm_ctx_for($pdo, $log, CM_OWNER);
     cm_do($ctx, 'повысить @vasya 3');
     assert_eq(3, cm_member($pdo, CM_CHAT, 20)['lvl']);
-    assert_eq('🎖 Вася теперь младший администратор (3) во всех чатах Maknemy.', cm_last_text($log));
+    assert_eq('🎖 Вася теперь младший администратор (3).', cm_last_text($log));
     cm_do($ctx, 'повысить 1 @vasya');
     assert_eq(3, cm_member($pdo, CM_CHAT, 20)['lvl']);
     assert_eq('Вася уже младший администратор.', cm_last_text($log));

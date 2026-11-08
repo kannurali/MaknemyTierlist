@@ -120,6 +120,7 @@ test('миграция лимита варнов: сохранённые 3 → 5
         $s = $c['settings'];
         $s['warns']['limit'] = $limit;
         $s['maknemy'] = true;
+        $s['solo'] = true;   // вне сети: иначе общие настройки уравняли бы лимиты
         cm_settings_save($pdo, $c, $s, CM_NOW);
     }
     $pdo->exec((string)file_get_contents(__DIR__ . '/../docs/migrations/2026-11-08-cm-warn-limit-5.sql'));
