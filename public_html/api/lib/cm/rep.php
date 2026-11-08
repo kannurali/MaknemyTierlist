@@ -1,7 +1,8 @@
 <?php
-// Репутация в чате (этап 2): ответ «+», «-», «спасибо» на чужое сообщение
-// или команды +реп / -реп. Одному человеку — раз в 24 часа, всего — не больше
-// 20 голосов за 24 часа от одного человека в чате.
+// Репутация (этап 2): ответ «+», «-», «спасибо» на чужое сообщение или
+// команды +реп / -реп. Одна на все чаты Макнеми (cm_net, db.php): голос
+// пишется в чат, где его отдали, а счёт и пределы — по всем. Одному человеку —
+// раз в 24 часа, всего — не больше 20 голосов за 24 часа от одного человека.
 
 const CM_REP_PAIR_GAP = 86400;
 const CM_REP_DAY_MAX  = 20;
@@ -10,13 +11,16 @@ const CM_REP_WORDS    = ['+' => 1, '-' => -1, 'спасибо' => 1, 'спс' =>
 // Служебный аккаунт Telegram: от его имени приходят автопересылки из канала.
 const CM_TG_SERVICE_ID = 777000;
 
-function cm_rep_score(PDO $pdo, int $chatId, int $userId): int {
-    $st = $pdo->prepare('SELECT score FROM cm_rep WHERE chat_id = :c AND user_id = :u');
-    $st->execute([':c' => $chatId, ':u' => $userId]);
+// Репутация человека — сумма по $chats (чат или список чатов).
+function cm_rep_score(PDO $pdo, $chats, int $userId): int {
+    $st = $pdo->prepare('SELECT COALESCE(SUM(score), 0) FROM cm_rep WHERE chat_id IN (' . cm_in($chats) . ') AND user_id = :u');
+    $st->execute([':u' => $userId]);
     return (int)$st->fetchColumn();
 }
 
 // Записать голос автора контекста. '' — записан, иначе ключ текста отказа.
+// Пределы — по всем чатам Макнеми: иначе тому же человеку можно было бы
+// голосовать в каждом чате.
 function cm_rep_vote(array $ctx, int $toId, bool $toBot, int $delta): string {
     $pdo = $ctx['pdo'];
     $chatId = (int)$ctx['chat']['chat_id'];
@@ -24,12 +28,13 @@ function cm_rep_vote(array $ctx, int $toId, bool $toBot, int $delta): string {
     $now = (int)$ctx['now'];
     if ($toBot || $toId === CM_TG_SERVICE_ID) { return 'target_bot'; }
     if ($toId <= 0 || $toId === $from) { return 'target_self'; }
+    $in = cm_in(cm_net($pdo, $chatId));
     $since = $now - CM_REP_PAIR_GAP;
-    $st = $pdo->prepare('SELECT COUNT(*) FROM cm_rep_log WHERE chat_id = :c AND from_id = :f AND to_id = :t AND at > :s');
-    $st->execute([':c' => $chatId, ':f' => $from, ':t' => $toId, ':s' => $since]);
+    $st = $pdo->prepare("SELECT COUNT(*) FROM cm_rep_log WHERE chat_id IN ($in) AND from_id = :f AND to_id = :t AND at > :s");
+    $st->execute([':f' => $from, ':t' => $toId, ':s' => $since]);
     if ((int)$st->fetchColumn() > 0) { return 'rep_pair_wait'; }
-    $st = $pdo->prepare('SELECT COUNT(*) FROM cm_rep_log WHERE chat_id = :c AND from_id = :f AND at > :s');
-    $st->execute([':c' => $chatId, ':f' => $from, ':s' => $since]);
+    $st = $pdo->prepare("SELECT COUNT(*) FROM cm_rep_log WHERE chat_id IN ($in) AND from_id = :f AND at > :s");
+    $st->execute([':f' => $from, ':s' => $since]);
     if ((int)$st->fetchColumn() >= CM_REP_DAY_MAX) { return 'rep_day_full'; }
     $pdo->prepare('INSERT INTO cm_rep_log (chat_id, from_id, to_id, delta, at) VALUES (:c, :f, :t, :d, :a)')
         ->execute([':c' => $chatId, ':f' => $from, ':t' => $toId, ':d' => $delta, ':a' => $now]);
@@ -49,7 +54,7 @@ function cm_rep_vote(array $ctx, int $toId, bool $toBot, int $delta): string {
 function cm_rep_done(array $ctx, string $toName, int $toId, int $delta): void {
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
     cm_reply($ctx, cm_t($delta > 0 ? 'rep_up' : 'rep_down', ['from' => cm_who_from($from), 'to' => $toName,
-        'score' => cm_rep_score($ctx['pdo'], (int)$ctx['chat']['chat_id'], $toId)]));
+        'score' => cm_rep_score($ctx['pdo'], cm_net($ctx['pdo'], (int)$ctx['chat']['chat_id']), $toId)]));
 }
 
 /**
@@ -102,21 +107,22 @@ function cm_cmd_rep_show(array $ctx, array $cmd): void {
     $t = cm_target_or_self($ctx, $args);
     if ($t === null) { return; }
     cm_reply($ctx, cm_t('rep_show', ['name' => $t['tag'],
-        'score' => cm_rep_score($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'])]));
+        'score' => cm_rep_score($ctx['pdo'], cm_net($ctx['pdo'], (int)$ctx['chat']['chat_id']), (int)$t['id'])]));
 }
 
-// 10 лучших с ненулевой репутацией, кто не покинул чат.
+// 10 лучших с ненулевой репутацией по всем чатам Макнеми, кто не ушёл из них
+// всех (cm_gone_sql, stats.php).
 function cm_cmd_rep_top(array $ctx, array $cmd): void {
     if (!cm_need2($ctx)) { return; }
     $pdo = $ctx['pdo'];
-    $st = $pdo->prepare('SELECT r.user_id, r.score FROM cm_rep r
-        LEFT JOIN cm_members m ON m.chat_id = r.chat_id AND m.user_id = r.user_id
-        WHERE r.chat_id = :c AND r.score <> 0 AND (m.left_at IS NULL OR m.left_at = 0)
-        ORDER BY r.score DESC, r.user_id LIMIT 10');
-    $st->execute([':c' => $ctx['chat']['chat_id']]);
+    $in = cm_in(cm_net($pdo, (int)$ctx['chat']['chat_id']));
+    $st = $pdo->query("SELECT r.user_id AS user_id, SUM(r.score) AS total FROM cm_rep r
+        WHERE r.chat_id IN ($in) AND r.user_id NOT IN (" . cm_gone_sql($in) . ')
+        GROUP BY r.user_id HAVING SUM(r.score) <> 0
+        ORDER BY total DESC, r.user_id LIMIT 10');
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $i => $r) {
-        $lines[] = cm_t('rep_top_line', ['n' => $i + 1, 'name' => cm_user_who($pdo, (int)$r['user_id'], true), 'score' => (int)$r['score']]);
+        $lines[] = cm_t('rep_top_line', ['n' => $i + 1, 'name' => cm_user_who($pdo, (int)$r['user_id'], true), 'score' => (int)$r['total']]);
     }
     cm_reply($ctx, $lines ? cm_t('rep_top_head') . "\n" . implode("\n", $lines) : cm_t('rep_top_empty'), false);
 }

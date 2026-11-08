@@ -262,7 +262,7 @@ test('кто я — профиль, и само сообщение уже пос
     $pdo = cm_test_pdo();
     $log = [];
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
-    assert_eq("👤 U7\nРанг: 0 — участник\nСообщений: 1 (сегодня 1), место 1\nВ чате с: 21.09.2026\nРепутация: 0\nВарны: 0/3",
+    assert_eq("👤 U7\nРанг: 0 — участник\nСообщений: 1 (сегодня 1), место 1\nВ чатах Maknemy с: 21.09.2026\nРепутация: 0\nВарны: 0/3",
         cm_last_text($log));
 });
 
@@ -333,6 +333,53 @@ test('вебхук: правки сообщений и право удалять
     $rights = cm_calls($log, 'setMyDefaultAdministratorRights');
     assert_eq(true, $rights[1][1]['rights']['can_delete_messages']);
     assert_eq(false, isset($rights[0][1]['rights']['can_delete_messages']), 'каналам не нужно');
+});
+
+// Чаты Макнеми (cm_ours, db.php): в чужой группе бот молчит целиком.
+const RT_FOREIGN = -1009990001;
+
+function rt_foreign(int $from, string $text, array $extra = []): array {
+    return cm_gmsg($from, $text, $extra + ['chat' => ['id' => RT_FOREIGN, 'type' => 'supergroup', 'title' => 'Чужой']]);
+}
+
+test('чужой чат: ни ссылок, ни команд, ни счётчика, кнопки пустые', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, rt_foreign(7, 'зайди evil.ru'), $log);
+    rt_run($pdo, rt_foreign(7, 'помощь'), $log);
+    rt_run($pdo, rt_foreign(CM_OWNER, '!мут', ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 7, 'first_name' => 'U7']]]), $log);
+    assert_eq(['getChatAdministrators'], array_values(array_unique(array_column($log, 0))), 'только узнал создателя');
+    assert_eq(false, cm_is_ours(cm_chat_row($pdo, RT_FOREIGN)));
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_msgs')->fetchColumn(), 'сообщения не пишутся');
+    assert_eq(0, cm_stats_msgs($pdo, RT_FOREIGN, 7, 0, CM_NOW), 'и не считаются');
+    $q = ['id' => 'q1', 'from' => ['id' => CM_OWNER], 'data' => 'cm:r:1:d',
+          'message' => ['message_id' => 9, 'chat' => ['id' => CM_CHAT, 'type' => 'supergroup', 'title' => 'Тестовый чат']]];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['callback_query' => $q], CM_NOW);
+    $q['message']['chat'] = ['id' => RT_FOREIGN, 'type' => 'supergroup', 'title' => 'Чужой'];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['callback_query' => $q], CM_NOW);
+    $answers = array_map(function ($c) { return $c[1]['text']; }, cm_calls($log, 'answerCallbackQuery'));
+    assert_eq(true, $answers[0] !== '', 'в нашем чате кнопка отвечает');
+    assert_eq('', $answers[1], 'в чужом — пусто');
+});
+
+test('создатель группы — сотрудник сайта: чат сам становится чатом Макнеми', function () {
+    $pdo = cm_test_pdo();
+    $pdo->exec('INSERT INTO tg_links (user_id, chat_id, linked_at) VALUES (900, ' . CM_OWNER . ', 0)');
+    $log = [];
+    rt_run($pdo, rt_foreign(7, 'зайди evil.ru'), $log);
+    assert_eq(1, count(cm_calls($log, 'deleteMessage')));
+    assert_eq(true, cm_is_ours(cm_chat_row($pdo, RT_FOREIGN)));
+});
+
+test('таймер чужого чата гаснет', function () {
+    $pdo = cm_test_pdo();
+    cm_seed_chat($pdo, RT_FOREIGN, false);
+    $log = [];
+    $pdo->prepare('INSERT INTO cm_timers (chat_id, run_at, body, by_id, created_at, done_at) VALUES (:c, :r, :b, 10, 0, 0)')
+        ->execute([':c' => RT_FOREIGN, ':r' => CM_NOW - 1, ':b' => 'Всем привет!']);
+    assert_eq(0, cm_timers_tick($pdo, cm_cfg(), cm_rec($log), CM_NOW));
+    assert_eq([], cm_calls($log, 'sendMessage'));
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_timers WHERE done_at = 0')->fetchColumn(), 'второй раз не возьмётся');
 });
 
 run_tests();

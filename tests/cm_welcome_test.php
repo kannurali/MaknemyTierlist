@@ -142,4 +142,42 @@ test('chat_member: вход — как служебное сообщение, в
     assert_eq(CM_NOW + 5, cm_member($pdo, CM_CHAT, 60)['left_at']);
 });
 
+// Бот в группе $chatId, апдейт от $by.
+function wl_bot_add(int $chatId, int $by, string $old = 'left', string $new = 'member', array $rights = []): array {
+    $u = wl_bot_update($old, $new, $rights);
+    $u['my_chat_member']['chat']['id'] = $chatId;
+    $u['my_chat_member']['from'] = ['id' => $by];
+    return $u;
+}
+
+test('бота добавил чужой — молчит; сотрудник повысил — чат Макнеми и знакомство', function () {
+    $pdo = cm_test_pdo();
+    $pdo->exec('INSERT INTO tg_links (user_id, chat_id, linked_at) VALUES (901, 501, 0)');   // модератор сайта
+    $log = [];
+    cm_on_membership($pdo, cm_cfg(), cm_rec($log), wl_bot_add(-3001, 77), CM_NOW);
+    assert_eq([], cm_calls($log, 'sendMessage'), 'чужой чат — без знакомства');
+    assert_eq(false, cm_is_ours(cm_chat_row($pdo, -3001)));
+    $join = ['chat_member' => [
+        'chat' => ['id' => -3001, 'type' => 'supergroup', 'title' => 'Т'], 'from' => ['id' => 60],
+        'old_chat_member' => ['status' => 'left', 'user' => ['id' => 60, 'first_name' => 'Оля']],
+        'new_chat_member' => ['status' => 'member', 'user' => ['id' => 60, 'first_name' => 'Оля']],
+    ]];
+    cm_on_membership($pdo, cm_cfg(), cm_rec($log), $join, CM_NOW);
+    assert_eq(null, cm_member($pdo, -3001, 60), 'входы в чужом чате не пишутся');
+    $rights = ['can_delete_messages' => true, 'can_restrict_members' => true];
+    cm_on_membership($pdo, cm_cfg(), cm_rec($log), wl_bot_add(-3001, 501, 'member', 'administrator', $rights), CM_NOW + 1);
+    assert_eq(true, cm_is_ours(cm_chat_row($pdo, -3001)));
+    assert_eq(0, strpos(cm_last_text($log), cm_t('intro_title')), 'стал нашим — знакомство');
+});
+
+test('бота добавил сотрудник — сразу чат Макнеми', function () {
+    $pdo = cm_test_pdo();
+    $pdo->exec('INSERT INTO tg_links (user_id, chat_id, linked_at) VALUES (900, 500, 0)');
+    $log = [];
+    cm_on_membership($pdo, cm_cfg(), cm_rec($log), wl_bot_add(-3002, 500), CM_NOW);
+    assert_eq(true, cm_is_ours(cm_chat_row($pdo, -3002)));
+    assert_eq(0, strpos(cm_last_text($log), cm_t('intro_title')));
+    assert_eq([CM_CHAT, -3002], cm_net($pdo, CM_CHAT), 'в сети оба чата');
+});
+
 run_tests();

@@ -150,4 +150,26 @@ test('нет таблиц этапа 2: «+» — обычное сообщен�
     assert_eq(cm_t('not_ready2'), cm_last_text($log));
 });
 
+test('сеть: репутация одна на все чаты Макнеми, пределы — тоже', function () {
+    $pdo = cm_test_pdo();
+    $trade = -1005550001;
+    cm_seed_chat($pdo, $trade, true);
+    cm_seed_chat($pdo, -1005550002, false);
+    $pdo->exec('INSERT INTO cm_rep (chat_id, user_id, score) VALUES (-1005550002, 20, 50)');   // чужой чат
+    cm_person($pdo, 20, 'petya', 'Петя');
+    $tr = ['chat' => ['id' => $trade, 'type' => 'supergroup', 'title' => 'Трейд']];
+    $log = [];
+    assert_eq(true, cm_rep_try(cm_ctx_for($pdo, $log, 7, '+', rp_reply(20))));
+    assert_eq(true, cm_rep_try(cm_ctx_for($pdo, $log, 7, '+', rp_reply(20) + $tr)));
+    assert_eq(1, count(cm_calls($log, 'sendMessage')), 'тот же человек в другом чате — раз в сутки');
+    assert_eq(true, cm_rep_try(cm_ctx_for($pdo, $log, 8, '+', rp_reply(20) + $tr)));
+    assert_eq('👍 U8 → Петя: +1 (репутация 2)', cm_last_text($log));
+    assert_eq(1, rp_score($pdo, 20), 'в каждом чате — свой голос');
+    $ctx = cm_ctx_for($pdo, $log, 7, '', $tr);
+    cm_do($ctx, 'репа @petya');
+    assert_eq(true, strpos(cm_last_text($log), 'репутация 2') !== false);
+    cm_do($ctx, 'топ репы');
+    assert_eq(cm_t('rep_top_head') . "\n1. Петя — 2", cm_last_text($log));
+});
+
 run_tests();
