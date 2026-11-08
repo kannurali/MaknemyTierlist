@@ -67,7 +67,7 @@ function cm_target_or_self(array $ctx, string &$args): ?array {
         return null;
     }
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-    return ['id' => (int)$ctx['actor'], 'name' => cm_display_name($from), 'is_bot' => false, 'msg_id' => 0];
+    return cm_target_full($ctx['pdo'], ['id' => (int)$ctx['actor'], 'name' => cm_display_name($from), 'is_bot' => false, 'msg_id' => 0]);
 }
 
 // --------------------------------------------------------------------------
@@ -179,7 +179,7 @@ function cm_cmd_stats_top(array $ctx, array $cmd): void {
     }
     $lines = [cm_t('stats_head', ['period' => $period, 'total' => cm_num(cm_stats_total($pdo, $chatId, $days, $now))])];
     foreach ($top as $i => $r) {
-        $lines[] = cm_t('stats_line', ['n' => $i + 1, 'name' => cm_user_name($pdo, $r['user_id']), 'msgs' => cm_num($r['msgs'])]);
+        $lines[] = cm_t('stats_line', ['n' => $i + 1, 'name' => cm_user_who($pdo, $r['user_id'], true), 'msgs' => cm_num($r['msgs'])]);
     }
     cm_reply($ctx, implode("\n", $lines), false);
 }
@@ -195,7 +195,7 @@ function cm_cmd_stats_me(array $ctx, array $cmd): void {
     $uid = (int)$t['id'];
     $place = cm_stats_place($pdo, $chatId, $uid, 0, $now);
     cm_reply($ctx, cm_t('stats_me', [
-        'name'  => $t['name'],
+        'name'  => $t['tag'],
         'd'     => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 1, $now)),
         'w'     => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 7, $now)),
         'm'     => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 30, $now)),

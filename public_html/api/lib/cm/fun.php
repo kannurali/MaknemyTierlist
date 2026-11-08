@@ -129,7 +129,7 @@ function cm_cmd_who(array $ctx, array $cmd): void {
         cm_reply($ctx, cm_t('who_empty'));
         return;
     }
-    $name = cm_user_name($pdo, $top[cm_rand($ctx, 0, count($top) - 1)]['user_id']);
+    $name = cm_user_who($pdo, $top[cm_rand($ctx, 0, count($top) - 1)]['user_id']);
     $q = trim((string)preg_replace('~[?]+$~u', '', trim($cmd['args'])));
     cm_reply($ctx, $q === '' ? cm_t('who_any', ['name' => $name]) : cm_t('who_done', ['q' => $q, 'name' => $name]), false);
 }
@@ -201,7 +201,7 @@ function cm_cmd_rp(array $ctx, array $cmd): void {
     $rp = CM_RP[$phrase];
     $g = cm_profile_get($ctx['pdo'], $me)['gender'];
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-    cm_reply($ctx, cm_t('rp_done', ['emoji' => $rp[0], 'from' => cm_display_name($from),
-        'verb' => $rp[$g === 'm' ? 1 : ($g === 'f' ? 2 : 3)], 'to' => $t['name']]), false);
+    cm_reply($ctx, cm_t('rp_done', ['emoji' => $rp[0], 'from' => cm_who_from($from),
+        'verb' => $rp[$g === 'm' ? 1 : ($g === 'f' ? 2 : 3)], 'to' => $t['who']]), false);
     if (!$bot) { cm_couple_xp($ctx['pdo'], (int)$ctx['chat']['chat_id'], $me, (int)$t['id'], (int)$ctx['now']); }
 }

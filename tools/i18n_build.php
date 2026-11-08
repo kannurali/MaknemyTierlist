@@ -23,9 +23,11 @@ const SITEMAP_PAGES = [
     ['/ads',        'monthly', '0.4'],
 ];
 // Правовые страницы двуязычные на одном адресе — языковых версий у них нет.
+// /bot — инструкция чат-менеджера, только по-русски, как и сам бот.
 const SITEMAP_SINGLE = [
     ['/privacy', 'yearly',  '0.2'],
     ['/terms',   'yearly',  '0.2'],
+    ['/bot',     'monthly', '0.4'],
 ];
 
 function build_dict_js(string $lang): string {

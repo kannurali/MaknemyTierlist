@@ -168,9 +168,11 @@ test('дк игры 6 выключает случайные команды', fun
     $log = [];
     cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк игры 6');
     assert_eq(cm_t('access_done', ['section' => 'игры', 'level' => 6]), cm_last_text($log));
-    assert_eq(true, fn_run($pdo, $log, 7, '!монетка'));
+    assert_eq(false, fn_run($pdo, $log, 7, '!монетка'), 'выключено — дальше в фильтры');
     assert_eq(cm_t('cmd_off'), cm_last_text($log));
-    assert_eq(false, fn_run($pdo, $log, 7, 'монетка'), 'без префикса — молча');
+    $n = count(cm_calls($log, 'sendMessage'));
+    assert_eq(false, fn_run($pdo, $log, 7, 'монетка'));
+    assert_eq($n, count(cm_calls($log, 'sendMessage')), 'без префикса — молча');
 });
 
 test('случайным командам таблицы этапа 3 не нужны', function () {
@@ -289,7 +291,7 @@ test('дк рп 6 выключает РП; без таблиц этапа 3 — 
     $pdo = cm_test_pdo();
     $log = [];
     cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк рп 6');
-    assert_eq(true, fn_run($pdo, $log, 7, '!обнять', fn_reply()));
+    assert_eq(false, fn_run($pdo, $log, 7, '!обнять', fn_reply()));
     assert_eq(cm_t('cmd_off'), cm_last_text($log));
     $pdo = cm_test_pdo();
     $pdo->exec('DROP TABLE cm_offers');

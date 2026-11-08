@@ -82,14 +82,14 @@ function cm_cmd_award_add(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
     $chatId = (int)$ctx['chat']['chat_id'];
     if (count(cm_awards_active($pdo, $chatId, (int)$t['id'], (int)$ctx['now'])) >= CM_AWARDS_MAX) {
-        cm_reply($ctx, cm_t('award_full', ['name' => $t['name'], 'max' => CM_AWARDS_MAX]));
+        cm_reply($ctx, cm_t('award_full', ['name' => $t['tag'], 'max' => CM_AWARDS_MAX]));
         return;
     }
     $pdo->prepare('INSERT INTO cm_awards (chat_id, user_id, level, reason, by_id, created_at, until_at, removed_at)
                    VALUES (:c, :u, :l, :r, :b, :n, :until, 0)')
         ->execute([':c' => $chatId, ':u' => (int)$t['id'], ':l' => $level, ':r' => $reason, ':b' => (int)$ctx['actor'],
                    ':n' => (int)$ctx['now'], ':until' => $until]);
-    cm_reply($ctx, cm_t('award_done', ['icon' => CM_AWARD_ICONS[$level], 'name' => $t['name'], 'level' => $level, 'reason' => $reason,
+    cm_reply($ctx, cm_t('award_done', ['icon' => CM_AWARD_ICONS[$level], 'name' => $t['who'], 'level' => $level, 'reason' => $reason,
         'until' => $until > 0 ? cm_t('award_until', ['date' => cm_date($until)]) : '']), false);
 }
 
@@ -111,10 +111,10 @@ function cm_cmd_awards_show(array $ctx, array $cmd): void {
     if ($t === null) { return; }
     $list = cm_awards_active($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'], (int)$ctx['now']);
     if (!$list) {
-        cm_reply($ctx, cm_t('awards_none', ['name' => $t['name']]));
+        cm_reply($ctx, cm_t('awards_none', ['name' => $t['tag']]));
         return;
     }
-    $lines = [cm_t('awards_head', ['name' => $t['name']])];
+    $lines = [cm_t('awards_head', ['name' => $t['tag']])];
     foreach ($list as $a) { $lines[] = cm_award_line($a, true); }
     cm_reply($ctx, implode("\n", $lines), false);
 }

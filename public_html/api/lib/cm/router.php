@@ -112,11 +112,17 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
 }
 
 /**
- * Выполнить команду с проверкой доступа. false — это не команда (без префикса
- * и не подходит под правила), сообщение идёт дальше в фильтры:
+ * Выполнить команду с проверкой доступа. false — сообщение идёт дальше в
+ * фильтры: это не команда (без префикса и не подходит под правила) или на
+ * неё не хватило ранга (иначе «!бан @ник ссылка» проносил бы ссылку мимо
+ * фильтра).
  *  - команда уровня 0 без префикса — только если строка ровно команда;
  *  - команда с целью без префикса — только если цель нашлась;
- *  - без ранга и без префикса — молча, как обычная речь;
+ *  - без ранга: с префиксом, с найденной целью или ровно командой —
+ *    ответ «нужен ранг», иначе молча, как обычная речь. Так «бан» ответом
+ *    без точки не пропадает в тишине;
+ *  - выключенная «дк … 6» — ответ только с префиксом: раздел выключили
+ *    нарочно, и «монетка» без точки не должна каждый раз это повторять;
  *  - команда из CM_BARE_ARGS без префикса — только если остаток строки без
  *    цели подходит под её шаблон (cm_bare_ok, parse.php);
  *  - команда из CM_PREFIX_ONLY без префикса — не команда («!кто»).
@@ -132,13 +138,14 @@ function cm_run_command(array $ctx, array $cmd): bool {
     $fn = 'cm_cmd_' . $cmd['handler'];
     if (!function_exists($fn)) { return false; }
     $need = cm_need_level($ctx['chat'], $cmd['section'], (int)$cmd['level']);
+    $loud = $cmd['prefixed'] || $cmd['target'] || $cmd['exact'];
     if ($need >= 6) {
         if ($cmd['prefixed']) { cm_reply($ctx, cm_t('cmd_off')); }
-        return (bool)$cmd['prefixed'];
+        return false;
     }
     if ((int)$ctx['rank'] < $need) {
-        if ($cmd['prefixed']) { cm_reply($ctx, cm_t('no_rank', ['need' => $need])); }
-        return (bool)$cmd['prefixed'];
+        if ($loud) { cm_reply($ctx, cm_t('no_rank', ['need' => $need])); }
+        return false;
     }
     if (!empty($ctx['timer']) && $cmd['handler'] === 'timer_add') { return true; }
     $fn($ctx, $cmd);
@@ -181,15 +188,29 @@ function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now
             $answer = cm_duel_callback($ctx, $q, (int)$p[2], (string)$p[3]);
         }
     }
-    $send('answerCallbackQuery', ['callback_query_id' => (string)($q['id'] ?? ''), 'text' => mb_substr($answer, 0, 200)]);
+    $send('answerCallbackQuery', ['callback_query_id' => (string)($q['id'] ?? ''), 'text' => mb_substr(cm_plain($answer), 0, 200)]);
 }
 
 // --------------------------------------------------------------------------
 //  Общие команды
 // --------------------------------------------------------------------------
 
+// Помощь: заголовок, как писать команды, разделы под раскрывающейся
+// цитатой (чат не заливает простынёй) и ссылка на полную инструкцию.
 function cm_cmd_help(array $ctx, array $cmd): void {
-    cm_reply($ctx, cm_t('help'), false);
+    cm_reply($ctx, cm_help_text(), false);
+}
+
+function cm_help_text(): string {
+    $rows = [];
+    foreach (CM_HELP as [$icon, $title, $cmds]) { $rows[] = $icon . ' ' . cm_bold($title) . ' — ' . $cmds; }
+    return cm_bold(cm_t('help_title')) . "\n" . cm_t('help_intro') . "\n\n"
+        . cm_mark('q', '', implode("\n", $rows)) . "\n\n" . cm_guide_line();
+}
+
+// «📖 Все команды с примерами: maknemy.com/bot» — адрес ссылкой.
+function cm_guide_line(): string {
+    return cm_t('help_more') . cm_link(CM_GUIDE_URL, CM_GUIDE_TEXT);
 }
 
 // «кто я» — свой профиль (profile.php). Пока нет таблиц этапа 2 — ранг и
@@ -197,7 +218,7 @@ function cm_cmd_help(array $ctx, array $cmd): void {
 function cm_cmd_whoami(array $ctx, array $cmd): void {
     if (cm_ready2($ctx['pdo'])) {
         $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-        cm_reply($ctx, implode("\n", cm_profile_lines($ctx, (int)$ctx['actor'], cm_display_name($from))), false);
+        cm_reply($ctx, implode("\n", cm_profile_lines($ctx, (int)$ctx['actor'], cm_user_tag($ctx['pdo'], (int)$ctx['actor'], cm_display_name($from)))), false);
         return;
     }
     $r = (int)$ctx['rank'];
@@ -209,7 +230,7 @@ function cm_cmd_id(array $ctx, array $cmd): void {
     $text = cm_t('id_text', ['chat' => (int)$ctx['chat']['chat_id'], 'me' => (int)$ctx['actor']]);
     $r = cm_reply_of($ctx['msg']);
     if ($r !== null && is_array($r['from'] ?? null)) {
-        $text .= "\n" . cm_t('id_target', ['name' => cm_display_name($r['from']), 'id' => (int)($r['from']['id'] ?? 0)]);
+        $text .= "\n" . cm_t('id_target', ['name' => cm_user_tag($ctx['pdo'], (int)($r['from']['id'] ?? 0), cm_display_name($r['from'])), 'id' => (int)($r['from']['id'] ?? 0)]);
     }
     cm_reply($ctx, $text);
 }

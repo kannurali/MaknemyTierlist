@@ -105,7 +105,12 @@ test('бота добавили — знакомство и недостающи
     $log = [];
     cm_on_membership($pdo, cm_cfg(), cm_rec($log), wl_bot_update('left', 'member'), CM_NOW);
     $t = cm_last_text($log);
-    assert_eq(0, strpos($t, cm_t('intro')));
+    assert_eq(0, strpos($t, cm_t('intro_title')));
+    assert_eq(true, strpos($t, cm_t('intro')) !== false);
+    assert_eq(true, strpos($t, '📖 Все команды с примерами: maknemy.com/bot') !== false, 'ссылка на инструкцию');
+    $e = cm_calls($log, 'sendMessage')[0][1]['entities'];
+    assert_eq(['bold', 'text_link'], array_column($e, 'type'));
+    assert_eq('https://maknemy.com/bot', $e[1]['url']);
     assert_eq(true, strpos($t, 'Удаление сообщений') !== false && strpos($t, 'Блокировка пользователей') !== false);
     $rights = ['can_delete_messages' => true, 'can_restrict_members' => true];
     cm_on_membership($pdo, cm_cfg(), cm_rec($log), wl_bot_update('member', 'administrator', $rights), CM_NOW + 1);

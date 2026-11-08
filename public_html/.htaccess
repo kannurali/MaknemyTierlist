@@ -169,6 +169,7 @@ RewriteRule ^(tierlist|calculator|profile|chat|trading|trading/new|stock|support
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/$ /$1 [L,R=301]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(.+)/$ /$1/$2 [L,R=301]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/(privacy|terms)$ /$2 [L,R=301]
+RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/bot$ /bot [L,R=301]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)$ /home.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/tierlist$ /index.php [L]
 RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/calculator$ /calculator.php [L]
@@ -373,6 +374,14 @@ RewriteRule ^terms/$ /terms [L,R=301]
 RewriteCond %{ENV:REDIRECT_STATUS} ^$
 RewriteRule ^terms\.php$ /terms [L,R=301]
 RewriteRule ^terms$ /terms.php [L]
+
+# /bot — инструкция чат-менеджера, на неё ссылается сам бот (помощь и
+# знакомство в группе). Схема та же, что у /privacy и /terms; бот говорит
+# только по-русски, поэтому /en/bot и прочие уводятся на /bot.
+RewriteRule ^bot/$ /bot [L,R=301]
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^bot\.php$ /bot [L,R=301]
+RewriteRule ^bot$ /bot.php [L]
 
 # /news/ (со слэшем на конце) — 301 на канонический /news, а не на news.html.
 # Без этого правила ниже (^news/?$) молча принимает и /news, и /news/ как один

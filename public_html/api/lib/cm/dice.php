@@ -45,7 +45,7 @@ function cm_offer_yes_dice(array $ctx, array $o): string {
     $chatId = $o['chat_id'];
     $a = $o['from_id'];
     $b = $o['to_id'];
-    $text = cm_t('dice_result', ['a' => cm_user_name($pdo, $a), 'va' => $va, 'b' => cm_user_name($pdo, $b), 'vb' => $vb]);
+    $text = cm_t('dice_result', ['a' => cm_user_who($pdo, $a), 'va' => $va, 'b' => cm_user_who($pdo, $b), 'vb' => $vb]);
     if ($va === $vb) {
         cm_game_score($pdo, $chatId, $a, 'dice', 'draws');
         cm_game_score($pdo, $chatId, $b, 'dice', 'draws');
@@ -56,6 +56,6 @@ function cm_offer_yes_dice(array $ctx, array $o): string {
     cm_game_score($pdo, $chatId, $win, 'dice', 'wins');
     cm_game_score($pdo, $chatId, $lose, 'dice', 'losses');
     $out = cm_game_outcome($ctx, 'dice_outcome', $a, $b, $lose, cm_t('reason_dice'));
-    cm_edit($ctx, $o['msg_id'], $text . "\n" . cm_t('game_won', ['name' => cm_user_name($pdo, $win)]) . $out);
+    cm_edit($ctx, $o['msg_id'], $text . "\n" . cm_t('game_won', ['name' => cm_user_who($pdo, $win)]) . $out);
     return '';
 }

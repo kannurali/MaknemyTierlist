@@ -30,11 +30,11 @@ function cm_duel_get(PDO $pdo, int $id): ?array {
 
 // Текст идущей дуэли: кто против кого, прицелы, последний ход, чей ход.
 function cm_duel_board(PDO $pdo, array $g, string $last): string {
-    $a = cm_user_name($pdo, $g['a_id']);
-    $b = cm_user_name($pdo, $g['b_id']);
+    $a = cm_user_who($pdo, $g['a_id']);
+    $b = cm_user_who($pdo, $g['b_id']);
     return cm_t('duel_head', ['a' => $a, 'b' => $b]) . "\n"
         . cm_t('duel_aims', ['a' => $a, 'na' => $g['aims']['a'], 'b' => $b, 'nb' => $g['aims']['b']]) . "\n"
-        . $last . "\n" . cm_t('duel_turn', ['name' => cm_user_name($pdo, $g['turn_id'])]);
+        . $last . "\n" . cm_t('duel_turn', ['name' => cm_user_who($pdo, $g['turn_id'])]);
 }
 
 function cm_duel_buttons(int $id): array {
@@ -52,7 +52,7 @@ function cm_offer_yes_duel(array $ctx, array $o): string {
         ->execute([':c' => $o['chat_id'], ':a' => $o['from_id'], ':b' => $o['to_id'], ':t' => $first,
                    ':s' => json_encode(['a' => 0, 'b' => 0]), ':m' => $o['msg_id'], ':n' => (int)$ctx['now']]);
     $g = cm_duel_get($pdo, (int)$pdo->lastInsertId());
-    cm_edit($ctx, $g['msg_id'], cm_duel_board($pdo, $g, cm_t('duel_first', ['name' => cm_user_name($pdo, $first)])),
+    cm_edit($ctx, $g['msg_id'], cm_duel_board($pdo, $g, cm_t('duel_first', ['name' => cm_user_who($pdo, $first)])),
         cm_duel_buttons($g['id']));
     return '';
 }
@@ -77,7 +77,7 @@ function cm_duel_callback(array $ctx, array $q, int $id, string $act): string {
     $mine = $me === $g['a_id'] ? 'a' : 'b';
     $their = $mine === 'a' ? 'b' : 'a';
     $other = $mine === 'a' ? $g['b_id'] : $g['a_id'];
-    $name = cm_user_name($pdo, $me);
+    $name = cm_user_who($pdo, $me);
     $aims = $g['aims'];
     if ($act === 'a' && $aims[$mine] >= CM_DUEL_AIMS_MAX) { return cm_t('duel_aim_max'); }
     if ($act === 's') {
@@ -97,7 +97,7 @@ function cm_duel_callback(array $ctx, array $q, int $id, string $act): string {
         $last = cm_t('duel_aimed', ['name' => $name]);
     } else {
         $aims[$their] = 0;
-        $last = cm_t('duel_knocked', ['name' => $name, 'other' => cm_user_name($pdo, $other)]);
+        $last = cm_t('duel_knocked', ['name' => $name, 'other' => cm_user_who($pdo, $other)]);
     }
     $st = $pdo->prepare("UPDATE cm_games SET state = :s, turn_id = :t, updated_at = :n WHERE id = :id AND status = 'on' AND turn_id = :me");
     $st->execute([':s' => json_encode($aims), ':t' => $other, ':n' => $now, ':id' => $id, ':me' => $me]);
@@ -115,8 +115,8 @@ function cm_duel_end(array $ctx, array $g, int $winner, string $last): void {
     cm_game_score($pdo, $g['chat_id'], $winner, 'duel', 'wins');
     cm_game_score($pdo, $g['chat_id'], $loser, 'duel', 'losses');
     $out = cm_game_outcome($ctx, 'duel_outcome', $g['a_id'], $g['b_id'], $loser, cm_t('reason_duel'));
-    cm_edit($ctx, $g['msg_id'], cm_t('duel_head', ['a' => cm_user_name($pdo, $g['a_id']), 'b' => cm_user_name($pdo, $g['b_id'])])
-        . "\n" . $last . "\n" . cm_t('game_won', ['name' => cm_user_name($pdo, $winner)]) . $out);
+    cm_edit($ctx, $g['msg_id'], cm_t('duel_head', ['a' => cm_user_who($pdo, $g['a_id']), 'b' => cm_user_who($pdo, $g['b_id'])])
+        . "\n" . $last . "\n" . cm_t('game_won', ['name' => cm_user_who($pdo, $winner)]) . $out);
 }
 
 // Ход просрочен: проиграл тот, чей был ход. false — дуэль уже закончилась
@@ -127,7 +127,7 @@ function cm_duel_timeout(array $ctx, array $g): bool {
         WHERE id = :id AND status = 'on' AND turn_id = :t AND updated_at = :u");
     $st->execute([':w' => $winner, ':id' => $g['id'], ':t' => $g['turn_id'], ':u' => $g['updated_at']]);
     if ($st->rowCount() === 0) { return false; }
-    cm_duel_end($ctx, $g, $winner, cm_t('duel_timeout', ['name' => cm_user_name($ctx['pdo'], $g['turn_id'])]));
+    cm_duel_end($ctx, $g, $winner, cm_t('duel_timeout', ['name' => cm_user_who($ctx['pdo'], $g['turn_id'])]));
     return true;
 }
 

@@ -185,7 +185,7 @@ function cm_punish_cmd(array $ctx, array $cmd, string $kind): void {
         $secs = $term ?? ($kind === 'mute' ? 3600 : 0);
     }
     $reason = cm_reason($args, $cmd['body']);
-    $vars = ['name' => $t['name'], 'term' => cm_term_text($secs), 'reason' => cm_reason_line($reason)];
+    $vars = ['name' => $t['who'], 'term' => cm_term_text($secs), 'reason' => cm_reason_line($reason)];
     if ($kind === 'warn') {
         [$err, $n, $limit, $after] = cm_warn($ctx, (int)$t['id'], $reason, (int)$ctx['actor']);
         if ($err !== '') {
@@ -213,12 +213,12 @@ function cm_cmd_unwarn(array $ctx, array $cmd): void {
     $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $t['id'], ':s' => cm_warns_since($ctx)]);
     $id = $st->fetchColumn();
     if ($id === false) {
-        cm_reply($ctx, cm_t('unwarn_none', ['name' => $t['name']]));
+        cm_reply($ctx, cm_t('unwarn_none', ['name' => $t['tag']]));
         return;
     }
     $pdo->prepare('UPDATE cm_punishments SET lifted_at = :n, lifted_by = :b WHERE id = :id')
         ->execute([':n' => $ctx['now'], ':b' => $ctx['actor'], ':id' => (int)$id]);
-    cm_reply($ctx, cm_t('unwarn_done', ['name' => $t['name'], 'n' => cm_warns_active($ctx, (int)$t['id']),
+    cm_reply($ctx, cm_t('unwarn_done', ['name' => $t['who'], 'n' => cm_warns_active($ctx, (int)$t['id']),
         'limit' => (int)$ctx['chat']['settings']['warns']['limit']]), false);
 }
 
@@ -228,13 +228,13 @@ function cm_cmd_unwarn_all(array $ctx, array $cmd): void {
     if ($t === null) { return; }
     $n = cm_warns_active($ctx, (int)$t['id']);
     if ($n === 0) {
-        cm_reply($ctx, cm_t('unwarn_none', ['name' => $t['name']]));
+        cm_reply($ctx, cm_t('unwarn_none', ['name' => $t['tag']]));
         return;
     }
     $ctx['pdo']->prepare("UPDATE cm_punishments SET lifted_at = :n, lifted_by = :b
         WHERE chat_id = :c AND user_id = :u AND kind = 'warn' AND lifted_at = 0")
         ->execute([':n' => $ctx['now'], ':b' => $ctx['actor'], ':c' => $ctx['chat']['chat_id'], ':u' => $t['id']]);
-    cm_reply($ctx, cm_t('unwarn_all_done', ['name' => $t['name'], 'n' => $n]), false);
+    cm_reply($ctx, cm_t('unwarn_all_done', ['name' => $t['who'], 'n' => $n]), false);
 }
 
 function cm_cmd_warns(array $ctx, array $cmd): void {
@@ -251,13 +251,13 @@ function cm_cmd_warns(array $ctx, array $cmd): void {
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $lines[] = '• ' . cm_date((int)$r['created_at']) . ' — ' . ((string)$r['reason'] !== '' ? $r['reason'] : '—');
         }
-        $head = cm_t('warns_user_head', ['name' => $t['name'], 'n' => count($lines), 'limit' => $limit]);
+        $head = cm_t('warns_user_head', ['name' => $t['tag'], 'n' => count($lines), 'limit' => $limit]);
     } else {
         $st = $pdo->prepare("SELECT user_id, COUNT(*) AS n FROM cm_punishments WHERE chat_id = :c AND kind = 'warn'
             AND lifted_at = 0 AND created_at > :s GROUP BY user_id ORDER BY n DESC, user_id LIMIT 20");
         $st->execute($p);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $lines[] = '• ' . cm_user_name($pdo, (int)$r['user_id']) . ' — ' . (int)$r['n'] . '/' . $limit;
+            $lines[] = '• ' . cm_user_who($pdo, (int)$r['user_id'], true) . ' — ' . (int)$r['n'] . '/' . $limit;
         }
         $head = cm_t('warns_head', ['limit' => $limit]);
     }
@@ -276,7 +276,7 @@ function cm_lift_cmd(array $ctx, array $cmd, string $kind): void {
         cm_reply_err($ctx, $err);
         return;
     }
-    cm_reply($ctx, cm_t($kind === 'mute' ? 'unmute_done' : 'unban_done', ['name' => $t['name']]), false);
+    cm_reply($ctx, cm_t($kind === 'mute' ? 'unmute_done' : 'unban_done', ['name' => $t['who']]), false);
 }
 
 function cm_cmd_mutes(array $ctx, array $cmd): void { cm_active_list($ctx, 'mute', 'mutes_head'); }
@@ -292,7 +292,7 @@ function cm_active_list(array $ctx, string $kind, string $head): void {
         $uid = (int)$r['user_id'];
         if (isset($lines[$uid]) || count($lines) >= 20) { continue; }
         $until = (int)$r['until_at'];
-        $lines[$uid] = '• ' . cm_user_name($pdo, $uid) . ' — '
+        $lines[$uid] = '• ' . cm_user_who($pdo, $uid, true) . ' — '
             . ($until === 0 ? cm_t('until_forever') : cm_t('until_date', ['date' => cm_date($until)]));
     }
     cm_reply($ctx, cm_t($head) . "\n" . ($lines ? implode("\n", $lines) : cm_t('list_empty')), false);

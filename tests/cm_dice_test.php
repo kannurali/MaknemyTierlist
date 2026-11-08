@@ -105,7 +105,7 @@ test('кубы исход: показать, включить, «ничего»,
     assert_eq(cm_t('outcome_off', ['game' => 'кубах']), cm_last_text($log));
     assert_eq([], cm_chat_row($pdo, CM_CHAT)['settings']['dice_outcome']);
     $ctx = cm_ctx_for($pdo, $log, 7, '!кубы исход мут 1ч');
-    assert_eq(true, cm_run_command($ctx, cm_parse('!кубы исход мут 1ч', CM_BOT)));
+    assert_eq(false, cm_run_command($ctx, cm_parse('!кубы исход мут 1ч', CM_BOT)), 'без ранга — дальше в фильтры');
     assert_eq(cm_t('no_rank', ['need' => 3]), cm_last_text($log));
 });
 
