@@ -60,12 +60,16 @@ test('варны копятся до лимита, потом наказание
     $log = [];
     $ctx = pn_mod($pdo, $log);
     cm_do($ctx, 'варн @vasya спам');
-    assert_eq("⚠️ Вася: варн 1/3 на 30 дней.\nПричина: спам", cm_last_text($log), 'без срока — срок чата, месяц');
+    assert_eq("⚠️ Вася: варн 1/5 на 30 дней.\nПричина: спам", cm_last_text($log), 'без срока — срок чата, месяц; лимит по умолчанию 5');
     cm_do($ctx, 'варн @vasya');
+    cm_do($ctx, 'варн @vasya');
+    cm_do($ctx, 'варн @vasya');
+    assert_eq('⚠️ Вася: варн 4/5 на 30 дней.', cm_last_text($log));
+    assert_eq(0, count(cm_calls($log, 'banChatMember')), 'до лимита не банит');
     cm_do($ctx, 'варн @vasya');
     $ban = cm_calls($log, 'banChatMember')[0][1];
     assert_eq(CM_NOW + 604800, $ban['until_date']);
-    assert_eq('⚠️ Вася: варн 3/3 — лимит: бан 7 дней', cm_last_text($log));
+    assert_eq('⚠️ Вася: варн 5/5 — лимит: бан 7 дней', cm_last_text($log));
     assert_eq(0, cm_warns_active($ctx, 20));
 });
 
@@ -74,13 +78,13 @@ test('временный варн: свой срок решает, сам пер
     $log = [];
     $ctx = pn_mod($pdo, $log);
     cm_do($ctx, 'варн @vasya 3 дня флуд');
-    assert_eq("⚠️ Вася: варн 1/3 на 3 дня.\nПричина: флуд", cm_last_text($log));
+    assert_eq("⚠️ Вася: варн 1/5 на 3 дня.\nПричина: флуд", cm_last_text($log));
     $row = $pdo->query("SELECT until_at, reason FROM cm_punishments WHERE kind = 'warn'")->fetch(PDO::FETCH_ASSOC);
     assert_eq([CM_NOW + 3 * 86400, 'флуд'], [(int)$row['until_at'], $row['reason']]);
     cm_do($ctx, 'варн @vasya 2ч');
-    assert_eq('⚠️ Вася: варн 2/3 на 2 ч.', cm_last_text($log));
+    assert_eq('⚠️ Вася: варн 2/5 на 2 ч.', cm_last_text($log));
     cm_do($ctx, 'варн @vasya 2 раза просили');
-    assert_eq("⚠️ Вася: варн 3/3 — лимит: бан 7 дней\nПричина: 2 раза просили", cm_last_text($log), 'голое число — причина, не срок');
+    assert_eq("⚠️ Вася: варн 3/5 на 30 дней.\nПричина: 2 раза просили", cm_last_text($log), 'голое число — причина, не срок');
 
     $pdo = cm_test_pdo();
     $log = [];
@@ -125,7 +129,7 @@ test('-варн снимает последний, снять варны — в�
     cm_do($ctx, 'варн @vasya раз');
     cm_do($ctx, 'варн @vasya два');
     cm_do($ctx, 'варны');
-    assert_eq(cm_t('warns_head', ['limit' => 3]) . "\n• Вася — 2/3", cm_last_text($log));
+    assert_eq(cm_t('warns_head', ['limit' => 5]) . "\n• Вася — 2/5", cm_last_text($log));
     cm_do($ctx, 'варны @vasya');
     assert_eq(true, strpos(cm_last_text($log), 'два') !== false);
     cm_do($ctx, '-варн @vasya');
