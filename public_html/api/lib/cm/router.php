@@ -118,9 +118,11 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
  *  - команда с целью без префикса — только если цель нашлась;
  *  - без ранга и без префикса — молча, как обычная речь;
  *  - команда из CM_BARE_ARGS без префикса — только если остаток строки без
- *    цели подходит под её шаблон (cm_bare_ok, parse.php).
+ *    цели подходит под её шаблон (cm_bare_ok, parse.php);
+ *  - команда из CM_PREFIX_ONLY без префикса — не команда («!кто»).
  */
 function cm_run_command(array $ctx, array $cmd): bool {
+    if (!$cmd['prefixed'] && in_array($cmd['handler'], CM_PREFIX_ONLY, true)) { return false; }
     if (!$cmd['prefixed'] && !cm_bare_ok($ctx, $cmd)) { return false; }
     if (!$cmd['prefixed'] && $cmd['exact'] && ($cmd['args'] !== '' || trim($cmd['body']) !== '')) { return false; }
     if (!$cmd['prefixed'] && $cmd['target']) {

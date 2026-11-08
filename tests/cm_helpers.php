@@ -12,6 +12,17 @@ const CM_ADMIN = 2;   // админ Telegram без ранга бота
 const CM_T2359 = 1790024340;
 const CM_T0001 = 1790024460;
 
+// Подставная случайность (этап 3): $ctx['rand'] = cm_seq([…]) — числа по
+// очереди, последнее повторяется. Число вне [$min, $max] — исключение: тест
+// ошибся в ожиданиях.
+function cm_seq(array $values): callable {
+    return function (int $min, int $max) use (&$values): int {
+        $v = count($values) > 1 ? array_shift($values) : $values[0];
+        if ($v < $min || $v > $max) { throw new RuntimeException("случайное $v вне [$min, $max]"); }
+        return $v;
+    };
+}
+
 function cm_test_pdo(): PDO {
     $pdo = test_db();
     cm_sqlite_tables($pdo);

@@ -86,6 +86,13 @@ const CM_COMMANDS = [
     '-город'             => ['profile_clear', 'анкета', 0, true, false],
     '-др'                => ['profile_clear', 'анкета', 0, true, false],
     '-о себе'            => ['profile_clear', 'анкета', 0, true, false],
+    'рандом'             => ['rand', 'игры', 0, false, false],
+    'монетка'            => ['coin', 'игры', 0, true, false],
+    'выбери'             => ['choose', 'игры', 0, false, false],
+    'инфа'               => ['chance', 'игры', 0, false, false],
+    'шанс'               => ['chance', 'игры', 0, false, false],
+    'шар'                => ['ball', 'игры', 0, false, false],
+    'кто'                => ['who', 'игры', 0, false, false],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -106,7 +113,15 @@ const CM_BARE_ARGS = [
     'awards_show' => '~^$~',
     'profile'     => '~^$~',
     'profile_of'  => '~^$~',
+    'rand'        => '~^(?:-?[0-9]{1,10}(?: +-?[0-9]{1,10})?)?$~',
+    'choose'      => '~\sили\s|,~u',
+    'chance'      => '~\S~u',
+    'ball'        => '~\S~u',
 ];
+
+// Команды только с префиксом: без него это слово обычной речи («кто знает…»).
+// Проверяет первая строка cm_run_command (router.php).
+const CM_PREFIX_ONLY = ['who'];
 
 function cm_bare_ok(array $ctx, array $cmd): bool {
     $re = CM_BARE_ARGS[$cmd['handler']] ?? null;
