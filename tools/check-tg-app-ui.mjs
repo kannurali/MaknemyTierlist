@@ -13,8 +13,13 @@
 //   (theme variables on <html>, initData, version checks, MainButton drawn as a
 //   bar at the bottom so screenshots show what the user would press);
 // - api/gw_tg_app.php is answered from the fixtures below, one per state;
-// - the banner URL (https://maknemy.com/images/giveaways/6.webp) is answered
-//   with a local picture: BANNER=<file> or the Hellfire popup creative.
+// - pictures on https://maknemy.com/images/ (banner, prize art, channel avatars)
+//   and the user's https://t.me/i/userpic/ are answered locally: the banner from
+//   BANNER=<file> (default: the Hellfire popup creative), anything else from
+//   IMG_DIR=<dir> by file name (userpic.jpg for the user) when it is there, else
+//   a drawn placeholder; a name with "broken" in it answers 404 so the fallbacks
+//   (letter avatar, gift outline) get drawn too. Real prize art is not in the
+//   repo: download it from https://maknemy.com/api/giveaways.php into IMG_DIR.
 //
 // Every case also asserts the behaviour around the screenshot: which MainButton
 // text is shown, that joined/last ask for write access once, that Subscribe
@@ -28,6 +33,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.argv[2] || 'http://127.0.0.1:9241';
 const OUT = path.resolve(process.argv[3] || path.join(HERE, 'scratch_tg_app_shots'));
 const BANNER = process.env.BANNER || path.join(HERE, '..', 'public_html', 'assets', 'promo', 'hellfire-prizes-popup.webp');
+const IMG_DIR = process.env.IMG_DIR || '';
 const PAGE = '/tg-app.php';
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -81,7 +87,7 @@ function stub() {
         return 0;
     };
     const version = cfg.version || '8.0';
-    let bar = null, btn = null, label = '', clicks = [], visible = false;
+    let bar = null, btn = null, label = '', clicks = [], visible = false, bottomBar = '';
     const BAR_H = 66;
     function drawBar() {
         if (!bar) {
@@ -89,7 +95,7 @@ function stub() {
             bar.setAttribute('data-stub', 'main-button');
             bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99;padding:8px 12px;box-sizing:border-box;height:' + BAR_H + 'px;background:' + (theme.bottom_bar_bg_color || theme.secondary_bg_color || '#000') + ';box-shadow:0 -0.5px 0 rgba(128,128,128,.3)';
             btn = document.createElement('button');
-            btn.style.cssText = 'width:100%;height:50px;border:0;border-radius:12px;font:600 16px -apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",sans-serif;background:' + (theme.button_color || '#2481cc') + ';color:' + (theme.button_text_color || '#fff');
+            btn.style.cssText = 'width:100%;height:50px;border:0;border-radius:12px;font:600 16px -apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",sans-serif';
             btn.addEventListener('click', () => clicks.slice().forEach(f => f()));
             bar.appendChild(btn);
             const st = document.createElement('style');
@@ -98,6 +104,9 @@ function stub() {
         }
         if (!bar.isConnected && document.body) { document.body.appendChild(bar); }
         btn.textContent = MainButton.isProgressVisible ? '···' : label;
+        btn.style.background = MainButton.color || theme.button_color || '#2481cc';
+        btn.style.color = MainButton.textColor || theme.button_text_color || '#fff';
+        bar.style.background = bottomBar || theme.bottom_bar_bg_color || theme.secondary_bg_color || '#000';
         bar.style.display = visible ? 'block' : 'none';
         document.body && document.body.classList.toggle('stub-mb', visible);
         root.style.setProperty('--tg-viewport-stable-height', (innerHeight - (visible ? BAR_H : 0)) + 'px');
@@ -113,9 +122,19 @@ function stub() {
         hideProgress() { this.isProgressVisible = false; drawBar(); return this; },
         enable() { this.isActive = true; return this; },
         disable() { this.isActive = false; return this; },
-        setParams(p) { if (p.text) { this.setText(p.text); } if (p.is_visible === true) { this.show(); } if (p.is_visible === false) { this.hide(); } return this; }
+        setParams(p) {
+            log('main.params', p);
+            if (p.color) { this.color = p.color; }
+            if (p.text_color) { this.textColor = p.text_color; }
+            if (p.text) { this.setText(p.text); }
+            if (p.is_visible === true) { this.show(); }
+            if (p.is_visible === false) { this.hide(); }
+            drawBar();
+            return this;
+        }
     };
-    const user = { id: 777000111, first_name: 'Nurali', language_code: cfg.lang || 'ru', allows_write_to_pm: !!cfg.canWrite };
+    const user = { id: 777000111, first_name: cfg.firstName === undefined ? 'Nurali' : cfg.firstName, language_code: cfg.lang || 'ru', allows_write_to_pm: !!cfg.canWrite };
+    if (cfg.photo !== null) { user.photo_url = cfg.photo || 'https://t.me/i/userpic/320/nurali.jpg'; }
     const WebApp = {
         initData: cfg.initData === undefined ? 'query_id=AAH&user=%7B%22id%22%3A777000111%7D&auth_date=1762600000&hash=abc' : cfg.initData,
         initDataUnsafe: { user, start_param: 'gw6' },
@@ -123,7 +142,7 @@ function stub() {
         isVersionAtLeast(v) { return cmp(version, v) >= 0; },
         ready() { log('ready'); }, expand() { log('expand'); }, close() { log('close'); },
         setHeaderColor(c) { log('setHeaderColor', c); }, setBackgroundColor(c) { log('setBackgroundColor', c); },
-        setBottomBarColor(c) { log('setBottomBarColor', c); },
+        setBottomBarColor(c) { log('setBottomBarColor', c); if (/^#/.test(c)) { bottomBar = c; if (bar) { drawBar(); } } },
         onEvent(e, f) { (handlers[e] = handlers[e] || []).push(f); }, offEvent(e, f) { handlers[e] = (handlers[e] || []).filter(x => x !== f); },
         openLink(u) { log('openLink', u); }, openTelegramLink(u) { log('openTelegramLink', u); },
         requestWriteAccess(cb) { log('requestWriteAccess'); if (cfg.write !== 'never') { setTimeout(() => cb && cb(cfg.write === 'grant'), 250); } },
@@ -134,20 +153,49 @@ function stub() {
     window.Telegram = { WebApp };
 }
 
+// Real file names from https://maknemy.com/api/giveaways.php (giveaways 6 and 2).
+const IMG = 'https://maknemy.com/images/';
+const BANNER_URL = IMG + 'a2d23d8abfef6bae07930dea75ff2bae159be68d.jpg';
+const ART = {
+    venom: IMG + '5708035a9826850deeb987b0a94abbf2648b4fe3.webp',
+    gas: IMG + '1689cda446ce4d6ea79a3116b663c8c8d4bd54f8.webp',
+    hellfire: IMG + 'aca91791385fbe7baeeae61a5699e27778971b9a.png',
+    werewolf: IMG + 'd52459cdabeb464ec24e44044a069c8df582d48a.webp',
+    tiger: IMG + '2aa53bc265ba4fe5dbd61ccbbd2fa4703afb5a37.webp',
+    ghost: IMG + '6837e1f304957229a18232cdf69fc4cf6293be11.png',
+    kitsune: IMG + 'd59f8b98a0db7f7bc3b1704d94d26b899349e3ae.webp'
+};
 const GW = {
     id: 6,
-    title: 'Permanent Venom, Gas и 5 Hellfire',
-    image: 'https://maknemy.com/images/giveaways/6.webp',
+    title: '🔥 РОЗЫГРЫШ PERMANENT VENOM, GAS И 5 HELLFIRE GAS MUTATIONS!',
+    image: BANNER_URL,
     prizes: [
-        { name: 'Permanent Venom', count: 3 },
-        { name: 'Permanent Gas', count: 2 },
-        { name: 'Скин Hellfire', count: 5 }
+        { name: 'Permanent Venom', count: 3, icon: ART.venom },
+        { name: 'Permanent Gas', count: 2, icon: ART.gas },
+        { name: 'Hellfire (Gas)', count: 5, icon: ART.hellfire }
     ],
     when: 'когда участников станет 15000',
-    entries: 10512, max: 15000, phase: 'live',
+    entries: 10513, max: 15000, phase: 'live',
     site: 'https://maknemy.com/giveaways#g6-ch'
 };
-const GW_EN = { ...GW, title: 'Permanent Venom, Gas and 5 Hellfire', when: 'when there are 15,000 participants', prizes: [GW.prizes[0], GW.prizes[1], { name: 'Hellfire skin', count: 5 }] };
+const GW_EN = { ...GW, title: '🔥 GIVEAWAY: PERMANENT VENOM, GAS AND 5 HELLFIRE GAS MUTATIONS!', when: 'when there are 15,000 participants' };
+const GW_8 = {
+    ...GW,
+    id: 2,
+    title: '🎃 МЕГА-РОЗЫГРЫШ К HALLOWEEN UPDATE!',
+    image: IMG + 'de33774d64638ebd97c1460293ea2cd78fa85713.jpg',
+    prizes: [
+        { name: 'Permanent Venom', count: 3, icon: ART.venom },
+        { name: 'Permanent Gas', count: 2, icon: ART.gas },
+        { name: 'Hellfire (Gas)', count: 5, icon: ART.hellfire },
+        { name: 'Werewolf (Tiger)', count: 1, icon: ART.werewolf },
+        { name: 'Tiger Fruit', count: 2, icon: ART.tiger },
+        { name: 'Scarlet Ghost', count: 7, icon: ART.ghost },
+        { name: 'Kitsune Fruit', count: 1, icon: ART.kitsune },
+        { name: 'Gamepass «2x Mastery» для одного счастливчика', count: 1, icon: null }
+    ],
+    when: 'когда участников станет 3001', entries: 2086, max: 3001, site: 'https://maknemy.com/giveaways#g2-ch'
+};
 const GW_LONG = {
     ...GW,
     title: 'Большой новогодний розыгрыш: Permanent Dragon, Kitsune, Leopard и ещё пять фруктов',
@@ -161,16 +209,18 @@ const GW_LONG = {
     ],
     when: '31 декабря в 23:00 по Москве', entries: 487, max: 0
 };
+// Avatars: a real one, none at all (null) and one that fails to load.
 const MISSING = [
-    { title: 'Stock Blox Fruits', url: 'https://t.me/Stock_BloxFruits' },
-    { title: 'MAKNEMY', url: 'https://t.me/theMaknemy' },
-    { title: 'Башня Шута — чат трейдеров Blox Fruits и обсуждение стока', url: 'https://t.me/+VQVMxAbCdEf12345' }
+    { title: 'Stock Blox Fruits', url: 'https://t.me/Stock_BloxFruits', photo: IMG + 'c0a1f00000000000000000000000000000000001.jpg' },
+    { title: 'MAKNEMY', url: 'https://t.me/theMaknemy', photo: null },
+    { title: 'Башня Шута — чат трейдеров Blox Fruits и обсуждение стока', url: 'https://t.me/+VQVMxAbCdEf12345', photo: IMG + 'broken-c0a1f0000000000000000000000000000002.jpg' }
 ];
 
 const R = {
-    joined: { ok: true, state: 'joined', lang: 'ru', text: 'Вы участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', gw: GW, missing: [] },
-    last: { ok: true, state: 'last', lang: 'ru', text: 'Вы участвуете и заняли последнее место — итоги совсем скоро.', note: '', gw: { ...GW, entries: 15000 }, missing: [] },
-    already: { ok: true, state: 'already', lang: 'ru', text: 'Вы уже участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', gw: { ...GW, entries: 10519 }, missing: [] },
+    joined: { ok: true, state: 'joined', lang: 'ru', text: 'Вы участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', ticket: 10513, gw: GW, missing: [] },
+    last: { ok: true, state: 'last', lang: 'ru', text: 'Вы участвуете и заняли последнее место — итоги совсем скоро.', note: '', ticket: 15000, gw: { ...GW, entries: 15000 }, missing: [] },
+    already: { ok: true, state: 'already', lang: 'ru', text: 'Вы уже участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', ticket: 9876, gw: { ...GW, entries: 10519 }, missing: [] },
+    prizes8: { ok: true, state: 'joined', lang: 'ru', text: 'Вы участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', ticket: 2086, gw: GW_8, missing: [] },
     missing: { ok: false, state: 'missing', lang: 'ru', text: 'Чтобы участвовать, подпишитесь на каналы из условий.', note: '', gw: GW, missing: MISSING },
     missingOne: { ok: false, state: 'missing', lang: 'ru', text: 'Чтобы участвовать, подпишитесь на каналы из условий.', note: '', gw: GW, missing: [MISSING[1]] },
     closed: { ok: false, state: 'closed', lang: 'ru', text: 'Приём заявок закрыт.', note: '', gw: { ...GW, entries: 15000, phase: 'drawn' }, missing: [] },
@@ -181,16 +231,35 @@ const R = {
     banned: { ok: false, state: 'banned', lang: 'ru', text: 'Участие в розыгрышах для вас закрыто.', gw: GW, missing: [] },
     tg_used: { ok: false, state: 'tg_used', lang: 'ru', text: 'Этот Telegram уже участвует с другого аккаунта сайта.', note: '', gw: GW, missing: [] },
     site: { ok: false, state: 'site', lang: 'ru', text: 'Участвуйте на сайте maknemy.com, в разделе «Розыгрыши».', note: '', gw: GW, missing: [] },
-    long: { ok: true, state: 'joined', lang: 'ru', text: 'Вы участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', gw: GW_LONG, missing: [] },
-    noimg: { ok: true, state: 'already', lang: 'ru', text: 'Вы уже участвуете!', note: '', gw: { ...GW, image: null }, missing: [] },
-    en: { ok: true, state: 'joined', lang: 'en', text: 'You\'re in!', note: 'Don\'t unsubscribe from the channels in the conditions until the results.', gw: GW_EN, missing: [] },
+    long: { ok: true, state: 'joined', lang: 'ru', text: 'Вы участвуете!', note: 'Не отписывайтесь от каналов из условий до итогов.', ticket: 487, gw: GW_LONG, missing: [] },
+    noimg: { ok: true, state: 'already', lang: 'ru', text: 'Вы уже участвуете!', note: '', ticket: 312, gw: { ...GW, image: null }, missing: [] },
+    en: { ok: true, state: 'joined', lang: 'en', text: 'You\'re in!', note: 'Don\'t unsubscribe from the channels in the conditions until the results.', ticket: 10513, gw: GW_EN, missing: [] },
     enMissing: { ok: false, state: 'missing', lang: 'en', text: 'To enter, subscribe to the channels from the conditions.', note: '', gw: GW_EN, missing: MISSING.slice(0, 2) }
 };
 const STATUS = { auth: 403, rate: 429 };
 
 const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || 'chrome' });
+const typeOf = f => /\.jpe?g$/i.test(f) ? 'image/jpeg' : /\.png$/i.test(f) ? 'image/png' : /\.svg$/i.test(f) ? 'image/svg+xml' : 'image/webp';
 const banner = fs.readFileSync(BANNER);
-const bannerType = BANNER.endsWith('.jpg') ? 'image/jpeg' : BANNER.endsWith('.png') ? 'image/png' : 'image/webp';
+
+// Placeholder for a picture that is not in IMG_DIR: a glowing blob, its hue taken
+// from the file name so neighbouring tiles differ.
+function placeholder(name) {
+    let h = 0;
+    for (const ch of name) { h = (h * 31 + ch.charCodeAt(0)) >>> 0; }
+    const hue = h % 360;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><radialGradient id="g" cx=".4" cy=".35"><stop offset="0" stop-color="hsl(${hue} 95% 78%)"/><stop offset="1" stop-color="hsl(${(hue + 40) % 360} 90% 42%)"/></radialGradient></defs><circle cx="80" cy="86" r="54" fill="url(#g)"/><path d="M80 32c6-10 18-14 26-10-8 2-14 8-18 16z" fill="hsl(120 60% 40%)"/></svg>`;
+}
+
+async function image(r) {
+    const url = r.request().url();
+    const name = decodeURIComponent(url.split('?')[0].split('/').pop() || '');
+    if (/broken/.test(name)) { return r.fulfill({ status: 404, contentType: 'text/plain', body: 'not found' }); }
+    if (url.startsWith(BANNER_URL)) { return r.fulfill({ status: 200, contentType: typeOf(BANNER), body: banner }); }
+    const local = IMG_DIR && path.join(IMG_DIR, /\/userpic\//.test(url) ? 'userpic.jpg' : name);
+    if (local && fs.existsSync(local)) { return r.fulfill({ status: 200, contentType: typeOf(local), body: fs.readFileSync(local) }); }
+    return r.fulfill({ status: 200, contentType: 'image/svg+xml', body: placeholder(name) });
+}
 let failed = 0;
 const shots = [];
 
@@ -207,13 +276,14 @@ async function open({ answers = ['joined'], theme = 'dark', scheme, size = 390, 
     page.setDefaultNavigationTimeout(45000);
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
-    page.on('console', m => { if (m.type() === 'error') { errors.push(m.text()); } });
+    page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { errors.push(m.text()); } });
     const cfg = { theme: THEMES[theme], scheme: scheme || (theme === 'light' ? 'light' : 'dark'), lang, write: 'deny', ...tg };
     await page.addInitScript(c => { window.__TG = c; }, cfg);
     await page.route('https://telegram.org/js/telegram-web-app.js*', r => r.fulfill({
         status: 200, contentType: 'application/javascript', body: `(${stub.toString()})();`
     }));
-    await page.route('https://maknemy.com/images/**', r => r.fulfill({ status: 200, contentType: bannerType, body: banner }));
+    await page.route('https://maknemy.com/images/**', image);
+    await page.route('https://t.me/i/userpic/**', image);
     const sent = [];
     let n = 0;
     await page.route('**/api/gw_tg_app.php', async r => {
@@ -246,13 +316,19 @@ const mainText = page => page.evaluate(() => {
 });
 const settle = page => page.waitForFunction(() => document.getElementById('ta').getAttribute('aria-busy') === 'false', null, { timeout: 15000 });
 const noOverflow = page => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+const loaded = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)].filter(i => i.complete && i.naturalWidth > 0).length, sel);
+const avatars = page => page.evaluate(() => [...document.querySelectorAll('.ta-ava')].map(a => {
+    const i = a.querySelector('img');
+    return i ? (i.complete && i.naturalWidth > 0 ? 'photo' : 'pending') : 'letter';
+}));
+const NNBSP = String.fromCharCode(0x202f);
 
 // --- загрузка ---------------------------------------------------------------
 {
     const { context, page, errors } = await open({ answers: ['hang'], motion: 'no-preference' });
     await page.waitForTimeout(900);
     await shot(page, '01-loading-390-dark');
-    check('загрузка: скелет на месте', await page.locator('.ta-skel-dot').count() === 1);
+    check('загрузка: скелет на месте', await page.locator('.ta-skel-stage').count() === 1);
     check('загрузка: ready() и expand() вызваны', (await calls(page)).some(c => c[0] === 'ready'));
     check('загрузка: без ошибок', errors.length === 0, errors);
     await context.close();
@@ -273,6 +349,12 @@ for (const [theme, size] of [['dark', 390], ['light', 390], ['dark', 320], ['bla
     check(`joined ${theme} ${size}: после отказа есть «Разрешить»`, await page.locator('.ta-ask-btn:visible').count() === 1);
     check(`joined ${theme} ${size}: нет горизонтальной прокрутки`, await noOverflow(page));
     check(`joined ${theme} ${size}: без ошибок`, errors.length === 0, errors);
+    check(`joined ${theme} ${size}: номер билета 10 513`, (await page.locator('.ta-pass-num').textContent()) === '10' + NNBSP + '513');
+    check(`joined ${theme} ${size}: 3 приза с картинками и ×N`,
+        JSON.stringify(await page.locator('.ta-qty').allTextContents()) === '["×3","×2","×5"]' && await loaded(page, '.ta-slot img') === 3,
+        await page.locator('.ta-qty').allTextContents());
+    check(`joined ${theme} ${size}: аватар пользователя на корешке`, await loaded(page, '.ta-me img') === 1);
+    check(`joined ${theme} ${size}: MainButton в цвет сайта`, c.some(x => x[0] === 'main.params' && x[1].color === '#8b00ff'), c.filter(x => x[0] === 'main.params'));
     if (theme === 'dark' && size === 390) {
         await page.getByRole('button', { name: 'Открыть на сайте' }).click();
         check('joined: «Открыть на сайте» → openLink(gw.site)', (await calls(page)).some(x => x[0] === 'openLink' && x[1] === GW.site));
@@ -293,8 +375,12 @@ for (const [key, theme, size, full] of [['last', 'dark', 390], ['already', 'ligh
         check('already: без haptic success', !c.some(x => x[0] === 'haptic'), c);
         check('already: уже может писать — не спрашиваем', !c.some(x => x[0] === 'requestWriteAccess'), c);
     }
+    if (key === 'noimg') {
+        check('noimg: без баннера сцена из картинок призов', await page.locator('.ta-stage.is-art .ta-stage-pic').count() === 3);
+    }
     if (key === 'long') {
-        check('long: 6 призов', await page.locator('.ta-prize').count() === 6);
+        check('long: 6 призов', await page.locator('.ta-item').count() === 6);
+        check('long: без картинок призов — контур подарка', await page.locator('.ta-slot:not(.has-art) svg').count() === 6);
         check('long: без max нет полосы', await page.locator('.ta-bar').count() === 0);
     }
     check(`${key} ${theme} ${size}: нет горизонтальной прокрутки`, await noOverflow(page));
@@ -312,6 +398,8 @@ for (const [theme, size] of [['dark', 390], ['light', 320]]) {
     check(`missing ${theme}: 3 строки каналов`, await page.locator('.ta-chan').count() === 3);
     check(`missing ${theme}: кнопка «Проверить подписку»`, await mainText(page) === 'Проверить подписку', await mainText(page));
     check(`missing ${theme}: нет горизонтальной прокрутки`, await noOverflow(page));
+    check(`missing ${theme}: аватарки — фото, буква (photo: null), буква после 404`,
+        JSON.stringify(await avatars(page)) === '["photo","letter","letter"]', await avatars(page));
     if (theme === 'dark') {
         await page.locator('[data-stub="main-button"] button').click();
         await page.waitForTimeout(150);
@@ -409,6 +497,42 @@ for (const [size, tg] of [[390, { initData: '' }], [320, { absent: true }]]) {
     check(`browser ${size}: ссылка на все розыгрыши`, (await page.locator('a.ta-cta').getAttribute('href')) === 'https://maknemy.com/giveaways');
     check(`browser ${size}: без ошибок`, errors.length === 0, errors);
     await context.close();
+}
+
+// --- набор для просмотра дизайна: главные состояния на 390 и 320 ----------------
+// Each shot twice: the screen as opened and the whole page. The "moment" shot is
+// the join animation half a second in: ticket landing, confetti in the air.
+for (const size of [390, 320]) {
+    for (const [key, theme, tg] of [
+        ['joined', 'dark'], ['joined', 'light'], ['already', 'dark', { canWrite: true }], ['missing', 'dark'],
+        ['missing', 'light'], ['closed', 'dark'], ['prizes8', 'dark', { photo: null }]
+    ]) {
+        const { context, page, errors } = await open({ answers: [key], theme, size, tg: tg || {} });
+        await settle(page);
+        await page.waitForTimeout(700);
+        await shot(page, `10-${key}-${size}-${theme}`);
+        await shot(page, `10-${key}-${size}-${theme}-full`, true);
+        if (key === 'prizes8') {
+            check(`prizes8 ${size}: 8 призов, 7 картинок и один подарок-заглушка`,
+                await page.locator('.ta-item').count() === 8 && await loaded(page, '.ta-slot img') === 7 && await page.locator('.ta-slot:not(.has-art)').count() === 1);
+            check(`prizes8 ${size}: без photo_url — буква на корешке`, (await page.locator('.ta-me-letter').textContent()) === 'N' && await page.locator('.ta-me img').count() === 0);
+        }
+        check(`design ${key} ${theme} ${size}: нет горизонтальной прокрутки`, await noOverflow(page));
+        check(`design ${key} ${theme} ${size}: без ошибок`, errors.length === 0, errors);
+        await context.close();
+    }
+    {
+        const { context, page, errors } = await open({ answers: ['joined'], theme: 'dark', size, motion: 'no-preference' });
+        await settle(page);
+        await page.waitForTimeout(520);
+        await shot(page, `10-joined-${size}-dark-moment`);
+        check(`moment ${size}: конфетти летит`, await page.locator('canvas.ta-burst').count() === 1);
+        await page.waitForTimeout(1700);
+        check(`moment ${size}: холст конфетти убран`, await page.locator('canvas.ta-burst').count() === 0);
+        await shot(page, `10-joined-${size}-dark-after`);
+        check(`moment ${size}: без ошибок`, errors.length === 0, errors);
+        await context.close();
+    }
 }
 
 await browser.close();

@@ -2549,7 +2549,7 @@ test('мини-приложение: подписка, участие, «уже 
 
     [$s, $b, $after] = gw_tg_app_join($p, gw_cfg(), gw_tg($log, [GW_CH_A => []]), $auth, GW_NOW);
     assert_eq([200, false, 'missing', 'ru', null], [$s, $b['ok'], $b['state'], $b['lang'], $after], 'не подписан');
-    assert_eq([['title' => 'Башня Шута', 'url' => 'https://t.me/bashnya']], $b['missing'], 'канал с кнопкой «Подписаться»');
+    assert_eq([['title' => 'Башня Шута', 'url' => 'https://t.me/bashnya', 'photo' => null]], $b['missing'], 'канал с кнопкой «Подписаться»; без images_dir — без аватарки');
     assert_eq('Чтобы участвовать, подпишитесь на каналы из условий.', $b['text'], 'заголовок экрана, без «нажмите ещё раз»');
 
     [$s, $b, $after] = gw_tg_app_join($p, gw_cfg(), gw_tg($log, [GW_CH_A => [7001]]), $auth, GW_NOW + 1);
@@ -2557,7 +2557,7 @@ test('мини-приложение: подписка, участие, «уже 
     assert_eq(['Вы участвуете!', 'Не отписывайтесь от каналов из условий до итогов.'], [$b['text'], $b['note']],
         'короткий заголовок; название и срок — на карточке, под заголовком — не отписываться');
     assert_eq('places', $after[0], 'после ответа — как с кнопки бота');
-    assert_eq([$id, 'Розыгрыш Magnet', [['name' => 'Venom', 'count' => 3], ['name' => 'Gas', 'count' => 1]], 1, 'live', TG_SITE . '/giveaways#g' . $id . '-ch'],
+    assert_eq([$id, 'Розыгрыш Magnet', [['name' => 'Venom', 'count' => 3, 'icon' => null], ['name' => 'Gas', 'count' => 1, 'icon' => null]], 1, 'live', TG_SITE . '/giveaways#g' . $id . '-ch'],
         [$b['gw']['id'], $b['gw']['title'], $b['gw']['prizes'], $b['gw']['entries'], $b['gw']['phase'], $b['gw']['site']], 'карточка');
     $e = $p->query('SELECT user_id, chat_id, src FROM giveaway_entries')->fetch(PDO::FETCH_ASSOC);
     assert_eq([gw_tg_uid(7001), 7001, 'cb'], [(string)$e['user_id'], (int)$e['chat_id'], $e['src']], 'та же запись, что с кнопки бота');
@@ -2628,6 +2628,97 @@ test('мини-приложение включено — под постом к�
     handle_gw_admin($p, gw_cfg(), $off, ['action' => 'save', 'id' => $id] + gw_draft(), GW_NOW + 500);
     assert_eq('gw:' . $id, gw_sent($log, 'editMessageText')[0][1]['reply_markup']['inline_keyboard'][0][0]['callback_data'] ?? null,
         'мини-приложение выключили — прежняя кнопка бота');
+});
+
+test('мини-приложение: одинаковые призы — одной строкой с иконкой; номер билета', function () {
+    $p = gw_db();
+    $icon = '/images/' . str_repeat('b', 40) . '.webp';
+    $id = gw_live($p, ['prizes' => [
+        ['name' => 'Permanent Venom', 'count' => 1, 'icon' => $icon],
+        ['name' => 'permanent venom ', 'count' => 1, 'icon' => $icon],
+        ['name' => 'Gas', 'count' => 2],
+        ['name' => 'Permanent Venom', 'count' => 1, 'icon' => $icon],
+    ]]);
+    $log = [];
+    $join = function (int $tg, int $at) use ($p, $id, &$log): array {
+        return gw_tg_app_join($p, gw_cfg(), gw_tg($log), gw_tg_app_auth(gw_init(['id' => $tg], 'gw' . $id), GW_TOKEN, GW_NOW), $at)[1];
+    };
+    $b = $join(7001, GW_NOW);
+    assert_eq([['name' => 'Permanent Venom', 'count' => 3, 'icon' => TG_SITE . $icon], ['name' => 'Gas', 'count' => 2, 'icon' => null]],
+        $b['gw']['prizes'], 'Venom трижды — «× 3», иконка полным адресом; без иконки — null');
+    assert_eq(1, $b['ticket'], 'первый — билет №1');
+    assert_true($b['gw']['when'] !== '', 'со сроком — срок строкой');
+    $byCount = gw_live($p, ['max_entries' => 100, 'end_by' => 'entries']);
+    $c = gw_tg_app_join($p, gw_cfg(), gw_tg($log), gw_tg_app_auth(gw_init(['id' => 7001], 'gw' . $byCount), GW_TOKEN, GW_NOW), GW_NOW)[1];
+    assert_eq(['', 100], [$c['gw']['when'], $c['gw']['max']], 'по числу участников — срок показывает полоса, строки нет');
+    assert_eq(2, $join(7002, GW_NOW + 1)['ticket'], 'второй — №2');
+    $again = $join(7001, GW_NOW + 2);
+    assert_eq(['already', 1], [$again['state'], $again['ticket']], 'повторное открытие — тот же номер');
+    assert_eq(0, gw_tg_app_join($p, gw_cfg(), gw_tg($log), gw_tg_app_auth(gw_init(['id' => 7003], 'gw' . $id), GW_TOKEN, GW_NOW), GW_NOW + 86400)[1]['ticket'],
+        'не участвует — 0');
+});
+
+test('мини-приложение: аватарки каналов — копия на сайте, раз в сутки', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Башня Шута', true, 'bashnya');
+    gw_channel($p, GW_CH_B, 'Без фото');
+    $id = gw_live($p, ['channels' => [GW_CH_A, GW_CH_B], 'ends_at' => GW_NOW + 7 * 86400]);
+    $dir = sys_get_temp_dir() . '/gw-photos-' . getmypid() . '-' . mt_rand();
+    $state = $dir . '.json';
+    $im = imagecreatetruecolor(160, 160);
+    ob_start();
+    imagejpeg($im);
+    $jpg = (string)ob_get_clean();
+
+    $log = [];
+    $base = gw_tg($log);
+    $send = function (string $m, array $pr) use (&$log, $base): ?array {
+        if ($m === 'getChat') {
+            $log[] = [$m, $pr];
+            return ['ok' => true, 'result' => $pr['chat_id'] === GW_CH_A ? ['id' => GW_CH_A, 'photo' => ['small_file_id' => 'AQADsmall', 'big_file_id' => 'AQADbig']] : ['id' => GW_CH_B]];
+        }
+        if ($m === 'getFile') {
+            $log[] = [$m, $pr];
+            return ['ok' => true, 'result' => ['file_id' => $pr['file_id'], 'file_path' => 'profile_photos/file_1.jpg']];
+        }
+        return $base($m, $pr);
+    };
+    $fetched = [];
+    $fetch = function (string $path) use (&$fetched, $jpg): ?string { $fetched[] = $path; return $jpg; };
+    $auth = gw_tg_app_auth(gw_init(['id' => 7001], 'gw' . $id), GW_TOKEN, GW_NOW);
+    $cfg = gw_cfg(['images_dir' => $dir]);
+
+    [, $b] = gw_tg_app_join($p, $cfg, $send, $auth, GW_NOW, $fetch, $state);
+    assert_eq('missing', $b['state']);
+    $url = (string)$b['missing'][0]['photo'];
+    assert_eq(1, preg_match('~^' . preg_quote(TG_SITE, '~') . '/images/[0-9a-f]{40}\.jpg$~', $url), 'копия на сайте: ' . $url);
+    assert_true(is_file($dir . '/' . basename($url)), 'файл лежит в images_dir');
+    assert_eq(null, $b['missing'][1]['photo'], 'у канала нет фото — на странице буква');
+    assert_eq(['AQADsmall'], array_column(array_column(gw_sent($log, 'getFile'), 1), 'file_id'), 'маленькое фото, 160×160');
+    assert_eq(['profile_photos/file_1.jpg'], $fetched, 'файл скачан один раз');
+    assert_eq(false, strpos(json_encode($b), GW_TOKEN), 'токена бота в ответе нет');
+
+    $log = [];
+    $fetched = [];
+    [, $b] = gw_tg_app_join($p, $cfg, $send, $auth, GW_NOW + 3600, $fetch, $state);
+    assert_eq([$url, null], array_column($b['missing'], 'photo'), 'в течение суток — те же');
+    assert_eq([[], []], [gw_sent($log, 'getChat'), $fetched], 'и без запросов к Telegram');
+
+    $log = [];
+    gw_tg_app_join($p, $cfg, $send, $auth, GW_NOW + GW_TG_PHOTO_TTL + 1, $fetch, $state);
+    assert_eq(2, count(gw_sent($log, 'getChat')), 'через сутки — спрашивает снова');
+
+    $log = [];
+    $down = function (string $m, array $pr) use ($send): ?array { return $m === 'getChat' ? null : $send($m, $pr); };
+    [, $b] = gw_tg_app_join($p, $cfg, $down, $auth, GW_NOW + 3 * GW_TG_PHOTO_TTL, $fetch, $state);
+    assert_eq($url, $b['missing'][0]['photo'], 'Telegram молчит — прежняя копия');
+
+    [, $b] = gw_tg_app_join($p, gw_cfg(), $send, $auth, GW_NOW, $fetch, $dir . '-none.json');
+    assert_eq([null, null], array_column($b['missing'], 'photo'), 'без images_dir — буквы');
+
+    foreach (glob($dir . '/*') ?: [] as $f) { @unlink($f); }
+    @rmdir($dir);
+    @unlink($state);
 });
 
 run_tests();

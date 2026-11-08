@@ -374,16 +374,49 @@ function gw_tg_app_target(PDO $pdo, string $start, int $now): int {
 }
 
 // Розыгрыш для экрана мини-приложения.
+// Призы с одинаковым названием — одной строкой «× N»: в админке их часто
+// заводят по одному («Permanent Venom» трижды). icon — полный адрес иконки
+// предмета с сайта или null.
+function gw_tg_app_prizes(array $row): array {
+    $out = [];
+    $at = [];
+    foreach (gw_prizes($row['prizes_json']) as $p) {
+        $key = mb_strtolower(trim($p['name']));
+        if (isset($at[$key])) {
+            $out[$at[$key]]['count'] += max(1, $p['count']);
+            if ($out[$at[$key]]['icon'] === null && $p['icon'] !== '') { $out[$at[$key]]['icon'] = TG_SITE . $p['icon']; }
+            continue;
+        }
+        $at[$key] = count($out);
+        $out[] = ['name' => $p['name'], 'count' => max(1, $p['count']), 'icon' => $p['icon'] !== '' ? TG_SITE . $p['icon'] : null];
+    }
+    return $out;
+}
+
+// Номер участника — по порядку вступления, «билет №…» на экране. 0 — не
+// участвует. Отписавшиеся номер не освобождают: у остальных он не меняется.
+function gw_tg_app_ticket(PDO $pdo, int $id, int $chat): int {
+    $st = $pdo->prepare('SELECT joined_at, user_id FROM giveaway_entries WHERE giveaway_id = :g AND chat_id = :c');
+    $st->execute([':g' => $id, ':c' => $chat]);
+    $me = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$me) { return 0; }
+    $st = $pdo->prepare('SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = :g
+                          AND (joined_at < :t OR (joined_at = :t2 AND user_id <= :u))');
+    $st->execute([':g' => $id, ':t' => (int)$me['joined_at'], ':t2' => (int)$me['joined_at'], ':u' => (string)$me['user_id']]);
+    return (int)$st->fetchColumn();
+}
+
 function gw_tg_app_card(PDO $pdo, array $row, string $lang, int $now): array {
     $id = (int)$row['id'];
-    $prizes = [];
-    foreach (gw_prizes($row['prizes_json']) as $p) { $prizes[] = ['name' => $p['name'], 'count' => $p['count']]; }
+    $prizes = gw_tg_app_prizes($row);
     return [
         'id'      => $id,
         'title'   => gw_title($row, $lang),
         'image'   => (string)$row['image_url'] !== '' ? TG_SITE . $row['image_url'] : null,
         'prizes'  => $prizes,
-        'when'    => gw_when($row, $lang),
+        // У розыгрыша «по числу участников» срок — это и есть полоса
+        // «N из max» на экране; строкой его не повторяем.
+        'when'    => gw_no_deadline($row) ? '' : gw_when($row, $lang),
         'entries' => gw_entry_counts($pdo, [$id])[$id] ?? 0,
         'max'     => gw_max($row),
         'phase'   => gw_phase($row, $now),
@@ -391,31 +424,108 @@ function gw_tg_app_card(PDO $pdo, array $row, string $lang, int $now): array {
     ];
 }
 
-// Каналы, на которые не подписан: название и ссылка «Подписаться» — та же
-// ссылка-приглашение розыгрыша, что в окне на сайте (gw_public_item()).
-function gw_tg_app_missing(PDO $pdo, int $id, array $missing, string $lang): array {
+// --------------------------------------------------------------------------
+//  Аватарки каналов в мини-приложении
+// --------------------------------------------------------------------------
+//
+// Фото канала бот берёт у Telegram (getChat → photo.small_file_id, 160×160 →
+// getFile → файл с api.telegram.org/file/bot<токен>/…) и кладёт копию в
+// images_dir тем же save_image_bytes(), что картинки новостей:
+// /images/<sha1>.jpg. Адрес файла у Telegram содержит токен бота — наружу
+// уходит только копия. Какое фото у какого канала и когда спрашивали — в JSON
+// во временной папке (таблица ради этого не нужна; пропал файл — спросим
+// заново). Раз в сутки спрашиваем снова: фото каналы меняют. Нет фото,
+// Telegram молчит, нет images_dir — '' (на странице буква).
+
+const GW_TG_PHOTO_TTL = 86400;
+
+function gw_tg_photo_state(): string {
+    return sys_get_temp_dir() . '/maknemy-tg-photos.json';
+}
+
+// Скачать файл Telegram по file_path из getFile.
+function gw_tg_file_fetch(string $token): callable {
+    return function (string $path) use ($token): ?string {
+        if (!function_exists('curl_init') || !preg_match('~^[A-Za-z0-9_][A-Za-z0-9_./-]{0,200}\z~', $path) || strpos($path, '..') !== false) { return null; }
+        $ch = curl_init('https://api.telegram.org/file/bot' . $token . '/' . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_FOLLOWLOCATION => false,
+        ]);
+        $raw = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return is_string($raw) && $code === 200 && $raw !== '' && strlen($raw) <= 512000 ? $raw : null;
+    };
+}
+
+// Адрес копии фото канала на сайте или ''.
+function gw_tg_channel_photo(callable $send, ?callable $fetch, string $dir, int $chat, int $now, string $statePath): string {
+    if ($dir === '') { return ''; }
+    $state = json_decode((string)@file_get_contents($statePath), true);
+    $have = is_array($state) && is_array($state[(string)$chat] ?? null) ? $state[(string)$chat] : null;
+    if ($have && $now - (int)($have[1] ?? 0) < GW_TG_PHOTO_TTL
+        && ((string)$have[0] === '' || is_file(rtrim($dir, '/\\') . '/' . basename((string)$have[0])))) {
+        return (string)$have[0];
+    }
+    if ($fetch === null) { return $have ? (string)$have[0] : ''; }
+
+    $url = '';
+    $res = $send('getChat', ['chat_id' => $chat]);
+    if ($res === null) { return $have ? (string)$have[0] : ''; }
+    $fileId = $res['result']['photo']['small_file_id'] ?? null;
+    if (!empty($res['ok']) && is_string($fileId) && $fileId !== '') {
+        $file = $send('getFile', ['file_id' => $fileId]);
+        $path = is_array($file) && !empty($file['ok']) ? ($file['result']['file_path'] ?? null) : null;
+        $bytes = is_string($path) ? $fetch($path) : null;
+        if ($bytes === null) { return $have ? (string)$have[0] : ''; }
+        try {
+            require_once __DIR__ . '/images.php';
+            $url = save_image_bytes($bytes, $dir, 512000, ['jpg', 'png', 'webp']);
+        } catch (Throwable $e) {
+            error_log('tg channel photo: ' . $e->getMessage());
+            return $have ? (string)$have[0] : '';
+        }
+    }
+    json_state_update($statePath, function ($s) use ($chat, $url, $now) {
+        $s = is_array($s) ? $s : [];
+        $s[(string)$chat] = [$url, $now];
+        return [null, $s];
+    }, null);
+    return $url;
+}
+
+// Каналы, на которые не подписан: название, ссылка «Подписаться» — та же
+// ссылка-приглашение розыгрыша, что в окне на сайте (gw_public_item()), — и
+// аватарка (полный адрес или null). $photo(chat_id) → адрес на сайте или ''.
+function gw_tg_app_missing(PDO $pdo, int $id, array $missing, string $lang, ?callable $photo = null): array {
     $channels = gw_channels($pdo, array_map('intval', $missing));
     $links = gw_links($pdo, [$id])[$id] ?? [];
     $out = [];
     foreach ($missing as $c) {
         $ch = $channels[(int)$c] ?? null;
         $title = $ch && (string)$ch['title'] !== '' ? (string)$ch['title'] : ($lang === 'en' ? 'Channel from the conditions' : 'Канал из условий');
-        $out[] = ['title' => $title, 'url' => $links[(int)$c] ?? ($ch ? gw_channel_url($ch) : '')];
+        $src = $photo ? $photo((int)$c) : '';
+        $out[] = ['title' => $title, 'url' => $links[(int)$c] ?? ($ch ? gw_channel_url($ch) : ''), 'photo' => $src !== '' ? TG_SITE . $src : null];
     }
     return $out;
 }
 
 // Ответ без розыгрыша: auth, rate, none.
 function gw_tg_app_fail(string $key, string $lang): array {
-    return ['ok' => false, 'state' => $key, 'lang' => $lang, 'text' => gw_tg_text($key, $lang), 'note' => '', 'gw' => null, 'missing' => []];
+    return ['ok' => false, 'state' => $key, 'lang' => $lang, 'text' => gw_tg_text($key, $lang), 'note' => '', 'ticket' => 0, 'gw' => null, 'missing' => []];
 }
 
 /**
  * Мини-приложение открыли или нажали в нём «Проверить подписку»: участие
  * человека из проверенных initData ($auth — gw_tg_app_auth()).
  * [код, тело, что сделать после ответа — для gw_tg_after()].
+ * $fetch и $photoState — скачивание файлов Telegram и кеш аватарок каналов
+ * (gw_tg_channel_photo()); по умолчанию настоящие.
  */
-function gw_tg_app_join(PDO $pdo, array $cfg, callable $send, array $auth, int $now): array {
+function gw_tg_app_join(PDO $pdo, array $cfg, callable $send, array $auth, int $now, ?callable $fetch = null, ?string $photoState = null): array {
     $from = $auth['user'];
     $lang = tg_lang_from_telegram($from['language_code'] ?? '');
     $id = gw_ready($pdo) ? gw_tg_app_target($pdo, (string)$auth['start'], $now) : 0;
@@ -423,16 +533,29 @@ function gw_tg_app_join(PDO $pdo, array $cfg, callable $send, array $auth, int $
     if (!$row || $row['status'] === 'draft') { return [200, gw_tg_app_fail('none', $lang), null]; }
     $j = gw_tg_join($pdo, $cfg, $send, $from, $id, $now);
     $row = $j['row'] ?? $row;
+    $ok = in_array($j['key'], ['joined', 'last', 'already'], true);
     // Под заголовком «Вы участвуете»: отписавшийся до итогов выбывает.
     $keep = in_array($j['key'], ['joined', 'already'], true) && gw_checked_channels($row) ? trim(gw_tg_text('keep', $lang)) : '';
+    $missing = [];
+    if ($j['key'] === 'missing') {
+        $tg = tg_config($cfg);
+        $dir = is_string($cfg['images_dir'] ?? null) ? $cfg['images_dir'] : '';
+        $fetch = $fetch ?? ($tg['token'] !== '' ? gw_tg_file_fetch($tg['token']) : null);
+        $state = $photoState ?? gw_tg_photo_state();
+        $photo = function (int $chat) use ($send, $fetch, $dir, $now, $state): string {
+            return gw_tg_channel_photo($send, $fetch, $dir, $chat, $now, $state);
+        };
+        $missing = gw_tg_app_missing($pdo, $id, $j['missing'], $lang, $photo);
+    }
     return [200, [
-        'ok'      => in_array($j['key'], ['joined', 'last', 'already'], true),
+        'ok'      => $ok,
         'state'   => $j['key'],
         'lang'    => $lang,
         'text'    => gw_tg_join_text($pdo, $j, $lang, true),
         'note'    => $keep,
-        'gw'      => gw_tg_app_card($pdo, $j['row'] ?? $row, $lang, $now),
-        'missing' => $j['key'] === 'missing' ? gw_tg_app_missing($pdo, $id, $j['missing'], $lang) : [],
+        'ticket'  => $ok ? gw_tg_app_ticket($pdo, $id, (int)$from['id']) : 0,
+        'gw'      => gw_tg_app_card($pdo, $row, $lang, $now),
+        'missing' => $missing,
     ], $j['after']];
 }
 
