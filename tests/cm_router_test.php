@@ -195,7 +195,7 @@ test('cron: таймеры и очередь', function () {
     $pdo = cm_test_pdo();
     $log = [];
     cm_queue_add($pdo, CM_CHAT, 1, CM_NOW - 1);
-    assert_eq(['timers' => 0, 'deleted' => 1], cm_cron_tick($pdo, cm_cfg(), cm_rec($log), CM_NOW));
+    assert_eq(['timers' => 0, 'deleted' => 1, 'games' => 0], cm_cron_tick($pdo, cm_cfg(), cm_rec($log), CM_NOW));
 });
 
 test('статистика: сообщение и команда считаются, правка и спамер — нет', function () {
@@ -245,6 +245,23 @@ test('без таблиц этапа 2: модерация как раньше',
     rt_run($pdo, cm_gmsg(7, '+', ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]]), $log);
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
     assert_eq(['Ваш ранг: 0 — участник. Варны: 0/3.'], cm_texts($log));
+});
+
+test('кнопка приглашения этапа 3 идёт через вебхук', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    rt_run($pdo, cm_gmsg(7, 'кубы @petya'), $log);
+    $chat = ['id' => CM_CHAT, 'type' => 'supergroup', 'title' => 'Тестовый чат'];
+    $q = ['id' => 'q1', 'from' => ['id' => 30, 'first_name' => 'Чужой'], 'data' => 'cm:p:1:y',
+          'message' => ['message_id' => cm_offer_get($pdo, 1)['msg_id'], 'chat' => $chat, 'text' => 'приглашение']];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['callback_query' => $q], CM_NOW);
+    $q['from'] = ['id' => 20, 'first_name' => 'Петя'];
+    $q['data'] = 'cm:p:1:n';
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['callback_query' => $q], CM_NOW);
+    $ans = array_map(function ($c) { return $c[1]['text']; }, cm_calls($log, 'answerCallbackQuery'));
+    assert_eq([cm_t('not_yours'), 'Петя отказывается.'], $ans);
+    assert_eq('no', cm_offer_get($pdo, 1)['status']);
 });
 
 test('вебхук: правки сообщений и право удалять в группах', function () {

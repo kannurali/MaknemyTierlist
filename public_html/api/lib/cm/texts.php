@@ -240,6 +240,27 @@ const CM_TEXTS = [
     'who_empty'        => 'За неделю здесь никто не писал.',
     // РП
     'rp_done'          => '{emoji} {from} {verb} {to}',
+    // приглашения и общее для игр
+    'btn_decline'      => 'Отказаться',
+    'offer_accepted'   => 'Принято!',
+    'offer_declined'   => '{name} отказывается.',
+    'offer_expired'    => '⌛ Приглашение истекло.',
+    'offer_replaced'   => 'Приглашение отменено: отправлено новое.',
+    'game_stake'       => "\nСтавка: проигравшему — {actions}.",
+    'game_won'         => '🏆 Победитель — {name}!',
+    'game_outcome'     => "\n⚖️ {name}: {done}",
+    'game_top_line'    => '{n}. {name} — {score}',
+    'outcome_usage'    => 'Так: «дуэли исход мут 10м», «кубы исход ничего». Действия: варн, мут <срок>, кик, бан <срок> — до трёх.',
+    'outcome_set'      => 'Проигравший в {game} получит: {actions}.',
+    'outcome_off'      => 'Проигрыш в {game} — без наказания.',
+    'reason_dice'      => 'проигрыш в кубах',
+    // кубы
+    'dice_offer'       => '🎲 {to}, {from} предлагает бросить кубы!{stake}',
+    'dice_result'      => '🎲 Кубы: {a} — {va}, {b} — {vb}',
+    'dice_draw'        => '🤝 Ничья!',
+    'dice_failed'      => 'Кубы не бросились: Telegram не ответил. Попробуйте ещё раз.',
+    'dice_top_head'    => '🎲 Лучшие в кубах:',
+    'dice_top_empty'   => 'В кубы здесь ещё не играли.',
     // общие команды
     'whoami'           => 'Ваш ранг: {n} — {rank}. Варны: {warns}/{limit}.',
     'id_text'          => "ID чата: {chat}\nВаш ID: {me}",

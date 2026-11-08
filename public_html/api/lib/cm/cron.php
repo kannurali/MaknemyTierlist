@@ -35,6 +35,8 @@ function cm_timers_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
     return $n;
 }
 
+// games — закрытые приглашения и ходы дуэлей этапа 3 (offers.php).
 function cm_cron_tick(PDO $pdo, array $cfg, callable $send, int $now): array {
-    return ['timers' => cm_timers_tick($pdo, $cfg, $send, $now), 'deleted' => cm_queue_tick($pdo, $send, $now)];
+    return ['timers' => cm_timers_tick($pdo, $cfg, $send, $now), 'deleted' => cm_queue_tick($pdo, $send, $now),
+            'games' => cm_games_tick($pdo, $cfg, $send, $now)];
 }

@@ -23,6 +23,18 @@ function cm_seq(array $values): callable {
     };
 }
 
+// Нажатие кнопки этапа 3 человеком $who: $data — «cm:p:<id>:y» (приглашение)
+// или «cm:d:<id>:s» (ход в дуэли). Контекст — как у cm_on_callback (чат,
+// нажавший и его ранг), случайность — $rand. Возвращает ответ на кнопку.
+function cm_press(PDO $pdo, array &$log, int $who, string $data, array $answers = [], int $now = CM_NOW, ?callable $rand = null): string {
+    $ctx = cm_ctx_for($pdo, $log, $who, '', [], $answers, $now);
+    if ($rand !== null) { $ctx['rand'] = $rand; }
+    $p = explode(':', $data);
+    $q = ['id' => 'q', 'from' => ['id' => $who], 'data' => $data];
+    return $p[1] === 'd' ? cm_duel_callback($ctx, $q, (int)$p[2], (string)$p[3])
+        : cm_offer_callback($ctx, $q, (int)$p[2], (string)$p[3]);
+}
+
 function cm_test_pdo(): PDO {
     $pdo = test_db();
     cm_sqlite_tables($pdo);

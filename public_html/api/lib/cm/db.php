@@ -27,6 +27,10 @@ const CM_DEFAULTS = [
     'autodelete'    => true,
     'report_code'   => null,
     'raid_greet_at' => 0,
+    // этап 3: исход проигравшему в дуэли и кубах — действия в формате
+    // триггеров; [] — проигрыш без наказания, исход включает модератор
+    'duel_outcome'  => [],
+    'dice_outcome'  => [],
 ];
 
 function cm_enabled(array $cfg): bool {

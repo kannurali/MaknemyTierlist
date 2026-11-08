@@ -153,7 +153,8 @@ function cm_on_private(PDO $pdo, array $cfg, callable $send, array $msg, int $no
     $fn($ctx, $cmd);
 }
 
-// Кнопки «cm:»: r — репорт, k — массовый кик, o — передача создателя.
+// Кнопки «cm:»: r — репорт, k — массовый кик, o — передача создателя,
+// p — приглашение этапа 3 (offers.php).
 // answerCallbackQuery уходит всегда, иначе у человека крутятся часики.
 function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now): void {
     $answer = '';
@@ -174,6 +175,8 @@ function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now
             $answer = cm_mass_callback($ctx, $q, (string)$p[2], (int)$p[3], (int)$p[4]);
         } elseif ($kind === 'o' && count($p) === 4) {
             $answer = cm_owner_callback($ctx, $q, (int)$p[2], (int)$p[3]);
+        } elseif ($kind === 'p' && count($p) === 4) {
+            $answer = cm_offer_callback($ctx, $q, (int)$p[2], (string)$p[3]);
         }
     }
     $send('answerCallbackQuery', ['callback_query_id' => (string)($q['id'] ?? ''), 'text' => mb_substr($answer, 0, 200)]);
