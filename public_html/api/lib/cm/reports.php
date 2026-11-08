@@ -2,7 +2,7 @@
 // Репорты: «репорт причина» ответом на сообщение нарушителя. Карточка с
 // кнопками уходит в ту же группу или в привязанный чат админов. Нажимать
 // кнопки может ранг из раздела «репорты» (по умолчанию 2) — в группе жалобы,
-// а не в чате, где висит карточка.
+// а не в чате, где висит карточка. Здесь же «созвать админов» (раздел «созыв»).
 
 const CM_REPORT_GAP = 300;
 
@@ -153,4 +153,57 @@ function cm_cmd_report_bind(array $ctx, array $cmd): void {
 function cm_cmd_report_home(array $ctx, array $cmd): void {
     $ctx['pdo']->prepare('UPDATE cm_chats SET report_chat_id = 0 WHERE chat_id = :c')->execute([':c' => $ctx['chat']['chat_id']]);
     cm_reply($ctx, cm_t('report_home'), false);
+}
+
+// --------------------------------------------------------------------------
+//  «созвать админов» — позвать на помощь всех, кто может навести порядок
+// --------------------------------------------------------------------------
+
+const CM_CALL_GAP = 600;   // участникам — раз в 10 минут на чат
+const CM_CALL_MAX = 30;
+
+// Кого звать: создатель, админы Telegram (без ботов — их нет в кеше) и
+// модераторы бота (ранг ≥ 1), кто ещё в чате. Без автора, без повторов.
+function cm_call_ids(array $ctx): array {
+    $chat = $ctx['chat'];
+    $ids = array_merge([(int)$chat['owner_id'], (int)$chat['tg_owner_id']], $chat['admins']);
+    $st = $ctx['pdo']->prepare('SELECT user_id FROM cm_members WHERE chat_id = :c AND lvl >= 1 AND left_at = 0
+        ORDER BY lvl DESC, user_id');
+    $st->execute([':c' => (int)$chat['chat_id']]);
+    $ids = array_merge($ids, array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN)));
+    $out = [];
+    foreach ($ids as $id) {
+        if ($id > 0 && $id !== (int)$ctx['actor'] && $id !== CM_TG_SERVICE_ID && !in_array($id, $out, true)) { $out[] = $id; }
+    }
+    return array_slice($out, 0, CM_CALL_MAX);
+}
+
+/**
+ * Ники всех, кого зовём, с упоминанием — им придёт уведомление. Причина —
+ * остаток строки и вторая строка. Участникам — раз в 10 минут на чат (иначе
+ * это кнопка «разбудить всех админов»), модераторам и админам — без паузы.
+ * Ответ постоянный: админ должен его найти.
+ */
+function cm_cmd_call_admins(array $ctx, array $cmd): void {
+    $pdo = $ctx['pdo'];
+    $now = (int)$ctx['now'];
+    $ids = cm_call_ids($ctx);
+    if (!$ids) {
+        cm_reply($ctx, cm_t('call_empty'));
+        return;
+    }
+    $s = $ctx['chat']['settings'];
+    if (!cm_exempt($ctx, (int)$ctx['actor'])) {
+        $left = (int)$s['call_at'] + CM_CALL_GAP - $now;
+        if ($left > 0) {
+            cm_reply($ctx, cm_t('call_wait', ['min' => max(1, intdiv($left + 59, 60))]));
+            return;
+        }
+    }
+    $s['call_at'] = $now;
+    cm_settings_save($pdo, $ctx['chat'], $s, $now);
+    $who = [];
+    foreach ($ids as $uid) { $who[] = cm_user_who($pdo, $uid); }
+    cm_reply($ctx, cm_t('call_done', ['from' => cm_actor_name($ctx)]) . cm_reason_line(cm_reason($cmd['args'], $cmd['body']))
+        . "\n" . implode(', ', $who), false);
 }
