@@ -2491,4 +2491,143 @@ test('счётчик на кнопке: число участников, не ч
     assert_eq('🎁 Участвовать (2)', gw_sent($log, 'editMessageText')[0][1]['reply_markup']['inline_keyboard'][0][0]['text'], '«Сохранить» тоже ставит число');
 });
 
+// --------------------------------------------------------------------------
+//  Мини-приложение (/tg-app): кнопка-ссылка переживает пересылку поста
+// --------------------------------------------------------------------------
+
+// initData так, как их подписывает Telegram: HMAC-SHA256 строки «поле=значение»
+// по алфавиту ключом HMAC-SHA256(токен, "WebAppData"). $rfc — как кодировать
+// значения: Telegram шлёт %20, но и «+» разбираться должен.
+function gw_init(array $user, string $start = '', int $at = GW_NOW, string $token = GW_TOKEN, int $rfc = PHP_QUERY_RFC3986): string {
+    $data = ['auth_date' => (string)$at, 'query_id' => 'AAHdF6IQAAAAAN0XohDhrOrc',
+             'user' => json_encode($user + ['first_name' => 'Иван', 'last_name' => 'П', 'username' => 'ivan_' . $user['id'], 'language_code' => 'ru', 'allows_write_to_pm' => true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+             'signature' => 'Zm9vYmFy'];
+    if ($start !== '') { $data['start_param'] = $start; }
+    ksort($data);
+    $lines = [];
+    foreach ($data as $k => $v) { $lines[] = $k . '=' . $v; }
+    $hash = hash_hmac('sha256', implode("\n", $lines), hash_hmac('sha256', $token, 'WebAppData', true));
+    return http_build_query($data + ['hash' => $hash], '', '&', $rfc);
+}
+
+// Telegram, у бота которого включено мини-приложение (getMe).
+function gw_tg_app_on(array &$log, array $subs = []): callable {
+    $base = gw_tg_posts($log, null, $subs);
+    return function (string $method, array $params) use (&$log, $base): ?array {
+        if ($method === 'getMe') {
+            $log[] = [$method, $params];
+            return ['ok' => true, 'result' => ['id' => 42, 'is_bot' => true, 'username' => 'MaknemyBot', 'has_main_web_app' => true]];
+        }
+        return $base($method, $params);
+    };
+}
+
+test('мини-приложение: подпись initData — только настоящая и свежая', function () {
+    $init = gw_init(['id' => 7001], 'gw5');
+    $a = gw_tg_app_auth($init, GW_TOKEN, GW_NOW + 60);
+    assert_eq([7001, 'Иван', 'gw5'], [$a['user']['id'], $a['user']['first_name'], $a['start']], 'кто и какой розыгрыш');
+    $plus = gw_tg_app_auth(gw_init(['id' => 7001, 'first_name' => 'Ivan Petrov'], '', GW_NOW, GW_TOKEN, PHP_QUERY_RFC1738), GW_TOKEN, GW_NOW);
+    assert_eq('Ivan Petrov', $plus['user']['first_name'] ?? null, 'пробел как «+» тоже разбирается');
+
+    assert_eq(null, gw_tg_app_auth($init, '987654321:AAHotherTokenForTestsOnly_abcdefghij', GW_NOW), 'чужой бот');
+    assert_eq(null, gw_tg_app_auth(str_replace('7001', '7002', $init), GW_TOKEN, GW_NOW), 'подменили id');
+    assert_eq(null, gw_tg_app_auth(str_replace('start_param=gw5', 'start_param=gw6', $init), GW_TOKEN, GW_NOW), 'подменили розыгрыш');
+    assert_eq(null, gw_tg_app_auth(preg_replace('~&hash=[0-9a-f]+~', '', $init), GW_TOKEN, GW_NOW), 'без подписи');
+    assert_eq(null, gw_tg_app_auth($init, GW_TOKEN, GW_NOW + GW_TG_APP_TTL + 1), 'старше суток');
+    assert_eq(null, gw_tg_app_auth(gw_init(['id' => 7001], '', GW_NOW + 3600), GW_TOKEN, GW_NOW), 'из будущего');
+    assert_eq(null, gw_tg_app_auth(gw_init(['id' => 7001, 'is_bot' => true]), GW_TOKEN, GW_NOW), 'бот');
+    assert_eq(null, gw_tg_app_auth('', GW_TOKEN, GW_NOW), 'пусто');
+    assert_eq(null, gw_tg_app_auth('user=1&hash', GW_TOKEN, GW_NOW), 'мусор');
+});
+
+test('мини-приложение: подписка, участие, «уже участвуете», карточка', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Башня Шута', true, 'bashnya');
+    $id = gw_live($p, ['channels' => [GW_CH_A], 'prizes' => [['name' => 'Venom', 'count' => 3], ['name' => 'Gas', 'count' => 1]]]);
+    $auth = gw_tg_app_auth(gw_init(['id' => 7001], 'gw' . $id), GW_TOKEN, GW_NOW);
+    $log = [];
+
+    [$s, $b, $after] = gw_tg_app_join($p, gw_cfg(), gw_tg($log, [GW_CH_A => []]), $auth, GW_NOW);
+    assert_eq([200, false, 'missing', 'ru', null], [$s, $b['ok'], $b['state'], $b['lang'], $after], 'не подписан');
+    assert_eq([['title' => 'Башня Шута', 'url' => 'https://t.me/bashnya']], $b['missing'], 'канал с кнопкой «Подписаться»');
+    assert_eq('Чтобы участвовать, подпишитесь на каналы из условий.', $b['text'], 'заголовок экрана, без «нажмите ещё раз»');
+
+    [$s, $b, $after] = gw_tg_app_join($p, gw_cfg(), gw_tg($log, [GW_CH_A => [7001]]), $auth, GW_NOW + 1);
+    assert_eq([200, true, 'joined', []], [$s, $b['ok'], $b['state'], $b['missing']], 'подписался — участвует');
+    assert_eq(['Вы участвуете!', 'Не отписывайтесь от каналов из условий до итогов.'], [$b['text'], $b['note']],
+        'короткий заголовок; название и срок — на карточке, под заголовком — не отписываться');
+    assert_eq('places', $after[0], 'после ответа — как с кнопки бота');
+    assert_eq([$id, 'Розыгрыш Magnet', [['name' => 'Venom', 'count' => 3], ['name' => 'Gas', 'count' => 1]], 1, 'live', TG_SITE . '/giveaways#g' . $id . '-ch'],
+        [$b['gw']['id'], $b['gw']['title'], $b['gw']['prizes'], $b['gw']['entries'], $b['gw']['phase'], $b['gw']['site']], 'карточка');
+    $e = $p->query('SELECT user_id, chat_id, src FROM giveaway_entries')->fetch(PDO::FETCH_ASSOC);
+    assert_eq([gw_tg_uid(7001), 7001, 'cb'], [(string)$e['user_id'], (int)$e['chat_id'], $e['src']], 'та же запись, что с кнопки бота');
+
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log, [GW_CH_A => [7001]]), $auth, GW_NOW + 2);
+    assert_eq([true, 'already'], [$b['ok'], $b['state']], 'повторное открытие');
+    $r = gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7001), GW_NOW + 3);
+    assert_true(strpos($r['reply']['text'], 'Вы уже участвуете') === 0, 'кнопка бота в старом посте видит ту же запись');
+
+    $en = gw_tg_app_auth(gw_init(['id' => 7002, 'language_code' => 'en'], 'gw' . $id), GW_TOKEN, GW_NOW);
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log, [], [GW_CH_A]), $en, GW_NOW + 4);
+    assert_eq(['down', 'en'], [$b['state'], $b['lang']], 'Telegram молчит — повторить, по-английски');
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log), $en, GW_NOW + 86400);
+    assert_eq(['closed', 'Entries are closed.', 'ended'], [$b['state'], $b['text'], $b['gw']['phase']], 'после конца');
+});
+
+test('мини-приложение: без ссылки — последний идущий; нет розыгрыша — none', function () {
+    $p = gw_db();
+    $log = [];
+    $none = gw_tg_app_auth(gw_init(['id' => 7001]), GW_TOKEN, GW_NOW);
+    [$s, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log), $none, GW_NOW);
+    assert_eq([200, 'none', null], [$s, $b['state'], $b['gw']], 'идущих нет');
+    $old = gw_live($p);
+    $new = gw_live($p, ['title_ru' => 'Новый']);
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log), $none, GW_NOW);
+    assert_eq([$new, 'joined'], [$b['gw']['id'], $b['state']], 'открыли из профиля бота — свежий розыгрыш');
+    $draft = handle_gw_admin($p, gw_cfg(), gw_tg($log), ['action' => 'save'] + gw_draft(), GW_NOW)[1]['id'];
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log), gw_tg_app_auth(gw_init(['id' => 7001], 'gw' . $draft), GW_TOKEN, GW_NOW), GW_NOW);
+    assert_eq('none', $b['state'], 'черновик не открывается');
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log), gw_tg_app_auth(gw_init(['id' => 7001], 'gw' . $old), GW_TOKEN, GW_NOW), GW_NOW);
+    assert_eq([$old, 'joined'], [$b['gw']['id'], $b['state']], 'по ссылке — свой розыгрыш');
+    assert_eq(['auth', null], [gw_tg_app_fail('auth', 'ru')['state'], gw_tg_app_fail('auth', 'ru')['gw']]);
+
+    $allowed = ['update_id' => 3, 'message' => ['chat' => ['id' => 7001, 'type' => 'private'], 'from' => ['id' => 7001, 'language_code' => 'ru'],
+        'write_access_allowed' => ['from_request' => true]]];
+    $r = gw_tg_bot_reply($p, $allowed, GW_NOW);
+    assert_eq([7001, '🔔 Готово! Если выиграете в розыгрыше, бот напишет вам сюда.'], [$r['chat_id'], $r['text']],
+        'разрешили боту писать — ответ про итоги, а не общее «привет»');
+});
+
+test('мини-приложение включено — под постом кнопка-ссылка, её не теряет пересылка', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    $log = [];
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_app_on($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, gw_cfg(), gw_tg_app_on($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    assert_eq([[['text' => '🎁 Участвовать', 'url' => 'https://t.me/MaknemyBot?startapp=gw' . $id]]],
+        gw_posts_sent($log)[0][1]['reply_markup']['inline_keyboard'], 'ссылка на мини-приложение, кнопка одна');
+
+    gw_tg_callback($p, gw_cfg(), gw_tg($log), gw_tap($id, 7001), GW_NOW);
+    $log = [];
+    assert_eq(1, gw_post_counts($p, gw_tg_app_on($log), GW_NOW, $id, gw_lock_file()), 'число обновилось');
+    assert_eq([[['text' => '🎁 Участвовать (1)', 'url' => 'https://t.me/MaknemyBot?startapp=gw' . $id]]],
+        gw_sent($log, 'editMessageReplyMarkup')[0][1]['reply_markup']['inline_keyboard'], 'с числом — та же ссылка');
+    assert_eq(1, count(gw_sent($log, 'getMe')), 'getMe — один раз за проход');
+
+    gw_emoji_set($p, ['🎁' => GW_EMOJI_GIFT]);
+    $log = [];
+    handle_gw_admin($p, gw_cfg(), gw_tg_app_on($log), ['action' => 'save', 'id' => $id] + gw_draft(), GW_NOW + 400);
+    assert_eq([['text' => 'Участвовать (1)', 'url' => 'https://t.me/MaknemyBot?startapp=gw' . $id, 'icon_custom_emoji_id' => GW_EMOJI_GIFT]],
+        gw_sent($log, 'editMessageText')[0][1]['reply_markup']['inline_keyboard'][0], 'премиум-эмодзи — иконкой, как у прочих кнопок');
+
+    $log = [];
+    $off = function (string $m, array $pr) use (&$log): ?array {
+        return $m === 'getMe' ? ['ok' => true, 'result' => ['id' => 42, 'username' => 'MaknemyBot', 'has_main_web_app' => false]] : gw_tg_posts($log)($m, $pr);
+    };
+    handle_gw_admin($p, gw_cfg(), $off, ['action' => 'save', 'id' => $id] + gw_draft(), GW_NOW + 500);
+    assert_eq('gw:' . $id, gw_sent($log, 'editMessageText')[0][1]['reply_markup']['inline_keyboard'][0][0]['callback_data'] ?? null,
+        'мини-приложение выключили — прежняя кнопка бота');
+});
+
 run_tests();

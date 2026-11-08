@@ -55,12 +55,33 @@ $POLICY = csp_policy($HT);
 // --------------------------------------------------------------------------
 
 test('заголовок один, ставится always и одной строкой', function () use ($HT, $POLICY) {
-    assert_eq(1, preg_match_all('~Content-Security-Policy~', preg_replace('~^\s*#.*$~m', '', $HT)),
-        'одна строка с CSP вне комментариев');
+    assert_eq(2, preg_match_all('~Content-Security-Policy~', preg_replace('~^\s*#.*$~m', '', $HT)),
+        'общая строка с CSP и своя у мини-приложения, вне комментариев');
     assert_true($POLICY !== [], 'Header always set Content-Security-Policy "…" разбирается');
     $block = strpos($HT, '<IfModule mod_headers.c>');
     $line  = strpos($HT, 'Header always set Content-Security-Policy');
+    $files = strpos($HT, '<FilesMatch "^tg-app\.php$">');
     assert_true($block !== false && $line > $block, 'внутри <IfModule mod_headers.c>');
+    assert_true($files !== false && $line < $files, 'общая политика — первой, вне <FilesMatch>');
+});
+
+// Мини-приложение розыгрышей (tg-app.php) — своя политика: скрипт Telegram
+// и фрейм веб-версии Telegram. Остальное — не мягче общей.
+test('мини-приложение: telegram.org в скриптах, фрейм только у web.telegram.org', function () use ($HT) {
+    $start = strpos($HT, '<FilesMatch "^tg-app\.php$">');
+    $end   = strpos($HT, '</FilesMatch>', (int)$start);
+    assert_true($start !== false && $end !== false, 'блок <FilesMatch> для tg-app.php');
+    $block = substr($HT, $start, $end - $start);
+    $p = csp_policy($block);
+    assert_eq(["'self'", 'https://telegram.org'], $p['script-src'] ?? [], 'script-src');
+    assert_eq(["'self'", 'https://web.telegram.org'], $p['frame-ancestors'] ?? [], 'frame-ancestors');
+    assert_eq(["'self'"], $p['default-src'] ?? [], 'default-src');
+    assert_eq(["'self'"], $p['connect-src'] ?? [], 'connect-src');
+    assert_eq(["'none'"], $p['object-src'] ?? [], 'object-src');
+    assert_eq(["'self'"], $p['base-uri'] ?? [], 'base-uri');
+    assert_true(strpos($block, 'Header always unset X-Frame-Options') !== false, 'X-Frame-Options снят');
+    $ifm = strrpos(substr($HT, 0, $start), '<IfModule mod_headers.c>');
+    assert_true($ifm !== false && $ifm > strpos($HT, 'Header always set Content-Security-Policy'), 'отдельный <IfModule> после общего');
 });
 
 test('скрипты — только свои и GA, без unsafe-inline и eval', function () use ($POLICY) {
