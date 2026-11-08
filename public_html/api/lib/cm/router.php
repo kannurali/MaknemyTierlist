@@ -195,8 +195,8 @@ function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now
 //  Общие команды
 // --------------------------------------------------------------------------
 
-// Помощь: заголовок, как писать команды, разделы под раскрывающейся
-// цитатой (чат не заливает простынёй) и ссылка на полную инструкцию.
+// Помощь: заголовок, разделы под раскрывающейся цитатой (чат не заливает
+// простынёй) и ссылка на полную инструкцию. Как писать команды — на /bot.
 function cm_cmd_help(array $ctx, array $cmd): void {
     cm_reply($ctx, cm_help_text(), false);
 }
@@ -204,8 +204,7 @@ function cm_cmd_help(array $ctx, array $cmd): void {
 function cm_help_text(): string {
     $rows = [];
     foreach (CM_HELP as [$icon, $title, $cmds]) { $rows[] = $icon . ' ' . cm_bold($title) . ' — ' . $cmds; }
-    return cm_bold(cm_t('help_title')) . "\n" . cm_t('help_intro') . "\n\n"
-        . cm_mark('q', '', implode("\n", $rows)) . "\n\n" . cm_guide_line();
+    return cm_bold(cm_t('help_title')) . "\n\n" . cm_mark('q', '', implode("\n", $rows)) . "\n\n" . cm_guide_line();
 }
 
 // «📖 Все команды с примерами: maknemy.com/bot» — адрес ссылкой.
