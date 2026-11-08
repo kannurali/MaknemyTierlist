@@ -2,13 +2,24 @@
 // Участие в розыгрыше прямо в Telegram — без входа на сайт.
 //
 // Под постом розыгрыша в канале (раздел «Пост в канале» в giveaway.php)
-// кнопка «🎁 Участвовать» — не ссылка, а кнопка бота (callback): человек жмёт
-// её и не уходит из канала. Telegram присылает вебхуку callback_query, бот
-// проверяет подписку на каналы из условий (getChatMember) и отвечает
-// всплывающим окном: «✅ Вы участвуете» или на какие каналы подписаться.
-// Кнопка под постом одна: только такую Telegram показывает и в полосе
-// закреплённого сообщения. Ссылка «Участвовать на сайте» — строкой в конце
-// поста (gw_post_text()).
+// кнопка «🎁 Участвовать». Человек жмёт её и не уходит из канала. Кнопка под
+// постом одна: только такую Telegram показывает и в полосе закреплённого
+// сообщения. Ссылка «Участвовать на сайте» — строкой в конце поста
+// (gw_post_text()).
+//
+// Кнопка бывает двух видов.
+// - Мини-приложение (/tg-app, api/gw_tg_app.php) — если у бота в @BotFather
+//   включено Main Mini App (getMe отвечает has_main_web_app). Кнопка — ссылка
+//   https://t.me/<бот>?startapp=gw<id>: Telegram открывает страницу поверх
+//   чата, она присылает подписанные Telegram данные (initData), сервер
+//   проверяет подпись токеном бота и записывает участие. Ссылка переживает
+//   пересылку поста: в пересланной копии Telegram оставляет кнопки, только
+//   если все они — ссылки (Telegram Desktop, CopyMarkupToForward()).
+// - Кнопка бота (callback gw:<id>) — пока мини-приложения нет. Telegram
+//   присылает вебхуку callback_query, бот отвечает всплывающим окном. При
+//   пересылке поста такая кнопка пропадает.
+// Оба пути — gw_tg_join(): проверка подписки на каналы из условий
+// (getChatMember) и запись.
 //
 // Кто участвует. Telegram подключён к аккаунту сайта (tg_links) — участвует
 // этот аккаунт, ровно как с кнопки на сайте (gw_enter()). Не подключён —
@@ -99,11 +110,32 @@ function gw_tg_person(PDO $pdo, int $chat): ?array {
 
 // Кнопка под постом идущего розыгрыша: участие прямо в Telegram.
 // $tail — хвост надписи «Участвовать», число участников: « (128)».
-function gw_tg_post_buttons(array $row, array $map, string $tail = ''): array {
+// $app — имя бота с мини-приложением (gw_tg_app_bot()): кнопка-ссылка на
+// него; пусто — кнопка бота.
+function gw_tg_post_buttons(array $row, array $map, string $tail = '', string $app = ''): array {
+    if ($app !== '') {
+        return [[gw_button($map, '🎁', 'Участвовать' . $tail, gw_tg_app_link($app, (int)$row['id']))]];
+    }
     $join = gw_button($map, '🎁', 'Участвовать' . $tail, '');
     unset($join['url']);
     $join['callback_data'] = 'gw:' . (int)$row['id'];
     return [[$join]];
+}
+
+function gw_tg_app_link(string $bot, int $id): string {
+    return 'https://t.me/' . $bot . '?startapp=gw' . $id;
+}
+
+// Имя бота, если у него включено мини-приложение (Main Mini App в
+// @BotFather), иначе ''. Спрашивает Telegram (getMe): вызывающие зовут это
+// раз на проход по постам и только когда есть что править. Telegram молчит —
+// '' (кнопка бота), следующая правка поста вернёт ссылку.
+function gw_tg_app_bot(callable $send): string {
+    $res = $send('getMe', []);
+    $me = is_array($res) && !empty($res['ok']) && is_array($res['result'] ?? null) ? $res['result'] : [];
+    $name = is_string($me['username'] ?? null) ? $me['username'] : '';
+    if (empty($me['has_main_web_app']) || !preg_match('/^[A-Za-z][A-Za-z0-9_]{3,31}\z/', $name)) { return ''; }
+    return $name;
 }
 
 // Кнопка «Забрать приз» под постом с итогами: открывает бота.
@@ -144,6 +176,17 @@ function gw_tg_text(string $key, string $lang, array $v = []): string {
         'tg_used' => ['Этот Telegram уже участвует с другого аккаунта сайта.', 'This Telegram is already in with another site account.'],
         'site'    => ['Участвуйте на сайте maknemy.com, в разделе «Розыгрыши».', 'Join on the site maknemy.com, in the «Розыгрыши» section.'],
         'error'   => ['Не получилось. Нажмите ещё раз.', "That didn't work. Tap again."],
+        // Мини-приложение: текст — заголовок экрана; название, призы и срок
+        // итогов там на карточке, каналы — списком с кнопками «Подписаться».
+        'app_joined'  => ['Вы участвуете!', "You're in!"],
+        'app_already' => ['Вы уже участвуете!', "You're already in!"],
+        'app_last'    => ['Вы участвуете и заняли последнее место — итоги совсем скоро.',
+                          "You're in and took the last spot — results very soon."],
+        'app_missing' => ['Чтобы участвовать, подпишитесь на каналы из условий.',
+                          'To enter, subscribe to the channels from the conditions.'],
+        'auth'    => ['Откройте розыгрыш заново из Telegram.', 'Open the giveaway again from Telegram.'],
+        'rate'    => ['Слишком много попыток. Попробуйте через несколько минут.', 'Too many tries. Try again in a few minutes.'],
+        'none'    => ['Сейчас нет розыгрыша, в котором можно участвовать.', 'There is no giveaway to enter right now.'],
     ];
     $s = $t[$key][$lang === 'en' ? 1 : 0];
     $pairs = [];
@@ -179,42 +222,40 @@ function gw_tg_joined_text(array $row, string $lang): string {
     ]);
 }
 
-// Ответ gw_enter() — для всплывающего окна.
-function gw_tg_enter_text(PDO $pdo, array $row, array $p, ?array $note, string $lang): string {
+// Ответ gw_enter() — ключ текста gw_tg_text().
+function gw_tg_enter_key(array $p, ?array $note): string {
     if (!empty($p['ok'])) {
-        if ($note === null) { return gw_tg_text('already', $lang, ['when' => gw_when($row, $lang)]); }
-        return !empty($note['last']) ? gw_tg_text('last', $lang) : gw_tg_joined_text($note['row'], $lang);
+        if ($note === null) { return 'already'; }
+        return !empty($note['last']) ? 'last' : 'joined';
     }
     $err = (string)($p['error'] ?? '');
-    if ($err === 'channels') { return gw_tg_text('missing', $lang, ['list' => gw_tg_missing_list($pdo, $p['missing'] ?? [])]); }
-    if ($err === 'tg_down') { return gw_tg_text('down', $lang); }
-    if (in_array($err, ['closed', 'full', 'banned', 'tg_used'], true)) { return gw_tg_text($err, $lang); }
-    return gw_tg_text('error', $lang);
+    if ($err === 'channels') { return 'missing'; }
+    if ($err === 'tg_down') { return 'down'; }
+    if (in_array($err, ['closed', 'full', 'banned', 'tg_used'], true)) { return $err; }
+    return 'error';
 }
 
 /**
- * Нажатие «Участвовать» под постом в канале (callback_query с данными
- * gw:<id>). ['reply' => answerCallbackQuery — его вебхук отдаёт телом
- * ответа, 'after' => что сделать после ответа: null, ['join', записка
- * gw_enter()] (участвует аккаунт сайта), ['places', записка] или ['due',
- * записка] (участник из Telegram; due — занял последнее место)].
- * null — нажатие не наше.
+ * Участие из Telegram — кнопкой бота под постом и из мини-приложения.
+ * $from — профиль Telegram (callback_query.from или user из initData).
+ * ['key' => что вышло, 'row' => строка розыгрыша (после записи) или null,
+ * 'missing' => [chat_id каналов, на которые не подписан], 'after' => что
+ * сделать после ответа: null, ['join', записка gw_enter()] (участвует
+ * аккаунт сайта), ['places', записка] или ['due', записка] (участник из
+ * Telegram; due — занял последнее место)].
+ * Ключи — тексты gw_tg_text(): joined, last, already, missing, down, closed,
+ * full, banned, tg_used, site (нет tg_people — участие только на сайте),
+ * error.
  */
-function gw_tg_callback(PDO $pdo, array $cfg, callable $send, array $update, int $now): ?array {
-    $cq = $update['callback_query'] ?? null;
-    if (!is_array($cq) || !is_string($cq['data'] ?? null) || !preg_match('/^gw:([1-9][0-9]{0,8})\z/', $cq['data'], $m)) {
-        return null;
-    }
-    $from = is_array($cq['from'] ?? null) ? $cq['from'] : [];
-    $lang = tg_lang_from_telegram($from['language_code'] ?? '');
-    $no = function (string $key) use ($cq, $lang): array {
-        return ['reply' => gw_tg_alert($cq, gw_tg_text($key, $lang)), 'after' => null];
+function gw_tg_join(PDO $pdo, array $cfg, callable $send, array $from, int $id, int $now): array {
+    $out = function (string $key, ?array $row = null, array $missing = [], ?array $after = null): array {
+        return ['key' => $key, 'row' => $row, 'missing' => $missing, 'after' => $after];
     };
-    if (!is_int($from['id'] ?? null) || !empty($from['is_bot']) || !gw_ready($pdo)) { return $no('error'); }
+    if (!is_int($from['id'] ?? null) || !empty($from['is_bot']) || !gw_ready($pdo)) { return $out('error'); }
     $chat = $from['id'];
-    $id = (int)$m[1];
+    $lang = tg_lang_from_telegram($from['language_code'] ?? '');
     $row = gw_load($pdo, $id);
-    if (!$row || $row['status'] === 'draft') { return $no('closed'); }
+    if (!$row || $row['status'] === 'draft') { return $out('closed'); }
 
     // Telegram подключён к аккаунту сайта — участвует аккаунт, как с сайта.
     $site = false;
@@ -228,37 +269,171 @@ function gw_tg_callback(PDO $pdo, array $cfg, callable $send, array $update, int
     if ($site !== false) {
         $res = gw_enter($pdo, $cfg, $send, (string)$site, $id, $now, 'cb');
         $note = $res[2] ?? null;
-        return ['reply' => gw_tg_alert($cq, gw_tg_enter_text($pdo, $row, $res[1], $note, $lang)), 'after' => $note ? ['join', $note] : null];
+        $key = gw_tg_enter_key($res[1], $note);
+        return $out($key, $note['row'] ?? $row, $key === 'missing' ? array_map('strval', $res[1]['missing'] ?? []) : [], $note ? ['join', $note] : null);
     }
 
-    if (!gw_has_tg_entry($pdo)) { return $no('site'); }
-    if (gw_phase($row, $now) !== 'live') { return $no($row['status'] === 'live' && gw_full($pdo, $row) ? 'full' : 'closed'); }
+    if (!gw_has_tg_entry($pdo)) { return $out('site', $row); }
+    if (gw_phase($row, $now) !== 'live') { return $out($row['status'] === 'live' && gw_full($pdo, $row) ? 'full' : 'closed', $row); }
 
     $st = $pdo->prepare('SELECT 1 FROM giveaway_entries e WHERE e.giveaway_id = :g AND e.chat_id = :c' . gw_active_sql($pdo));
     $st->execute([':g' => $id, ':c' => $chat]);
-    if ($st->fetchColumn() !== false) {
-        return ['reply' => gw_tg_alert($cq, gw_tg_text('already', $lang, ['when' => gw_when($row, $lang)])), 'after' => null];
-    }
+    if ($st->fetchColumn() !== false) { return $out('already', $row); }
 
     $channels = gw_checked_channels($row);
     if ($channels) {
         $chk = gw_check_channels($send, $channels, $chat);
-        if ($chk['error']) { return $no('down'); }
-        if (!$chk['ok']) {
-            return ['reply' => gw_tg_alert($cq, gw_tg_text('missing', $lang, ['list' => gw_tg_missing_list($pdo, $chk['missing'])])), 'after' => null];
-        }
+        if ($chk['error']) { return $out('down', $row); }
+        if (!$chk['ok']) { return $out('missing', $row, $chk['missing']); }
     }
 
     gw_tg_person_save($pdo, $from, $now);
-    [$err, $row] = gw_add_entry($pdo, $id, gw_tg_uid($chat), $chat, $now, 'cb');
-    if ($err === 'closed' || $err === 'full') { return $no($err); }
-    if ($err === 'dup') { return $no('tg_used'); }
-    $last = (int)$row['ends_at'] <= $now;
-    $note = ['chat_id' => $chat, 'lang' => $lang, 'row' => $row, 'last' => $last, 'user' => gw_tg_uid($chat)];
+    [$err, $after] = gw_add_entry($pdo, $id, gw_tg_uid($chat), $chat, $now, 'cb');
+    if ($err === 'closed' || $err === 'full') { return $out($err, $after ?: $row); }
+    if ($err === 'dup') { return $out('tg_used', $row); }
+    $last = (int)$after['ends_at'] <= $now;
+    $note = ['chat_id' => $chat, 'lang' => $lang, 'row' => $after, 'last' => $last, 'user' => gw_tg_uid($chat)];
+    return $out($last ? 'last' : 'joined', $after, [], [$last ? 'due' : 'places', $note]);
+}
+
+// Текст ответа gw_tg_join(). $app — для мини-приложения: там текст —
+// короткий заголовок экрана (app_*).
+function gw_tg_join_text(PDO $pdo, array $j, string $lang, bool $app = false): string {
+    $key = $j['key'];
+    if ($app && in_array($key, ['joined', 'already', 'last', 'missing'], true)) { return gw_tg_text('app_' . $key, $lang); }
+    if ($key === 'joined') { return gw_tg_joined_text($j['row'], $lang); }
+    if ($key === 'already') { return gw_tg_text('already', $lang, ['when' => gw_when($j['row'], $lang)]); }
+    if ($key === 'missing') { return gw_tg_text('missing', $lang, ['list' => gw_tg_missing_list($pdo, $j['missing'])]); }
+    return gw_tg_text($key, $lang);
+}
+
+/**
+ * Нажатие «Участвовать» под постом в канале (callback_query с данными
+ * gw:<id>). ['reply' => answerCallbackQuery — его вебхук отдаёт телом
+ * ответа, 'after' => что сделать после ответа (gw_tg_join())].
+ * null — нажатие не наше.
+ */
+function gw_tg_callback(PDO $pdo, array $cfg, callable $send, array $update, int $now): ?array {
+    $cq = $update['callback_query'] ?? null;
+    if (!is_array($cq) || !is_string($cq['data'] ?? null) || !preg_match('/^gw:([1-9][0-9]{0,8})\z/', $cq['data'], $m)) {
+        return null;
+    }
+    $from = is_array($cq['from'] ?? null) ? $cq['from'] : [];
+    $lang = tg_lang_from_telegram($from['language_code'] ?? '');
+    $j = gw_tg_join($pdo, $cfg, $send, $from, (int)$m[1], $now);
+    return ['reply' => gw_tg_alert($cq, gw_tg_join_text($pdo, $j, $lang)), 'after' => $j['after']];
+}
+
+// --------------------------------------------------------------------------
+//  Мини-приложение (/tg-app, api/gw_tg_app.php)
+// --------------------------------------------------------------------------
+
+// Данные Telegram (initData) годны сутки: дольше мини-приложение открытым
+// не держат, а перехваченная строка не должна работать вечно.
+const GW_TG_APP_TTL = 86400;
+
+/**
+ * Проверить initData мини-приложения. Подпись — по правилам Telegram
+ * («Validating data received via the Mini App»): ключ = HMAC-SHA256 токена
+ * бота с ключом "WebAppData"; hash = HMAC-SHA256 строки из всех полей,
+ * кроме hash, вида «поле=значение», по алфавиту, через перевод строки.
+ * Подделать её без токена нельзя, поэтому id в Telegram отсюда — настоящий.
+ * ['user' => профиль Telegram, 'start' => start_param] или null.
+ */
+function gw_tg_app_auth(string $init, string $token, int $now): ?array {
+    if ($init === '' || strlen($init) > 8192 || $token === '') { return null; }
+    $data = [];
+    foreach (explode('&', $init) as $pair) {
+        $kv = explode('=', $pair, 2);
+        if (count($kv) !== 2) { return null; }
+        $data[urldecode($kv[0])] = urldecode($kv[1]);
+    }
+    $hash = (string)($data['hash'] ?? '');
+    unset($data['hash']);
+    if (!preg_match('/^[0-9a-f]{64}\z/', $hash)) { return null; }
+    ksort($data, SORT_STRING);
+    $lines = [];
+    foreach ($data as $k => $v) { $lines[] = $k . '=' . $v; }
+    $key = hash_hmac('sha256', $token, 'WebAppData', true);
+    if (!hash_equals(hash_hmac('sha256', implode("\n", $lines), $key), $hash)) { return null; }
+    $at = (int)($data['auth_date'] ?? 0);
+    if ($at <= 0 || $at < $now - GW_TG_APP_TTL || $at > $now + 300) { return null; }
+    $user = json_decode((string)($data['user'] ?? ''), true);
+    if (!is_array($user) || !is_int($user['id'] ?? null) || $user['id'] <= 0 || !empty($user['is_bot'])) { return null; }
+    return ['user' => $user, 'start' => (string)($data['start_param'] ?? '')];
+}
+
+// Какой розыгрыш открыть: из ссылки кнопки (startapp=gw<id>), а без неё
+// (мини-приложение открыли из профиля бота) — последний идущий.
+function gw_tg_app_target(PDO $pdo, string $start, int $now): int {
+    if (preg_match('/^gw([1-9][0-9]{0,8})\z/', $start, $m)) { return (int)$m[1]; }
+    $real = gw_has_test($pdo) ? ' AND test = 0' : '';
+    $st = $pdo->prepare("SELECT id FROM giveaways WHERE status = 'live' AND ends_at > :now" . $real . ' ORDER BY published_at DESC, id DESC LIMIT 1');
+    $st->execute([':now' => $now]);
+    return (int)$st->fetchColumn();
+}
+
+// Розыгрыш для экрана мини-приложения.
+function gw_tg_app_card(PDO $pdo, array $row, string $lang, int $now): array {
+    $id = (int)$row['id'];
+    $prizes = [];
+    foreach (gw_prizes($row['prizes_json']) as $p) { $prizes[] = ['name' => $p['name'], 'count' => $p['count']]; }
     return [
-        'reply' => gw_tg_alert($cq, $last ? gw_tg_text('last', $lang) : gw_tg_joined_text($row, $lang)),
-        'after' => [$last ? 'due' : 'places', $note],
+        'id'      => $id,
+        'title'   => gw_title($row, $lang),
+        'image'   => (string)$row['image_url'] !== '' ? TG_SITE . $row['image_url'] : null,
+        'prizes'  => $prizes,
+        'when'    => gw_when($row, $lang),
+        'entries' => gw_entry_counts($pdo, [$id])[$id] ?? 0,
+        'max'     => gw_max($row),
+        'phase'   => gw_phase($row, $now),
+        'site'    => gw_post_link($id, gw_is_test($row)),
     ];
+}
+
+// Каналы, на которые не подписан: название и ссылка «Подписаться» — та же
+// ссылка-приглашение розыгрыша, что в окне на сайте (gw_public_item()).
+function gw_tg_app_missing(PDO $pdo, int $id, array $missing, string $lang): array {
+    $channels = gw_channels($pdo, array_map('intval', $missing));
+    $links = gw_links($pdo, [$id])[$id] ?? [];
+    $out = [];
+    foreach ($missing as $c) {
+        $ch = $channels[(int)$c] ?? null;
+        $title = $ch && (string)$ch['title'] !== '' ? (string)$ch['title'] : ($lang === 'en' ? 'Channel from the conditions' : 'Канал из условий');
+        $out[] = ['title' => $title, 'url' => $links[(int)$c] ?? ($ch ? gw_channel_url($ch) : '')];
+    }
+    return $out;
+}
+
+// Ответ без розыгрыша: auth, rate, none.
+function gw_tg_app_fail(string $key, string $lang): array {
+    return ['ok' => false, 'state' => $key, 'lang' => $lang, 'text' => gw_tg_text($key, $lang), 'note' => '', 'gw' => null, 'missing' => []];
+}
+
+/**
+ * Мини-приложение открыли или нажали в нём «Проверить подписку»: участие
+ * человека из проверенных initData ($auth — gw_tg_app_auth()).
+ * [код, тело, что сделать после ответа — для gw_tg_after()].
+ */
+function gw_tg_app_join(PDO $pdo, array $cfg, callable $send, array $auth, int $now): array {
+    $from = $auth['user'];
+    $lang = tg_lang_from_telegram($from['language_code'] ?? '');
+    $id = gw_ready($pdo) ? gw_tg_app_target($pdo, (string)$auth['start'], $now) : 0;
+    $row = $id > 0 ? gw_load($pdo, $id) : null;
+    if (!$row || $row['status'] === 'draft') { return [200, gw_tg_app_fail('none', $lang), null]; }
+    $j = gw_tg_join($pdo, $cfg, $send, $from, $id, $now);
+    $row = $j['row'] ?? $row;
+    // Под заголовком «Вы участвуете»: отписавшийся до итогов выбывает.
+    $keep = in_array($j['key'], ['joined', 'already'], true) && gw_checked_channels($row) ? trim(gw_tg_text('keep', $lang)) : '';
+    return [200, [
+        'ok'      => in_array($j['key'], ['joined', 'last', 'already'], true),
+        'state'   => $j['key'],
+        'lang'    => $lang,
+        'text'    => gw_tg_join_text($pdo, $j, $lang, true),
+        'note'    => $keep,
+        'gw'      => gw_tg_app_card($pdo, $j['row'] ?? $row, $lang, $now),
+        'missing' => $j['key'] === 'missing' ? gw_tg_app_missing($pdo, $id, $j['missing'], $lang) : [],
+    ], $j['after']];
 }
 
 // После ответа вебхуку: «вы участвуете» в личку (аккаунт сайта),
@@ -292,6 +467,8 @@ function gw_tg_prize_text(string $key, string $lang, array $v = []): string {
                       'Thanks! The username {nick} has been passed on — the prize goes to it.'],
         'nick_bad'=> ['Ник в Roblox — от 3 до 20 латинских букв, цифр или _. Пришлите ещё раз.',
                       'A Roblox username is 3–20 Latin letters, digits or _. Send it again.'],
+        'write_ok'=> ['🔔 Готово! Если выиграете в розыгрыше, бот напишет вам сюда.',
+                      '🔔 Done! If you win a giveaway, the bot will message you here.'],
     ];
     $s = $t[$key][$lang === 'en' ? 1 : 0];
     $pairs = [];
@@ -324,6 +501,13 @@ function gw_tg_bot_reply(PDO $pdo, array $update, int $now): ?array {
     $say = function (string $s) use ($chat): array {
         return ['method' => 'sendMessage', 'chat_id' => $chat, 'text' => $s];
     };
+
+    // Мини-приложение после участия просит разрешить боту писать
+    // (requestWriteAccess); разрешили — Telegram кладёт в личку служебное
+    // сообщение. Отвечаем по делу, а не общим «привет» tg_handle_update().
+    if (is_array($msg['write_access_allowed'] ?? null)) {
+        return $say(gw_tg_prize_text('write_ok', $lang));
+    }
 
     if (preg_match('~^/start(?:@\w+)?\s+gwp([1-9][0-9]{0,8})\z~', $text, $m)) {
         $row = gw_load($pdo, (int)$m[1]);

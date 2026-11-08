@@ -132,6 +132,7 @@ test('session-bound and writing endpoints never ask for the cache', function () 
               'api/roblox_start.php', 'api/roblox_callback.php',
               'api/tg_link.php', 'api/tg_webhook.php', 'api/tg_setup.php',
               'admin-giveaways.php', 'api/giveaway_enter.php', 'api/giveaway_admin.php',
+              'tg-app.php', 'api/gw_tg_app.php',
               'admin-hunt.php', 'api/hunt_me.php', 'api/hunt_act.php', 'api/hunt_admin.php'] as $f) {
         $src = dg_read("$PUB/$f");
         assert_eq(false, strpos($src, 'page_lscache('), "$f: page_lscache");

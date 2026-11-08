@@ -315,6 +315,15 @@ RewriteRule ^giveaways\.php$ /giveaways [L,R=301]
 
 RewriteRule ^giveaways$ /giveaways.php [L]
 
+# ------------------- Мини-приложение розыгрышей (Telegram) -------------------
+# Страница, которую Telegram открывает поверх чата кнопкой «Участвовать» под
+# постом розыгрыша (api/lib/gw_tg.php). Этот адрес, https://maknemy.com/tg-app,
+# вписан в @BotFather: Bot Settings → Configure Mini App. Telegram дописывает
+# к нему ?tgWebAppStartParam=… и #tgWebAppData=… — правило их не трогает.
+# Своя политика CSP — ниже, у заголовков.
+RewriteRule ^tg-app/$ /tg-app [L,R=301]
+RewriteRule ^tg-app$ /tg-app.php [L]
+
 # ------------------------- Хэллоуинский ивент -------------------------
 # Spooky Tokens (api/lib/hunt.php). Слова event/promo в адресе не берём —
 # их режут блокировщики. Пути внутри halloween.php документ-относительные,
@@ -495,6 +504,27 @@ Options -Indexes
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   # Site is HTTPS-only (redirect above); 180 days, no preload — reversible.
   Header always set Strict-Transport-Security "max-age=15552000"
+</IfModule>
+
+# Мини-приложение розыгрышей (/tg-app → tg-app.php) — своя политика вместо
+# общей. Отличия три:
+#   script-src https://telegram.org — telegram-web-app.js, связь страницы с
+#     Telegram; Telegram велит подключать его со своего адреса.
+#   frame-ancestors https://web.telegram.org — веб-версия Telegram открывает
+#     мини-приложения во фрейме; X-Frame-Options поэтому снят (при
+#     frame-ancestors браузеры на него и так не смотрят). Приложения Telegram
+#     для телефона и компьютера открывают страницу без фрейма.
+#   img-src — только свои картинки (баннер розыгрыша); аналитики на странице нет.
+# <FilesMatch> применяется после заголовков выше и перекрывает их. Без этого
+# блока страница попадёт под общую политику, telegram-web-app.js не
+# загрузится и мини-приложение не заработает. Откат — выключить
+# мини-приложение в @BotFather: кнопка под постом сама станет прежней
+# кнопкой бота при следующей правке поста.
+<IfModule mod_headers.c>
+  <FilesMatch "^tg-app\.php$">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https://maknemy.com data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org"
+    Header always unset X-Frame-Options
+  </FilesMatch>
 </IfModule>
 
 # index.html carries the ?v= numbers for app.js and styles.css, so a stale

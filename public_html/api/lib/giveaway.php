@@ -1999,13 +1999,20 @@ function gw_post_params(array $row, string $text, bool $results, array $map = []
 }
 
 // Кнопка под постом идущего розыгрыша; на «Участвовать» — число участников,
-// как у рандомайзеров. Есть tg_people — участие прямо в Telegram (gw_tg.php),
-// нет — кнопка-ссылка на сайт. Кнопка одна, чтобы была видна и в закрепе
-// (gw_post_site_html()).
-function gw_post_keyboard(PDO $pdo, array $row, array $map, int $count): array {
+// как у рандомайзеров. Есть tg_people — участие прямо в Telegram (gw_tg.php):
+// $app — имя бота с мини-приложением (gw_post_app()), пусто — кнопка бота.
+// Нет tg_people — кнопка-ссылка на сайт. Кнопка одна, чтобы была видна и в
+// закрепе (gw_post_site_html()).
+function gw_post_keyboard(PDO $pdo, array $row, array $map, int $count, string $app = ''): array {
     $tail = $count > 0 ? ' (' . $count . ')' : '';
-    if (gw_has_tg_entry($pdo)) { return gw_tg_post_buttons($row, $map, $tail); }
+    if (gw_has_tg_entry($pdo)) { return gw_tg_post_buttons($row, $map, $tail, $app); }
     return [[gw_button($map, '🎁', 'Участвовать' . $tail, gw_post_link((int)$row['id'], gw_is_test($row)))]];
+}
+
+// Имя бота для кнопки-ссылки на мини-приложение — или '', если участия в
+// Telegram нет или мини-приложение у бота не включено (gw_tg_app_bot()).
+function gw_post_app(PDO $pdo, callable $send): string {
+    return gw_has_tg_entry($pdo) ? gw_tg_app_bot($send) : '';
 }
 
 // Число на кнопке обновляется не чаще раза в столько секунд на розыгрыш:
@@ -2039,6 +2046,7 @@ function gw_post_counts(PDO $pdo, callable $send, int $now, ?int $only = null, ?
         $counts = gw_entry_counts($pdo, array_keys($posts));
         $map = gw_emoji_map($pdo);
         $fancy = gw_send_fancy($send, $map);
+        $app = null;
         foreach ($posts as $id => $list) {
             $n = $counts[$id] ?? 0;
             $was = $state[$id] ?? null;
@@ -2046,7 +2054,8 @@ function gw_post_counts(PDO $pdo, callable $send, int $now, ?int $only = null, ?
             if (is_array($was) && $now - (int)$was[0] < GW_POST_COUNT_EVERY) { continue; }
             $row = gw_load($pdo, $id);
             if (!$row) { continue; }
-            $kb = ['inline_keyboard' => gw_post_keyboard($pdo, $row, $map, $n)];
+            $app = $app ?? gw_post_app($pdo, $send);
+            $kb = ['inline_keyboard' => gw_post_keyboard($pdo, $row, $map, $n, $app)];
             foreach ($list as $p) {
                 $res = $fancy('editMessageReplyMarkup', ['chat_id' => (int)$p['chat_id'], 'message_id' => (int)$p['message_id'], 'reply_markup' => $kb]);
                 if (gw_post_edit_state($res) === 'ok') { $edited++; }
@@ -2099,9 +2108,10 @@ function gw_post_sync(PDO $pdo, callable $send, array $row, int $now): array {
     if (!$posts) { return $out; }
     $channels = gw_channels($pdo, array_keys($posts));
     $map = gw_emoji_map($pdo);
+    $app = gw_post_app($pdo, $send);
     $send = gw_send_fancy($send, $map);
     $text = gw_post_text($pdo, $row, $map);
-    $keyboard = gw_post_keyboard($pdo, $row, $map, gw_entry_counts($pdo, [$id])[$id] ?? 0);
+    $keyboard = gw_post_keyboard($pdo, $row, $map, gw_entry_counts($pdo, [$id])[$id] ?? 0, $app);
     foreach ($posts as $chat => $p) {
         if ((int)$p['results_at'] > 0) { continue; }
         $c = $channels[$chat] ?? null;
