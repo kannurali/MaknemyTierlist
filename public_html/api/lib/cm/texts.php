@@ -184,6 +184,15 @@ const CM_TEXTS = [
     'stats_p_0'        => 'всё время',
     'stats_me'         => "📊 {name}\nСегодня: {d} · неделя: {w} · месяц: {m} · всего: {all}{place}",
     'stats_place'      => "\nМесто в топе за всё время: {n}",
+    // репутация
+    'rep_up'           => '👍 {from} → {to}: +1 (репутация {score})',
+    'rep_down'         => '👎 {from} → {to}: -1 (репутация {score})',
+    'rep_pair_wait'    => 'Этому человеку голос — не чаще раза в сутки.',
+    'rep_day_full'     => 'Не больше {max} голосов за сутки.',
+    'rep_show'         => '⭐ {name}: репутация {score}',
+    'rep_top_head'     => '⭐ Лучшая репутация:',
+    'rep_top_line'     => '{n}. {name} — {score}',
+    'rep_top_empty'    => 'Репутации пока ни у кого нет.',
     // общие команды
     'whoami'           => 'Ваш ранг: {n} — {rank}. Варны: {warns}/{limit}.',
     'id_text'          => "ID чата: {chat}\nВаш ID: {me}",
