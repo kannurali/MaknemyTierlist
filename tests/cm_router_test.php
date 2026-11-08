@@ -189,7 +189,7 @@ test('помощь, кто я, id', function () {
     rt_run($pdo, cm_gmsg(7, 'помощь'), $log);
     assert_eq(cm_plain(cm_help_text()), cm_last_text($log));
     $p = cm_calls($log, 'sendMessage')[0][1];
-    assert_eq(0, strpos($p['text'], "🤖 Чат-менеджер Maknemy\nКоманды пишутся прямо в чат — точка, ! и / не нужны."));
+    assert_eq(0, strpos($p['text'], "🤖 Чат-менеджер Maknemy\n\n👮 Модерация — "), 'сразу разделы, без пояснений');
     $types = array_count_values(array_column($p['entities'], 'type'));
     assert_eq(1, $types['expandable_blockquote'] ?? 0, 'разделы — под раскрывающейся цитатой');
     assert_eq(1, $types['text_link'] ?? 0, 'ссылка на инструкцию');

@@ -83,7 +83,7 @@ function cm_on_membership(PDO $pdo, array $cfg, callable $send, array $update, i
         cm_admins_refresh($ctx, true);
         $missing = cm_missing_rights($new);
         if ($wasOut) {
-            $text = cm_bold(cm_t('intro_title')) . "\n" . cm_t('intro') . "\n" . cm_guide_line();
+            $text = cm_bold(cm_t('intro_title')) . "\n" . cm_t('intro') . "\n\n" . cm_guide_line();
             if ($missing) { $text .= "\n\n" . cm_t('need_rights_list', ['rights' => implode("\n• ", $missing)]); }
             cm_say($ctx, $chatId, $text);
         } elseif ($ns === 'administrator' && !$missing && $os !== 'administrator') {
