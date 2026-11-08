@@ -9,7 +9,7 @@ require_once __DIR__ . '/../chess.php';
 
 foreach (['db', 'texts', 'parse', 'send', 'queue', 'ranks', 'punish', 'words', 'filters', 'spam',
           'welcome', 'reports', 'cleanup', 'notes', 'timers', 'stats', 'rep', 'awards', 'profile',
-          'fun', 'offers', 'dice', 'duel', 'chess', 'love', 'clans', 'router', 'cron'] as $cm_part) {
+          'fun', 'farm', 'offers', 'dice', 'duel', 'chess', 'love', 'clans', 'router', 'cron'] as $cm_part) {
     require_once __DIR__ . '/' . $cm_part . '.php';
 }
 unset($cm_part);

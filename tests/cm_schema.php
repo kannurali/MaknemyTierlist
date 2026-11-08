@@ -104,6 +104,10 @@ function cm_sqlite_tables(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS cm_clan_members (
         chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL, clan_id INTEGER NOT NULL, joined_at INTEGER NOT NULL,
         PRIMARY KEY (chat_id, user_id))");
+    // docs/migrations/2026-11-08-cm-coins.sql
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_coins (
+        user_id INTEGER PRIMARY KEY, coins INTEGER NOT NULL DEFAULT 0, farms INTEGER NOT NULL DEFAULT 0,
+        farm_at INTEGER NOT NULL DEFAULT 0)");
     $pdo->exec("CREATE TABLE IF NOT EXISTS tg_links (
         user_id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL, tg_name TEXT NOT NULL DEFAULT '',
         lang TEXT NOT NULL DEFAULT 'ru', linked_at INTEGER NOT NULL)");

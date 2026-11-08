@@ -1,9 +1,10 @@
 <?php
 // Случайные команды и РП (этап 3): рандом, монетка, выбери, инфа / шанс, шар,
-// !кто, РП-действия. Здесь же общее для всего этапа 3: cm_ready3, cm_rand,
-// cm_plural. Таблицы этапа 3 — docs/migrations/2026-11-08-chat-manager-games.sql.
-// Приглашения — offers.php, кубы — dice.php, дуэль — duel.php, пары и браки
-// — love.php, кланы — clans.php.
+// !кто, !когда, шипперим, РП-действия и 18+. Здесь же общее для всего этапа 3:
+// cm_ready3, cm_rand, cm_plural. Таблицы этапа 3 —
+// docs/migrations/2026-11-08-chat-manager-games.sql. Приглашения — offers.php,
+// кубы — dice.php, дуэль — duel.php, пары и браки — love.php, кланы —
+// clans.php, ферма монет — farm.php.
 
 const CM_RAND_MAX   = 1000000000;
 const CM_CHOOSE_MAX = 10;
@@ -134,6 +135,124 @@ function cm_cmd_who(array $ctx, array $cmd): void {
     cm_reply($ctx, $q === '' ? cm_t('who_any', ['name' => $name]) : cm_t('who_done', ['q' => $q, 'name' => $name]), false);
 }
 
+// «бот, когда я стану богатым?» — случайный срок. Как «!кто»: только с
+// префиксом или обращением «бот …», ответ постоянный.
+const CM_WHEN = ['Сегодня.', 'Завтра.', 'Послезавтра.', 'Скоро.', 'Уже было.', 'Никогда.',
+                 'Когда рак на горе свистнет.', 'days', 'weeks', 'months', 'years'];
+const CM_WHEN_UNITS = ['days' => [2, 30, ['день', 'дня', 'дней']], 'weeks' => [2, 10, ['неделю', 'недели', 'недель']],
+                       'months' => [2, 12, ['месяц', 'месяца', 'месяцев']], 'years' => [2, 50, ['год', 'года', 'лет']]];
+
+function cm_when_answer(array $ctx): string {
+    $a = CM_WHEN[cm_rand($ctx, 0, count(CM_WHEN) - 1)];
+    $u = CM_WHEN_UNITS[$a] ?? null;
+    if ($u === null) { return $a; }
+    $n = cm_rand($ctx, $u[0], $u[1]);
+    return cm_t('when_in', ['n' => $n, 'unit' => cm_plural($n, $u[2])]);
+}
+
+function cm_cmd_when(array $ctx, array $cmd): void {
+    $q = trim((string)preg_replace('~[?]+$~u', '', trim($cmd['args'])));
+    if ($q === '') {
+        cm_reply($ctx, cm_t('when_usage'));
+        return;
+    }
+    cm_reply($ctx, cm_t('when_done', ['q' => $q, 'answer' => cm_when_answer($ctx)]), false);
+}
+
+// --------------------------------------------------------------------------
+//  Шипперим: пара из двух случайных участников или совместимость с целью
+// --------------------------------------------------------------------------
+
+// Совместимость 0–100: та же пара в тот же день по Москве — то же число, как
+// у «инфы», иначе её перекидывали бы до нужного. Порядок не важен.
+function cm_ship_percent(int $a, int $b, int $now): int {
+    return crc32(min($a, $b) . '|' . max($a, $b) . '|' . cm_day($now)) % 101;
+}
+
+// Имя пары из половинок имён: «Вася» + «Петя» → «Ватя». Первое слово из букв
+// (смайлы и цифры пропускаются); не из чего собрать — ''.
+function cm_ship_name(string $a, string $b): string {
+    $part = function (string $s): string {
+        $s = trim((string)preg_replace('~[^\p{L}\s]+~u', '', $s));
+        return (string)(preg_split('~\s+~u', $s)[0] ?? '');
+    };
+    $x = $part($a);
+    $y = $part($b);
+    if (mb_strlen($x) < 2 || mb_strlen($y) < 2) { return ''; }
+    $head = mb_substr($x, 0, (int)ceil(mb_strlen($x) / 2));
+    $tail = mb_strtolower(mb_substr($y, intdiv(mb_strlen($y), 2)));
+    $name = $head . $tail;
+    return mb_strtoupper(mb_substr($name, 0, 1)) . mb_strtolower(mb_substr($name, 1));
+}
+
+function cm_ship_heart(int $p): string {
+    if ($p >= 80) { return '💞'; }
+    if ($p >= 50) { return '❤️'; }
+    if ($p >= 20) { return '💛'; }
+    return '💔';
+}
+
+/**
+ * «шипперим» — пара из двух случайных участников, писавших за неделю (как у
+ * «!кто»). Ответом или с @ником — автор и цель, двумя @никами — эти двое.
+ * Ответ постоянный, ники с упоминанием: ради этого и шипперят.
+ */
+function cm_cmd_ship(array $ctx, array $cmd): void {
+    $pdo = $ctx['pdo'];
+    $me = (int)$ctx['actor'];
+    $args = $cmd['args'];
+    $why = null;
+    $t1 = cm_target($pdo, $ctx['msg'], $args, $why);
+    if ($t1 === null && $why === 'unknown') {
+        cm_reply($ctx, cm_t('target_unknown'));
+        return;
+    }
+    if ($t1 !== null) {
+        $t2 = null;
+        if (cm_reply_of($ctx['msg']) === null) {
+            $rest = (string)preg_replace('~^(?:и|\+|&|,)\s*~iu', '', $args);
+            $t2 = cm_target($pdo, ['text' => $rest], $rest, $why);
+            if ($t2 === null && $why === 'unknown') {
+                cm_reply($ctx, cm_t('target_unknown'));
+                return;
+            }
+        }
+        $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
+        $a = $t2 === null ? ['id' => $me, 'name' => cm_display_name($from), 'is_bot' => false] : $t1;
+        $b = $t2 ?? $t1;
+        if (cm_botlike($a) || cm_botlike($b)) {
+            cm_reply($ctx, cm_t('target_bot'));
+            return;
+        }
+        if ((int)$a['id'] === (int)$b['id']) {
+            cm_reply($ctx, cm_t('target_self'));
+            return;
+        }
+        cm_ship_say($ctx, (int)$a['id'], (string)$a['name'], (int)$b['id'], (string)$b['name']);
+        return;
+    }
+    if (!cm_need2($ctx)) { return; }
+    $top = cm_stats_top($pdo, (int)$ctx['chat']['chat_id'], CM_WHO_DAYS, (int)$ctx['now'], 1000);
+    if (count($top) < 2) {
+        cm_reply($ctx, cm_t('ship_empty'));
+        return;
+    }
+    $i = cm_rand($ctx, 0, count($top) - 1);
+    $j = cm_rand($ctx, 0, count($top) - 2);
+    if ($j >= $i) { $j++; }
+    $a = $top[$i]['user_id'];
+    $b = $top[$j]['user_id'];
+    cm_ship_say($ctx, $a, cm_user_name($pdo, $a), $b, cm_user_name($pdo, $b));
+}
+
+function cm_ship_say(array $ctx, int $a, string $an, int $b, string $bn): void {
+    $p = cm_ship_percent($a, $b, (int)$ctx['now']);
+    $name = cm_ship_name($an, $bn);
+    $text = cm_t('ship_done', ['a' => cm_who($a, $an), 'b' => cm_who($b, $bn), 'heart' => cm_ship_heart($p), 'n' => $p]);
+    if ($name !== '') { $text .= "\n" . cm_t('ship_name', ['name' => $name]); }
+    cm_reply($ctx, $text, false);
+}
+
 // --------------------------------------------------------------------------
 //  РП-действия: «обнять» ответом на сообщение или с @ником
 // --------------------------------------------------------------------------
@@ -154,9 +273,34 @@ const CM_RP = [
     'пощекотать'  => ['🤭', 'пощекотал', 'пощекотала', 'пощекотал(а)'],
     'ущипнуть'    => ['🤏', 'ущипнул', 'ущипнула', 'ущипнул(а)'],
     'убить'       => ['🔪', 'убил', 'убила', 'убил(а)'],
+    'шлепнуть'    => ['👋', 'шлёпнул', 'шлёпнула', 'шлёпнул(а)'],
+    'дать пять'   => ['🙌', 'дал пять', 'дала пять', 'дал(а) пять'],
+    'дать леща'   => ['🐟', 'дал леща', 'дала леща', 'дал(а) леща'],
+    'лизнуть'     => ['👅', 'лизнул', 'лизнула', 'лизнул(а)'],
+    'понюхать'    => ['👃', 'понюхал', 'понюхала', 'понюхал(а)'],
+    'прижать'     => ['🫂', 'прижал к себе', 'прижала к себе', 'прижал(а) к себе'],
+];
+
+// 18+ (с мясом и матом, как у Ириса) — свой раздел «18+», по умолчанию
+// ВЫКЛЮЧЕН: ранг 6 в CM_COMMANDS. Аудитория Blox Fruits — во многом дети,
+// поэтому включает только создатель чата («дк 18+ 0»), сам бот — никогда.
+// Слова не перечислены на maknemy.com/bot: страницу видят все и поисковики.
+const CM_ADULT = '18+';
+const CM_RP18 = [
+    'выебать'   => ['😏', 'выебал', 'выебала', 'выебал(а)'],
+    'трахнуть'  => ['🔥', 'трахнул', 'трахнула', 'трахнул(а)'],
+    'отсосать'  => ['🍌', 'отсосал у', 'отсосала у', 'отсосал(а) у'],
+    'отлизать'  => ['👅', 'отлизал у', 'отлизала у', 'отлизал(а) у'],
+    'раздеть'   => ['👙', 'раздел', 'раздела', 'раздел(а)'],
+    'облапать'  => ['🫳', 'облапал', 'облапала', 'облапал(а)'],
+    'засосать'  => ['💋', 'засосал', 'засосала', 'засосал(а)'],
+    'нагнуть'   => ['🍑', 'нагнул', 'нагнула', 'нагнул(а)'],
+    'отшлепать' => ['🍑', 'отшлёпал', 'отшлёпала', 'отшлёпал(а)'],
+    'уебать'    => ['💥', 'уебал', 'уебала', 'уебал(а)'],
+    'послать'   => ['🖕', 'послал нахуй', 'послала нахуй', 'послал(а) нахуй'],
 ];
 // С ботом — только это, остальное с ним бессмысленно.
-const CM_RP_BOT_OK = ['обнять', 'похвалить'];
+const CM_RP_BOT_OK = ['обнять', 'похвалить', 'дать пять'];
 // Опыта паре от РП — не больше стольких в сутки по Москве.
 const CM_RP_XP_DAY = 20;
 
@@ -198,7 +342,7 @@ function cm_cmd_rp(array $ctx, array $cmd): void {
         cm_reply($ctx, cm_t('target_bot'));
         return;
     }
-    $rp = CM_RP[$phrase];
+    $rp = CM_RP[$phrase] ?? CM_RP18[$phrase];
     $g = cm_profile_get($ctx['pdo'], $me)['gender'];
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
     cm_reply($ctx, cm_t('rp_done', ['emoji' => $rp[0], 'from' => cm_who_from($from),

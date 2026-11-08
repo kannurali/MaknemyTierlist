@@ -94,6 +94,14 @@ const CM_COMMANDS = [
     'шанс'               => ['chance', 'игры', 0, false, false],
     'шар'                => ['ball', 'игры', 0, false, false],
     'кто'                => ['who', 'игры', 0, false, false],
+    'когда'              => ['when', 'игры', 0, false, false],
+    'шипперим'           => ['ship', 'отношения', 0, false, false],
+    'шип'                => ['ship', 'отношения', 0, false, false],
+    'ферма'              => ['farm', 'ферма', 0, true, false],
+    'фарма'              => ['farm', 'ферма', 0, true, false],
+    'монеты'             => ['coins', 'ферма', 0, false, false],
+    'баланс'             => ['coins', 'ферма', 0, false, false],
+    'топ монет'          => ['coins_top', 'ферма', 0, true, false],
     'обнять'             => ['rp', 'рп', 0, false, true],
     'поцеловать'         => ['rp', 'рп', 0, false, true],
     'погладить'          => ['rp', 'рп', 0, false, true],
@@ -108,6 +116,24 @@ const CM_COMMANDS = [
     'пощекотать'         => ['rp', 'рп', 0, false, true],
     'ущипнуть'           => ['rp', 'рп', 0, false, true],
     'убить'              => ['rp', 'рп', 0, false, true],
+    'шлепнуть'           => ['rp', 'рп', 0, false, true],
+    'дать пять'          => ['rp', 'рп', 0, false, true],
+    'дать леща'          => ['rp', 'рп', 0, false, true],
+    'лизнуть'            => ['rp', 'рп', 0, false, true],
+    'понюхать'           => ['rp', 'рп', 0, false, true],
+    'прижать'            => ['rp', 'рп', 0, false, true],
+    // 18+ — ранг 6: раздел выключен, пока создатель не скажет «дк 18+ 0» (fun.php)
+    'выебать'            => ['rp', '18+', 6, false, true],
+    'трахнуть'           => ['rp', '18+', 6, false, true],
+    'отсосать'           => ['rp', '18+', 6, false, true],
+    'отлизать'           => ['rp', '18+', 6, false, true],
+    'раздеть'            => ['rp', '18+', 6, false, true],
+    'облапать'           => ['rp', '18+', 6, false, true],
+    'засосать'           => ['rp', '18+', 6, false, true],
+    'нагнуть'            => ['rp', '18+', 6, false, true],
+    'отшлепать'          => ['rp', '18+', 6, false, true],
+    'уебать'             => ['rp', '18+', 6, false, true],
+    'послать'            => ['rp', '18+', 6, false, true],
     'кубы'               => ['dice', 'игры', 0, false, false],
     'кубы исход'         => ['dice_outcome', 'триггеры', 3, false, false],
     'дуэль'              => ['duel', 'игры', 0, false, true],
@@ -176,6 +202,8 @@ const CM_BARE_ARGS = [
     'chance'      => '~\S~u',
     'ball'        => '~\S~u',
     'rp'          => '~^$~',
+    'ship'        => '~^(?:(?:и|\+|&|,)?\s*@[a-z]\w{3,31})?$~u',
+    'coins'       => '~^$~',
     'dice'        => '~^$~',
     'duel'        => '~^$~',
     'chess'       => '~^(?:[0-9]{1,2}(?: ?(?:минуты|минута|минут|мин|м))?)?(?: ?@[a-z]\w{3,31})?$~u',
@@ -188,9 +216,15 @@ const CM_BARE_ARGS = [
     'clan_kick'   => '~^$~',
 ];
 
-// Команды только с префиксом: без него это слово обычной речи («кто знает…»).
-// Проверяет первая строка cm_run_command (router.php).
-const CM_PREFIX_ONLY = ['who'];
+// Команды только с префиксом: без него это слово обычной речи («кто знает…»,
+// «когда придёшь?»). Проверяет первая строка cm_run_command (router.php).
+// Обращение «бот, …» — тоже префикс (cm_parse).
+const CM_PREFIX_ONLY = ['who', 'when'];
+
+// Обращение к боту вместо префикса, как «Ирис, кто герой?»: «бот кто герой»,
+// «Бот, когда …», «@MaknemyBot кто …». После него нужен пробел, запятая или
+// двоеточие: «ботик» и «боты» — не обращение.
+const CM_CALL_NAMES = ['бот'];
 
 function cm_bare_ok(array $ctx, array $cmd): bool {
     $re = CM_BARE_ARGS[$cmd['handler']] ?? null;
@@ -216,6 +250,19 @@ function cm_phrases(): array {
     return $p;
 }
 
+// Строка без обращения «бот, …» / «@ИмяБота …» или null, если обращения нет
+// (или после него пусто). Регистр не важен.
+function cm_call_strip(string $line, string $botName): ?string {
+    $names = CM_CALL_NAMES;
+    if ($botName !== '') { $names[] = '@' . $botName; }
+    foreach ($names as $n) {
+        if (preg_match('~^' . preg_quote($n, '~') . '[\s,:]+(?=\S)~iu', $line, $m)) {
+            return substr($line, strlen($m[0]));
+        }
+    }
+    return null;
+}
+
 /**
  * Команда из текста сообщения или null. args — остаток первой строки
  * (исходный регистр), body — всё со второй строки как есть: от него
@@ -228,7 +275,15 @@ function cm_parse(string $text, string $botName): ?array {
     $line  = trim($first);
     if ($line === '') { return null; }
     $prefixed = in_array($line[0], CM_PREFIXES, true);
-    if ($prefixed) { $line = ltrim(substr($line, 1)); }
+    if ($prefixed) {
+        $line = ltrim(substr($line, 1));
+    } else {
+        $call = cm_call_strip($line, $botName);
+        if ($call !== null) {
+            $line = $call;
+            $prefixed = true;
+        }
+    }
     // /бан@ИмяБота — чужому боту не отвечаем.
     if ($prefixed && preg_match('~^([^\s@]+)@(\w+)(.*)\z~su', $line, $m)) {
         if ($botName === '' || strcasecmp($m[2], $botName) !== 0) { return null; }
