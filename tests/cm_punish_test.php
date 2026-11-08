@@ -60,13 +60,51 @@ test('варны копятся до лимита, потом наказание
     $log = [];
     $ctx = pn_mod($pdo, $log);
     cm_do($ctx, 'варн @vasya спам');
-    assert_eq("⚠️ Вася: варн 1/3.\nПричина: спам", cm_last_text($log));
+    assert_eq("⚠️ Вася: варн 1/3 на 30 дней.\nПричина: спам", cm_last_text($log), 'без срока — срок чата, месяц');
     cm_do($ctx, 'варн @vasya');
     cm_do($ctx, 'варн @vasya');
     $ban = cm_calls($log, 'banChatMember')[0][1];
     assert_eq(CM_NOW + 604800, $ban['until_date']);
-    assert_eq('⚠️ Вася: варн 3/3 — лимит: бан 7 дн.', cm_last_text($log));
+    assert_eq('⚠️ Вася: варн 3/3 — лимит: бан 7 дней', cm_last_text($log));
     assert_eq(0, cm_warns_active($ctx, 20));
+});
+
+test('временный варн: свой срок решает, сам перестаёт считаться', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = pn_mod($pdo, $log);
+    cm_do($ctx, 'варн @vasya 3 дня флуд');
+    assert_eq("⚠️ Вася: варн 1/3 на 3 дня.\nПричина: флуд", cm_last_text($log));
+    $row = $pdo->query("SELECT until_at, reason FROM cm_punishments WHERE kind = 'warn'")->fetch(PDO::FETCH_ASSOC);
+    assert_eq([CM_NOW + 3 * 86400, 'флуд'], [(int)$row['until_at'], $row['reason']]);
+    cm_do($ctx, 'варн @vasya 2ч');
+    assert_eq('⚠️ Вася: варн 2/3 на 2 ч.', cm_last_text($log));
+    cm_do($ctx, 'варн @vasya 2 раза просили');
+    assert_eq("⚠️ Вася: варн 3/3 — лимит: бан 7 дней\nПричина: 2 раза просили", cm_last_text($log), 'голое число — причина, не срок');
+
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = pn_mod($pdo, $log);
+    cm_do($ctx, 'варн @vasya 1ч');
+    cm_do($ctx, 'варн @vasya');
+    assert_eq(2, cm_warns_active($ctx, 20));
+    $later = cm_ctx_for($pdo, $log, 10, '', [], [], CM_NOW + 3601);
+    assert_eq(1, cm_warns_active($later, 20), 'час прошёл — временный сам снялся');
+    cm_do($later, 'варны @vasya');
+    assert_eq(1, substr_count(cm_last_text($log), '•'), 'в списке — только действующий');
+    assert_eq(true, strpos(cm_last_text($log), '(до ') !== false, 'и до какого числа');
+    $month = cm_ctx_for($pdo, $log, 10, '', [], [], CM_NOW + 2592001);
+    assert_eq(0, cm_warns_active($month, 20), 'обычный — через месяц');
+
+    $pdo = cm_test_pdo();
+    $ctx = pn_mod($pdo, $log);
+    cm_do($ctx, 'варны срок 1 день');
+    cm_do(pn_mod($pdo, $log), 'варн @vasya 10 дней');
+    assert_eq(1, cm_warns_active(cm_ctx_for($pdo, $log, 10, '', [], [], CM_NOW + 5 * 86400), 20), 'срок модератора длиннее срока чата — решает он');
+    foreach (['варн @vasya навсегда', 'варн @vasya 400 дней', 'варн @vasya 10с'] as $bad) {
+        cm_do(pn_mod($pdo, $log), $bad);
+        assert_eq(cm_t('warn_term_bad', ['term' => 'на 1 день']), cm_last_text($log), $bad);
+    }
 });
 
 test('истёкший варн не считается', function () {

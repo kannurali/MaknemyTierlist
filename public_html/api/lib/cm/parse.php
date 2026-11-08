@@ -250,11 +250,12 @@ const CM_MAX_TERM = 31622400;
 
 /**
  * Срок в начале строки; съедается из $rest. null — срока нет, 0 — «навсегда»,
- * -1 — срок есть, но вне пределов Telegram. Голое число — минуты. Единица без
- * числа — только словом от трёх букв («час», «неделя»), иначе «м» в начале
- * причины считалось бы минутой.
+ * -1 — срок есть, но вне пределов Telegram. Голое число — минуты, если не
+ * $needUnit (варн: «варн 2 раза…» — это причина). Единица без числа — только
+ * словом от трёх букв («час», «неделя»), иначе «м» в начале причины
+ * считалось бы минутой.
  */
-function cm_take_term(string &$rest): ?int {
+function cm_take_term(string &$rest, bool $needUnit = false): ?int {
     $s = ltrim($rest);
     $n = cm_norm($s);
     if (preg_match('~^навсегда(?![\p{L}\p{N}])~u', $n, $m)) {
@@ -269,7 +270,7 @@ function cm_take_term(string &$rest): ?int {
         $t = ($hasNum ? (int)$m[1] : 1) * $u[1];
         return ($t < CM_MIN_TERM || $t > CM_MAX_TERM) ? -1 : $t;
     }
-    if (preg_match('~^(\d{1,4})(?![\p{L}\p{N}])~u', $n, $m)) {
+    if (!$needUnit && preg_match('~^(\d{1,4})(?![\p{L}\p{N}])~u', $n, $m)) {
         $rest = ltrim(substr($s, strlen($m[0])));
         $t = (int)$m[1] * 60;
         return ($t < CM_MIN_TERM || $t > CM_MAX_TERM) ? -1 : $t;
@@ -279,7 +280,7 @@ function cm_take_term(string &$rest): ?int {
 
 function cm_term_text(int $secs): string {
     if ($secs <= 0) { return 'навсегда'; }
-    if ($secs % 86400 === 0) { return intdiv($secs, 86400) . ' дн.'; }
+    if ($secs % 86400 === 0) { $d = intdiv($secs, 86400); return $d . ' ' . cm_plural($d, ['день', 'дня', 'дней']); }
     if ($secs % 3600 === 0) { return intdiv($secs, 3600) . ' ч'; }
     if ($secs % 60 === 0) { return intdiv($secs, 60) . ' мин'; }
     return $secs . ' с';
