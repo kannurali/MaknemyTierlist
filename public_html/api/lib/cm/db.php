@@ -13,10 +13,12 @@ const CM_ADMINS_TTL = 3600;     // список админов Telegram пере
 const CM_RANK_NAMES = ['участник', 'младший модератор', 'старший модератор',
                        'младший администратор', 'старший администратор', 'создатель'];
 
-// Сам, без команды модератора, бот трогает только ссылки и спамеров из базы.
+// Сам, без команды модератора, бот трогает только ссылки, спамеров из базы и
+// служебные сообщения (вход, выход, «… удалил(а) @ник», закреп — с 08.11.2026
+// по просьбе владельца).
 const CM_DEFAULTS = [
     'filters'       => ['spam' => true, 'links' => true, 'forwards' => false, 'mat' => false, 'flood' => false,
-                        'caps' => false, 'stickers' => false, 'gifs' => false, 'voice' => false],
+                        'caps' => false, 'stickers' => false, 'gifs' => false, 'voice' => false, 'service' => true],
     'flood'         => [5, 10],
     'domains'       => [],
     'triggers'      => [],

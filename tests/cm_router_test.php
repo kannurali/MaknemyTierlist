@@ -424,4 +424,45 @@ test('слова разделов у чат-менеджера и у лички 
     assert_eq($words, $cm);
 });
 
+// Служебные сообщения (CM_SERVICE_KEYS, router.php): фильтр «служебные», по умолчанию вкл.
+function rt_service(int $from, array $extra): array {
+    $m = cm_gmsg($from, '', $extra);
+    unset($m['text']);
+    return $m;
+}
+
+test('служебные: вход, «удалил(а) @ник», закреп, название — убираются; вход и выход учтены', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(CM_OWNER, "+приветствие\nПривет, {имя}!"), $log);
+    $join = rt_service(70, ['new_chat_members' => [['id' => 70, 'first_name' => 'Гость']]]);
+    $kick = rt_service(CM_OWNER, ['left_chat_member' => ['id' => 71, 'first_name' => 'Ушедший']]);
+    $pin = rt_service(CM_OWNER, ['pinned_message' => ['message_id' => 5, 'date' => CM_NOW]]);
+    $anon = rt_service(CM_OWNER, ['sender_chat' => ['id' => CM_CHAT, 'type' => 'supergroup'], 'pinned_message' => ['message_id' => 6]]);
+    $title = rt_service(CM_OWNER, ['new_chat_title' => 'Новое имя']);
+    foreach ([$join, $kick, $pin, $anon, $title] as $m) { rt_run($pdo, $m, $log); }
+    assert_eq(true, in_array('Привет, Гость!', cm_texts($log), true), 'приветствие на месте');
+    assert_eq(CM_NOW, cm_member($pdo, CM_CHAT, 70)['joined_at'], 'вход учтён');
+    assert_eq(CM_NOW, cm_member($pdo, CM_CHAT, 71)['left_at'], 'выход учтён');
+    $deleted = array_map(function ($c) { return $c[1]['message_id']; }, cm_calls($log, 'deleteMessage'));
+    assert_eq([$join['message_id'], $kick['message_id'], $pin['message_id'], $anon['message_id'], $title['message_id']], $deleted);
+    assert_eq(0, count(array_filter(cm_calls($log, 'deleteMessage'), function ($c) { return $c[1]['chat_id'] !== CM_CHAT; })));
+});
+
+test('служебные: «фильтр служебные выкл» оставляет, триггера нет, чужой чат не трогаем', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $o = cm_ctx_for($pdo, $log, CM_OWNER);
+    cm_do($o, 'фильтры');
+    assert_eq(true, strpos(cm_last_text($log), '✅ служебные → удалить') !== false);
+    cm_do($o, 'триггер служебные: варн');
+    assert_eq(false, isset(cm_chat_row($pdo, CM_CHAT)['settings']['triggers']['service']), 'наказывать некого');
+    rt_run($pdo, rt_service(CM_OWNER, ['new_chat_title' => 'X'] + ['chat' => ['id' => RT_FOREIGN, 'type' => 'supergroup', 'title' => 'Чужой']]), $log);
+    assert_eq([], cm_calls($log, 'deleteMessage'), 'чужой чат');
+    cm_do($o, 'фильтр служебные выкл');
+    rt_run($pdo, rt_service(CM_OWNER, ['pinned_message' => ['message_id' => 5]]), $log);
+    rt_run($pdo, rt_service(7, ['new_chat_members' => [['id' => 7, 'first_name' => 'U7']]]), $log);
+    assert_eq([], cm_calls($log, 'deleteMessage'), 'фильтр выключен');
+});
+
 run_tests();

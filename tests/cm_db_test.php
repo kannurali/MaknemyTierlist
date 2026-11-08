@@ -18,11 +18,11 @@ test('выключатель в config', function () {
     assert_eq(false, cm_enabled(['cm_enabled' => false]));
 });
 
-test('по умолчанию сами работают только ссылки и спамеры', function () {
+test('по умолчанию сами работают только ссылки, спамеры и служебные', function () {
     $s = cm_settings([]);
     $on = array_keys(array_filter($s['filters']));
     sort($on);
-    assert_eq(['links', 'spam'], $on);
+    assert_eq(['links', 'service', 'spam'], $on);
     assert_eq(['limit' => 3, 'ttl' => 2592000], $s['warns']);
     assert_eq(true, $s['autodelete']);
 });
