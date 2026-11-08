@@ -38,9 +38,34 @@ function cm_handle_update(PDO $pdo, array $cfg, callable $send, array $update, i
     cm_on_message($pdo, $cfg, $send, $msg, $edited, $now);
 }
 
+// Служебные сообщения Telegram, которые удаляет фильтр «служебные» (по
+// умолчанию вкл.): вход, выход и удаление из чата («maknemy.com удалил(а)
+// @ник»), закреп, новое название и фото, видеочат, таймер автоудаления,
+// бусты, фон чата. «Группа создана» Telegram удалить не даёт, а сообщения
+// тем форума — опора самих тем, их нет в списке.
+const CM_SERVICE_KEYS = ['new_chat_members', 'left_chat_member', 'pinned_message', 'new_chat_title',
+    'new_chat_photo', 'delete_chat_photo', 'video_chat_scheduled', 'video_chat_started', 'video_chat_ended',
+    'video_chat_participants_invited', 'message_auto_delete_timer_changed', 'boost_added', 'chat_background_set'];
+
+function cm_is_service(array $msg): bool {
+    foreach (CM_SERVICE_KEYS as $k) {
+        if (array_key_exists($k, $msg)) { return true; }
+    }
+    return false;
+}
+
+// Удалить служебное сообщение контекста. Нет прав — молча: это уборка, а о
+// правах бот и так напомнит на первом нарушении.
+function cm_service_drop(array $ctx): void {
+    if (empty($ctx['chat']['settings']['filters']['service'])) { return; }
+    $mid = (int)($ctx['msg']['message_id'] ?? 0);
+    if ($mid > 0) { ($ctx['send'])('deleteMessage', ['chat_id' => (int)$ctx['chat']['chat_id'], 'message_id' => $mid]); }
+}
+
 /**
  * Сообщение группы:
  *  -. чат не Макнеми (cm_ours, db.php) — молчим целиком;
+ *  -. служебное (вход, выход, закреп…) — вход и выход учесть, само убрать;
  *  0. от имени этой группы или автопересылка своего канала — не трогаем;
  *     от имени чужого канала — только удаляем (канал не замутить);
  *  1. запомнить автора;
@@ -71,10 +96,16 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
     $chat = $ctx['chat'];
     if (!empty($msg['new_chat_members'])) {
         cm_on_join($ctx, (array)$msg['new_chat_members']);
+        cm_service_drop($ctx);
         return;
     }
     if (is_array($msg['left_chat_member'] ?? null)) {
         cm_on_left($ctx, $msg['left_chat_member']);
+        cm_service_drop($ctx);
+        return;
+    }
+    if (cm_is_service($msg)) {
+        if (!$edited) { cm_service_drop($ctx); }
         return;
     }
     $sender = $msg['sender_chat'] ?? null;
