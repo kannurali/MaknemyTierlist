@@ -10,7 +10,8 @@ function cm_mute_perms(bool $can): array {
 
 /**
  * Наказать и записать. Кик — бан и сразу разбан: человек может вернуться.
- * Варн — только запись. '' — вышло, иначе ключ ошибки (cm_tg_error).
+ * Варн — только запись; со сроком ($secs) он сам перестаёт считаться
+ * (until_at, CM_WARN_LIVE). '' — вышло, иначе ключ ошибки (cm_tg_error).
  */
 function cm_punish(array $ctx, int $userId, string $kind, int $secs, string $reason, int $byId): string {
     $chatId = (int)$ctx['chat']['chat_id'];
@@ -33,7 +34,7 @@ function cm_punish(array $ctx, int $userId, string $kind, int $secs, string $rea
     $ctx['pdo']->prepare('INSERT INTO cm_punishments (chat_id, user_id, kind, reason, by_id, created_at, until_at, lifted_at, lifted_by)
                           VALUES (:c, :u, :k, :r, :b, :n, :t, 0, 0)')
         ->execute([':c' => $chatId, ':u' => $userId, ':k' => $kind, ':r' => mb_substr($reason, 0, 500), ':b' => $byId,
-                   ':n' => $now, ':t' => ($kind === 'mute' || $kind === 'ban') ? $until : 0]);
+                   ':n' => $now, ':t' => in_array($kind, ['mute', 'ban', 'warn'], true) ? $until : 0]);
     if ($kind === 'ban' || $kind === 'kick') { cm_member_set($ctx['pdo'], $chatId, $userId, ['left_at' => $now]); }
     return '';
 }
@@ -58,21 +59,39 @@ function cm_lift(array $ctx, int $userId, string $kind, int $byId): string {
 //  Варны
 // --------------------------------------------------------------------------
 
+// Действующий варн: не снят и не истёк. Варн со сроком из команды
+// («варн 3 дня») истекает по своему until_at, и только по нему — так решил
+// модератор. Без срока (until_at = 0) варн живёт «варны срок» чата (по
+// умолчанию месяц) от выдачи. Снимать по cron не нужно: истёкший просто
+// перестаёт считаться. Параметры — cm_warn_params().
+const CM_WARN_LIVE = "kind = 'warn' AND lifted_at = 0 AND ((until_at = 0 AND created_at > :s) OR until_at > :n)";
+
 function cm_warns_since(array $ctx): int {
     $ttl = (int)$ctx['chat']['settings']['warns']['ttl'];
     return $ttl > 0 ? (int)$ctx['now'] - $ttl : 0;
 }
 
+function cm_warn_params(array $ctx): array {
+    return [':s' => cm_warns_since($ctx), ':n' => (int)$ctx['now']];
+}
+
+// «на 3 дн.» — сколько проживёт варн: свой срок или срок чата.
+function cm_warn_term_text(array $ctx, int $secs): string {
+    $ttl = (int)$ctx['chat']['settings']['warns']['ttl'];
+    $t = $secs > 0 ? $secs : $ttl;
+    return $t > 0 ? 'на ' . cm_term_text($t) : cm_t('until_forever');
+}
+
 function cm_warns_active(array $ctx, int $userId): int {
-    $st = $ctx['pdo']->prepare("SELECT COUNT(*) FROM cm_punishments
-        WHERE chat_id = :c AND user_id = :u AND kind = 'warn' AND lifted_at = 0 AND created_at > :s");
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $userId, ':s' => cm_warns_since($ctx)]);
+    $st = $ctx['pdo']->prepare('SELECT COUNT(*) FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND ' . CM_WARN_LIVE);
+    $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $userId] + cm_warn_params($ctx));
     return (int)$st->fetchColumn();
 }
 
-// Варн. Набран лимит — наказание из триггера «варны», активные варны снимаются.
-function cm_warn(array $ctx, int $userId, string $reason, int $byId): array {
-    $err = cm_punish($ctx, $userId, 'warn', 0, $reason, $byId);
+// Варн; $secs > 0 — со своим сроком. Набран лимит — наказание из триггера
+// «варны», активные варны снимаются.
+function cm_warn(array $ctx, int $userId, string $reason, int $byId, int $secs = 0): array {
+    $err = cm_punish($ctx, $userId, 'warn', $secs, $reason, $byId);
     if ($err !== '') { return [$err, 0, 0, '']; }
     $limit = max(1, (int)$ctx['chat']['settings']['warns']['limit']);
     $n = cm_warns_active($ctx, $userId);
@@ -184,10 +203,21 @@ function cm_punish_cmd(array $ctx, array $cmd, string $kind): void {
         }
         $secs = $term ?? ($kind === 'mute' ? 3600 : 0);
     }
+    // Срок варна — только с единицей: «варн 2 раза просили» — причина, а не
+    // две минуты. «навсегда» у варна не бывает: без срока — срок чата.
+    if ($kind === 'warn') {
+        $term = cm_take_term($args, true);
+        if ($term === -1 || $term === 0) {
+            cm_reply($ctx, cm_t('warn_term_bad', ['term' => cm_warn_term_text($ctx, 0)]));
+            return;
+        }
+        $secs = (int)$term;
+    }
     $reason = cm_reason($args, $cmd['body']);
     $vars = ['name' => $t['who'], 'term' => cm_term_text($secs), 'reason' => cm_reason_line($reason)];
     if ($kind === 'warn') {
-        [$err, $n, $limit, $after] = cm_warn($ctx, (int)$t['id'], $reason, (int)$ctx['actor']);
+        $vars['wterm'] = cm_warn_term_text($ctx, $secs);
+        [$err, $n, $limit, $after] = cm_warn($ctx, (int)$t['id'], $reason, (int)$ctx['actor'], $secs);
         if ($err !== '') {
             cm_reply_err($ctx, $err);
             return;
@@ -208,9 +238,9 @@ function cm_cmd_unwarn(array $ctx, array $cmd): void {
     $t = cm_need_target($ctx, $args);
     if ($t === null) { return; }
     $pdo = $ctx['pdo'];
-    $st = $pdo->prepare("SELECT id FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND kind = 'warn'
-        AND lifted_at = 0 AND created_at > :s ORDER BY id DESC LIMIT 1");
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $t['id'], ':s' => cm_warns_since($ctx)]);
+    $st = $pdo->prepare('SELECT id FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND ' . CM_WARN_LIVE
+        . ' ORDER BY id DESC LIMIT 1');
+    $st->execute([':c' => $ctx['chat']['chat_id'], ':u' => $t['id']] + cm_warn_params($ctx));
     $id = $st->fetchColumn();
     if ($id === false) {
         cm_reply($ctx, cm_t('unwarn_none', ['name' => $t['tag']]));
@@ -242,19 +272,23 @@ function cm_cmd_warns(array $ctx, array $cmd): void {
     $args = $cmd['args'];
     $t = cm_target($pdo, $ctx['msg'], $args);
     $limit = (int)$ctx['chat']['settings']['warns']['limit'];
-    $p = [':c' => $ctx['chat']['chat_id'], ':s' => cm_warns_since($ctx)];
+    $ttl = (int)$ctx['chat']['settings']['warns']['ttl'];
+    $p = [':c' => $ctx['chat']['chat_id']] + cm_warn_params($ctx);
     $lines = [];
     if ($t !== null) {
-        $st = $pdo->prepare("SELECT reason, created_at FROM cm_punishments WHERE chat_id = :c AND user_id = :u
-            AND kind = 'warn' AND lifted_at = 0 AND created_at > :s ORDER BY id");
+        $st = $pdo->prepare('SELECT reason, created_at, until_at FROM cm_punishments WHERE chat_id = :c AND user_id = :u AND '
+            . CM_WARN_LIVE . ' ORDER BY id');
         $st->execute($p + [':u' => $t['id']]);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $lines[] = '• ' . cm_date((int)$r['created_at']) . ' — ' . ((string)$r['reason'] !== '' ? $r['reason'] : '—');
+            $end = (int)$r['until_at'] > 0 ? (int)$r['until_at'] : ($ttl > 0 ? (int)$r['created_at'] + $ttl : 0);
+            $lines[] = cm_t('warns_user_line', ['date' => cm_date((int)$r['created_at']),
+                'reason' => (string)$r['reason'] !== '' ? $r['reason'] : '—',
+                'until' => $end > 0 ? cm_t('until_date', ['date' => cm_date($end)]) : cm_t('until_forever')]);
         }
         $head = cm_t('warns_user_head', ['name' => $t['tag'], 'n' => count($lines), 'limit' => $limit]);
     } else {
-        $st = $pdo->prepare("SELECT user_id, COUNT(*) AS n FROM cm_punishments WHERE chat_id = :c AND kind = 'warn'
-            AND lifted_at = 0 AND created_at > :s GROUP BY user_id ORDER BY n DESC, user_id LIMIT 20");
+        $st = $pdo->prepare('SELECT user_id, COUNT(*) AS n FROM cm_punishments WHERE chat_id = :c AND ' . CM_WARN_LIVE
+            . ' GROUP BY user_id ORDER BY n DESC, user_id LIMIT 20');
         $st->execute($p);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $lines[] = '• ' . cm_user_who($pdo, (int)$r['user_id'], true) . ' — ' . (int)$r['n'] . '/' . $limit;

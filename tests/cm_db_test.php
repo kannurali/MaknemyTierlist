@@ -114,7 +114,7 @@ test('группа стала супергруппой — всё переезж
 });
 
 test('тексты подставляют поля', function () {
-    assert_eq('⚠️ Вася: варн 1/3.', cm_t('warn_done', ['name' => 'Вася', 'n' => 1, 'limit' => 3, 'reason' => '']));
+    assert_eq('⚠️ Вася: варн 1/3 на 30 дней.', cm_t('warn_done', ['name' => 'Вася', 'n' => 1, 'limit' => 3, 'wterm' => 'на 30 дней', 'reason' => '']));
     assert_eq('нет_такого', cm_t('нет_такого'));
     assert_eq('', cm_reason_line(''));
     assert_eq("\nПричина: спам", cm_reason_line('спам'));

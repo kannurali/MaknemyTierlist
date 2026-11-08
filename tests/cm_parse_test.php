@@ -71,7 +71,9 @@ test('сроки: единицы, голое число — минуты, «на
 
 test('срок словами', function () {
     assert_eq('навсегда', cm_term_text(0));
-    assert_eq('7 дн.', cm_term_text(604800));
+    assert_eq('7 дней', cm_term_text(604800));
+    assert_eq('1 день', cm_term_text(86400));
+    assert_eq('3 дня', cm_term_text(259200));
     assert_eq('2 ч', cm_term_text(7200));
     assert_eq('10 мин', cm_term_text(600));
     assert_eq('45 с', cm_term_text(45));
