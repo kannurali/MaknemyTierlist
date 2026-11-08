@@ -197,9 +197,10 @@ test('созвать клан: скрытые упоминания, до 30 че
     $head = "📣 U7 созывает клан «Волки»:\n";
     assert_eq($head . 'Петя, Коля', $p['text']);
     assert_eq(29, cm_utf16_len($head), '📣 — две единицы UTF-16');
-    assert_eq([['type' => 'text_mention', 'offset' => 29, 'length' => 4, 'user' => ['id' => 20, 'is_bot' => false, 'first_name' => 'Петя']],
+    assert_eq([['type' => 'text_mention', 'offset' => 3, 'length' => 2, 'user' => ['id' => 7, 'is_bot' => false, 'first_name' => 'U7']],
+               ['type' => 'text_mention', 'offset' => 29, 'length' => 4, 'user' => ['id' => 20, 'is_bot' => false, 'first_name' => 'Петя']],
                ['type' => 'text_mention', 'offset' => 35, 'length' => 4, 'user' => ['id' => 21, 'is_bot' => false, 'first_name' => 'Коля']]],
-        $p['entities']);
+        $p['entities'], 'глава и участники — ники-ссылки');
     cl_do($pdo, $log, 7, 'созвать клан', CM_NOW + 400);
     assert_eq('Созывать клан можно раз в 10 минут. Следующий раз — через 5 мин.', cm_last_text($log));
     cl_do($pdo, $log, 7, 'созвать клан', CM_NOW + 699);
@@ -212,7 +213,7 @@ test('созвать клан: скрытые упоминания, до 30 че
     for ($u = 1000; $u < 1040; $u++) { $ins->execute([':c' => CM_CHAT, ':u' => $u, ':j' => CM_NOW + 10]); }
     cl_do($pdo, $log, 7, 'созвать клан', CM_NOW + 3000);
     $m = cm_calls($log, 'sendMessage');
-    assert_eq(30, count($m[count($m) - 1][1]['entities']));
+    assert_eq(31, count($m[count($m) - 1][1]['entities']), 'глава и 30 участников');
     cl_do($pdo, $log, 30, '+клан Одиночки');
     cl_do($pdo, $log, 30, 'созвать клан');
     assert_eq(cm_t('clan_call_empty'), cm_last_text($log));
@@ -253,7 +254,7 @@ test('без префикса — по правилам команд; дк кл�
     }
     assert_eq(false, $run('пригласить бы его', $reply));
     cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк кланы 6');
-    assert_eq(true, $run('!кланы'));
+    assert_eq(false, $run('!кланы'));
     assert_eq(cm_t('cmd_off'), cm_last_text($log));
     $pdo = cm_test_pdo();
     $pdo->exec('DROP TABLE cm_offers');

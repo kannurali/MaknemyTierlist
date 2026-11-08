@@ -43,7 +43,7 @@ test('ссылка от участника удаляется молча, от �
     assert_eq(2, (int)$pdo->query('SELECT COUNT(*) FROM cm_msgs')->fetchColumn(), 'сообщения записаны');
 });
 
-test('без ранга: с префиксом — отказ, без префикса — молча, а фильтры работают', function () {
+test('без ранга: команда с целью — отказ и без точки, а фильтры работают', function () {
     $pdo = cm_test_pdo();
     $log = [];
     cm_person($pdo, 20, 'vasya');
@@ -52,7 +52,31 @@ test('без ранга: с префиксом — отказ, без префи
     rt_run($pdo, cm_gmsg(7, 'бан @vasya evil.ru'), $log);
     assert_eq(0, count(cm_calls($log, 'banChatMember')));
     assert_eq(1, count(cm_calls($log, 'deleteMessage')), 'ссылка в «команде» без прав удалена');
-    assert_eq(1, count(cm_calls($log, 'sendMessage')));
+    assert_eq(2, count(cm_calls($log, 'sendMessage')), 'без точки — тот же отказ');
+    rt_run($pdo, cm_gmsg(7, '!бан @vasya evil.ru'), $log);
+    assert_eq(2, count(cm_calls($log, 'deleteMessage')), 'и с префиксом ссылка мимо фильтра не проходит');
+    rt_run($pdo, cm_gmsg(7, 'бан', ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 20, 'first_name' => 'Вася']]]), $log);
+    assert_eq(cm_t('no_rank', ['need' => 3]), cm_last_text($log), 'ответом без точки — отказ, а не тишина');
+    $n = count(cm_calls($log, 'sendMessage'));
+    rt_run($pdo, cm_gmsg(7, 'бан бы ему'), $log);
+    assert_eq($n, count(cm_calls($log, 'sendMessage')), 'без цели — обычная речь');
+});
+
+test('ответом без точки: бан модератора и РП участника', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_lvl($pdo, 10, 3);
+    $reply = ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 20, 'is_bot' => false, 'first_name' => 'Вася']]];
+    rt_run($pdo, cm_gmsg(10, 'бан', $reply), $log);
+    assert_eq(1, count(cm_calls($log, 'banChatMember')));
+    $p = cm_calls($log, 'sendMessage')[0][1];
+    assert_eq('⛔ Вася: бан навсегда.', $p['text']);
+    assert_eq([['type' => 'text_mention', 'offset' => 2, 'length' => 4, 'user' => ['id' => 20, 'is_bot' => false, 'first_name' => 'Вася']]],
+        $p['entities'], 'ник — ссылка на профиль');
+    rt_run($pdo, cm_gmsg(7, 'обнять', $reply), $log);
+    $p = cm_calls($log, 'sendMessage')[1][1];
+    assert_eq('🤗 U7 обнял(а) Вася', $p['text']);
+    assert_eq([7, 20], array_map(function ($e) { return $e['user']['id']; }, $p['entities']), 'оба ника — ссылки');
 });
 
 test('модератор без префикса: с целью — команда, без цели — обычная речь', function () {
@@ -163,7 +187,13 @@ test('помощь, кто я, id', function () {
     $pdo = cm_test_pdo();
     $log = [];
     rt_run($pdo, cm_gmsg(7, 'помощь'), $log);
-    assert_eq(cm_t('help'), cm_last_text($log));
+    assert_eq(cm_plain(cm_help_text()), cm_last_text($log));
+    $p = cm_calls($log, 'sendMessage')[0][1];
+    assert_eq(0, strpos($p['text'], "🤖 Чат-менеджер Maknemy\nКоманды пишутся прямо в чат — точка, ! и / не нужны."));
+    $types = array_count_values(array_column($p['entities'], 'type'));
+    assert_eq(1, $types['expandable_blockquote'] ?? 0, 'разделы — под раскрывающейся цитатой');
+    assert_eq(1, $types['text_link'] ?? 0, 'ссылка на инструкцию');
+    assert_eq(true, substr($p['text'], -strlen('maknemy.com/bot')) === 'maknemy.com/bot');
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
     assert_eq(0, strpos(cm_last_text($log), "👤 U7\nРанг: 0 — участник\n"), 'кто я — профиль');
     rt_run($pdo, cm_gmsg(7, 'id', ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 20, 'first_name' => 'Вася']]]), $log);
@@ -208,7 +238,7 @@ test('статистика: сообщение и команда считают�
     rt_run($pdo, cm_gmsg(66, 'купи'), $log);
     assert_eq(2, cm_stats_msgs($pdo, CM_CHAT, 7, 0, CM_NOW));
     assert_eq(0, cm_stats_msgs($pdo, CM_CHAT, 66, 0, CM_NOW));
-    assert_eq(true, strpos(cm_t('help'), 'стата') !== false, 'помощь знает этап 2');
+    assert_eq(true, strpos(cm_plain(cm_help_text()), 'стата') !== false, 'помощь знает этап 2');
 });
 
 test('ответ «спасибо» — голос: раньше команд и фильтров', function () {
@@ -290,7 +320,7 @@ test('«кто» без префикса — обычная речь и филь
     rt_run($pdo, cm_gmsg(7, '!кто дежурит?'), $log);
     assert_eq('🎯 Кто дежурит? Думаю, U7.', cm_last_text($log));
     foreach (['дуэль', 'кубы', 'обнять', 'встречаться', 'вернуть брак', '+клан', 'созвать клан'] as $w) {
-        assert_eq(true, strpos(cm_t('help'), $w) !== false, $w);
+        assert_eq(true, strpos(cm_plain(cm_help_text()), $w) !== false, $w);
     }
 });
 

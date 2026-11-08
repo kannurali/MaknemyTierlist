@@ -186,7 +186,7 @@ test('дк статистика 6 выключает стату', function () {
     cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк статистика 6');
     assert_eq(cm_t('access_done', ['section' => 'статистика', 'level' => 6]), cm_last_text($log));
     $ctx = cm_ctx_for($pdo, $log, 7, '!стата');
-    assert_eq(true, cm_run_command($ctx, cm_parse('!стата', CM_BOT)));
+    assert_eq(false, cm_run_command($ctx, cm_parse('!стата', CM_BOT)));
     assert_eq(cm_t('cmd_off'), cm_last_text($log));
 });
 

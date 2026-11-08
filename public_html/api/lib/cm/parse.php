@@ -346,8 +346,8 @@ function cm_target(PDO $pdo, array $msg, string &$args, ?string &$why = null): ?
     $reply = cm_reply_of($msg);
     if ($reply !== null && is_array($reply['from'] ?? null)) {
         $f = $reply['from'];
-        return ['id' => (int)($f['id'] ?? 0), 'name' => cm_display_name($f), 'is_bot' => !empty($f['is_bot']),
-                'msg_id' => (int)($reply['message_id'] ?? 0)];
+        return cm_target_full($pdo, ['id' => (int)($f['id'] ?? 0), 'name' => cm_display_name($f), 'is_bot' => !empty($f['is_bot']),
+                'msg_id' => (int)($reply['message_id'] ?? 0)]);
     }
     $text = (string)($msg['text'] ?? '');
     foreach ((array)($msg['entities'] ?? []) as $e) {
@@ -356,7 +356,7 @@ function cm_target(PDO $pdo, array $msg, string &$args, ?string &$why = null): ?
         $pos = $label === '' ? false : strpos($args, $label);
         if ($pos !== false) { $args = trim(substr($args, 0, $pos) . substr($args, $pos + strlen($label))); }
         $u = $e['user'];
-        return ['id' => (int)($u['id'] ?? 0), 'name' => cm_display_name($u), 'is_bot' => !empty($u['is_bot']), 'msg_id' => 0];
+        return cm_target_full($pdo, ['id' => (int)($u['id'] ?? 0), 'name' => cm_display_name($u), 'is_bot' => !empty($u['is_bot']), 'msg_id' => 0]);
     }
     $orig = $args;
     $lead = '';
@@ -383,5 +383,13 @@ function cm_target(PDO $pdo, array $msg, string &$args, ?string &$why = null): ?
         return null;
     }
     $args = trim($lead . ' ' . $args);
-    return $found;
+    return cm_target_full($pdo, $found);
+}
+
+// who — ник-ссылка с упоминанием (событие о человеке), tag — тихая ссылка
+// (справки и ошибки), name — просто имя.
+function cm_target_full(PDO $pdo, array $t): array {
+    $t['who'] = cm_who((int)$t['id'], (string)$t['name']);
+    $t['tag'] = cm_user_tag($pdo, (int)$t['id'], (string)$t['name']);
+    return $t;
 }

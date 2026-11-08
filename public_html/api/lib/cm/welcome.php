@@ -1,7 +1,8 @@
 <?php
 // Вход участников, приветствие и правила, статус самого бота в группе.
 // Приветствие — простой текст: подстановка {имя} сдвигала бы разметку
-// Telegram. У правил разметка сохраняется.
+// Telegram. {имя} — ники новичков со ссылкой на профиль (cm_who). У правил
+// разметка сохраняется.
 
 const CM_RAID_JOINS = 3;   // больше стольких входов за минуту — рейд
 
@@ -24,7 +25,7 @@ function cm_on_join(array $ctx, array $users): void {
         if ($tpl === '') { continue; }
         $st = $pdo->prepare('UPDATE cm_members SET greeted_at = :n WHERE chat_id = :c AND user_id = :u AND greeted_at = 0');
         $st->execute([':n' => $now, ':c' => $chatId, ':u' => $id]);
-        if ($st->rowCount() > 0) { $names[] = cm_display_name($u); }
+        if ($st->rowCount() > 0) { $names[] = cm_who_from($u); }
     }
     if (!$names) { return; }
     $who = implode(', ', $names);
@@ -82,7 +83,7 @@ function cm_on_membership(PDO $pdo, array $cfg, callable $send, array $update, i
         cm_admins_refresh($ctx, true);
         $missing = cm_missing_rights($new);
         if ($wasOut) {
-            $text = cm_t('intro');
+            $text = cm_bold(cm_t('intro_title')) . "\n" . cm_t('intro') . "\n" . cm_guide_line();
             if ($missing) { $text .= "\n\n" . cm_t('need_rights_list', ['rights' => implode("\n• ", $missing)]); }
             cm_say($ctx, $chatId, $text);
         } elseif ($ns === 'administrator' && !$missing && $os !== 'administrator') {

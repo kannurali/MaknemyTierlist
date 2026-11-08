@@ -221,7 +221,7 @@ test('без префикса — только ровно команда; дк �
         assert_eq(false, $run($t), $t);
     }
     cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк отношения 6');
-    assert_eq(true, $run('!пара'));
+    assert_eq(false, $run('!пара'));
     assert_eq(cm_t('cmd_off'), cm_last_text($log));
     $pdo = cm_test_pdo();
     $pdo->exec('DROP TABLE cm_offers');

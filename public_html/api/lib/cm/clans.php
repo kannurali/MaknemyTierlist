@@ -99,7 +99,7 @@ function cm_clan_owned(array $ctx): ?array {
 
 function cm_clan_card(array $ctx, array $c): string {
     $pdo = $ctx['pdo'];
-    return cm_t('clan_info', ['name' => $c['name'], 'owner' => cm_user_name($pdo, $c['owner_id']),
+    return cm_t('clan_info', ['name' => $c['name'], 'owner' => cm_user_who($pdo, $c['owner_id'], true),
             'n' => cm_clan_size($pdo, $c['id']), 'max' => CM_CLAN_MAX,
             'state' => cm_t($c['is_open'] ? 'clan_state_open' : 'clan_state_closed'),
             'msgs' => cm_num(cm_clan_week($pdo, $c, (int)$ctx['now']))])
@@ -268,7 +268,7 @@ function cm_cmd_clan_invite(array $ctx, array $cmd): void {
     }
     $pdo = $ctx['pdo'];
     if (cm_clan_of($pdo, $c['chat_id'], (int)$t['id']) !== null) {
-        cm_reply($ctx, cm_t('clan_them_in', ['name' => $t['name']]));
+        cm_reply($ctx, cm_t('clan_them_in', ['name' => $t['tag']]));
         return;
     }
     if (cm_clan_size($pdo, $c['id']) >= CM_CLAN_MAX) {
@@ -276,7 +276,7 @@ function cm_cmd_clan_invite(array $ctx, array $cmd): void {
         return;
     }
     cm_offer_send($ctx, 'clan', (int)$t['id'], $c['id'],
-        cm_t('clan_offer', ['to' => $t['name'], 'from' => cm_actor_name($ctx), 'clan' => $c['name']]));
+        cm_t('clan_offer', ['to' => $t['who'], 'from' => cm_actor_name($ctx), 'clan' => $c['name']]));
 }
 
 // «Принять» приглашение в клан: клан ещё есть, человек ни в каком, место есть.
@@ -287,7 +287,7 @@ function cm_offer_yes_clan(array $ctx, array $o): string {
     if (cm_clan_of($pdo, $o['chat_id'], $o['to_id']) !== null) { return 'clan_busy'; }
     if (cm_clan_size($pdo, $c['id']) >= CM_CLAN_MAX) { return 'clan_full_short'; }
     if (!cm_clan_add_member($pdo, $c, $o['to_id'], (int)$ctx['now'])) { return 'clan_busy'; }
-    cm_edit($ctx, $o['msg_id'], cm_t('clan_joined', ['name' => cm_user_name($pdo, $o['to_id']), 'clan' => $c['name']]));
+    cm_edit($ctx, $o['msg_id'], cm_t('clan_joined', ['name' => cm_user_who($pdo, $o['to_id']), 'clan' => $c['name']]));
     return '';
 }
 
@@ -305,12 +305,12 @@ function cm_cmd_clan_kick(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
     $theirs = cm_clan_of($pdo, $c['chat_id'], (int)$t['id']);
     if ($theirs === null || $theirs['id'] !== $c['id']) {
-        cm_reply($ctx, cm_t('clan_not_member', ['name' => $t['name']]));
+        cm_reply($ctx, cm_t('clan_not_member', ['name' => $t['tag']]));
         return;
     }
     $pdo->prepare('DELETE FROM cm_clan_members WHERE chat_id = :c AND user_id = :u AND clan_id = :k')
         ->execute([':c' => $c['chat_id'], ':u' => (int)$t['id'], ':k' => $c['id']]);
-    cm_reply($ctx, cm_t('clan_kicked', ['name' => $t['name'], 'clan' => $c['name']]), false);
+    cm_reply($ctx, cm_t('clan_kicked', ['name' => $t['who'], 'clan' => $c['name']]), false);
 }
 
 // «клан открыт» / «клан закрыт».
@@ -367,14 +367,7 @@ function cm_cmd_clan_call(array $ctx, array $cmd): void {
         cm_reply($ctx, cm_t('clan_call_wait', ['min' => max(1, intdiv($left + 59, 60))]));
         return;
     }
-    $text = cm_t('clan_call', ['owner' => cm_actor_name($ctx), 'clan' => $c['name']]) . "\n";
-    $ents = [];
-    foreach ($ids as $i => $uid) {
-        if ($i > 0) { $text .= ', '; }
-        $name = cm_user_name($pdo, $uid);
-        $ents[] = ['type' => 'text_mention', 'offset' => cm_utf16_len($text), 'length' => cm_utf16_len($name),
-                   'user' => ['id' => $uid, 'is_bot' => false, 'first_name' => $name]];
-        $text .= $name;
-    }
-    cm_reply($ctx, $text, false, ['entities' => $ents]);
+    $who = [];
+    foreach ($ids as $uid) { $who[] = cm_user_who($pdo, $uid); }
+    cm_reply($ctx, cm_t('clan_call', ['owner' => cm_actor_name($ctx), 'clan' => $c['name']]) . "\n" . implode(', ', $who), false);
 }

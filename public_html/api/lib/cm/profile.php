@@ -68,7 +68,7 @@ function cm_profile_lines(array $ctx, int $userId, string $name): array {
     $chatId = (int)$chat['chat_id'];
     $now = (int)$ctx['now'];
     $rank = cm_rank($ctx, $userId);
-    $lines = ['👤 ' . $name, cm_t('profile_rank', ['n' => $rank, 'rank' => CM_RANK_NAMES[$rank]])];
+    $lines = ['👤 ' . cm_bold($name), cm_t('profile_rank', ['n' => $rank, 'rank' => CM_RANK_NAMES[$rank]])];
     if (cm_section_on($chat, 'статистика')) {
         $place = cm_stats_place($pdo, $chatId, $userId, 0, $now);
         $lines[] = cm_t('profile_msgs', ['all' => cm_num(cm_stats_msgs($pdo, $chatId, $userId, 0, $now)),
@@ -106,11 +106,11 @@ function cm_profile_lines3(array $ctx, int $userId): array {
     if (cm_section_on($chat, 'отношения')) {
         $c = cm_couple_of($pdo, $chatId, $userId);
         if ($c !== null) {
-            $out[] = cm_t('profile_couple', ['name' => cm_user_name($pdo, cm_partner($c, $userId)), 'lvl' => cm_couple_level($c['xp'])]);
+            $out[] = cm_t('profile_couple', ['name' => cm_user_who($pdo, cm_partner($c, $userId), true), 'lvl' => cm_couple_level($c['xp'])]);
         }
         $m = cm_marriage_of($pdo, $chatId, $userId);
         if ($m !== null) {
-            $out[] = cm_t('profile_marriage', ['name' => cm_user_name($pdo, cm_partner($m, $userId)),
+            $out[] = cm_t('profile_marriage', ['name' => cm_user_who($pdo, cm_partner($m, $userId), true),
                 'days' => cm_days_text((int)$ctx['now'] - $m['since'])]);
         }
     }
@@ -130,7 +130,7 @@ function cm_profile_send(array $ctx, array $t): void {
         cm_reply($ctx, cm_t('target_bot'));
         return;
     }
-    cm_reply($ctx, implode("\n", cm_profile_lines($ctx, (int)$t['id'], (string)$t['name'])), false);
+    cm_reply($ctx, implode("\n", cm_profile_lines($ctx, (int)$t['id'], (string)$t['tag'])), false);
 }
 
 // --------------------------------------------------------------------------

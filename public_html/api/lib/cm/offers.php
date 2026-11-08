@@ -34,10 +34,12 @@ function cm_offer_close(PDO $pdo, int $id, string $status): bool {
 // Поправить сообщение бота в чате контекста. Без $buttons кнопки пропадают.
 function cm_edit(array $ctx, int $msgId, string $text, array $buttons = []): void {
     if ($msgId <= 0) { return; }
-    $p = ['chat_id' => (int)$ctx['chat']['chat_id'], 'message_id' => $msgId, 'text' => mb_substr($text, 0, 4096),
-          'link_preview_options' => ['is_disabled' => true]];
+    $p = ['chat_id' => (int)$ctx['chat']['chat_id'], 'message_id' => $msgId] + cm_text_params($text)
+       + ['link_preview_options' => ['is_disabled' => true]];
     if ($buttons) { $p['reply_markup'] = ['inline_keyboard' => $buttons]; }
-    ($ctx['send'])('editMessageText', $p);
+    $res = ($ctx['send'])('editMessageText', $p);
+    $plain = cm_entity_error($res) ? cm_without_mentions($p) : null;
+    if ($plain !== null) { ($ctx['send'])('editMessageText', $plain); }
 }
 
 function cm_offer_buttons(int $id): array {
@@ -91,9 +93,9 @@ function cm_offer_callback(array $ctx, array $q, int $id, string $ans): string {
     }
     if ($ans === 'n') {
         if (!cm_offer_close($pdo, $id, 'no')) { return cm_t('offer_stale'); }
-        $text = cm_t('offer_declined', ['name' => cm_user_name($pdo, $o['to_id'])]);
+        $text = cm_t('offer_declined', ['name' => cm_user_who($pdo, $o['to_id'])]);
         cm_edit($ctx, $o['msg_id'], $text);
-        return $text;
+        return cm_plain($text);
     }
     $fn = 'cm_offer_yes_' . $o['kind'];
     if (!function_exists($fn) || !cm_offer_close($pdo, $id, 'yes')) { return cm_t('offer_stale'); }
@@ -144,7 +146,7 @@ function cm_game_invite(array $ctx, string $kind, array $t, string $textKey, str
         return;
     }
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-    cm_offer_send($ctx, $kind, (int)$t['id'], 0, cm_t($textKey, ['to' => $t['name'], 'from' => cm_display_name($from),
+    cm_offer_send($ctx, $kind, (int)$t['id'], 0, cm_t($textKey, ['to' => $t['who'], 'from' => cm_who_from($from),
         'stake' => cm_stake_line($ctx, $outcomeKey, (int)$ctx['actor'], (int)$t['id'])]));
 }
 
@@ -189,7 +191,7 @@ function cm_game_top(array $ctx, string $kind, string $head, string $empty, bool
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $i => $r) {
         $s = ['wins' => (int)$r['wins'], 'losses' => (int)$r['losses'], 'draws' => (int)$r['draws']];
-        $lines[] = cm_t('game_top_line', ['n' => $i + 1, 'name' => cm_user_name($pdo, (int)$r['user_id']),
+        $lines[] = cm_t('game_top_line', ['n' => $i + 1, 'name' => cm_user_who($pdo, (int)$r['user_id'], true),
             'score' => cm_score_text($s, $draws)]);
     }
     cm_reply($ctx, $lines ? cm_t($head) . "\n" . implode("\n", $lines) : cm_t($empty), false);
@@ -216,7 +218,7 @@ function cm_game_outcome(array $ctx, string $key, int $a, int $b, int $loser, st
     $acts = cm_game_stake($ctx, $key, $a, $b);
     if (!$acts) { return ''; }
     $done = cm_apply_actions($ctx, $loser, 0, $acts, $reason, 0);
-    return $done === '' ? '' : cm_t('game_outcome', ['name' => cm_user_name($ctx['pdo'], $loser), 'done' => $done]);
+    return $done === '' ? '' : cm_t('game_outcome', ['name' => cm_user_who($ctx['pdo'], $loser), 'done' => $done]);
 }
 
 // «кубы исход мут 10м», «дуэли исход ничего»; без слов — что сейчас.

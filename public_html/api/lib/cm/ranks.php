@@ -113,11 +113,11 @@ function cm_rank_change(array $ctx, array $t, int $new): void {
         return;
     }
     if ($new === $old) {
-        cm_reply($ctx, cm_t('rank_same', ['name' => $t['name'], 'rank' => CM_RANK_NAMES[$old]]));
+        cm_reply($ctx, cm_t('rank_same', ['name' => $t['tag'], 'rank' => CM_RANK_NAMES[$old]]));
         return;
     }
     cm_rank_store($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'], $old, $new, (int)$ctx['actor'], (int)$ctx['now']);
-    cm_reply($ctx, cm_t('rank_done', ['name' => $t['name'], 'rank' => CM_RANK_NAMES[$new], 'n' => $new]), false);
+    cm_reply($ctx, cm_t('rank_done', ['name' => $t['who'], 'rank' => CM_RANK_NAMES[$new], 'n' => $new]), false);
 }
 
 function cm_cmd_rank_set(array $ctx, array $cmd): void {
@@ -131,16 +131,24 @@ function cm_cmd_rank_set(array $ctx, array $cmd): void {
     cm_rank_change($ctx, $t, (int)$m[1]);
 }
 
+// «повысить» — на ступень, «повысить 3» — сразу до ранга 3. Число в другую
+// сторону ранг не трогает: «повысить 1» старшему — ответ «уже …».
 function cm_cmd_rank_up(array $ctx, array $cmd): void {
     $args = $cmd['args'];
     $t = cm_need_target($ctx, $args);
-    if ($t !== null) { cm_rank_change($ctx, $t, min(4, cm_rank($ctx, (int)$t['id']) + 1)); }
+    if ($t === null) { return; }
+    $old = cm_rank($ctx, (int)$t['id']);
+    $n = preg_match('~^(\d)(?!\d)~', trim($args), $m) ? (int)$m[1] : null;
+    cm_rank_change($ctx, $t, $n === null ? min(4, $old + 1) : max($old, $n));
 }
 
 function cm_cmd_rank_down(array $ctx, array $cmd): void {
     $args = $cmd['args'];
     $t = cm_need_target($ctx, $args);
-    if ($t !== null) { cm_rank_change($ctx, $t, max(0, cm_rank($ctx, (int)$t['id']) - 1)); }
+    if ($t === null) { return; }
+    $old = cm_rank($ctx, (int)$t['id']);
+    $n = preg_match('~^(\d)(?!\d)~', trim($args), $m) ? (int)$m[1] : null;
+    cm_rank_change($ctx, $t, $n === null ? max(0, $old - 1) : min($old, $n));
 }
 
 function cm_cmd_rank_clear(array $ctx, array $cmd): void {
@@ -153,11 +161,11 @@ function cm_cmd_rank_list(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
     $owner = (int)$ctx['chat']['owner_id'];
     $lines = [];
-    if ($owner > 0) { $lines[] = '5 · ' . cm_user_name($pdo, $owner); }
+    if ($owner > 0) { $lines[] = '5 · ' . cm_user_who($pdo, $owner, true); }
     $st = $pdo->prepare('SELECT user_id, lvl FROM cm_members WHERE chat_id = :c AND lvl > 0 AND user_id <> :o ORDER BY lvl DESC, user_id');
     $st->execute([':c' => $ctx['chat']['chat_id'], ':o' => $owner]);
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $lines[] = min(4, (int)$r['lvl']) . ' · ' . cm_user_name($pdo, (int)$r['user_id']);
+        $lines[] = min(4, (int)$r['lvl']) . ' · ' . cm_user_who($pdo, (int)$r['user_id'], true);
     }
     cm_reply($ctx, $lines ? cm_t('ranks_head') . "\n" . implode("\n", $lines) : cm_t('ranks_empty'), false);
 }
@@ -174,8 +182,8 @@ function cm_cmd_rank_log(array $ctx, array $cmd): void {
     $st->execute($p);
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $lines[] = cm_t('ranklog_line', ['date' => cm_date((int)$r['at']), 'by' => cm_user_name($pdo, (int)$r['by_id']),
-            'name' => cm_user_name($pdo, (int)$r['user_id']), 'old' => (int)$r['old_lvl'], 'new' => (int)$r['new_lvl']]);
+        $lines[] = cm_t('ranklog_line', ['date' => cm_date((int)$r['at']), 'by' => cm_user_who($pdo, (int)$r['by_id'], true),
+            'name' => cm_user_who($pdo, (int)$r['user_id'], true), 'old' => (int)$r['old_lvl'], 'new' => (int)$r['new_lvl']]);
     }
     cm_reply($ctx, $lines ? cm_t('ranklog_head') . "\n" . implode("\n", $lines) : cm_t('ranklog_empty'), false);
 }
@@ -193,7 +201,7 @@ function cm_cmd_owner_pass(array $ctx, array $cmd): void {
         return;
     }
     $data = 'cm:o:' . (int)$ctx['actor'] . ':' . (int)$t['id'];
-    cm_reply($ctx, cm_t('owner_offer', ['name' => $t['name'], 'owner' => cm_user_name($ctx['pdo'], (int)$ctx['actor'])]), false,
+    cm_reply($ctx, cm_t('owner_offer', ['name' => $t['who'], 'owner' => cm_user_who($ctx['pdo'], (int)$ctx['actor'])]), false,
         ['buttons' => [[['text' => cm_t('btn_accept'), 'callback_data' => $data]]]]);
 }
 
@@ -210,11 +218,11 @@ function cm_owner_callback(array $ctx, array $q, int $from, int $to): string {
     cm_rank_store($pdo, $chatId, $from, 5, 4, $from, $now);
     $was = cm_member($pdo, $chatId, $to);
     cm_rank_store($pdo, $chatId, $to, $was ? min(4, $was['lvl']) : 0, 5, $from, $now);
-    $text = cm_t('owner_done', ['name' => cm_user_name($pdo, $to)]);
+    $text = cm_t('owner_done', ['name' => cm_user_who($pdo, $to)]);
     $qm = is_array($q['message'] ?? null) ? $q['message'] : [];
     ($ctx['send'])('editMessageText', ['chat_id' => (int)($qm['chat']['id'] ?? $chatId),
-        'message_id' => (int)($qm['message_id'] ?? 0), 'text' => $text]);
-    return $text;
+        'message_id' => (int)($qm['message_id'] ?? 0)] + cm_text_params($text));
+    return cm_plain($text);
 }
 
 function cm_cmd_owner_restore(array $ctx, array $cmd): void {
@@ -235,7 +243,7 @@ function cm_cmd_owner_restore(array $ctx, array $cmd): void {
     if ($prev > 0) { cm_rank_store($pdo, $chatId, $prev, 5, 4, $me, (int)$ctx['now']); }
     $was = cm_member($pdo, $chatId, $me);
     cm_rank_store($pdo, $chatId, $me, $was ? min(4, $was['lvl']) : 0, 5, $me, (int)$ctx['now']);
-    cm_reply($ctx, cm_t('owner_restored', ['name' => cm_user_name($pdo, $me)]), false);
+    cm_reply($ctx, cm_t('owner_restored', ['name' => cm_user_who($pdo, $me)]), false);
 }
 
 // --------------------------------------------------------------------------

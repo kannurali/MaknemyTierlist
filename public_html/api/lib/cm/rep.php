@@ -48,7 +48,7 @@ function cm_rep_vote(array $ctx, int $toId, bool $toBot, int $delta): string {
 // Временный ответ: «👍 Вася → Петя: +1 (репутация 15)».
 function cm_rep_done(array $ctx, string $toName, int $toId, int $delta): void {
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-    cm_reply($ctx, cm_t($delta > 0 ? 'rep_up' : 'rep_down', ['from' => cm_display_name($from), 'to' => $toName,
+    cm_reply($ctx, cm_t($delta > 0 ? 'rep_up' : 'rep_down', ['from' => cm_who_from($from), 'to' => $toName,
         'score' => cm_rep_score($ctx['pdo'], (int)$ctx['chat']['chat_id'], $toId)]));
 }
 
@@ -70,7 +70,7 @@ function cm_rep_try(array $ctx): bool {
     $f = $reply['from'];
     $delta = CM_REP_WORDS[$word];
     if (cm_rep_vote($ctx, (int)($f['id'] ?? 0), !empty($f['is_bot']), $delta) === '') {
-        cm_rep_done($ctx, cm_display_name($f), (int)$f['id'], $delta);
+        cm_rep_done($ctx, cm_who_from($f), (int)$f['id'], $delta);
     }
     return true;
 }
@@ -93,7 +93,7 @@ function cm_rep_cmd(array $ctx, array $cmd, int $delta): void {
         cm_reply($ctx, cm_t($err, ['max' => CM_REP_DAY_MAX]));
         return;
     }
-    cm_rep_done($ctx, (string)$t['name'], (int)$t['id'], $delta);
+    cm_rep_done($ctx, (string)$t['who'], (int)$t['id'], $delta);
 }
 
 function cm_cmd_rep_show(array $ctx, array $cmd): void {
@@ -101,7 +101,7 @@ function cm_cmd_rep_show(array $ctx, array $cmd): void {
     $args = $cmd['args'];
     $t = cm_target_or_self($ctx, $args);
     if ($t === null) { return; }
-    cm_reply($ctx, cm_t('rep_show', ['name' => $t['name'],
+    cm_reply($ctx, cm_t('rep_show', ['name' => $t['tag'],
         'score' => cm_rep_score($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'])]));
 }
 
@@ -116,7 +116,7 @@ function cm_cmd_rep_top(array $ctx, array $cmd): void {
     $st->execute([':c' => $ctx['chat']['chat_id']]);
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $i => $r) {
-        $lines[] = cm_t('rep_top_line', ['n' => $i + 1, 'name' => cm_user_name($pdo, (int)$r['user_id']), 'score' => (int)$r['score']]);
+        $lines[] = cm_t('rep_top_line', ['n' => $i + 1, 'name' => cm_user_who($pdo, (int)$r['user_id'], true), 'score' => (int)$r['score']]);
     }
     cm_reply($ctx, $lines ? cm_t('rep_top_head') . "\n" . implode("\n", $lines) : cm_t('rep_top_empty'), false);
 }

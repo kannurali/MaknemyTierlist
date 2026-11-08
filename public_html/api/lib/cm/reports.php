@@ -21,8 +21,8 @@ function cm_report_buttons(int $id): array {
 }
 
 function cm_report_card(array $r, PDO $pdo, array $src): string {
-    return cm_t('report_card', ['chat' => $src['title'], 'from' => cm_user_name($pdo, (int)$r['reporter_id']),
-        'to' => cm_user_name($pdo, (int)$r['target_id']), 'reason' => (string)$r['reason'] !== '' ? $r['reason'] : '—',
+    return cm_t('report_card', ['chat' => $src['title'], 'from' => cm_user_who($pdo, (int)$r['reporter_id']),
+        'to' => cm_user_who($pdo, (int)$r['target_id']), 'reason' => (string)$r['reason'] !== '' ? $r['reason'] : '—',
         'link' => cm_msg_link($src, (int)$r['message_id'])]);
 }
 
@@ -92,12 +92,13 @@ function cm_report_callback(array $ctx, array $q, int $id, string $act): string 
         ->execute([':s' => $act === 'x' ? 'rejected' : 'done', ':b' => $ctx['actor'], ':n' => $ctx['now'], ':id' => $id]);
     $what = ['d' => 'удалено', 'm' => 'мут 1 ч', 'b' => 'бан', 'x' => 'отклонено'][$act];
     $qm = is_array($q['message'] ?? null) ? $q['message'] : [];
+    // Разметка карточки (ники-ссылки) — из самого сообщения: текст карточки
+    // идёт первым, её смещения не сдвигаются.
     ($ctx['send'])('editMessageText', [
         'chat_id' => (int)($qm['chat']['id'] ?? 0), 'message_id' => (int)($qm['message_id'] ?? 0),
-        'text' => mb_substr((string)($qm['text'] ?? '') . "\n\n" . cm_t('report_result',
-            ['who' => cm_user_name($pdo, (int)$ctx['actor']), 'what' => $what]), 0, 4096),
-        'link_preview_options' => ['is_disabled' => true],
-    ]);
+    ] + cm_text_params((string)($qm['text'] ?? '') . "\n\n" . cm_t('report_result',
+            ['who' => cm_user_who($pdo, (int)$ctx['actor'], true), 'what' => $what]), (array)($qm['entities'] ?? []))
+      + ['link_preview_options' => ['is_disabled' => true]]);
     return cm_t('report_handled');
 }
 
@@ -107,7 +108,7 @@ function cm_cmd_report_list(array $ctx, array $cmd): void {
     $st->execute([':c' => $ctx['chat']['chat_id']]);
     $lines = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $lines[] = '#' . (int)$r['id'] . ' · ' . cm_user_name($pdo, (int)$r['target_id']) . ' — '
+        $lines[] = '#' . (int)$r['id'] . ' · ' . cm_user_who($pdo, (int)$r['target_id'], true) . ' — '
             . ((string)$r['reason'] !== '' ? $r['reason'] : '—') . ' ' . cm_msg_link($ctx['chat'], (int)$r['message_id']);
     }
     cm_reply($ctx, $lines ? cm_t('reports_head') . "\n" . implode("\n", $lines) : cm_t('reports_empty'), false);

@@ -188,7 +188,7 @@ function cm_filter_act(array $ctx, string $key): void {
         cm_trigger_actions($ctx['chat'], $key), cm_t('reason_filter', ['filter' => $name]), 0);
     if ($done === '') { return; }
     cm_say($ctx, (int)$ctx['chat']['chat_id'],
-        cm_t('filter_notice', ['name' => cm_display_name($from), 'filter' => $name, 'done' => $done]), ['temp' => true]);
+        cm_t('filter_notice', ['name' => cm_who_from($from), 'filter' => $name, 'done' => $done]), ['temp' => true]);
 }
 
 // --------------------------------------------------------------------------

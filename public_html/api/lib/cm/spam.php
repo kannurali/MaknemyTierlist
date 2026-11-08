@@ -87,7 +87,7 @@ function cm_cmd_spam_add(array $ctx, array $cmd): void {
         if ($done !== '') { $n++; }
     }
     $n += cm_spam_sweep($ctx, (int)$t['id']);
-    cm_reply($ctx, cm_t('spam_added', ['name' => $t['name'], 'n' => $n]), false);
+    cm_reply($ctx, cm_t('spam_added', ['name' => $t['who'], 'n' => $n]), false);
 }
 
 function cm_cmd_spam_del(array $ctx, array $cmd): void {
@@ -97,7 +97,7 @@ function cm_cmd_spam_del(array $ctx, array $cmd): void {
     if ($t === null) { return; }
     $st = $ctx['pdo']->prepare('DELETE FROM cm_spam WHERE user_id = :u');
     $st->execute([':u' => (int)$t['id']]);
-    cm_reply($ctx, cm_t($st->rowCount() > 0 ? 'spam_removed' : 'spam_missing', ['name' => $t['name']]), false);
+    cm_reply($ctx, cm_t($st->rowCount() > 0 ? 'spam_removed' : 'spam_missing', ['name' => $t['tag']]), false);
 }
 
 function cm_cmd_spam_check(array $ctx, array $cmd): void {
@@ -107,9 +107,9 @@ function cm_cmd_spam_check(array $ctx, array $cmd): void {
     if ($t === null) { return; }
     $row = cm_spam_row($ctx['pdo'], (int)$t['id']);
     if ($row === null) {
-        cm_reply($ctx, cm_t('spam_no', ['name' => $t['name']]), false);
+        cm_reply($ctx, cm_t('spam_no', ['name' => $t['tag']]), false);
         return;
     }
-    cm_reply($ctx, cm_t('spam_yes', ['name' => $t['name'], 'date' => cm_date((int)$row['added_at']),
+    cm_reply($ctx, cm_t('spam_yes', ['name' => $t['tag'], 'date' => cm_date((int)$row['added_at']),
         'reason' => cm_reason_line((string)$row['reason'])]), false);
 }
