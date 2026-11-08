@@ -69,6 +69,7 @@ const CM_COMMANDS = [
     '-таймер'            => ['timer_del', 'таймеры', 1, false, false],
     'стата'              => ['stats_top', 'статистика', 0, false, false],
     'моя стата'          => ['stats_me', 'статистика', 0, false, false],
+    'импорт статы'       => ['stats_iris', 'статистика', 0, false, false],
     '+реп'               => ['rep_plus', 'репутация', 0, false, true],
     '-реп'               => ['rep_minus', 'репутация', 0, false, true],
     'репа'               => ['rep_show', 'репутация', 0, false, false],
