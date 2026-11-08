@@ -2721,4 +2721,66 @@ test('мини-приложение: аватарки каналов — коп�
     @unlink($state);
 });
 
+test('мини-приложение: аватарка человека — фото профиля копией на сайте, раз в сутки', function () {
+    $dir = sys_get_temp_dir() . '/gw-uphotos-' . getmypid() . '-' . mt_rand();
+    $state = $dir . '.json';
+    $im = imagecreatetruecolor(320, 320);
+    ob_start();
+    imagejpeg($im);
+    $jpg = (string)ob_get_clean();
+
+    $log = [];
+    $photos = [7001 => [[['file_id' => 'S160', 'width' => 160, 'height' => 160], ['file_id' => 'S320', 'width' => 320, 'height' => 320],
+                         ['file_id' => 'S640', 'width' => 640, 'height' => 640]]],
+               7002 => [[['file_id' => 'T160', 'width' => 160, 'height' => 160]]],
+               7003 => []];
+    $send = function (string $m, array $pr) use (&$log, $photos): ?array {
+        $log[] = [$m, $pr];
+        if ($m === 'getUserProfilePhotos') {
+            $p = $photos[$pr['user_id']] ?? [];
+            return ['ok' => true, 'result' => ['total_count' => count($p), 'photos' => $p]];
+        }
+        if ($m === 'getFile') { return ['ok' => true, 'result' => ['file_id' => $pr['file_id'], 'file_path' => 'profile_photos/' . $pr['file_id'] . '.jpg']]; }
+        return ['ok' => true, 'result' => true];
+    };
+    $fetched = [];
+    $fetch = function (string $path) use (&$fetched, $jpg): ?string { $fetched[] = $path; return $jpg; };
+    $cfg = gw_cfg(['images_dir' => $dir]);
+    $auth = function (int $id) { return gw_tg_app_auth(gw_init(['id' => $id], 'gw1'), GW_TOKEN, GW_NOW); };
+
+    [$code, $b] = gw_tg_app_photo($cfg, $send, $auth(7001), GW_NOW, $fetch, $state);
+    assert_eq(200, $code);
+    $url = (string)$b['photo'];
+    assert_eq(1, preg_match('~^' . preg_quote(TG_SITE, '~') . '/images/[0-9a-f]{40}\.jpg$~', $url), 'копия на сайте: ' . $url);
+    assert_true(is_file($dir . '/' . basename($url)));
+    assert_eq([['user_id' => 7001, 'limit' => 1]], array_column(gw_sent($log, 'getUserProfilePhotos'), 1));
+    assert_eq(['S320'], array_column(array_column(gw_sent($log, 'getFile'), 1), 'file_id'), 'размер от 320 px, не больше нужного');
+    assert_eq(false, strpos(json_encode($b), GW_TOKEN), 'токена бота в ответе нет');
+
+    $log = [];
+    $fetched = [];
+    assert_eq(['photo' => $url], gw_tg_app_photo($cfg, $send, $auth(7001), GW_NOW + 3600, $fetch, $state)[1], 'в течение суток — та же');
+    assert_eq([[], []], [$log, $fetched], 'и без запросов к Telegram');
+
+    $log = [];
+    gw_tg_app_photo($cfg, $send, $auth(7002), GW_NOW, $fetch, $state);
+    assert_eq(['T160'], array_column(array_column(gw_sent($log, 'getFile'), 1), 'file_id'), 'нет 320 — самый большой');
+    assert_eq(['photo' => null], gw_tg_app_photo($cfg, $send, $auth(7003), GW_NOW, $fetch, $state)[1], 'фото нет или скрыто — буква');
+
+    $log = [];
+    gw_tg_app_photo($cfg, $send, $auth(7001), GW_NOW + GW_TG_PHOTO_TTL + 1, $fetch, $state);
+    assert_eq(1, count(gw_sent($log, 'getUserProfilePhotos')), 'через сутки — спрашивает снова');
+    $down = function (string $m, array $pr): ?array { return null; };
+    assert_eq(['photo' => $url], gw_tg_app_photo($cfg, $down, $auth(7001), GW_NOW + 3 * GW_TG_PHOTO_TTL, $fetch, $state)[1],
+        'Telegram молчит — прежняя копия');
+    assert_eq(['photo' => null], gw_tg_app_photo(gw_cfg(), $send, $auth(7001), GW_NOW, $fetch, $dir . '-none.json')[1], 'без images_dir — буква');
+
+    $raw = json_decode((string)file_get_contents($state), true);
+    assert_eq(['u7001', 'u7002', 'u7003'], array_keys($raw), 'люди в кеше под «u<id>», не путаются с каналами');
+
+    foreach (glob($dir . '/*') ?: [] as $f) { @unlink($f); }
+    @rmdir($dir);
+    @unlink($state);
+});
+
 run_tests();

@@ -310,6 +310,15 @@ button { font: inherit; color: inherit; }
   height: 100%;
   object-fit: cover;
 }
+.ta-me img.is-late {
+  animation: ta-me-in .3s ease both;
+}
+@keyframes ta-me-in {
+  from { opacity: 0; transform: scale(.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-me img.is-late { animation: none; }
+}
 .ta-me svg {
   width: 30px;
   height: 30px;

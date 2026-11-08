@@ -425,17 +425,20 @@ function gw_tg_app_card(PDO $pdo, array $row, string $lang, int $now): array {
 }
 
 // --------------------------------------------------------------------------
-//  Аватарки каналов в мини-приложении
+//  Аватарки каналов и самого человека в мини-приложении
 // --------------------------------------------------------------------------
 //
-// Фото канала бот берёт у Telegram (getChat → photo.small_file_id, 160×160 →
-// getFile → файл с api.telegram.org/file/bot<токен>/…) и кладёт копию в
-// images_dir тем же save_image_bytes(), что картинки новостей:
-// /images/<sha1>.jpg. Адрес файла у Telegram содержит токен бота — наружу
-// уходит только копия. Какое фото у какого канала и когда спрашивали — в JSON
-// во временной папке (таблица ради этого не нужна; пропал файл — спросим
-// заново). Раз в сутки спрашиваем снова: фото каналы меняют. Нет фото,
-// Telegram молчит, нет images_dir — '' (на странице буква).
+// Фото канала бот берёт у Telegram (getChat → photo.small_file_id, 160×160),
+// фото человека — getUserProfilePhotos (первое фото профиля, 320×320; его
+// photo_url в initData Telegram даёт только мини-приложениям из меню
+// вложений, а наше открывают кнопкой под постом). Дальше getFile → файл с
+// api.telegram.org/file/bot<токен>/… → копия в images_dir тем же
+// save_image_bytes(), что картинки новостей: /images/<sha1>.jpg. Адрес файла
+// у Telegram содержит токен бота — наружу уходит только копия. Какое фото у
+// кого и когда спрашивали — в JSON во временной папке (каналы — по id чата,
+// люди — «u<id>»; таблица ради этого не нужна, пропал файл — спросим заново).
+// Раз в сутки спрашиваем снова: фото меняют. Нет фото (или человек скрыл его
+// настройками приватности), Telegram молчит, нет images_dir — '' (буква).
 
 const GW_TG_PHOTO_TTL = 86400;
 
@@ -463,9 +466,42 @@ function gw_tg_file_fetch(string $token): callable {
 
 // Адрес копии фото канала на сайте или ''.
 function gw_tg_channel_photo(callable $send, ?callable $fetch, string $dir, int $chat, int $now, string $statePath): string {
+    return gw_tg_cached_photo($send, $fetch, $dir, (string)$chat, function () use ($send, $chat): ?string {
+        $res = $send('getChat', ['chat_id' => $chat]);
+        if ($res === null) { return null; }
+        $fileId = $res['result']['photo']['small_file_id'] ?? null;
+        return !empty($res['ok']) && is_string($fileId) ? $fileId : '';
+    }, $now, $statePath);
+}
+
+// Адрес копии фото профиля человека на сайте или ''. Берётся первое фото и
+// в нём — первый размер от 320 px (на телефоне аватарка 58 px × 3), иначе
+// самый большой.
+function gw_tg_user_photo(callable $send, ?callable $fetch, string $dir, int $user, int $now, string $statePath): string {
+    return gw_tg_cached_photo($send, $fetch, $dir, 'u' . $user, function () use ($send, $user): ?string {
+        $res = $send('getUserProfilePhotos', ['user_id' => $user, 'limit' => 1]);
+        if ($res === null) { return null; }
+        $sizes = $res['result']['photos'][0] ?? null;
+        if (empty($res['ok']) || !is_array($sizes) || !$sizes) { return ''; }
+        $pick = null;
+        foreach ($sizes as $s) {
+            if (!is_array($s) || !is_string($s['file_id'] ?? null)) { continue; }
+            $pick = $s;
+            if ((int)($s['width'] ?? 0) >= 320) { break; }
+        }
+        return $pick ? (string)$pick['file_id'] : '';
+    }, $now, $statePath);
+}
+
+/**
+ * Общее для фото канала и человека: кеш на сутки в $statePath под ключом
+ * $key, $fileId() → file_id, '' — фото нет, null — Telegram не ответил
+ * (тогда остаётся прежняя копия).
+ */
+function gw_tg_cached_photo(callable $send, ?callable $fetch, string $dir, string $key, callable $fileId, int $now, string $statePath): string {
     if ($dir === '') { return ''; }
     $state = json_decode((string)@file_get_contents($statePath), true);
-    $have = is_array($state) && is_array($state[(string)$chat] ?? null) ? $state[(string)$chat] : null;
+    $have = is_array($state) && is_array($state[$key] ?? null) ? $state[$key] : null;
     if ($have && $now - (int)($have[1] ?? 0) < GW_TG_PHOTO_TTL
         && ((string)$have[0] === '' || is_file(rtrim($dir, '/\\') . '/' . basename((string)$have[0])))) {
         return (string)$have[0];
@@ -473,11 +509,10 @@ function gw_tg_channel_photo(callable $send, ?callable $fetch, string $dir, int 
     if ($fetch === null) { return $have ? (string)$have[0] : ''; }
 
     $url = '';
-    $res = $send('getChat', ['chat_id' => $chat]);
-    if ($res === null) { return $have ? (string)$have[0] : ''; }
-    $fileId = $res['result']['photo']['small_file_id'] ?? null;
-    if (!empty($res['ok']) && is_string($fileId) && $fileId !== '') {
-        $file = $send('getFile', ['file_id' => $fileId]);
+    $fid = $fileId();
+    if ($fid === null) { return $have ? (string)$have[0] : ''; }
+    if ($fid !== '') {
+        $file = $send('getFile', ['file_id' => $fid]);
         $path = is_array($file) && !empty($file['ok']) ? ($file['result']['file_path'] ?? null) : null;
         $bytes = is_string($path) ? $fetch($path) : null;
         if ($bytes === null) { return $have ? (string)$have[0] : ''; }
@@ -485,16 +520,29 @@ function gw_tg_channel_photo(callable $send, ?callable $fetch, string $dir, int 
             require_once __DIR__ . '/images.php';
             $url = save_image_bytes($bytes, $dir, 512000, ['jpg', 'png', 'webp']);
         } catch (Throwable $e) {
-            error_log('tg channel photo: ' . $e->getMessage());
+            error_log('tg photo: ' . $e->getMessage());
             return $have ? (string)$have[0] : '';
         }
     }
-    json_state_update($statePath, function ($s) use ($chat, $url, $now) {
+    json_state_update($statePath, function ($s) use ($key, $url, $now) {
         $s = is_array($s) ? $s : [];
-        $s[(string)$chat] = [$url, $now];
+        $s[$key] = [$url, $now];
         return [null, $s];
     }, null);
     return $url;
+}
+
+/**
+ * Аватарка того, кто открыл мини-приложение ($auth — gw_tg_app_auth()):
+ * отдельный запрос после карточки, чтобы скачивание фото у Telegram не
+ * задерживало сам ответ «вы участвуете». {"photo": полный адрес или null}.
+ */
+function gw_tg_app_photo(array $cfg, callable $send, array $auth, int $now, ?callable $fetch = null, ?string $photoState = null): array {
+    $tg = tg_config($cfg);
+    $dir = is_string($cfg['images_dir'] ?? null) ? $cfg['images_dir'] : '';
+    $fetch = $fetch ?? ($tg['token'] !== '' ? gw_tg_file_fetch($tg['token']) : null);
+    $src = gw_tg_user_photo($send, $fetch, $dir, (int)$auth['user']['id'], $now, $photoState ?? gw_tg_photo_state());
+    return [200, ['photo' => $src !== '' ? TG_SITE . $src : null]];
 }
 
 // Каналы, на которые не подписан: название, ссылка «Подписаться» — та же

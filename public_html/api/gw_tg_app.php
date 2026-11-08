@@ -7,6 +7,8 @@ require_once __DIR__ . '/lib/giveaway.php';
 //   → {"ok", "state", "lang", "text", "note", "gw", "missing"} — см. gw_tg_app_join()
 //     в api/lib/gw_tg.php. 403 — initData не прошли проверку подписи или
 //     устарели; 429 — слишком часто.
+// POST {"init": …, "photo": true} → {"photo": адрес или null} — аватарка
+//   открывшего (gw_tg_app_photo()), отдельно, чтобы не задерживать карточку.
 //
 // Кто участвует, сервер берёт только из initData: их подписывает Telegram
 // токеном бота (gw_tg_app_auth()). Какой розыгрыш — тоже оттуда
@@ -16,6 +18,7 @@ require_once __DIR__ . '/lib/giveaway.php';
 // попытки считаются, как нажатия на сайте (api/giveaway_enter.php).
 
 const GW_APP_PER_HOUR = 30;
+const GW_APP_PHOTO_PER_HOUR = 30;
 
 if (!defined('TESTING')) {
     header('Cache-Control: no-store');
@@ -28,6 +31,15 @@ if (!defined('TESTING')) {
     $auth = tg_enabled($tg) ? gw_tg_app_auth($init, $tg['token'], time()) : null;
     if ($auth === null) {
         json_out(gw_tg_app_fail('auth', 'ru'), 403);
+        exit;
+    }
+    if (($body['photo'] ?? null) === true) {
+        if (!rate_limit_allow('gw_app_photo', (string)$auth['user']['id'], GW_APP_PHOTO_PER_HOUR, 3600, time())) {
+            json_out(['photo' => null], 429);
+            exit;
+        }
+        $result = gw_tg_app_photo($cfg, tg_http($tg['token']), $auth, time());
+        json_out($result[1], $result[0]);
         exit;
     }
     $lang = tg_lang_from_telegram($auth['user']['language_code'] ?? '');
