@@ -518,7 +518,9 @@ Options -Indexes
 #     мини-приложения во фрейме; X-Frame-Options поэтому снят (при
 #     frame-ancestors браузеры на него и так не смотрят). Приложения Telegram
 #     для телефона и компьютера открывают страницу без фрейма.
-#   img-src — только свои картинки (баннер розыгрыша); аналитики на странице нет.
+#   img-src — свои картинки (баннер, иконки призов, аватарки каналов) и
+#     аватар самого человека из Telegram (photo_url — t.me/i/userpic/…);
+#     аналитики на странице нет.
 # <FilesMatch> применяется после заголовков выше и перекрывает их. Без этого
 # блока страница попадёт под общую политику, telegram-web-app.js не
 # загрузится и мини-приложение не заработает. Откат — выключить
@@ -526,7 +528,7 @@ Options -Indexes
 # кнопкой бота при следующей правке поста.
 <IfModule mod_headers.c>
   <FilesMatch "^tg-app\.php$">
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https://maknemy.com data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https://maknemy.com https://t.me data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org"
     Header always unset X-Frame-Options
   </FilesMatch>
 </IfModule>
