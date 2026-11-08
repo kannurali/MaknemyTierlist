@@ -103,7 +103,7 @@ test('нарушение: по умолчанию удаление молча, �
     $log2 = [];
     $ctx2 = cm_ctx_for($pdo, $log2, 7, 'evil.ru');
     cm_filter_act($ctx2, 'links');
-    assert_eq('🚫 U7: ссылки → варн 1/3', cm_last_text($log2));
+    assert_eq('🚫 U7: ссылки → варн 1/5', cm_last_text($log2));
     assert_eq(1, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'сообщение временное');
 });
 

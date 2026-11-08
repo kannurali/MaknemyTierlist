@@ -23,16 +23,16 @@ test('по умолчанию сами работают только ссылк�
     $on = array_keys(array_filter($s['filters']));
     sort($on);
     assert_eq(['links', 'service', 'spam'], $on);
-    assert_eq(['limit' => 3, 'ttl' => 2592000], $s['warns']);
+    assert_eq(['limit' => 5, 'ttl' => 2592000], $s['warns']);
     assert_eq(true, $s['autodelete']);
 });
 
 test('настройки сливаются с умолчаниями, мусор отбрасывается', function () {
-    $s = cm_settings(['filters' => ['mat' => true, 'nope' => true], 'warns' => ['limit' => 5],
+    $s = cm_settings(['filters' => ['mat' => true, 'nope' => true], 'warns' => ['limit' => 7],
                       'autodelete' => 'да', 'zzz' => 1]);
     assert_eq(true, $s['filters']['mat']);
     assert_eq(false, isset($s['filters']['nope']));
-    assert_eq(5, $s['warns']['limit']);
+    assert_eq(7, $s['warns']['limit']);
     assert_eq(2592000, $s['warns']['ttl']);
     assert_eq(true, $s['autodelete'], 'строка вместо bool не принимается');
     assert_eq(false, isset($s['zzz']));
@@ -111,6 +111,24 @@ test('группа стала супергруппой — всё переезж
     assert_eq(null, cm_chat_row($pdo, -500));
     cm_migrate($pdo, -500, CM_CHAT);
     assert_eq(1, (int)$pdo->query('SELECT COUNT(*) FROM cm_chats')->fetchColumn(), 'повтор безвреден');
+});
+
+test('миграция лимита варнов: сохранённые 3 → 5, другое число не трогает', function () {
+    $pdo = cm_test_pdo();
+    foreach ([-501 => 3, -502 => 7, -503 => 13] as $id => $limit) {
+        $c = cm_chat_ensure($pdo, ['id' => $id, 'title' => 'Чат'], CM_NOW);
+        $s = $c['settings'];
+        $s['warns']['limit'] = $limit;
+        $s['maknemy'] = true;
+        cm_settings_save($pdo, $c, $s, CM_NOW);
+    }
+    $pdo->exec((string)file_get_contents(__DIR__ . '/../docs/migrations/2026-11-08-cm-warn-limit-5.sql'));
+    $got = [];
+    foreach ([-501, -502, -503] as $id) {
+        $s = cm_chat_row($pdo, $id)['settings'];
+        $got[$id] = [$s['warns']['limit'], $s['warns']['ttl'], $s['maknemy']];
+    }
+    assert_eq([-501 => [5, 2592000, true], -502 => [7, 2592000, true], -503 => [13, 2592000, true]], $got);
 });
 
 test('тексты подставляют поля', function () {
