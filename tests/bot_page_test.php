@@ -53,12 +53,19 @@ test('в разметке страницы нет HTML-комментариев:
     assert_eq(0, substr_count($html, '<!--'));
 });
 
-test('на странице есть каждая команда бота', function () use ($TEXT) {
+test('на странице есть каждая команда бота, кроме слов 18+', function () use ($TEXT) {
     $miss = [];
-    foreach (array_keys(CM_COMMANDS) as $phrase) {
+    $adult = [];
+    foreach (CM_COMMANDS as $phrase => $def) {
+        if ($def[1] === CM_ADULT) {
+            if (preg_match('~(?<!\p{L})' . preg_quote($phrase, '~') . '(?!\p{L})~u', $TEXT)) { $adult[] = $phrase; }
+            continue;
+        }
         if (strpos($TEXT, $phrase) === false) { $miss[] = $phrase; }
     }
     assert_eq([], $miss, 'команды из CM_COMMANDS без описания на /bot');
+    assert_eq([], $adult, 'слова 18+ на публичной странице не пишем: её видят дети и поисковики');
+    assert_true(strpos($TEXT, 'дк 18+ 0') !== false, 'но как включить 18+ — написано');
     foreach (array_keys(CM_FILTERS) as $f) {
         assert_true(strpos($TEXT, $f) !== false, "фильтр «{$f}»");
     }

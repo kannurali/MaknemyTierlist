@@ -57,7 +57,7 @@ function cm_birthday(string $raw, int $now): string {
 // --------------------------------------------------------------------------
 
 /**
- * Профиль строками: имя, ранг, сообщения, «в чате с», репутация, награды,
+ * Профиль строками: имя, ранг, сообщения, «в чате с», репутация, монеты, награды,
  * варны, анкета. Пустые строки анкеты не выводятся, строки выключенного
  * раздела — тоже; награды видны всегда, как и команда «награды». Этап 3
  * вставляет «Пара», «Брак», «Клан», «Дуэли» после наград, перед варнами.
@@ -80,6 +80,10 @@ function cm_profile_lines(array $ctx, int $userId, string $name): array {
     }
     if (cm_section_on($chat, 'репутация')) {
         $lines[] = cm_t('profile_rep', ['score' => cm_rep_score($pdo, $net, $userId)]);
+    }
+    if (cm_section_on($chat, 'ферма') && cm_ready_coins($pdo)) {
+        $coins = cm_coins_get($pdo, $userId)['coins'];
+        if ($coins > 0) { $lines[] = cm_t('profile_coins', ['coins' => cm_num($coins)]); }
     }
     $awards = cm_awards_active($pdo, $chatId, $userId, $now);
     if ($awards) { $lines[] = cm_t('profile_awards', ['list' => cm_awards_brief($awards)]); }
