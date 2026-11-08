@@ -44,10 +44,13 @@ function cm_handle_update(PDO $pdo, array $cfg, callable $send, array $update, i
  *     от имени чужого канала — только удаляем (канал не замутить);
  *  1. запомнить автора;
  *  2. спамер из базы — бан;
- *  3. команда — выполнить;
- *  4. фильтры по старшинству;
- *  5. «#имя» — заметка.
- * Правку проверяют только фильтры: команду из правки не выполняем.
+ *  3. +1 сообщение в статистику (этап 2, stats.php);
+ *  4. ответ «+» / «спасибо» — голос репутации (этап 2, rep.php);
+ *  5. команда — выполнить;
+ *  6. фильтры по старшинству;
+ *  7. «#имя» — заметка.
+ * Правку проверяют только фильтры: команду и голос из правки не выполняем,
+ * в статистику правка не идёт.
  */
 function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $edited, int $now): void {
     $chatId = (int)($msg['chat']['id'] ?? 0);
@@ -92,7 +95,9 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
         cm_apply_actions($ctx, $uid, (int)($msg['message_id'] ?? 0), cm_trigger_actions($chat, 'spam'), cm_t('reason_spam'), 0);
         return;
     }
+    if (!$edited) { cm_stats_hit($pdo, $chatId, $uid, $now); }
     if (!$edited && isset($msg['text'])) {
+        if (cm_rep_try($ctx)) { return; }
         $cmd = cm_parse((string)$msg['text'], $ctx['bot']);
         if ($cmd !== null && cm_run_command($ctx, $cmd)) { return; }
     }
