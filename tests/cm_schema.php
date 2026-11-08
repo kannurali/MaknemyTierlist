@@ -52,6 +52,23 @@ function cm_sqlite_tables(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS cm_queue (
         chat_id INTEGER NOT NULL, message_id INTEGER NOT NULL, delete_at INTEGER NOT NULL,
         PRIMARY KEY (chat_id, message_id))");
+    // этап 2 — docs/migrations/2026-11-08-chat-manager-activity.sql
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_stats (
+        chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL, day INTEGER NOT NULL,
+        msgs INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (chat_id, user_id, day))");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_profiles (
+        user_id INTEGER PRIMARY KEY, gender TEXT NOT NULL DEFAULT '', city TEXT NOT NULL DEFAULT '',
+        birthday TEXT NOT NULL DEFAULT '', about TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_rep (
+        chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL, score INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (chat_id, user_id))");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_rep_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, from_id INTEGER NOT NULL,
+        to_id INTEGER NOT NULL, delta INTEGER NOT NULL, at INTEGER NOT NULL)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_awards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
+        level INTEGER NOT NULL, reason TEXT NOT NULL, by_id INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL, until_at INTEGER NOT NULL DEFAULT 0, removed_at INTEGER NOT NULL DEFAULT 0)");
     $pdo->exec("CREATE TABLE IF NOT EXISTS tg_links (
         user_id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL, tg_name TEXT NOT NULL DEFAULT '',
         lang TEXT NOT NULL DEFAULT 'ru', linked_at INTEGER NOT NULL)");

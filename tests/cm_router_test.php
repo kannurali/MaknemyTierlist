@@ -165,7 +165,7 @@ test('помощь, кто я, id', function () {
     rt_run($pdo, cm_gmsg(7, 'помощь'), $log);
     assert_eq(cm_t('help'), cm_last_text($log));
     rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
-    assert_eq('Ваш ранг: 0 — участник. Варны: 0/3.', cm_last_text($log));
+    assert_eq(0, strpos(cm_last_text($log), "👤 U7\nРанг: 0 — участник\n"), 'кто я — профиль');
     rt_run($pdo, cm_gmsg(7, 'id', ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 20, 'first_name' => 'Вася']]]), $log);
     assert_eq(true, strpos(cm_last_text($log), 'Вася: 20') !== false);
 });
@@ -196,6 +196,55 @@ test('cron: таймеры и очередь', function () {
     $log = [];
     cm_queue_add($pdo, CM_CHAT, 1, CM_NOW - 1);
     assert_eq(['timers' => 0, 'deleted' => 1], cm_cron_tick($pdo, cm_cfg(), cm_rec($log), CM_NOW));
+});
+
+test('статистика: сообщение и команда считаются, правка и спамер — нет', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(7, 'привет'), $log);
+    rt_run($pdo, cm_gmsg(7, 'помощь'), $log);
+    rt_run($pdo, cm_gmsg(7, 'привет!'), $log, [], CM_NOW, 'edited_message');
+    $pdo->exec("INSERT INTO cm_spam (user_id, reason, added_by, added_at) VALUES (66, 'скам', '900', 0)");
+    rt_run($pdo, cm_gmsg(66, 'купи'), $log);
+    assert_eq(2, cm_stats_msgs($pdo, CM_CHAT, 7, 0, CM_NOW));
+    assert_eq(0, cm_stats_msgs($pdo, CM_CHAT, 66, 0, CM_NOW));
+    assert_eq(true, strpos(cm_t('help'), 'стата') !== false, 'помощь знает этап 2');
+});
+
+test('ответ «спасибо» — голос: раньше команд и фильтров', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(CM_OWNER, 'фильтр мат вкл'), $log);
+    rt_run($pdo, cm_gmsg(CM_OWNER, '+слово спасибо'), $log);
+    $reply = ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]];
+    rt_run($pdo, cm_gmsg(7, 'спасибо', $reply), $log);
+    assert_eq(0, count(cm_calls($log, 'deleteMessage')), 'до фильтра мата не дошло');
+    assert_eq('👍 U7 → Петя: +1 (репутация 1)', cm_last_text($log));
+    assert_eq(1, cm_stats_msgs($pdo, CM_CHAT, 7, 0, CM_NOW), 'голос — тоже сообщение');
+    rt_run($pdo, cm_gmsg(8, 'спасибо', $reply), $log, [], CM_NOW, 'edited_message');
+    assert_eq(1, cm_rep_score($pdo, CM_CHAT, 20), 'правка — не голос');
+    assert_eq(1, count(cm_calls($log, 'deleteMessage')), 'правку видят фильтры');
+    rt_run($pdo, cm_gmsg(7, 'спасибо огромное', $reply), $log);
+    assert_eq(2, count(cm_calls($log, 'deleteMessage')), 'не голос — фильтры как обычно');
+});
+
+test('кто я — профиль, и само сообщение уже посчитано', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
+    assert_eq("👤 U7\nРанг: 0 — участник\nСообщений: 1 (сегодня 1), место 1\nВ чате с: 21.09.2026\nРепутация: 0\nВарны: 0/3",
+        cm_last_text($log));
+});
+
+test('без таблиц этапа 2: модерация как раньше', function () {
+    $pdo = cm_test_pdo();
+    $pdo->exec('DROP TABLE cm_stats');
+    $log = [];
+    rt_run($pdo, cm_gmsg(7, 'зайди evil.ru'), $log);
+    assert_eq(1, count(cm_calls($log, 'deleteMessage')));
+    rt_run($pdo, cm_gmsg(7, '+', ['reply_to_message' => ['message_id' => 70, 'from' => ['id' => 20, 'first_name' => 'Петя']]]), $log);
+    rt_run($pdo, cm_gmsg(7, 'кто я'), $log);
+    assert_eq(['Ваш ранг: 0 — участник. Варны: 0/3.'], cm_texts($log));
 });
 
 test('вебхук: правки сообщений и право удалять в группах', function () {
