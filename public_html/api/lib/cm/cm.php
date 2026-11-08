@@ -7,7 +7,7 @@ require_once __DIR__ . '/../chat_filter.php';
 
 foreach (['db', 'texts', 'parse', 'send', 'queue', 'ranks', 'punish', 'words', 'filters', 'spam',
           'welcome', 'reports', 'cleanup', 'notes', 'timers', 'stats', 'rep', 'awards', 'profile',
-          'fun', 'offers', 'dice', 'duel', 'router', 'cron'] as $cm_part) {
+          'fun', 'offers', 'dice', 'duel', 'love', 'router', 'cron'] as $cm_part) {
     require_once __DIR__ . '/' . $cm_part . '.php';
 }
 unset($cm_part);

@@ -112,6 +112,14 @@ const CM_COMMANDS = [
     'дуэль'              => ['duel', 'игры', 0, false, true],
     'дуэли'              => ['duel_top', 'игры', 0, true, false],
     'дуэли исход'        => ['duel_outcome', 'триггеры', 3, false, false],
+    'встречаться'        => ['couple_ask', 'отношения', 0, false, true],
+    'расстаться'         => ['couple_end', 'отношения', 0, true, false],
+    'пара'               => ['couple_show', 'отношения', 0, false, false],
+    'пары'               => ['couple_top', 'отношения', 0, true, false],
+    'брак'               => ['marry', 'отношения', 0, false, false],
+    'развод'             => ['divorce', 'отношения', 0, true, false],
+    'вернуть брак'       => ['remarry', 'отношения', 0, true, false],
+    'браки'              => ['marry_top', 'отношения', 0, true, false],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -139,6 +147,9 @@ const CM_BARE_ARGS = [
     'rp'          => '~^$~',
     'dice'        => '~^$~',
     'duel'        => '~^$~',
+    'couple_ask'  => '~^$~',
+    'couple_show' => '~^$~',
+    'marry'       => '~^$~',
 ];
 
 // Команды только с префиксом: без него это слово обычной речи («кто знает…»).
