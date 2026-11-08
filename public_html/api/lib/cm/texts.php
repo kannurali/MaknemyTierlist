@@ -238,6 +238,8 @@ const CM_TEXTS = [
     'who_done'         => '🎯 Кто {q}? Думаю, {name}.',
     'who_any'          => '🎯 Думаю, {name}.',
     'who_empty'        => 'За неделю здесь никто не писал.',
+    // РП
+    'rp_done'          => '{emoji} {from} {verb} {to}',
     // общие команды
     'whoami'           => 'Ваш ранг: {n} — {rank}. Варны: {warns}/{limit}.',
     'id_text'          => "ID чата: {chat}\nВаш ID: {me}",

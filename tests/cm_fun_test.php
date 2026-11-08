@@ -216,4 +216,85 @@ test('переезд без таблиц этапа 3 — как раньше', 
     assert_eq(4, cm_rep_score($pdo, CM_CHAT, 7));
 });
 
+// Ответ на сообщение человека $to (по умолчанию Петя, id 20).
+function fn_reply(int $to = 20, string $name = 'Петя', array $from = []): array {
+    return ['reply_to_message' => ['message_id' => 70, 'from' => $from + ['id' => $to, 'is_bot' => false, 'first_name' => $name]]];
+}
+
+test('РП: ответом и @ником, форма глагола по полу из анкеты; ответ постоянный', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'обнять');
+    assert_eq('🤗 U7 обнял(а) Петя', cm_last_text($log));
+    cm_profile_put($pdo, 7, 'gender', 'f', CM_NOW);
+    cm_do(cm_ctx_for($pdo, $log, 7), 'пожать руку @petya');
+    assert_eq('🤝 U7 пожала руку Петя', cm_last_text($log));
+    cm_profile_put($pdo, 7, 'gender', 'm', CM_NOW);
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'убить');
+    assert_eq('🔪 U7 убил Петя', cm_last_text($log));
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'не удаляется');
+    assert_eq(14, count(CM_RP));
+    foreach (array_keys(CM_RP) as $p) { assert_eq('rp', CM_COMMANDS[$p][0], $p); }
+});
+
+test('РП: себе нельзя, ботам — только обнять и похвалить, без цели — подсказка', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(7, 'U7')), 'обнять');
+    assert_eq(cm_t('target_self'), cm_last_text($log));
+    $bot = fn_reply(555, 'Бот', ['is_bot' => true]);
+    cm_do(cm_ctx_for($pdo, $log, 7, '', $bot), 'ударить');
+    assert_eq(cm_t('target_bot'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7, '', $bot), 'похвалить');
+    assert_eq('👏 U7 похвалил(а) Бот', cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(777000, 'Telegram')), 'поцеловать');
+    assert_eq(cm_t('target_bot'), cm_last_text($log), 'служебный Telegram — как бот');
+    cm_do(cm_ctx_for($pdo, $log, 7), 'обнять');
+    assert_eq(cm_t('need_target'), cm_last_text($log));
+});
+
+test('опыт пары: +1 за РП друг другу, не больше 20 в сутки по Москве', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $pdo->exec('INSERT INTO cm_couples (chat_id, a_id, b_id, since, xp, xp_day, xp_today, ended_at) VALUES (' . CM_CHAT . ', 20, 7, 0, 0, 0, 0, 0)');
+    $xp = function () use ($pdo): array {
+        return array_map('intval', $pdo->query('SELECT xp, xp_day, xp_today FROM cm_couples')->fetch(PDO::FETCH_NUM));
+    };
+    for ($i = 0; $i < 25; $i++) { cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(), [], CM_T2359), 'обнять'); }
+    assert_eq([20, 20260921, 20], $xp());
+    cm_do(cm_ctx_for($pdo, $log, 20, '', fn_reply(7, 'U7'), [], CM_T0001), 'погладить');
+    assert_eq([21, 20260922, 1], $xp(), 'новые сутки, и в обе стороны');
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(30, 'Коля'), [], CM_T0001), 'обнять');
+    assert_eq([21, 20260922, 1], $xp(), 'не пара — без опыта');
+    $pdo->exec('UPDATE cm_couples SET ended_at = 1');
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply(), [], CM_T0001), 'обнять');
+    assert_eq(21, $xp()[0], 'расставшимся — без опыта');
+});
+
+test('РП без префикса: ровно команда с целью, лишние слова — речь', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'petya', 'Петя');
+    assert_eq(true, fn_run($pdo, $log, 7, 'обнять', fn_reply()));
+    assert_eq(true, fn_run($pdo, $log, 7, 'обнять @petya'));
+    $n = count(cm_calls($log, 'sendMessage'));
+    assert_eq(false, fn_run($pdo, $log, 7, 'обнять'));
+    assert_eq(false, fn_run($pdo, $log, 7, 'ударить бы его', fn_reply()));
+    assert_eq(false, fn_run($pdo, $log, 7, 'убить время'));
+    assert_eq($n, count(cm_calls($log, 'sendMessage')));
+});
+
+test('дк рп 6 выключает РП; без таблиц этапа 3 — «ещё не настроено»', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк рп 6');
+    assert_eq(true, fn_run($pdo, $log, 7, '!обнять', fn_reply()));
+    assert_eq(cm_t('cmd_off'), cm_last_text($log));
+    $pdo = cm_test_pdo();
+    $pdo->exec('DROP TABLE cm_offers');
+    cm_do(cm_ctx_for($pdo, $log, 7, '', fn_reply()), 'обнять');
+    assert_eq(cm_t('not_ready2'), cm_last_text($log));
+});
+
 run_tests();

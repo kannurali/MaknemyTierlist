@@ -133,3 +133,75 @@ function cm_cmd_who(array $ctx, array $cmd): void {
     $q = trim((string)preg_replace('~[?]+$~u', '', trim($cmd['args'])));
     cm_reply($ctx, $q === '' ? cm_t('who_any', ['name' => $name]) : cm_t('who_done', ['q' => $q, 'name' => $name]), false);
 }
+
+// --------------------------------------------------------------------------
+//  РП-действия: «обнять» ответом на сообщение или с @ником
+// --------------------------------------------------------------------------
+
+// Фраза → [смайл, «он», «она», пол не указан]. Имена не склоняются.
+const CM_RP = [
+    'обнять'      => ['🤗', 'обнял', 'обняла', 'обнял(а)'],
+    'поцеловать'  => ['😘', 'поцеловал', 'поцеловала', 'поцеловал(а)'],
+    'погладить'   => ['🥰', 'погладил', 'погладила', 'погладил(а)'],
+    'ударить'     => ['👊', 'ударил', 'ударила', 'ударил(а)'],
+    'укусить'     => ['😬', 'укусил', 'укусила', 'укусил(а)'],
+    'пнуть'       => ['🦶', 'пнул', 'пнула', 'пнул(а)'],
+    'пожать руку' => ['🤝', 'пожал руку', 'пожала руку', 'пожал(а) руку'],
+    'похвалить'   => ['👏', 'похвалил', 'похвалила', 'похвалил(а)'],
+    'поздравить'  => ['🎉', 'поздравил', 'поздравила', 'поздравил(а)'],
+    'накормить'   => ['🍲', 'накормил', 'накормила', 'накормил(а)'],
+    'напоить'     => ['🥤', 'напоил', 'напоила', 'напоил(а)'],
+    'пощекотать'  => ['🤭', 'пощекотал', 'пощекотала', 'пощекотал(а)'],
+    'ущипнуть'    => ['🤏', 'ущипнул', 'ущипнула', 'ущипнул(а)'],
+    'убить'       => ['🔪', 'убил', 'убила', 'убил(а)'],
+];
+// С ботом — только это, остальное с ним бессмысленно.
+const CM_RP_BOT_OK = ['обнять', 'похвалить'];
+// Опыта паре от РП — не больше стольких в сутки по Москве.
+const CM_RP_XP_DAY = 20;
+
+// Бот или служебный аккаунт Telegram (от него приходят автопересылки из канала).
+function cm_botlike(array $t): bool {
+    return !empty($t['is_bot']) || (int)($t['id'] ?? 0) === CM_TG_SERVICE_ID;
+}
+
+// +1 опыт паре $a и $b (в любом порядке), не больше CM_RP_XP_DAY в сутки по
+// Москве: новый день обнуляет счёт сегодняшнего. Не пара — ничего.
+function cm_couple_xp(PDO $pdo, int $chatId, int $a, int $b, int $now): void {
+    $st = $pdo->prepare('SELECT id FROM cm_couples WHERE chat_id = :c AND ended_at = 0
+        AND ((a_id = :a AND b_id = :b) OR (a_id = :b2 AND b_id = :a2))');
+    $st->execute([':c' => $chatId, ':a' => $a, ':b' => $b, ':a2' => $a, ':b2' => $b]);
+    $id = (int)$st->fetchColumn();
+    if ($id === 0) { return; }
+    $day = cm_day($now);
+    $pdo->prepare('UPDATE cm_couples SET xp_day = :d, xp_today = 0 WHERE id = :id AND xp_day <> :d2')
+        ->execute([':d' => $day, ':id' => $id, ':d2' => $day]);
+    $pdo->prepare('UPDATE cm_couples SET xp = xp + 1, xp_today = xp_today + 1 WHERE id = :id AND xp_today < ' . CM_RP_XP_DAY)
+        ->execute([':id' => $id]);
+}
+
+// «🤗 Вася обнял(а) Петя». Форма глагола — по полу из анкеты автора (этап 2).
+// Ответ постоянный: это и есть разговор в чате.
+function cm_cmd_rp(array $ctx, array $cmd): void {
+    if (!cm_need3($ctx)) { return; }
+    $args = $cmd['args'];
+    $t = cm_need_target($ctx, $args);
+    if ($t === null) { return; }
+    $me = (int)$ctx['actor'];
+    if ((int)$t['id'] === $me) {
+        cm_reply($ctx, cm_t('target_self'));
+        return;
+    }
+    $phrase = $cmd['phrase'];
+    $bot = cm_botlike($t);
+    if ($bot && !in_array($phrase, CM_RP_BOT_OK, true)) {
+        cm_reply($ctx, cm_t('target_bot'));
+        return;
+    }
+    $rp = CM_RP[$phrase];
+    $g = cm_profile_get($ctx['pdo'], $me)['gender'];
+    $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
+    cm_reply($ctx, cm_t('rp_done', ['emoji' => $rp[0], 'from' => cm_display_name($from),
+        'verb' => $rp[$g === 'm' ? 1 : ($g === 'f' ? 2 : 3)], 'to' => $t['name']]), false);
+    if (!$bot) { cm_couple_xp($ctx['pdo'], (int)$ctx['chat']['chat_id'], $me, (int)$t['id'], (int)$ctx['now']); }
+}

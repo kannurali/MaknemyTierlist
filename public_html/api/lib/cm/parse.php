@@ -93,6 +93,20 @@ const CM_COMMANDS = [
     'шанс'               => ['chance', 'игры', 0, false, false],
     'шар'                => ['ball', 'игры', 0, false, false],
     'кто'                => ['who', 'игры', 0, false, false],
+    'обнять'             => ['rp', 'рп', 0, false, true],
+    'поцеловать'         => ['rp', 'рп', 0, false, true],
+    'погладить'          => ['rp', 'рп', 0, false, true],
+    'ударить'            => ['rp', 'рп', 0, false, true],
+    'укусить'            => ['rp', 'рп', 0, false, true],
+    'пнуть'              => ['rp', 'рп', 0, false, true],
+    'пожать руку'        => ['rp', 'рп', 0, false, true],
+    'похвалить'          => ['rp', 'рп', 0, false, true],
+    'поздравить'         => ['rp', 'рп', 0, false, true],
+    'накормить'          => ['rp', 'рп', 0, false, true],
+    'напоить'            => ['rp', 'рп', 0, false, true],
+    'пощекотать'         => ['rp', 'рп', 0, false, true],
+    'ущипнуть'           => ['rp', 'рп', 0, false, true],
+    'убить'              => ['rp', 'рп', 0, false, true],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -117,6 +131,7 @@ const CM_BARE_ARGS = [
     'choose'      => '~\sили\s|,~u',
     'chance'      => '~\S~u',
     'ball'        => '~\S~u',
+    'rp'          => '~^$~',
 ];
 
 // Команды только с префиксом: без него это слово обычной речи («кто знает…»).
