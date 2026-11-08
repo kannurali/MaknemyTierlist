@@ -134,6 +134,9 @@
   var askedWrite = false;
   var writeOk = false;
   var manualCheck = false;
+  var mePhoto = "";
+  var photoAsked = false;
+  var meFace = null;
 
   function L() { return TEXT[lang] || TEXT.ru; }
 
@@ -398,6 +401,48 @@
     return (m ? m[0] : String(s).charAt(0) || "#").toUpperCase();
   }
 
+  function tgPhoto() {
+    var u = me();
+    return u && typeof u.photo_url === "string" && /^https:\/\/t\.me\/[^\s]+$/i.test(u.photo_url) ? u.photo_url : "";
+  }
+
+  function putPhoto(face, src, late) {
+    var im = el("img", late ? "is-late" : "");
+    im.alt = "";
+    im.decoding = "async";
+    im.referrerPolicy = "no-referrer";
+    im.src = src;
+    im.addEventListener("error", function () { drop(im); });
+    face.appendChild(im);
+  }
+
+  function askPhoto() {
+    if (photoAsked || tgPhoto() || !tg || !tg.initData) { return; }
+    photoAsked = true;
+    var p;
+    try {
+      p = fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ init: tg.initData, photo: true }),
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+    } catch (e) {
+      return;
+    }
+    p.then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var src = j && typeof j.photo === "string" && /^https:\/\/maknemy\.com\/images\/[0-9a-f]{40}\.(?:jpg|png|webp)$/.test(j.photo) ? j.photo : "";
+      if (!src) { return; }
+      var pre = new Image();
+      pre.onload = function () {
+        mePhoto = src;
+        if (meFace && meFace.isConnected !== false && !meFace.querySelector("img")) { putPhoto(meFace, src, true); }
+      };
+      pre.src = src;
+    }, function () {});
+  }
+
   function pass(text, no) {
     var wrap = el("div", "ta-passwrap");
     var card = el("section", "ta-pass");
@@ -427,16 +472,9 @@
       face.appendChild(icon("check"));
       face.classList.add("is-mark");
     }
-    var photo = u && typeof u.photo_url === "string" && /^https:\/\/t\.me\/[^\s]+$/i.test(u.photo_url) ? u.photo_url : "";
-    if (photo) {
-      var im = el("img");
-      im.alt = "";
-      im.decoding = "async";
-      im.referrerPolicy = "no-referrer";
-      im.src = photo;
-      im.addEventListener("error", function () { drop(im); });
-      face.appendChild(im);
-    }
+    var photo = tgPhoto() || mePhoto;
+    if (photo) { putPhoto(face, photo, false); }
+    meFace = face;
     stub.appendChild(face);
     if (name) { stub.appendChild(el("span", "ta-me-name", name)); }
     card.appendChild(stub);
@@ -767,6 +805,7 @@
       var no = typeof data.ticket === "number" && isFinite(data.ticket) ? Math.floor(data.ticket) : 0;
       var p = pass(text, no);
       root.appendChild(p);
+      askPhoto();
       var note = typeof data.note === "string" ? data.note.trim() : "";
       if (note) { root.appendChild(hint(note)); }
       var ask = askRow();

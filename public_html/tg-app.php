@@ -10,8 +10,8 @@
 <base href="/" />
 <title>Розыгрыш — MAKNEMY</title>
 <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
-<link rel="stylesheet" href="css/tg-app.css?v=2" />
-<script src="js/tg-app.js?v=2" defer></script>
+<link rel="stylesheet" href="css/tg-app.css?v=3" />
+<script src="js/tg-app.js?v=3" defer></script>
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 </head>
 <body>

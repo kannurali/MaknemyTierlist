@@ -12,7 +12,9 @@
 // - telegram-web-app.js is answered with a stub that mimics window.Telegram.WebApp
 //   (theme variables on <html>, initData, version checks, MainButton drawn as a
 //   bar at the bottom so screenshots show what the user would press);
-// - api/gw_tg_app.php is answered from the fixtures below, one per state;
+// - api/gw_tg_app.php is answered from the fixtures below, one per state; its
+//   avatar request ({photo: true}) separately, from open({ photo }) — null by
+//   default, so the letter stays unless a case asks for a picture;
 // - pictures on https://maknemy.com/images/ (banner, prize art, channel avatars)
 //   and the user's https://t.me/i/userpic/ are answered locally: the banner from
 //   BANNER=<file> (default: the Hellfire popup creative), anything else from
@@ -269,7 +271,7 @@ function check(name, ok, detail) {
 }
 
 // answers: list of fixture keys (or 'net' / 'hang'), one per API call; the last repeats.
-async function open({ answers = ['joined'], theme = 'dark', scheme, size = 390, lang = 'ru', tg = {}, motion = 'reduce' } = {}) {
+async function open({ answers = ['joined'], theme = 'dark', scheme, size = 390, lang = 'ru', tg = {}, motion = 'reduce', photo = null } = {}) {
     const viewport = size === 320 ? { width: 320, height: 640 } : { width: 390, height: 780 };
     const context = await browser.newContext({ viewport, deviceScaleFactor: 2, reducedMotion: motion, hasTouch: true, isMobile: true });
     const page = await context.newPage();
@@ -285,9 +287,16 @@ async function open({ answers = ['joined'], theme = 'dark', scheme, size = 390, 
     await page.route('https://maknemy.com/images/**', image);
     await page.route('https://t.me/i/userpic/**', image);
     const sent = [];
+    const photoAsks = [];
     let n = 0;
     await page.route('**/api/gw_tg_app.php', async r => {
-        sent.push(r.request().postDataJSON());
+        const body = r.request().postDataJSON();
+        if (body && body.photo === true) {
+            photoAsks.push(body);
+            await new Promise(res => setTimeout(res, 200));
+            return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ photo }) });
+        }
+        sent.push(body);
         const key = answers[Math.min(n++, answers.length - 1)];
         if (key === 'net') { return r.abort('internetdisconnected'); }
         if (key === 'hang') { return; }
@@ -295,7 +304,7 @@ async function open({ answers = ['joined'], theme = 'dark', scheme, size = 390, 
         return r.fulfill({ status: STATUS[R[key].state] || 200, contentType: 'application/json', body: JSON.stringify(R[key]) });
     });
     await page.goto(BASE + PAGE, { waitUntil: 'domcontentloaded' });
-    return { context, page, errors, sent };
+    return { context, page, errors, sent, photoAsks };
 }
 
 // Full-page shots hide the stub's MainButton: a fixed bar would land in the
@@ -531,6 +540,49 @@ for (const size of [390, 320]) {
         check(`moment ${size}: холст конфетти убран`, await page.locator('canvas.ta-burst').count() === 0);
         await shot(page, `10-joined-${size}-dark-after`);
         check(`moment ${size}: без ошибок`, errors.length === 0, errors);
+        await context.close();
+    }
+}
+
+// --- аватарка с сервера: photo_url Telegram даёт только мини-приложениям из
+// меню вложений, остальным фото профиля приносит сам сайт ----------------------
+{
+    const pic = 'https://maknemy.com/images/' + 'a'.repeat(40) + '.jpg';
+    for (const theme of ['dark', 'light']) {
+        const { context, page, errors, photoAsks } = await open({ answers: ['joined'], theme, tg: { photo: null }, photo: pic });
+        await settle(page);
+        await page.waitForFunction(() => { const i = document.querySelector('.ta-me img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 10000 });
+        await page.waitForTimeout(400);
+        await shot(page, `20-avatar-server-${theme}`);
+        check(`avatar ${theme}: без photo_url сайт отдал фото — оно на корешке`,
+            await page.locator('.ta-me img.is-late').count() === 1 && (await page.locator('.ta-me img').getAttribute('src')) === pic);
+        check(`avatar ${theme}: спросили один раз`, photoAsks.length === 1);
+        check(`avatar ${theme}: без ошибок`, errors.length === 0, errors);
+        await context.close();
+    }
+    {
+        const { context, page, errors, photoAsks } = await open({ answers: ['joined'], tg: { photo: null }, photo: null });
+        await settle(page);
+        await page.waitForTimeout(700);
+        check('avatar: у сервера фото нет — буква', await page.locator('.ta-me img').count() === 0 && (await page.locator('.ta-me-letter').textContent()) === 'N');
+        check('avatar: спросили один раз', photoAsks.length === 1);
+        check('avatar: без ошибок', errors.length === 0, errors);
+        await context.close();
+    }
+    {
+        const { context, page, errors, photoAsks } = await open({ answers: ['joined'], photo: pic });
+        await settle(page);
+        await page.waitForTimeout(700);
+        check('avatar: есть photo_url — сайт не спрашиваем', photoAsks.length === 0 && /\/userpic\//.test(await page.locator('.ta-me img').getAttribute('src')));
+        check('avatar photo_url: без ошибок', errors.length === 0, errors);
+        await context.close();
+    }
+    {
+        const { context, page, errors, photoAsks } = await open({ answers: ['joined'], tg: { photo: null }, photo: 'https://evil.example/x.jpg' });
+        await settle(page);
+        await page.waitForTimeout(700);
+        check('avatar: чужой адрес не ставится', await page.locator('.ta-me img').count() === 0 && photoAsks.length === 1);
+        check('avatar evil: без ошибок', errors.length === 0, errors);
         await context.close();
     }
 }
