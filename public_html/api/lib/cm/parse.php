@@ -137,6 +137,23 @@ const CM_COMMANDS = [
     'кто я'              => ['whoami', null, 0, true, false],
     'id'                 => ['id', null, 0, true, false],
     'ид'                 => ['id', null, 0, true, false],
+    // разделы сайта кнопкой в мини-приложение — те же слова, что TG_PAGE_WORDS
+    // (api/lib/tg_pages.php); латинские — ещё и /команды меню бота
+    'тирлист'            => ['site', 'сайт', 0, true, false],
+    'тир лист'           => ['site', 'сайт', 0, true, false],
+    'tierlist'           => ['site', 'сайт', 0, true, false],
+    'сток'               => ['site', 'сайт', 0, true, false],
+    'stock'              => ['site', 'сайт', 0, true, false],
+    'калькулятор'        => ['site', 'сайт', 0, true, false],
+    'калк'               => ['site', 'сайт', 0, true, false],
+    'calc'               => ['site', 'сайт', 0, true, false],
+    'трейды'             => ['site', 'сайт', 0, true, false],
+    'трейдинг'           => ['site', 'сайт', 0, true, false],
+    'trading'            => ['site', 'сайт', 0, true, false],
+    'новости'            => ['site', 'сайт', 0, true, false],
+    'news'               => ['site', 'сайт', 0, true, false],
+    'розыгрыши'          => ['site', 'сайт', 0, true, false],
+    'giveaways'          => ['site', 'сайт', 0, true, false],
 ];
 
 const CM_PREFIXES = ['!', '.', '/'];

@@ -884,4 +884,68 @@ test('пост задним числом и чужой id не рассылаю�
     assert_eq([], $log);
 });
 
+// Разделы сайта (api/lib/tg_pages.php): в личке — кнопка в мини-приложение.
+test('личка: «/stock», «Тирлист» — кнопка в мини-приложение, прочее — подсказка', function () {
+    $p = tg_db();
+    $r = tg_handle_update($p, tg_start_update(555, '/stock'), TG_NOW, 'MaknemyBot');
+    assert_eq(TG_PAGES['stock'][1], $r['text']);
+    assert_eq(['text' => 'Открыть сток', 'url' => 'https://t.me/MaknemyBot?startapp=stock'], $r['reply_markup']['inline_keyboard'][0][0]);
+    $r = tg_handle_update($p, tg_start_update(555, 'Тирлист'), TG_NOW, 'MaknemyBot');
+    assert_eq('https://t.me/MaknemyBot?startapp=tierlist', $r['reply_markup']['inline_keyboard'][0][0]['url']);
+    $r = tg_handle_update($p, tg_start_update(555, '/news@MaknemyBot'), TG_NOW, 'MaknemyBot');
+    assert_eq('https://t.me/MaknemyBot?startapp=news', $r['reply_markup']['inline_keyboard'][0][0]['url']);
+    $r = tg_handle_update($p, tg_start_update(555, 'калькулятор'), TG_NOW);
+    assert_eq('https://maknemy.com/calculator', $r['reply_markup']['inline_keyboard'][0][0]['url'], 'без имени бота — сразу сайт');
+    $r = tg_handle_update($p, tg_start_update(555, 'сток сегодня'), TG_NOW, 'MaknemyBot');
+    assert_eq(tg_text('hello', 'ru'), $r['text'], 'не команда — подсказка');
+});
+
+test('разделы сайта: слова, ссылки, пути и меню команд', function () {
+    assert_eq('stock', tg_page_from_text(' СТОК ', 'MaknemyBot'));
+    assert_eq('tierlist', tg_page_from_text("тир   лист", 'MaknemyBot'));
+    assert_eq('giveaways', tg_page_from_text('!розыгрыши', 'MaknemyBot'));
+    assert_eq(null, tg_page_from_text('/stock@OtherBot', 'MaknemyBot'), 'чужому боту');
+    assert_eq(null, tg_page_from_text('/start', 'MaknemyBot'));
+    assert_eq('/stock', tg_page_path('stock'));
+    assert_eq('', tg_page_path('gw12'), 'ключ розыгрыша — не раздел');
+    assert_eq('', tg_page_path('__proto__'));
+    assert_eq('https://maknemy.com/tierlist', tg_page_link('bad name!', 'tierlist'));
+    $ht = file_get_contents(__DIR__ . '/../public_html/.htaccess');
+    foreach (TG_PAGES as $key => $page) {
+        assert_eq(1, preg_match('~^RewriteRule \^' . preg_quote(ltrim($page[0], '/'), '~') . '(/\?)?\$ /~m', $ht), "$key: адрес {$page[0]} есть на сайте");
+        assert_true(preg_match('/^[A-Za-z0-9_-]{1,64}\z/', $key) === 1, "$key: годится для startapp");
+        assert_eq(1, count(array_filter(tg_page_commands(), function ($c) use ($key) { return TG_PAGE_WORDS[$c['command']] === $key; })), "$key: одна команда в меню");
+    }
+    $log = [];
+    tg_setup_webhook(tg_recorder($log), TG_TOKEN);
+    $menus = array_values(array_filter($log, function ($c) { return $c[0] === 'setMyCommands'; }));
+    assert_eq(3, count($menus), 'личка RU, личка EN, группы');
+    assert_eq(['tierlist', 'stock', 'calc', 'trading', 'news', 'giveaways', 'stop'], array_column($menus[0][1]['commands'], 'command'));
+    assert_eq(['tierlist', 'stock', 'calc', 'trading', 'news', 'giveaways'], array_column($menus[2][1]['commands'], 'command'));
+    assert_eq(['type' => 'all_group_chats'], $menus[2][1]['scope']);
+});
+
+test('мини-приложение: ключ раздела — переход на сайт, иначе — розыгрыш', function () {
+    $render = function (array $get): string {
+        $_GET = $get;
+        ob_start();
+        @include __DIR__ . '/../public_html/tg-app.php';   // header() после вывода тестов — шум
+        $_GET = [];
+        return (string)ob_get_clean();
+    };
+    $go = $render(['tgWebAppStartParam' => 'stock']);
+    assert_true(strpos($go, 'js/tg-open.js') !== false);
+    assert_eq(false, strpos($go, 'js/tg-app.js'), 'экран розыгрыша не грузится');
+    assert_eq(false, strpos($go, 'ta-skel'), 'и его заготовки нет');
+    assert_true(strpos($go, 'href="https://maknemy.com/stock"') !== false, 'ссылка без JavaScript');
+    $gw = $render(['tgWebAppStartParam' => 'gw5']);
+    assert_true(strpos($gw, 'js/tg-open.js') !== false && strpos($gw, 'js/tg-app.js') !== false);
+    assert_true(strpos($gw, 'ta-skel') !== false);
+    preg_match('/name="nx-tg-pages" content="([^"]*)"/', $gw, $m);
+    $map = json_decode(html_entity_decode($m[1] ?? '', ENT_QUOTES, 'UTF-8'), true);
+    assert_eq('/tierlist', $map['tierlist'] ?? null, 'карта разделов — и для ключа только в initData');
+    $js = file_get_contents(__DIR__ . '/../public_html/js/tg-app.js');
+    assert_true(strpos($js, 'window.NX_TG_PAGE') !== false, 'tg-app.js уступает переходу');
+});
+
 run_tests();
