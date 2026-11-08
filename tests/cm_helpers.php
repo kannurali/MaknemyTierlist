@@ -8,6 +8,9 @@ const CM_CHAT  = -1001234567890;
 const CM_BOT   = 'MaknemyBot';
 const CM_OWNER = 1;   // создатель группы в Telegram
 const CM_ADMIN = 2;   // админ Telegram без ранга бота
+// Смена суток по Москве (этап 2): 21.09.2026 23:59 и 22.09.2026 00:01 МСК.
+const CM_T2359 = 1790024340;
+const CM_T0001 = 1790024460;
 
 function cm_test_pdo(): PDO {
     $pdo = test_db();

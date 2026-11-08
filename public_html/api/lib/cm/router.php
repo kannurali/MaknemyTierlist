@@ -111,9 +111,12 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
  * и не подходит под правила), сообщение идёт дальше в фильтры:
  *  - команда уровня 0 без префикса — только если строка ровно команда;
  *  - команда с целью без префикса — только если цель нашлась;
- *  - без ранга и без префикса — молча, как обычная речь.
+ *  - без ранга и без префикса — молча, как обычная речь;
+ *  - команда из CM_BARE_ARGS без префикса — только если остаток строки без
+ *    цели подходит под её шаблон (cm_bare_ok, parse.php).
  */
 function cm_run_command(array $ctx, array $cmd): bool {
+    if (!$cmd['prefixed'] && !cm_bare_ok($ctx, $cmd)) { return false; }
     if (!$cmd['prefixed'] && $cmd['exact'] && ($cmd['args'] !== '' || trim($cmd['body']) !== '')) { return false; }
     if (!$cmd['prefixed'] && $cmd['target']) {
         $a = $cmd['args'];

@@ -67,6 +67,8 @@ const CM_COMMANDS = [
     'таймер'             => ['timer_add', 'таймеры', 1, false, false],
     'таймеры'            => ['timer_list', 'таймеры', 1, false, false],
     '-таймер'            => ['timer_del', 'таймеры', 1, false, false],
+    'стата'              => ['stats_top', 'статистика', 0, false, false],
+    'моя стата'          => ['stats_me', 'статистика', 0, false, false],
     'помощь'             => ['help', null, 0, true, false],
     'команды'            => ['help', null, 0, true, false],
     'кто я'              => ['whoami', null, 0, true, false],
@@ -75,6 +77,24 @@ const CM_COMMANDS = [
 ];
 
 const CM_PREFIXES = ['!', '.', '/'];
+
+// Команды этапа 2, у которых аргументы есть по смыслу, а цель необязательна.
+// Без префикса такая команда — только если второй строки нет, а остаток
+// первой без цели (cm_target) целиком подходит под шаблон (после cm_norm).
+// Иначе это обычная речь: «стата норм», «награды раздали».
+const CM_BARE_ARGS = [
+    'stats_top'   => '~^(?:(?:[0-9]{1,2}|день|неделя|месяц|все)(?: +|$)){0,2}$~u',
+    'stats_me'    => '~^$~',
+];
+
+function cm_bare_ok(array $ctx, array $cmd): bool {
+    $re = CM_BARE_ARGS[$cmd['handler']] ?? null;
+    if ($re === null) { return true; }
+    if (trim($cmd['body']) !== '') { return false; }
+    $a = $cmd['args'];
+    cm_target($ctx['pdo'], $ctx['msg'], $a);
+    return preg_match($re, cm_norm(trim($a))) === 1;
+}
 
 function cm_norm(string $s): string {
     return str_replace('ё', 'е', mb_strtolower($s));

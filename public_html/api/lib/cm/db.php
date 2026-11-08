@@ -233,15 +233,24 @@ function cm_msg_log(PDO $pdo, int $chatId, int $msgId, int $userId, string $text
 
 const CM_CHAT_TABLES_PK   = ['cm_members', 'cm_msgs', 'cm_words', 'cm_notes', 'cm_queue'];
 const CM_CHAT_TABLES_ROWS = ['cm_punishments', 'cm_rank_log', 'cm_reports', 'cm_timers'];
+// Таблицы этапа 2 переезжают, только если его миграция уже выполнена.
+const CM_CHAT_TABLES2_PK   = ['cm_stats', 'cm_rep'];
+const CM_CHAT_TABLES2_ROWS = ['cm_rep_log', 'cm_awards'];
 
 function cm_migrate(PDO $pdo, int $old, int $new): void {
     if ($old === 0 || $new === 0 || $old === $new || cm_chat_row($pdo, $old) === null) { return; }
+    $pk = CM_CHAT_TABLES_PK;
+    $rows = CM_CHAT_TABLES_ROWS;
+    if (cm_ready2($pdo)) {
+        $pk = array_merge($pk, CM_CHAT_TABLES2_PK);
+        $rows = array_merge($rows, CM_CHAT_TABLES2_ROWS);
+    }
     $pdo->beginTransaction();
     try {
-        foreach (array_merge(['cm_chats'], CM_CHAT_TABLES_PK) as $t) {
+        foreach (array_merge(['cm_chats'], $pk) as $t) {
             $pdo->prepare("DELETE FROM $t WHERE chat_id = :n")->execute([':n' => $new]);
         }
-        foreach (array_merge(['cm_chats'], CM_CHAT_TABLES_PK, CM_CHAT_TABLES_ROWS) as $t) {
+        foreach (array_merge(['cm_chats'], $pk, $rows) as $t) {
             $pdo->prepare("UPDATE $t SET chat_id = :n WHERE chat_id = :o")->execute([':n' => $new, ':o' => $old]);
         }
         $pdo->prepare('UPDATE cm_chats SET report_chat_id = :n WHERE report_chat_id = :o')->execute([':n' => $new, ':o' => $old]);
