@@ -132,11 +132,11 @@ test('стата: топ за период, общее число, пусто', 
     st_put($pdo, 8, 20260915, 1000);   // за пределами недели
     $ctx = cm_ctx_for($pdo, $log, 30, '', [], [], CM_T0001);
     cm_do($ctx, 'стата неделя');
-    assert_eq("📊 Активность за неделю (всего 1 234):\n1. Вася — 1 200\n2. Петя — 34", cm_last_text($log));
+    assert_eq("📊 Активность в чатах Maknemy за неделю (всего 1 234):\n1. Вася — 1 200\n2. Петя — 34", cm_last_text($log));
     cm_do($ctx, 'стата 1');
-    assert_eq("📊 Активность за сегодня (всего 1 200):\n1. Вася — 1 200", cm_last_text($log));
+    assert_eq("📊 Активность в чатах Maknemy за сегодня (всего 1 200):\n1. Вася — 1 200", cm_last_text($log));
     cm_do($ctx, 'стата всё');
-    assert_eq("📊 Активность за всё время (всего 2 234):\n1. Вася — 1 200\n2. Петя — 1 034", cm_last_text($log));
+    assert_eq("📊 Активность в чатах Maknemy за всё время (всего 2 234):\n1. Вася — 1 200\n2. Петя — 1 034", cm_last_text($log));
     cm_do($ctx, '!стата норм');
     assert_eq(cm_t('stats_usage'), cm_last_text($log));
     cm_do(cm_ctx_for($pdo, $log, 30, '', [], [], CM_T0001 + 86400), 'стата');
@@ -198,6 +198,52 @@ test('нет таблиц этапа 2 — «ещё не настроено»', 
     assert_eq(cm_t('not_ready2'), cm_last_text($log));
     cm_do(cm_ctx_for($pdo, $log, 7), 'моя стата');
     assert_eq(cm_t('not_ready2'), cm_last_text($log));
+});
+
+// Чаты Макнеми — одна сеть (cm_net, db.php): 9 в главном и 7 в трейд-чате — 16.
+const ST_TRADE = -1005550001;
+const ST_ALIEN = -1005550002;
+
+test('сеть: сообщения складываются по чатам Макнеми, чужой чат не в счёт', function () {
+    $pdo = cm_test_pdo();
+    cm_seed_chat($pdo, ST_TRADE, true);
+    cm_seed_chat($pdo, ST_ALIEN, false);
+    cm_person($pdo, 7, 'vasya', 'Вася');
+    cm_person($pdo, 8, 'petya', 'Петя');
+    st_put($pdo, 7, 20260922, 9);
+    st_put($pdo, 7, 20260922, 7, ST_TRADE);
+    st_put($pdo, 7, 20260922, 100, ST_ALIEN);
+    st_put($pdo, 8, 20260922, 10, ST_TRADE);
+    $net = cm_net($pdo, CM_CHAT);
+    assert_eq([CM_CHAT, ST_TRADE], $net);
+    assert_eq(16, cm_stats_msgs($pdo, $net, 7, 0, CM_T0001));
+    $log = [];
+    $ctx = cm_ctx_for($pdo, $log, 7, '', [], [], CM_T0001);
+    cm_do($ctx, 'моя стата');
+    assert_eq(true, strpos(cm_last_text($log), "Сегодня: 16 · неделя: 16 · месяц: 16 · всего: 16\nМесто в топе за всё время: 1") !== false);
+    cm_do($ctx, 'стата');
+    assert_eq("📊 Активность в чатах Maknemy за сегодня (всего 26):\n1. Вася — 16\n2. Петя — 10", cm_last_text($log));
+    cm_do($ctx, 'профиль');
+    assert_eq(true, strpos(cm_last_text($log), "Сообщений: 16 (сегодня 16), место 1\nВ чатах Maknemy с: 22.09.2026") !== false);
+    $trade = cm_ctx_for($pdo, $log, 8, '', ['chat' => ['id' => ST_TRADE, 'type' => 'supergroup', 'title' => 'Трейд']], [], CM_T0001);
+    cm_do($trade, 'стата');
+    assert_eq("📊 Активность в чатах Maknemy за сегодня (всего 26):\n1. Вася — 16\n2. Петя — 10", cm_last_text($log), 'из трейд-чата — тот же топ');
+});
+
+test('сеть: ушёл из одного чата — в топе; ушёл из всех — нет', function () {
+    $pdo = cm_test_pdo();
+    cm_seed_chat($pdo, ST_TRADE, true);
+    st_put($pdo, 7, 20260922, 5);
+    st_put($pdo, 7, 20260922, 5, ST_TRADE);
+    st_put($pdo, 8, 20260922, 3);
+    cm_member_set($pdo, CM_CHAT, 7, ['left_at' => CM_NOW]);
+    cm_member_set($pdo, ST_TRADE, 7, ['last_seen' => CM_NOW]);
+    $net = cm_net($pdo, CM_CHAT);
+    assert_eq(1, cm_stats_place($pdo, $net, 7, 0, CM_T0001), 'в трейд-чате ещё есть');
+    assert_eq(0, cm_stats_place($pdo, CM_CHAT, 7, 0, CM_T0001), 'для одного чата — ушёл');
+    cm_member_set($pdo, ST_TRADE, 7, ['left_at' => CM_NOW]);
+    assert_eq([['user_id' => 8, 'msgs' => 3]], cm_stats_top($pdo, $net, 1, CM_T0001, 10));
+    assert_eq(13, cm_stats_total($pdo, $net, 1, CM_T0001), 'всего — вместе с ушедшими');
 });
 
 run_tests();

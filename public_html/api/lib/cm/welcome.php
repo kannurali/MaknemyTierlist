@@ -59,6 +59,9 @@ function cm_missing_rights(array $member): array {
  * my_chat_member — бота добавили, повысили или убрали; chat_member — человек
  * вошёл или вышел (на бою этот апдейт доходит не всегда, поэтому главный
  * источник входов — служебное сообщение, router.php). Только группы.
+ * Бота добавил или повысил сотрудник сайта — чат становится чатом Макнеми
+ * (cm_ours, db.php); в чужом бот молчит, без знакомства. Знакомство — когда
+ * чат стал нашим: бота добавили или сотрудник повысил добавленного чужим.
  */
 function cm_on_membership(PDO $pdo, array $cfg, callable $send, array $update, int $now): void {
     if (!cm_enabled($cfg) || !cm_ready($pdo)) { return; }
@@ -81,8 +84,12 @@ function cm_on_membership(PDO $pdo, array $cfg, callable $send, array $update, i
     $ctx = cm_ctx($pdo, $cfg, $send, $chat, ['chat' => $m['chat'], 'from' => is_array($m['from'] ?? null) ? $m['from'] : []], $now);
     if ($bot) {
         cm_admins_refresh($ctx, true);
+        $wasOurs = cm_is_ours($ctx['chat']);
+        $by = (int)($m['from']['id'] ?? 0);
+        if ($by > 0 && cm_is_staff($pdo, $cfg, $by)) { cm_mark_ours($pdo, $ctx['chat'], $now); }
+        if (!cm_ours($ctx)) { return; }
         $missing = cm_missing_rights($new);
-        if ($wasOut) {
+        if ($wasOut || !$wasOurs) {
             $text = cm_bold(cm_t('intro_title')) . "\n" . cm_t('intro') . "\n\n" . cm_guide_line();
             if ($missing) { $text .= "\n\n" . cm_t('need_rights_list', ['rights' => implode("\n• ", $missing)]); }
             cm_say($ctx, $chatId, $text);
@@ -91,6 +98,7 @@ function cm_on_membership(PDO $pdo, array $cfg, callable $send, array $update, i
         }
         return;
     }
+    if (!cm_ours($ctx)) { return; }
     $user = is_array($new['user'] ?? null) ? $new['user'] : [];
     if ($gone) {
         cm_on_left($ctx, $user);

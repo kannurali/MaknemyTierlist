@@ -35,10 +35,19 @@ function cm_press(PDO $pdo, array &$log, int $who, string $data, array $answers 
         : cm_offer_callback($ctx, $q, (int)$p[2], (string)$p[3]);
 }
 
+// Тестовая группа CM_CHAT — чат Макнеми (settings.maknemy): в чужом бот
+// молчит. Чужие чаты тесты заводят сами (cm_seed_chat).
 function cm_test_pdo(): PDO {
     $pdo = test_db();
     cm_sqlite_tables($pdo);
+    cm_seed_chat($pdo, CM_CHAT, true);
     return $pdo;
+}
+
+// Строка чата заранее: $ours — чат Макнеми или чужой.
+function cm_seed_chat(PDO $pdo, int $chatId, bool $ours): void {
+    $pdo->prepare('INSERT INTO cm_chats (chat_id, title, settings, added_at, updated_at) VALUES (:c, :t, :s, :n, :n)')
+        ->execute([':c' => $chatId, ':t' => $ours ? 'Тестовый чат' : 'Чужой', ':s' => $ours ? '{"maknemy":true}' : '{}', ':n' => CM_NOW]);
 }
 
 function cm_cfg(array $extra = []): array {

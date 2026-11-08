@@ -37,9 +37,9 @@ function cm_spam_has(PDO $pdo, int $uid): bool {
     return cm_spam_row($pdo, $uid) !== null;
 }
 
-// Забанить в других активных чатах, где бот этого человека видел и где фильтр
-// «спамеры» включён. До 200 чатов за раз: Telegram пускает около 30 вызовов в
-// секунду, а вызов идёт уже после ответа вебхуку.
+// Забанить в других активных чатах Макнеми, где бот этого человека видел и где
+// фильтр «спамеры» включён. До 200 чатов за раз: Telegram пускает около 30
+// вызовов в секунду, а вызов идёт уже после ответа вебхуку.
 function cm_spam_sweep(array $ctx, int $uid): int {
     $pdo = $ctx['pdo'];
     $st = $pdo->prepare('SELECT m.chat_id FROM cm_members m JOIN cm_chats c ON c.chat_id = m.chat_id
@@ -48,7 +48,7 @@ function cm_spam_sweep(array $ctx, int $uid): int {
     $n = 0;
     foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $chatId) {
         $chat = cm_chat_row($pdo, (int)$chatId);
-        if ($chat === null || empty($chat['settings']['filters']['spam'])) { continue; }
+        if ($chat === null || !cm_is_ours($chat) || empty($chat['settings']['filters']['spam'])) { continue; }
         $c = $ctx;
         $c['chat'] = $chat;
         if (cm_punish($c, $uid, 'ban', 0, cm_t('reason_spam'), 0) === '') { $n++; }

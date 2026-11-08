@@ -31,6 +31,8 @@ const CM_DEFAULTS = [
     // триггеров; [] — проигрыш без наказания, исход включает модератор
     'duel_outcome'  => [],
     'dice_outcome'  => [],
+    // чат Макнеми: только в таких бот работает (cm_ours ниже)
+    'maknemy'       => false,
 ];
 
 function cm_enabled(array $cfg): bool {
@@ -121,6 +123,57 @@ function cm_settings_save(PDO $pdo, array &$chat, array $settings, int $now): vo
     $chat['settings'] = cm_settings($settings);
     $pdo->prepare('UPDATE cm_chats SET settings = :s, updated_at = :n WHERE chat_id = :c')
         ->execute([':s' => json_encode($chat['settings'], JSON_UNESCAPED_UNICODE), ':n' => $now, ':c' => (int)$chat['chat_id']]);
+}
+
+// --------------------------------------------------------------------------
+//  Чаты Макнеми
+// --------------------------------------------------------------------------
+// Бот работает только в чатах Макнеми (решение владельца 08.11.2026). Чат
+// наш, если бота в него добавил или повысил сотрудник сайта (cm_is_staff,
+// spam.php) либо создатель группы в Telegram — сотрудник. Отметка
+// settings.maknemy не снимается. В чужой группе бот молчит, но не выходит:
+// там он может проверять подписку для условий розыгрыша.
+//
+// Чаты Макнеми — одна сеть: сообщения и репутация человека складываются по
+// всем (7 в трейд-чате и 9 в главном — 16).
+
+function cm_is_ours(array $chat): bool {
+    return !empty($chat['settings']['maknemy']);
+}
+
+function cm_mark_ours(PDO $pdo, array &$chat, int $now): void {
+    if (cm_is_ours($chat) || !empty($chat['private'])) { return; }
+    $s = $chat['settings'];
+    $s['maknemy'] = true;
+    cm_settings_save($pdo, $chat, $s, $now);
+}
+
+// Наш ли чат контекста. Создатель берётся из последнего cm_admins_refresh.
+function cm_ours(array &$ctx): bool {
+    if (cm_is_ours($ctx['chat'])) { return true; }
+    $owner = (int)($ctx['chat']['tg_owner_id'] ?? 0);
+    if (!empty($ctx['chat']['private']) || $owner <= 0 || !cm_is_staff($ctx['pdo'], $ctx['cfg'], $owner)) { return false; }
+    cm_mark_ours($ctx['pdo'], $ctx['chat'], (int)$ctx['now']);
+    return true;
+}
+
+// Все чаты Макнеми; $chatId (чат, откуда спросили) — в списке всегда.
+function cm_net(PDO $pdo, int $chatId): array {
+    $ids = [$chatId];
+    foreach ($pdo->query('SELECT chat_id, settings FROM cm_chats')->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $s = is_string($r['settings'] ?? null) ? json_decode($r['settings'], true) : null;
+        if (is_array($s) && ($s['maknemy'] ?? false) === true) { $ids[] = (int)$r['chat_id']; }
+    }
+    $ids = array_values(array_unique($ids));
+    sort($ids);
+    return $ids;
+}
+
+// Чат или список чатов → «-100…,-100…» для IN (…). Числа — сразу в строке:
+// список переменной длины, а id — целые.
+function cm_in($chats): string {
+    $ids = array_map('intval', is_array($chats) ? $chats : [$chats]);
+    return $ids ? implode(',', $ids) : '0';
 }
 
 // --------------------------------------------------------------------------

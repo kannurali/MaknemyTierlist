@@ -204,7 +204,7 @@ const CM_TEXTS = [
     'not_ready2'       => 'Эта часть бота ещё не настроена.',
     // статистика
     'stats_usage'      => 'Так: «стата», «стата 20», «стата неделя», «стата 15 месяц», «стата всё» (мест — до 50).',
-    'stats_head'       => '📊 Активность за {period} (всего {total}):',
+    'stats_head'       => '📊 Активность в чатах Maknemy за {period} (всего {total}):',
     'stats_line'       => '{n}. {name} — {msgs}',
     'stats_empty'      => 'За {period} сообщений нет.',
     'stats_p_1'        => 'сегодня',
@@ -243,7 +243,7 @@ const CM_TEXTS = [
     'profile_rank'     => 'Ранг: {n} — {rank}',
     'profile_msgs'     => 'Сообщений: {all} (сегодня {today}){place}',
     'profile_place'    => ', место {n}',
-    'profile_since'    => 'В чате с: {date}',
+    'profile_since'    => 'В чатах Maknemy с: {date}',
     'profile_rep'      => 'Репутация: {score}',
     'profile_awards'   => 'Награды: {list}',
     'profile_warns'    => 'Варны: {n}/{limit}',

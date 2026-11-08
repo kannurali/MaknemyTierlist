@@ -69,16 +69,17 @@ function cm_profile_lines(array $ctx, int $userId, string $name): array {
     $now = (int)$ctx['now'];
     $rank = cm_rank($ctx, $userId);
     $lines = ['👤 ' . cm_bold($name), cm_t('profile_rank', ['n' => $rank, 'rank' => CM_RANK_NAMES[$rank]])];
+    $net = cm_net($pdo, $chatId);   // сообщения и репутация — по всем чатам Макнеми
     if (cm_section_on($chat, 'статистика')) {
-        $place = cm_stats_place($pdo, $chatId, $userId, 0, $now);
-        $lines[] = cm_t('profile_msgs', ['all' => cm_num(cm_stats_msgs($pdo, $chatId, $userId, 0, $now)),
-            'today' => cm_num(cm_stats_msgs($pdo, $chatId, $userId, 1, $now)),
+        $place = cm_stats_place($pdo, $net, $userId, 0, $now);
+        $lines[] = cm_t('profile_msgs', ['all' => cm_num(cm_stats_msgs($pdo, $net, $userId, 0, $now)),
+            'today' => cm_num(cm_stats_msgs($pdo, $net, $userId, 1, $now)),
             'place' => $place > 0 ? cm_t('profile_place', ['n' => $place]) : '']);
-        $first = cm_stats_first_day($pdo, $chatId, $userId);
+        $first = cm_stats_first_day($pdo, $net, $userId);
         if ($first > 0) { $lines[] = cm_t('profile_since', ['date' => cm_day_text($first)]); }
     }
     if (cm_section_on($chat, 'репутация')) {
-        $lines[] = cm_t('profile_rep', ['score' => cm_rep_score($pdo, $chatId, $userId)]);
+        $lines[] = cm_t('profile_rep', ['score' => cm_rep_score($pdo, $net, $userId)]);
     }
     $awards = cm_awards_active($pdo, $chatId, $userId, $now);
     if ($awards) { $lines[] = cm_t('profile_awards', ['list' => cm_awards_brief($awards)]); }

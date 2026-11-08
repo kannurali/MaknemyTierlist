@@ -2,16 +2,35 @@
 // Статистика сообщений (этап 2): счётчик за день по Москве, топы, «моя стата».
 // Считается с момента, когда бот появился в чате: прошлую переписку Telegram
 // боту не отдаёт. Таблицы — docs/migrations/2026-11-08-chat-manager-activity.sql.
+//
+// Счётчик пишет каждый чат отдельно, а «стата», «моя стата» и профиль
+// складывают все чаты Макнеми (cm_net, db.php). Выборки ниже принимают чат
+// или список чатов ($chats); «кто …» (fun.php) и кланы смотрят свой чат.
 
 // Слово периода (после cm_norm) → дней; 0 — за всё время.
 const CM_STATS_PERIODS = ['день' => 1, 'неделя' => 7, 'месяц' => 30, 'все' => 0];
 const CM_STATS_TOP_MAX = 50;
 
-// Суммы сообщений по людям, кто не покинул чат. Параметры :c и :d.
-const CM_STATS_SUMS = 'SELECT s.user_id AS user_id, SUM(s.msgs) AS n FROM cm_stats s
-    LEFT JOIN cm_members m ON m.chat_id = s.chat_id AND m.user_id = s.user_id
-    WHERE s.chat_id = :c AND s.day >= :d AND (m.left_at IS NULL OR m.left_at = 0)
-    GROUP BY s.user_id';
+// Кто ушёл из всех этих чатов, где бот его видел: в топах его нет. Нет
+// строки участника — человек на месте (как было и для одного чата).
+function cm_gone_sql(string $in): string {
+    return "SELECT m.user_id FROM cm_members m WHERE m.chat_id IN ($in) GROUP BY m.user_id HAVING MIN(m.left_at) > 0";
+}
+
+function cm_gone(PDO $pdo, $chats, int $userId): bool {
+    $in = cm_in($chats);
+    $st = $pdo->prepare("SELECT MIN(left_at) FROM cm_members WHERE chat_id IN ($in) AND user_id = :u");
+    $st->execute([':u' => $userId]);
+    return (int)$st->fetchColumn() > 0;
+}
+
+// Суммы сообщений по людям, кто не ушёл из всех чатов. Параметр :d.
+function cm_stats_sums_sql($chats): string {
+    $in = cm_in($chats);
+    return "SELECT s.user_id AS user_id, SUM(s.msgs) AS n FROM cm_stats s
+        WHERE s.chat_id IN ($in) AND s.day >= :d AND s.user_id NOT IN (" . cm_gone_sql($in) . ')
+        GROUP BY s.user_id';
+}
 
 // Миграция этапа 2 выполняется руками после этапа 1. Пока её нет, команды
 // этапа 2 отвечают «ещё не настроено», счётчик молчит, модерация работает.
@@ -91,27 +110,26 @@ function cm_stats_hit(PDO $pdo, int $chatId, int $userId, int $now): void {
     }
 }
 
-// Сообщения человека за $days дней (0 — за всё время). Им же этап 3 считает
-// активность кланов.
-function cm_stats_msgs(PDO $pdo, int $chatId, int $userId, int $days, int $now): int {
-    $st = $pdo->prepare('SELECT COALESCE(SUM(msgs), 0) FROM cm_stats WHERE chat_id = :c AND user_id = :u AND day >= :d');
-    $st->execute([':c' => $chatId, ':u' => $userId, ':d' => cm_day_from($now, $days)]);
+// Сообщения человека за $days дней (0 — за всё время) во всех $chats.
+function cm_stats_msgs(PDO $pdo, $chats, int $userId, int $days, int $now): int {
+    $st = $pdo->prepare('SELECT COALESCE(SUM(msgs), 0) FROM cm_stats WHERE chat_id IN (' . cm_in($chats) . ') AND user_id = :u AND day >= :d');
+    $st->execute([':u' => $userId, ':d' => cm_day_from($now, $days)]);
     return (int)$st->fetchColumn();
 }
 
-// Всего сообщений в чате за период — вместе с ушедшими.
-function cm_stats_total(PDO $pdo, int $chatId, int $days, int $now): int {
-    $st = $pdo->prepare('SELECT COALESCE(SUM(msgs), 0) FROM cm_stats WHERE chat_id = :c AND day >= :d');
-    $st->execute([':c' => $chatId, ':d' => cm_day_from($now, $days)]);
+// Всего сообщений в $chats за период — вместе с ушедшими.
+function cm_stats_total(PDO $pdo, $chats, int $days, int $now): int {
+    $st = $pdo->prepare('SELECT COALESCE(SUM(msgs), 0) FROM cm_stats WHERE chat_id IN (' . cm_in($chats) . ') AND day >= :d');
+    $st->execute([':d' => cm_day_from($now, $days)]);
     return (int)$st->fetchColumn();
 }
 
 // Топ: [['user_id' => int, 'msgs' => int], …], больше — выше, при равенстве
-// меньший id. Ушедших (left_at > 0) нет. LIMIT — числом в строке: эмуляция
+// меньший id. Ушедших из всех $chats нет. LIMIT — числом в строке: эмуляция
 // подготовленных запросов MySQL взяла бы параметр в кавычки.
-function cm_stats_top(PDO $pdo, int $chatId, int $days, int $now, int $limit): array {
-    $st = $pdo->prepare(CM_STATS_SUMS . ' ORDER BY n DESC, s.user_id LIMIT ' . max(1, $limit));
-    $st->execute([':c' => $chatId, ':d' => cm_day_from($now, $days)]);
+function cm_stats_top(PDO $pdo, $chats, int $days, int $now, int $limit): array {
+    $st = $pdo->prepare(cm_stats_sums_sql($chats) . ' ORDER BY n DESC, s.user_id LIMIT ' . max(1, $limit));
+    $st->execute([':d' => cm_day_from($now, $days)]);
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $out[] = ['user_id' => (int)$r['user_id'], 'msgs' => (int)$r['n']];
@@ -121,20 +139,19 @@ function cm_stats_top(PDO $pdo, int $chatId, int $days, int $now, int $limit): a
 
 // Место в том же топе; 0 — сообщений нет или человек ушёл. Числа — в строке:
 // SQLite сравнивает SUM() с параметром-строкой как текст.
-function cm_stats_place(PDO $pdo, int $chatId, int $userId, int $days, int $now): int {
-    $mine = cm_stats_msgs($pdo, $chatId, $userId, $days, $now);
-    $m = cm_member($pdo, $chatId, $userId);
-    if ($mine === 0 || ($m !== null && $m['left_at'] > 0)) { return 0; }
-    $st = $pdo->prepare('SELECT COUNT(*) FROM (' . CM_STATS_SUMS . ') t WHERE t.n > ' . $mine
+function cm_stats_place(PDO $pdo, $chats, int $userId, int $days, int $now): int {
+    $mine = cm_stats_msgs($pdo, $chats, $userId, $days, $now);
+    if ($mine === 0 || cm_gone($pdo, $chats, $userId)) { return 0; }
+    $st = $pdo->prepare('SELECT COUNT(*) FROM (' . cm_stats_sums_sql($chats) . ') t WHERE t.n > ' . $mine
         . ' OR (t.n = ' . $mine . ' AND t.user_id < ' . $userId . ')');
-    $st->execute([':c' => $chatId, ':d' => cm_day_from($now, $days)]);
+    $st->execute([':d' => cm_day_from($now, $days)]);
     return (int)$st->fetchColumn() + 1;
 }
 
-// Первый день в статистике чата — для «В чате с»; 0 — строк нет.
-function cm_stats_first_day(PDO $pdo, int $chatId, int $userId): int {
-    $st = $pdo->prepare('SELECT MIN(day) FROM cm_stats WHERE chat_id = :c AND user_id = :u');
-    $st->execute([':c' => $chatId, ':u' => $userId]);
+// Первый день в статистике $chats — для «В чатах с»; 0 — строк нет.
+function cm_stats_first_day(PDO $pdo, $chats, int $userId): int {
+    $st = $pdo->prepare('SELECT MIN(day) FROM cm_stats WHERE chat_id IN (' . cm_in($chats) . ') AND user_id = :u');
+    $st->execute([':u' => $userId]);
     return (int)$st->fetchColumn();
 }
 
@@ -169,15 +186,15 @@ function cm_cmd_stats_top(array $ctx, array $cmd): void {
     }
     [$limit, $days] = $a;
     $pdo = $ctx['pdo'];
-    $chatId = (int)$ctx['chat']['chat_id'];
+    $net = cm_net($pdo, (int)$ctx['chat']['chat_id']);
     $now = (int)$ctx['now'];
     $period = cm_t('stats_p_' . $days);
-    $top = cm_stats_top($pdo, $chatId, $days, $now, $limit);
+    $top = cm_stats_top($pdo, $net, $days, $now, $limit);
     if (!$top) {
         cm_reply($ctx, cm_t('stats_empty', ['period' => $period]), false);
         return;
     }
-    $lines = [cm_t('stats_head', ['period' => $period, 'total' => cm_num(cm_stats_total($pdo, $chatId, $days, $now))])];
+    $lines = [cm_t('stats_head', ['period' => $period, 'total' => cm_num(cm_stats_total($pdo, $net, $days, $now))])];
     foreach ($top as $i => $r) {
         $lines[] = cm_t('stats_line', ['n' => $i + 1, 'name' => cm_user_who($pdo, $r['user_id'], true), 'msgs' => cm_num($r['msgs'])]);
     }
@@ -190,16 +207,16 @@ function cm_cmd_stats_me(array $ctx, array $cmd): void {
     $t = cm_target_or_self($ctx, $args);
     if ($t === null) { return; }
     $pdo = $ctx['pdo'];
-    $chatId = (int)$ctx['chat']['chat_id'];
+    $net = cm_net($pdo, (int)$ctx['chat']['chat_id']);
     $now = (int)$ctx['now'];
     $uid = (int)$t['id'];
-    $place = cm_stats_place($pdo, $chatId, $uid, 0, $now);
+    $place = cm_stats_place($pdo, $net, $uid, 0, $now);
     cm_reply($ctx, cm_t('stats_me', [
         'name'  => $t['tag'],
-        'd'     => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 1, $now)),
-        'w'     => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 7, $now)),
-        'm'     => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 30, $now)),
-        'all'   => cm_num(cm_stats_msgs($pdo, $chatId, $uid, 0, $now)),
+        'd'     => cm_num(cm_stats_msgs($pdo, $net, $uid, 1, $now)),
+        'w'     => cm_num(cm_stats_msgs($pdo, $net, $uid, 7, $now)),
+        'm'     => cm_num(cm_stats_msgs($pdo, $net, $uid, 30, $now)),
+        'all'   => cm_num(cm_stats_msgs($pdo, $net, $uid, 0, $now)),
         'place' => $place > 0 ? cm_t('stats_place', ['n' => $place]) : '',
     ]), false);
 }

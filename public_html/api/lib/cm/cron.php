@@ -3,7 +3,7 @@
 
 // Таймер выполняется от имени автора с его ТЕКУЩИМ рангом. Строка
 // помечается выполненной до запуска: второй cron, начатый внахлёст, её не
-// возьмёт.
+// возьмёт. Таймер чужого чата (заведён до 08.11.2026) просто гаснет.
 function cm_timers_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
     $st = $pdo->prepare('SELECT * FROM cm_timers WHERE done_at = 0 AND run_at <= :n ORDER BY run_at, id LIMIT 50');
     $st->execute([':n' => $now]);
@@ -14,7 +14,7 @@ function cm_timers_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
         $claim->execute([':n' => $now, ':id' => (int)$t['id']]);
         if ($claim->rowCount() === 0) { continue; }
         $chat = cm_chat_row($pdo, (int)$t['chat_id']);
-        if ($chat === null || $chat['active'] !== 1) { continue; }
+        if ($chat === null || $chat['active'] !== 1 || !cm_is_ours($chat)) { continue; }
         $by = (int)$t['by_id'];
         $body = (string)$t['body'];
         $msg = ['message_id' => 0, 'chat' => ['id' => $chat['chat_id'], 'type' => 'supergroup', 'title' => $chat['title']],

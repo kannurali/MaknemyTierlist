@@ -40,6 +40,7 @@ function cm_handle_update(PDO $pdo, array $cfg, callable $send, array $update, i
 
 /**
  * Сообщение группы:
+ *  -. чат не Макнеми (cm_ours, db.php) — молчим целиком;
  *  0. от имени этой группы или автопересылка своего канала — не трогаем;
  *     от имени чужого канала — только удаляем (канал не замутить);
  *  1. запомнить автора;
@@ -66,6 +67,8 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
     $ctx = cm_ctx($pdo, $cfg, $send, $chat, $msg, $now);
     $ctx['edited'] = $edited;
     cm_admins_refresh($ctx);
+    if (!cm_ours($ctx)) { return; }
+    $chat = $ctx['chat'];
     if (!empty($msg['new_chat_members'])) {
         cm_on_join($ctx, (array)$msg['new_chat_members']);
         return;
@@ -162,7 +165,8 @@ function cm_on_private(PDO $pdo, array $cfg, callable $send, array $msg, int $no
 
 // Кнопки «cm:»: r — репорт, k — массовый кик, o — передача создателя,
 // p — приглашение, d — ход в дуэли (этап 3: offers.php, duel.php).
-// answerCallbackQuery уходит всегда, иначе у человека крутятся часики.
+// answerCallbackQuery уходит всегда, иначе у человека крутятся часики. В
+// чужом чате кнопки ничего не делают.
 function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now): void {
     $answer = '';
     $qm = is_array($q['message'] ?? null) ? $q['message'] : null;
@@ -175,7 +179,7 @@ function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now
         cm_admins_refresh($ctx);
         $ctx['rank'] = cm_rank($ctx, $ctx['actor']);
         $p = explode(':', (string)($q['data'] ?? ''));
-        $kind = $p[1] ?? '';
+        $kind = cm_ours($ctx) ? ($p[1] ?? '') : '';
         if ($kind === 'r' && count($p) === 4) {
             $answer = cm_report_callback($ctx, $q, (int)$p[2], (string)$p[3]);
         } elseif ($kind === 'k' && count($p) === 5) {
