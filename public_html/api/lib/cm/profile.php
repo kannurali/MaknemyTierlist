@@ -126,6 +126,8 @@ function cm_profile_lines3(array $ctx, int $userId): array {
     if (cm_section_on($chat, 'игры')) {
         $s = cm_game_stat($pdo, $chatId, $userId, 'duel');
         if ($s['wins'] + $s['losses'] > 0) { $out[] = cm_t('profile_duels', ['score' => cm_score_text($s, false)]); }
+        $s = cm_game_stat($pdo, $chatId, $userId, 'chess');
+        if ($s['wins'] + $s['losses'] + $s['draws'] > 0) { $out[] = cm_t('profile_chess', ['score' => cm_score_text($s, true)]); }
     }
     return $out;
 }

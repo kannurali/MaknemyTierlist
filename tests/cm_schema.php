@@ -82,6 +82,14 @@ function cm_sqlite_tables(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS cm_game_stats (
         chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL, kind TEXT NOT NULL, wins INTEGER NOT NULL DEFAULT 0,
         losses INTEGER NOT NULL DEFAULT 0, draws INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (chat_id, user_id, kind))");
+    // шахматы — docs/migrations/2026-11-08-cm-chess.sql
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_chess (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, white_id INTEGER NOT NULL,
+        black_id INTEGER NOT NULL, base_ms INTEGER NOT NULL, white_ms INTEGER NOT NULL, black_ms INTEGER NOT NULL,
+        fen TEXT NOT NULL, moves TEXT NOT NULL, san TEXT NOT NULL, turn_at INTEGER NOT NULL,
+        due_at INTEGER NOT NULL DEFAULT 0, draw_by TEXT NOT NULL DEFAULT '', msg_id INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'on', result TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '',
+        rev INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)");
     $pdo->exec("CREATE TABLE IF NOT EXISTS cm_couples (
         id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, a_id INTEGER NOT NULL, b_id INTEGER NOT NULL,
         since INTEGER NOT NULL, xp INTEGER NOT NULL DEFAULT 0, xp_day INTEGER NOT NULL DEFAULT 0,

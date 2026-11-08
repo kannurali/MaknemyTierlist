@@ -9,6 +9,11 @@
   var start = "";
   try { start = new URLSearchParams(window.location.search).get("tgWebAppStartParam") || ""; } catch (e) { start = ""; }
   if (!start && tg && tg.initDataUnsafe) { start = String(tg.initDataUnsafe.start_param || ""); }
+  if (/^ch[1-9][0-9]{0,9}$/.test(start)) {
+    window.NX_TG_PAGE = true;
+    window.location.replace("/tg-app?tgWebAppStartParam=" + start + window.location.hash);
+    return;
+  }
   if (!start || !Object.prototype.hasOwnProperty.call(pages, start)) { return; }
 
   window.NX_TG_PAGE = true;

@@ -946,6 +946,14 @@ test('мини-приложение: ключ раздела — переход 
     assert_eq('/tierlist', $map['tierlist'] ?? null, 'карта разделов — и для ключа только в initData');
     $js = file_get_contents(__DIR__ . '/../public_html/js/tg-app.js');
     assert_true(strpos($js, 'window.NX_TG_PAGE') !== false, 'tg-app.js уступает переходу');
+    $ch = $render(['tgWebAppStartParam' => 'ch12']);
+    assert_true(strpos($ch, 'js/tg-chess.js') !== false && strpos($ch, 'css/tg-chess.css') !== false, 'партия в шахматы');
+    assert_eq([false, false, false], [strpos($ch, 'js/tg-open.js'), strpos($ch, 'js/tg-app.js'), strpos($ch, 'ta-skel')]);
+    assert_true(strpos($ch, 'id="tc"') !== false);
+    $bad = $render(['tgWebAppStartParam' => 'ch0']);
+    assert_eq(false, strpos($bad, 'js/tg-chess.js'), 'ch0 — не партия');
+    $open = file_get_contents(__DIR__ . '/../public_html/js/tg-open.js');
+    assert_true(strpos($open, '/tg-app?tgWebAppStartParam=') !== false, 'ключ партии только в initData — перезагрузка с ключом');
 });
 
 run_tests();

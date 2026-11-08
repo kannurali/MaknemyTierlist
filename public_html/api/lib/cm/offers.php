@@ -1,6 +1,6 @@
 <?php
 // Приглашения с кнопками и общее для игр (этап 3). Приглашают на дуэль, в
-// кубы, в пару, в брак, вернуть брак и в клан. «Принять» / «Отказаться»
+// шахматы, в кубы, в пару, в брак, вернуть брак и в клан. «Принять» / «Отказаться»
 // (cm:p:<id>:y|n, router.php) жмёт только адресат. Срок — CM_OFFER_TTL;
 // просроченные закрывает cm_games_tick() из cron. От человека в чате — одно
 // открытое приглашение каждого вида: новое закрывает старое. «Принять» зовёт
@@ -8,7 +8,7 @@
 // Кнопки правят то же сообщение (editMessageText), новых не шлют: так игры не
 // съедают бюджет группы (send.php).
 
-const CM_OFFER_TTL     = ['duel' => 300, 'dice' => 300, 'couple' => 600, 'marry' => 600, 'remarry' => 600, 'clan' => 300];
+const CM_OFFER_TTL     = ['duel' => 300, 'dice' => 300, 'chess' => 300, 'couple' => 600, 'marry' => 600, 'remarry' => 600, 'clan' => 300];
 // Ключ настройки исхода → «в чём» проигрыш, для текстов.
 const CM_OUTCOME_GAMES = ['duel_outcome' => 'дуэли', 'dice_outcome' => 'кубах'];
 const CM_GAME_FIELDS   = ['wins', 'losses', 'draws'];
@@ -128,7 +128,7 @@ function cm_games_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
         if ($ctx !== null) { cm_edit($ctx, (int)$o['msg_id'], cm_t('offer_expired')); }
         $n++;
     }
-    return $n + cm_duel_tick($pdo, $cfg, $send, $now);
+    return $n + cm_duel_tick($pdo, $cfg, $send, $now) + cm_chess_tick($pdo, $cfg, $send, $now);
 }
 
 // --------------------------------------------------------------------------
