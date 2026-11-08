@@ -4,6 +4,7 @@
   var LANG_KEY = 'nexus-lang-v1';
   var ABOUT_MAX = 280;
   var ABOUT_URL = '/api/profile-about.php';
+  var TITLE_URL = '/api/title-pick.php';
 
   var i18n = window.I18N;
   var auth = window.MKAuth;
@@ -122,6 +123,76 @@
     syncAbout();
   }
   if (aboutSave) { aboutSave.addEventListener('click', saveAbout); }
+
+  var titleBox   = $('pfTitles');
+  var titleState = $('pfTlStatus');
+  var titleMain  = $('pfTitleMain');
+  var titleBusy  = false;
+
+  function setTitleStatus(key, fallback) {
+    if (!titleState) { return; }
+    if (!key) {
+      titleState.textContent = '';
+      titleState.removeAttribute('data-i18n');
+      return;
+    }
+    titleState.textContent = tx(key, fallback);
+    titleState.setAttribute('data-i18n', key);
+  }
+
+  function showMainTitle(btn) {
+    titleBox.querySelectorAll('.pf-tl-item[aria-pressed]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b === btn));
+    });
+    var chip = btn.querySelector('.nx-title');
+    var head = titleMain ? titleMain.querySelector('.nx-title') : null;
+    if (chip && head) {
+      head.setAttribute('data-kind', chip.getAttribute('data-kind'));
+      head.textContent = chip.textContent;
+    }
+  }
+
+  function pickTitle(btn) {
+    if (titleBusy || btn.getAttribute('aria-pressed') === 'true') { return; }
+    var was = titleBox.querySelector('.pf-tl-item[aria-pressed="true"]');
+    var fail = function (key, fallback) {
+      if (was) { showMainTitle(was); }
+      setTitleStatus(key, fallback);
+    };
+    titleBusy = true;
+    titleBox.setAttribute('aria-busy', 'true');
+    setTitleStatus('', '');
+    showMainTitle(btn);
+
+    fetch(TITLE_URL, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: btn.getAttribute('data-kind') })
+    }).then(function (res) {
+      if (res.status === 401) {
+        renderAuth(false);
+      } else if (res.status === 429) {
+        fail('profile.aboutTooOften', 'Слишком часто — попробуйте позже');
+      } else if (res.status === 503) {
+        fail('profile.aboutUnavailable', 'Пока не сохраняется — раздел ещё не подключён');
+      } else if (!res.ok) {
+        fail('profile.aboutError', 'Не удалось сохранить');
+      }
+    }).catch(function () {
+      fail('profile.aboutError', 'Не удалось сохранить');
+    }).then(function () {
+      titleBusy = false;
+      titleBox.removeAttribute('aria-busy');
+    });
+  }
+
+  if (titleBox) {
+    titleBox.addEventListener('click', function (e) {
+      var btn = e.target.closest('.pf-tl-item[aria-pressed]');
+      if (btn) { pickTitle(btn); }
+    });
+  }
 
   var out  = $('pfLogout');
   var swap = $('pfSwitch');

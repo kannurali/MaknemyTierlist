@@ -5,6 +5,12 @@
 //
 // Титул остаётся навсегда; текст берётся из titles_json своего сезона, так
 // что правка текста в админке меняет его у всех, кто титул уже получил.
+//
+// У ника виден ОДИН титул — главный (решение владельца 08.11.2026): в чате,
+// трейдинге и под ником профиля. Полный список — только в разделе «Титулы»
+// профиля, там же человек выбирает главный (таблица title_picks). Не выбрал,
+// или выбранного титула у него больше нет — главный первый по порядку:
+// личный, потом заработанные, потом выданные в коде титулы ивента.
 
 const HUNT_TITLE_KINDS    = ['login', 'hours'];
 const HUNT_TITLES_DEFAULT = [
@@ -53,9 +59,11 @@ function hunt_titles_cfg(array $hunt): array {
 }
 
 /**
- * Титулы людей пакетом: [user_id => [{kind, title:{ru,en}}, …]]; у кого нет —
- * ключа нет. Таблиц ещё нет (миграция не выполнена) — только выданные в коде:
- * чат и лента от этого не падают.
+ * Титулы людей пакетом: [user_id => [{kind, title:{ru,en}, main}, …]]; у кого
+ * нет — ключа нет. Ровно у одного титула человека main = true. Порядок списка
+ * от выбора не зависит, чтобы раздел «Титулы» в профиле не прыгал. Таблиц ещё
+ * нет (миграция не выполнена) — только выданные в коде: чат и лента от этого
+ * не падают.
  */
 function hunt_titles_for(PDO $pdo, array $uids): array {
     $uids = array_values(array_unique(array_filter(array_map('strval', $uids), function ($u) {
@@ -77,7 +85,67 @@ function hunt_titles_for(PDO $pdo, array $uids): array {
     } catch (PDOException $e) {
         $out = [];
     }
-    return hunt_titles_granted($pdo, $uids, $out);
+    $out = hunt_titles_granted($pdo, $uids, $out);
+    return hunt_titles_mark_main($out, $out ? hunt_title_picks($pdo, array_keys($out)) : []);
+}
+
+// Выбор главного титула пакетом: [user_id => kind]. Таблицы title_picks нет
+// (миграция не выполнена) — пусто, главным становится первый по порядку.
+function hunt_title_picks(PDO $pdo, array $uids): array {
+    $uids = array_values(array_filter(array_map('strval', $uids), 'ctype_digit'));
+    if (!$uids) { return []; }
+    try {
+        $in = implode(',', array_fill(0, count($uids), '?'));
+        $st = $pdo->prepare("SELECT user_id, kind FROM title_picks WHERE user_id IN ($in)");
+        $st->execute($uids);
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $out[(string)$r['user_id']] = (string)$r['kind']; }
+        return $out;
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+// Поставить main: выбранному, если такой титул у человека есть, иначе первому.
+function hunt_titles_mark_main(array $out, array $picks): array {
+    foreach ($out as $uid => $list) {
+        $kinds = array_column($list, 'kind');
+        $at = array_search($picks[(string)$uid] ?? '', $kinds, true);
+        if ($at === false) { $at = 0; }
+        foreach ($list as $i => $t) { $out[$uid][$i]['main'] = $i === $at; }
+    }
+    return $out;
+}
+
+// Главный титул из списка hunt_titles_for; пустой список — null.
+function hunt_title_main(array $list): ?array {
+    foreach ($list as $t) {
+        if (!empty($t['main'])) { return $t; }
+    }
+    return $list[0] ?? null;
+}
+
+/**
+ * Сделать титул главным. Возвращает 'ok', 'bad_kind' (такого титула у
+ * человека нет — выбрать можно только свой) или 'unavailable' (таблицы
+ * title_picks нет: миграция не выполнена).
+ *
+ * Своими руками, а не ON DUPLICATE KEY: тесты идут на SQLite.
+ */
+function hunt_title_pick(PDO $pdo, string $uid, string $kind, int $now): string {
+    $have = array_column(hunt_titles_for($pdo, [$uid])[$uid] ?? [], 'kind');
+    if (!in_array($kind, $have, true)) { return 'bad_kind'; }
+    try {
+        $pdo->beginTransaction();
+        $pdo->prepare('DELETE FROM title_picks WHERE user_id = :u')->execute([':u' => $uid]);
+        $pdo->prepare('INSERT INTO title_picks (user_id, kind, updated_at) VALUES (:u, :k, :t)')
+            ->execute([':u' => $uid, ':k' => $kind, ':t' => $now]);
+        $pdo->commit();
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        return 'unavailable';
+    }
+    return 'ok';
 }
 
 // Тексты титулов последнего сезона; нет таблицы или сезона — по умолчанию.
@@ -116,11 +184,14 @@ function hunt_titles_granted(PDO $pdo, array $uids, array $out): array {
     return $out;
 }
 
-// Дописать поле titles в список людей [id => человек].
+// Дописать поле titles в список людей [id => человек]. В нём только главный
+// титул (или пусто): чат и трейдинг показывают у ника один. Поле осталось
+// списком, чтобы закешированный у посетителя старый js читал его как раньше.
 function hunt_titles_attach(PDO $pdo, array $people): array {
     $titles = hunt_titles_for($pdo, array_keys($people));
     foreach ($people as $id => $p) {
-        $people[$id]['titles'] = $titles[(string)$id] ?? [];
+        $main = hunt_title_main($titles[(string)$id] ?? []);
+        $people[$id]['titles'] = $main !== null ? [$main] : [];
     }
     return $people;
 }

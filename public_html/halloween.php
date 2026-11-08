@@ -45,7 +45,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=5" />
+<link rel="stylesheet" href="css/hunt.css?v=6" />
 <link rel="stylesheet" href="css/gw-card.css?v=2" />
 
 <?php echo metrika_counter_html(); ?>
