@@ -163,4 +163,43 @@ test('кто я — тот же профиль; без таблиц этапа 2
     assert_eq(cm_t('not_ready2'), cm_last_text($log));
 });
 
+// Пара, брак, клан и счёт дуэлей Пети (id 20) — данные этапа 3.
+function pf_games(PDO $pdo): void {
+    cm_person($pdo, 20, 'petya', 'Петя');
+    cm_person($pdo, 21, 'kolya', 'Коля');
+    cm_person($pdo, 22, 'olya', 'Оля');
+    $c = CM_CHAT;
+    $pdo->exec("INSERT INTO cm_couples (chat_id, a_id, b_id, since, xp, xp_day, xp_today, ended_at) VALUES ($c, 21, 20, 0, 117, 0, 0, 0)");
+    $pdo->exec("INSERT INTO cm_marriages (chat_id, a_id, b_id, since, ended_at, ended_by) VALUES ($c, 20, 22, " . (CM_NOW - 125 * 86400) . ", 0, 0)");
+    $pdo->exec("INSERT INTO cm_clans (chat_id, name, name_key, owner_id, about, is_open, called_at, created_at) VALUES ($c, 'Волки', 'волки', 20, '', 1, 0, 0)");
+    $pdo->exec("INSERT INTO cm_clan_members (chat_id, user_id, clan_id, joined_at) VALUES ($c, 20, 1, 0)");
+    $pdo->exec("INSERT INTO cm_game_stats (chat_id, user_id, kind, wins, losses, draws) VALUES ($c, 20, 'duel', 5, 2, 0)");
+    $pdo->exec("INSERT INTO cm_game_stats (chat_id, user_id, kind, wins, losses, draws) VALUES ($c, 20, 'dice', 9, 9, 9)");
+}
+
+test('профиль: пара, брак, клан и дуэли (этап 3) — после наград, перед варнами', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    pf_games($pdo);
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), '+награда 5 @petya Лучший трейдер');
+    cm_do(cm_ctx_for($pdo, $log, 7), 'профиль @petya');
+    assert_eq("👤 Петя\nРанг: 0 — участник\nСообщений: 0 (сегодня 0)\nРепутация: 0\nНаграды: 🥇 Лучший трейдер\n"
+        . "Пара: Коля (уровень 3)\nБрак: Оля (125 дней)\nКлан: Волки\nДуэли: 5 побед / 2 поражения\nВарны: 0/3", cm_last_text($log));
+});
+
+test('профиль: выключенный раздел этапа 3 прячет свои строки; без таблиц этапа 3 — как в этапе 2', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    pf_games($pdo);
+    $o = cm_ctx_for($pdo, $log, CM_OWNER);
+    foreach (['отношения', 'кланы', 'игры'] as $s) { cm_do($o, 'дк ' . $s . ' 6'); }
+    cm_do(cm_ctx_for($pdo, $log, 7), 'профиль @petya');
+    assert_eq("👤 Петя\nРанг: 0 — участник\nСообщений: 0 (сегодня 0)\nРепутация: 0\nВарны: 0/3", cm_last_text($log));
+    $pdo = cm_test_pdo();
+    pf_games($pdo);
+    $pdo->exec('DROP TABLE cm_offers');
+    cm_do(cm_ctx_for($pdo, $log, 7), 'профиль @petya');
+    assert_eq("👤 Петя\nРанг: 0 — участник\nСообщений: 0 (сегодня 0)\nРепутация: 0\nВарны: 0/3", cm_last_text($log));
+});
+
 run_tests();

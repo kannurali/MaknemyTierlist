@@ -82,6 +82,7 @@ function cm_profile_lines(array $ctx, int $userId, string $name): array {
     }
     $awards = cm_awards_active($pdo, $chatId, $userId, $now);
     if ($awards) { $lines[] = cm_t('profile_awards', ['list' => cm_awards_brief($awards)]); }
+    if (cm_ready3($pdo)) { $lines = array_merge($lines, cm_profile_lines3($ctx, $userId)); }
     $lines[] = cm_t('profile_warns', ['n' => cm_warns_active($ctx, $userId), 'limit' => (int)$chat['settings']['warns']['limit']]);
     if (cm_section_on($chat, 'анкета')) {
         $p = cm_profile_get($pdo, $userId);
@@ -93,6 +94,35 @@ function cm_profile_lines(array $ctx, int $userId, string $name): array {
         if ($p['about'] !== '') { $lines[] = cm_t('profile_about', ['about' => $p['about']]); }
     }
     return $lines;
+}
+
+// Строки этапа 3: пара, брак, клан, счёт дуэлей. Выключенный раздел («дк
+// отношения 6», «дк кланы 6», «дк игры 6») прячет свои строки; пустых нет.
+function cm_profile_lines3(array $ctx, int $userId): array {
+    $pdo = $ctx['pdo'];
+    $chat = $ctx['chat'];
+    $chatId = (int)$chat['chat_id'];
+    $out = [];
+    if (cm_section_on($chat, 'отношения')) {
+        $c = cm_couple_of($pdo, $chatId, $userId);
+        if ($c !== null) {
+            $out[] = cm_t('profile_couple', ['name' => cm_user_name($pdo, cm_partner($c, $userId)), 'lvl' => cm_couple_level($c['xp'])]);
+        }
+        $m = cm_marriage_of($pdo, $chatId, $userId);
+        if ($m !== null) {
+            $out[] = cm_t('profile_marriage', ['name' => cm_user_name($pdo, cm_partner($m, $userId)),
+                'days' => cm_days_text((int)$ctx['now'] - $m['since'])]);
+        }
+    }
+    if (cm_section_on($chat, 'кланы')) {
+        $cl = cm_clan_of($pdo, $chatId, $userId);
+        if ($cl !== null) { $out[] = cm_t('profile_clan', ['name' => $cl['name']]); }
+    }
+    if (cm_section_on($chat, 'игры')) {
+        $s = cm_game_stat($pdo, $chatId, $userId, 'duel');
+        if ($s['wins'] + $s['losses'] > 0) { $out[] = cm_t('profile_duels', ['score' => cm_score_text($s, false)]); }
+    }
+    return $out;
 }
 
 function cm_profile_send(array $ctx, array $t): void {

@@ -281,6 +281,19 @@ test('кнопка хода дуэли идёт через вебхук', functi
     assert_eq('on', cm_duel_get($pdo, 1)['status']);
 });
 
+test('«кто» без префикса — обычная речь и фильтры, «!кто» — ответ; помощь знает этап 3', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'фильтр мат вкл');
+    rt_run($pdo, cm_gmsg(7, 'кто знает, сука, где ключи'), $log);
+    assert_eq(1, count(cm_calls($log, 'deleteMessage')), 'не команда — сработал фильтр мата');
+    rt_run($pdo, cm_gmsg(7, '!кто дежурит?'), $log);
+    assert_eq('🎯 Кто дежурит? Думаю, U7.', cm_last_text($log));
+    foreach (['дуэль', 'кубы', 'обнять', 'встречаться', 'вернуть брак', '+клан', 'созвать клан'] as $w) {
+        assert_eq(true, strpos(cm_t('help'), $w) !== false, $w);
+    }
+});
+
 test('вебхук: правки сообщений и право удалять в группах', function () {
     $log = [];
     tg_setup_webhook(cm_rec($log), '123456789:AAHfakeTokenForTestsOnly_abcdefghij');
