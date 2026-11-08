@@ -118,9 +118,11 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
  *  - команда с целью без префикса — только если цель нашлась;
  *  - без ранга и без префикса — молча, как обычная речь;
  *  - команда из CM_BARE_ARGS без префикса — только если остаток строки без
- *    цели подходит под её шаблон (cm_bare_ok, parse.php).
+ *    цели подходит под её шаблон (cm_bare_ok, parse.php);
+ *  - команда из CM_PREFIX_ONLY без префикса — не команда («!кто»).
  */
 function cm_run_command(array $ctx, array $cmd): bool {
+    if (!$cmd['prefixed'] && in_array($cmd['handler'], CM_PREFIX_ONLY, true)) { return false; }
     if (!$cmd['prefixed'] && !cm_bare_ok($ctx, $cmd)) { return false; }
     if (!$cmd['prefixed'] && $cmd['exact'] && ($cmd['args'] !== '' || trim($cmd['body']) !== '')) { return false; }
     if (!$cmd['prefixed'] && $cmd['target']) {
@@ -151,7 +153,8 @@ function cm_on_private(PDO $pdo, array $cfg, callable $send, array $msg, int $no
     $fn($ctx, $cmd);
 }
 
-// Кнопки «cm:»: r — репорт, k — массовый кик, o — передача создателя.
+// Кнопки «cm:»: r — репорт, k — массовый кик, o — передача создателя,
+// p — приглашение, d — ход в дуэли (этап 3: offers.php, duel.php).
 // answerCallbackQuery уходит всегда, иначе у человека крутятся часики.
 function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now): void {
     $answer = '';
@@ -172,6 +175,10 @@ function cm_on_callback(PDO $pdo, array $cfg, callable $send, array $q, int $now
             $answer = cm_mass_callback($ctx, $q, (string)$p[2], (int)$p[3], (int)$p[4]);
         } elseif ($kind === 'o' && count($p) === 4) {
             $answer = cm_owner_callback($ctx, $q, (int)$p[2], (int)$p[3]);
+        } elseif ($kind === 'p' && count($p) === 4) {
+            $answer = cm_offer_callback($ctx, $q, (int)$p[2], (string)$p[3]);
+        } elseif ($kind === 'd' && count($p) === 4) {
+            $answer = cm_duel_callback($ctx, $q, (int)$p[2], (string)$p[3]);
         }
     }
     $send('answerCallbackQuery', ['callback_query_id' => (string)($q['id'] ?? ''), 'text' => mb_substr($answer, 0, 200)]);

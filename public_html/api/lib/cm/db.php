@@ -27,6 +27,10 @@ const CM_DEFAULTS = [
     'autodelete'    => true,
     'report_code'   => null,
     'raid_greet_at' => 0,
+    // этап 3: исход проигравшему в дуэли и кубах — действия в формате
+    // триггеров; [] — проигрыш без наказания, исход включает модератор
+    'duel_outcome'  => [],
+    'dice_outcome'  => [],
 ];
 
 function cm_enabled(array $cfg): bool {
@@ -236,6 +240,10 @@ const CM_CHAT_TABLES_ROWS = ['cm_punishments', 'cm_rank_log', 'cm_reports', 'cm_
 // Таблицы этапа 2 переезжают, только если его миграция уже выполнена.
 const CM_CHAT_TABLES2_PK   = ['cm_stats', 'cm_rep'];
 const CM_CHAT_TABLES2_ROWS = ['cm_rep_log', 'cm_awards'];
+// Таблицы этапа 3 — так же, если выполнена его миграция. У cm_clans имя
+// уникально в чате, поэтому она уступает место, как таблицы с ключом по чату.
+const CM_CHAT_TABLES3_PK   = ['cm_game_stats', 'cm_clans', 'cm_clan_members'];
+const CM_CHAT_TABLES3_ROWS = ['cm_offers', 'cm_games', 'cm_couples', 'cm_marriages'];
 
 function cm_migrate(PDO $pdo, int $old, int $new): void {
     if ($old === 0 || $new === 0 || $old === $new || cm_chat_row($pdo, $old) === null) { return; }
@@ -244,6 +252,10 @@ function cm_migrate(PDO $pdo, int $old, int $new): void {
     if (cm_ready2($pdo)) {
         $pk = array_merge($pk, CM_CHAT_TABLES2_PK);
         $rows = array_merge($rows, CM_CHAT_TABLES2_ROWS);
+    }
+    if (cm_ready3($pdo)) {
+        $pk = array_merge($pk, CM_CHAT_TABLES3_PK);
+        $rows = array_merge($rows, CM_CHAT_TABLES3_ROWS);
     }
     $pdo->beginTransaction();
     try {

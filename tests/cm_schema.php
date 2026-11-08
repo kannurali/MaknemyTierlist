@@ -69,6 +69,33 @@ function cm_sqlite_tables(PDO $pdo): void {
         id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
         level INTEGER NOT NULL, reason TEXT NOT NULL, by_id INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER NOT NULL, until_at INTEGER NOT NULL DEFAULT 0, removed_at INTEGER NOT NULL DEFAULT 0)");
+    // этап 3 — docs/migrations/2026-11-08-chat-manager-games.sql
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_offers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, kind TEXT NOT NULL,
+        from_id INTEGER NOT NULL, to_id INTEGER NOT NULL, ref_id INTEGER NOT NULL DEFAULT 0,
+        msg_id INTEGER NOT NULL DEFAULT 0, expires_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'open')");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_games (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, kind TEXT NOT NULL,
+        a_id INTEGER NOT NULL, b_id INTEGER NOT NULL, turn_id INTEGER NOT NULL, state TEXT NOT NULL DEFAULT '{}',
+        msg_id INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'on', winner_id INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_game_stats (
+        chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL, kind TEXT NOT NULL, wins INTEGER NOT NULL DEFAULT 0,
+        losses INTEGER NOT NULL DEFAULT 0, draws INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (chat_id, user_id, kind))");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_couples (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, a_id INTEGER NOT NULL, b_id INTEGER NOT NULL,
+        since INTEGER NOT NULL, xp INTEGER NOT NULL DEFAULT 0, xp_day INTEGER NOT NULL DEFAULT 0,
+        xp_today INTEGER NOT NULL DEFAULT 0, ended_at INTEGER NOT NULL DEFAULT 0)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_marriages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, a_id INTEGER NOT NULL, b_id INTEGER NOT NULL,
+        since INTEGER NOT NULL, ended_at INTEGER NOT NULL DEFAULT 0, ended_by INTEGER NOT NULL DEFAULT 0)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_clans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, name TEXT NOT NULL, name_key TEXT NOT NULL,
+        owner_id INTEGER NOT NULL, about TEXT NOT NULL DEFAULT '', is_open INTEGER NOT NULL DEFAULT 1,
+        called_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, UNIQUE (chat_id, name_key))");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS cm_clan_members (
+        chat_id INTEGER NOT NULL, user_id INTEGER NOT NULL, clan_id INTEGER NOT NULL, joined_at INTEGER NOT NULL,
+        PRIMARY KEY (chat_id, user_id))");
     $pdo->exec("CREATE TABLE IF NOT EXISTS tg_links (
         user_id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL, tg_name TEXT NOT NULL DEFAULT '',
         lang TEXT NOT NULL DEFAULT 'ru', linked_at INTEGER NOT NULL)");

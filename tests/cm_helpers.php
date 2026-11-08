@@ -12,6 +12,29 @@ const CM_ADMIN = 2;   // админ Telegram без ранга бота
 const CM_T2359 = 1790024340;
 const CM_T0001 = 1790024460;
 
+// Подставная случайность (этап 3): $ctx['rand'] = cm_seq([…]) — числа по
+// очереди, последнее повторяется. Число вне [$min, $max] — исключение: тест
+// ошибся в ожиданиях.
+function cm_seq(array $values): callable {
+    return function (int $min, int $max) use (&$values): int {
+        $v = count($values) > 1 ? array_shift($values) : $values[0];
+        if ($v < $min || $v > $max) { throw new RuntimeException("случайное $v вне [$min, $max]"); }
+        return $v;
+    };
+}
+
+// Нажатие кнопки этапа 3 человеком $who: $data — «cm:p:<id>:y» (приглашение)
+// или «cm:d:<id>:s» (ход в дуэли). Контекст — как у cm_on_callback (чат,
+// нажавший и его ранг), случайность — $rand. Возвращает ответ на кнопку.
+function cm_press(PDO $pdo, array &$log, int $who, string $data, array $answers = [], int $now = CM_NOW, ?callable $rand = null): string {
+    $ctx = cm_ctx_for($pdo, $log, $who, '', [], $answers, $now);
+    if ($rand !== null) { $ctx['rand'] = $rand; }
+    $p = explode(':', $data);
+    $q = ['id' => 'q', 'from' => ['id' => $who], 'data' => $data];
+    return $p[1] === 'd' ? cm_duel_callback($ctx, $q, (int)$p[2], (string)$p[3])
+        : cm_offer_callback($ctx, $q, (int)$p[2], (string)$p[3]);
+}
+
 function cm_test_pdo(): PDO {
     $pdo = test_db();
     cm_sqlite_tables($pdo);
