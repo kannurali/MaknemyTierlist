@@ -3,6 +3,12 @@
 // админ Telegram без ранга — 0, но фильтры его не трогают и наказать его бот
 // не может (не даёт Telegram). Ранг 5 — owner_id; сначала это создатель
 // группы в Telegram, дальше — через «передать создателя».
+//
+// Ранги 1–4 общие для чатов Макнеми (решение владельца 08.11.2026): выдал в
+// одном — действует во всех. Хранятся по-прежнему строками cm_members.lvl
+// по чатам; ранг человека — наибольший из его строк в сети (cm_net), смена
+// ранга пишет во все его строки сети. Создатель (5), варны, «дк» и админы
+// Telegram — по чату. Чужой чат сети не видит: там только свои строки.
 
 const CM_SECTIONS = ['ранги', 'варны', 'мут', 'кик', 'бан', 'фильтры', 'триггеры', 'приветствие',
                      'правила', 'репорты', 'созыв', 'чистка', 'заметки', 'таймеры', 'статистика',
@@ -37,12 +43,27 @@ function cm_admins_refresh(array &$ctx, bool $force = false): void {
     $ctx['chat']['owner_id'] = $owner;
 }
 
+// Чаты, по которым считается ранг: вся сеть Макнеми или только этот чат.
+function cm_rank_chats(array $ctx): array {
+    $chatId = (int)$ctx['chat']['chat_id'];
+    return cm_is_ours($ctx['chat']) ? cm_net($ctx['pdo'], $chatId) : [$chatId];
+}
+
+// Ранг одной строки cm_members для SQL. lvl 5 пишет передача создателя: в
+// своём чате бывший создатель остаётся старшим администратором (4), из
+// чужой строки 5 ранга не берём — создатель одного чата не создатель сети.
+function cm_rank_sql(int $chatId): string {
+    return 'CASE WHEN lvl <= 4 THEN lvl WHEN chat_id = ' . $chatId . ' THEN 4 ELSE 0 END';
+}
+
 function cm_rank(array $ctx, int $userId): int {
     if ($userId <= 0) { return 0; }
     if ($userId === (int)$ctx['chat']['owner_id']) { return 5; }
     if (!empty($ctx['chat']['private'])) { return 0; }
-    $m = cm_member($ctx['pdo'], (int)$ctx['chat']['chat_id'], $userId);
-    return $m ? max(0, min(4, $m['lvl'])) : 0;
+    $st = $ctx['pdo']->prepare('SELECT MAX(' . cm_rank_sql((int)$ctx['chat']['chat_id']) . ') FROM cm_members
+        WHERE chat_id IN (' . cm_in(cm_rank_chats($ctx)) . ') AND user_id = :u');
+    $st->execute([':u' => $userId]);
+    return max(0, min(4, (int)$st->fetchColumn()));
 }
 
 function cm_is_tg_admin(array $ctx, int $userId): bool {
@@ -80,7 +101,13 @@ function cm_need_level(array $chat, ?string $section, int $default): int {
     return (is_int($a) && $a >= 0 && $a <= 6) ? $a : $default;
 }
 
-function cm_rank_store(PDO $pdo, int $chatId, int $userId, int $old, int $new, int $byId, int $now): void {
+// $net — чаты, где переписать ранг человека (команды рангов: вся сеть);
+// пусто — только этот чат (передача создателя).
+function cm_rank_store(PDO $pdo, int $chatId, int $userId, int $old, int $new, int $byId, int $now, array $net = []): void {
+    if ($net) {
+        $pdo->prepare('UPDATE cm_members SET lvl = :n WHERE user_id = :u AND chat_id IN (' . cm_in($net) . ')')
+            ->execute([':n' => $new, ':u' => $userId]);
+    }
     cm_member_set($pdo, $chatId, $userId, ['lvl' => $new]);
     $pdo->prepare('INSERT INTO cm_rank_log (chat_id, user_id, by_id, old_lvl, new_lvl, at) VALUES (:c, :u, :b, :o, :n, :a)')
         ->execute([':c' => $chatId, ':u' => $userId, ':b' => $byId, ':o' => $old, ':n' => $new, ':a' => $now]);
@@ -116,7 +143,8 @@ function cm_rank_change(array $ctx, array $t, int $new): void {
         cm_reply($ctx, cm_t('rank_same', ['name' => $t['tag'], 'rank' => CM_RANK_NAMES[$old]]));
         return;
     }
-    cm_rank_store($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'], $old, $new, (int)$ctx['actor'], (int)$ctx['now']);
+    cm_rank_store($ctx['pdo'], (int)$ctx['chat']['chat_id'], (int)$t['id'], $old, $new, (int)$ctx['actor'], (int)$ctx['now'],
+        cm_rank_chats($ctx));
     cm_reply($ctx, cm_t('rank_done', ['name' => $t['who'], 'rank' => CM_RANK_NAMES[$new], 'n' => $new]), false);
 }
 
@@ -162,10 +190,12 @@ function cm_cmd_rank_list(array $ctx, array $cmd): void {
     $owner = (int)$ctx['chat']['owner_id'];
     $lines = [];
     if ($owner > 0) { $lines[] = '5 · ' . cm_user_who($pdo, $owner, true); }
-    $st = $pdo->prepare('SELECT user_id, lvl FROM cm_members WHERE chat_id = :c AND lvl > 0 AND user_id <> :o ORDER BY lvl DESC, user_id');
-    $st->execute([':c' => $ctx['chat']['chat_id'], ':o' => $owner]);
+    $st = $pdo->prepare('SELECT user_id, MAX(' . cm_rank_sql((int)$ctx['chat']['chat_id']) . ') AS r FROM cm_members
+        WHERE chat_id IN (' . cm_in(cm_rank_chats($ctx)) . ') AND lvl > 0 AND user_id <> :o
+        GROUP BY user_id HAVING r > 0 ORDER BY r DESC, user_id');
+    $st->execute([':o' => $owner]);
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $lines[] = min(4, (int)$r['lvl']) . ' · ' . cm_user_who($pdo, (int)$r['user_id'], true);
+        $lines[] = min(4, (int)$r['r']) . ' · ' . cm_user_who($pdo, (int)$r['user_id'], true);
     }
     cm_reply($ctx, $lines ? cm_t('ranks_head') . "\n" . implode("\n", $lines) : cm_t('ranks_empty'), false);
 }
@@ -174,9 +204,9 @@ function cm_cmd_rank_log(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
     $args = $cmd['args'];
     $t = cm_target($pdo, $ctx['msg'], $args);
-    $sql = 'SELECT user_id, by_id, old_lvl, new_lvl, at FROM cm_rank_log WHERE chat_id = :c'
+    $sql = 'SELECT user_id, by_id, old_lvl, new_lvl, at FROM cm_rank_log WHERE chat_id IN (' . cm_in(cm_rank_chats($ctx)) . ')'
          . ($t ? ' AND user_id = :u' : '') . ' ORDER BY id DESC LIMIT 15';
-    $p = [':c' => $ctx['chat']['chat_id']];
+    $p = [];
     if ($t) { $p[':u'] = $t['id']; }
     $st = $pdo->prepare($sql);
     $st->execute($p);

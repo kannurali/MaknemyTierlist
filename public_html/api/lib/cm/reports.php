@@ -163,13 +163,18 @@ const CM_CALL_GAP = 600;   // участникам — раз в 10 минут �
 const CM_CALL_MAX = 30;
 
 // Кого звать: создатель, админы Telegram (без ботов — их нет в кеше) и
-// модераторы бота (ранг ≥ 1), кто ещё в чате. Без автора, без повторов.
+// модераторы бота (ранг ≥ 1, общий по сети — ranks.php), кто ещё в этом
+// чате. Без автора, без повторов.
 function cm_call_ids(array $ctx): array {
     $chat = $ctx['chat'];
+    $chatId = (int)$chat['chat_id'];
     $ids = array_merge([(int)$chat['owner_id'], (int)$chat['tg_owner_id']], $chat['admins']);
-    $st = $ctx['pdo']->prepare('SELECT user_id FROM cm_members WHERE chat_id = :c AND lvl >= 1 AND left_at = 0
-        ORDER BY lvl DESC, user_id');
-    $st->execute([':c' => (int)$chat['chat_id']]);
+    $st = $ctx['pdo']->prepare('SELECT m.user_id FROM cm_members m
+        JOIN (SELECT user_id, MAX(' . cm_rank_sql($chatId) . ') AS r FROM cm_members
+              WHERE chat_id IN (' . cm_in(cm_rank_chats($ctx)) . ') AND lvl > 0 GROUP BY user_id) n ON n.user_id = m.user_id
+        WHERE m.chat_id = :c AND m.left_at = 0 AND n.r >= 1
+        ORDER BY n.r DESC, m.user_id');
+    $st->execute([':c' => $chatId]);
     $ids = array_merge($ids, array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN)));
     $out = [];
     foreach ($ids as $id) {

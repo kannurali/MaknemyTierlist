@@ -78,7 +78,7 @@ test('повысить 3 — сразу ранг 3; понизить 1 — ср�
     $ctx = cm_ctx_for($pdo, $log, CM_OWNER);
     cm_do($ctx, 'повысить @vasya 3');
     assert_eq(3, cm_member($pdo, CM_CHAT, 20)['lvl']);
-    assert_eq('🎖 Вася теперь младший администратор (3).', cm_last_text($log));
+    assert_eq('🎖 Вася теперь младший администратор (3) во всех чатах Maknemy.', cm_last_text($log));
     cm_do($ctx, 'повысить 1 @vasya');
     assert_eq(3, cm_member($pdo, CM_CHAT, 20)['lvl']);
     assert_eq('Вася уже младший администратор.', cm_last_text($log));
