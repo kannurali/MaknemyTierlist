@@ -95,4 +95,58 @@ test('список открытых жалоб', function () {
     assert_eq(true, strpos($t, '#1') !== false && strpos($t, '#2') !== false && strpos($t, 'два') !== false);
 });
 
+// --------------------------------------------------------------------------
+//  «созвать админов»
+// --------------------------------------------------------------------------
+
+function ca_run(PDO $pdo, array &$log, int $actor, string $text, int $now = CM_NOW): bool {
+    return cm_run_command(cm_ctx_for($pdo, $log, $actor, $text, [], [], $now), cm_parse($text, CM_BOT));
+}
+
+// id из упоминаний последнего ответа бота.
+function ca_mentions(array $log): array {
+    $send = cm_calls($log, 'sendMessage');
+    $out = [];
+    foreach ((array)($send[count($send) - 1][1]['entities'] ?? []) as $e) {
+        if (($e['type'] ?? '') === 'text_mention') { $out[] = (int)$e['user']['id']; }
+    }
+    return $out;
+}
+
+test('созвать админов: создатель, админы Telegram и модераторы бота с упоминанием, без автора и ушедших', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 40, 'moder', 'Модер');
+    cm_person($pdo, 41, 'gone', 'Ушёл');
+    cm_lvl($pdo, 40, 1);
+    cm_lvl($pdo, 41, 3);
+    cm_member_set($pdo, CM_CHAT, 41, ['left_at' => CM_NOW]);
+    assert_eq(true, ca_run($pdo, $log, 7, 'созвать админов тут спамят'));
+    assert_eq("🚨 U7 зовёт админов!\nПричина: тут спамят\nOwner, Admin, Модер", cm_last_text($log));
+    assert_eq([7, CM_OWNER, CM_ADMIN, 40], ca_mentions($log), 'автор — ник-ссылкой, как в других событиях');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM cm_queue')->fetchColumn(), 'не удаляется');
+    assert_eq(true, ca_run($pdo, $log, 40, "позвать админов\nрейд в чате", CM_NOW + 10));
+    assert_eq("🚨 U40 зовёт админов!\nПричина: рейд в чате\nOwner, Admin", cm_last_text($log), 'модератор — без паузы и без себя');
+    assert_eq(true, ca_run($pdo, $log, 8, '!созвать модеров', CM_NOW + 20));
+    assert_eq(cm_t('call_wait', ['min' => 10]), cm_last_text($log), 'участнику — раз в 10 минут');
+    assert_eq(true, ca_run($pdo, $log, 8, 'позвать модеров', CM_NOW + 10 + CM_CALL_GAP));
+    assert_eq("🚨 U8 зовёт админов!\nOwner, Admin, Модер", cm_last_text($log), 'без причины — без строки');
+});
+
+test('созвать админов: звать некого; дк созыв 6 выключает; без префикса — с причиной тоже', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $alone = function (array $p): array {
+        return ['ok' => true, 'result' => [['status' => 'creator', 'user' => ['id' => 7, 'first_name' => 'U7']]]];
+    };
+    $ctx = cm_ctx_for($pdo, $log, 7, '', [], ['getChatAdministrators' => $alone]);
+    cm_do($ctx, 'созвать админов');
+    assert_eq(cm_t('call_empty'), cm_last_text($log), 'создатель один — звать некого');
+    $pdo = cm_test_pdo();
+    assert_eq(true, ca_run($pdo, $log, 7, 'созвать админов помогите'));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк созыв 6');
+    assert_eq(false, ca_run($pdo, $log, 8, '!созвать админов', CM_NOW + CM_CALL_GAP));
+    assert_eq(cm_t('cmd_off'), cm_last_text($log));
+});
+
 run_tests();
