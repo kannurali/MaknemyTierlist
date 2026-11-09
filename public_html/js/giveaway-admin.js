@@ -55,6 +55,9 @@
     drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     posts_migrate: "Для постов в канале выполните docs/migrations/2026-10-27-giveaway-posts.sql.",
     "bad posts": "Каналов для поста — не больше пяти.",
+    channel_cant_post: "Боту в этом канале нужно право «Отправка публикаций» — включите и нажмите «Обновить» у канала в «Каналы бота».",
+    post_failed: "Telegram не принял пост — старый пост не тронут. Попробуйте ещё раз через минуту.",
+    "channel not found": "Канал не найден — обновите страницу.",
     "bad emoji": "В строке эмодзи слева — сам эмодзи (не буквы, до 8 знаков), справа id — только цифры, до 24. Строк — до 100.",
     "dup emoji": "Один и тот же эмодзи в списке дважды — оставьте одну строку.",
     unauthorized: "Сессия админа закончилась — войдите на сайт заново."
@@ -627,16 +630,16 @@
     S.channels.forEach(c => {
       const post = byChat[c.id];
       const lab = document.createElement("label");
-      lab.className = "page-chk" + (c.admin || post ? "" : " ga-ch-off");
+      lab.className = "page-chk" + (c.post || post ? "" : " ga-ch-off");
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.value = c.id;
       cb.checked = !!post || selected.indexOf(c.id) >= 0;
-      cb.disabled = locked() || !!(post && post.posted) || (!c.admin && !post);
+      cb.disabled = locked() || !!(post && post.posted) || (!c.post && !post);
       cb.addEventListener("change", changed);
       let note = "";
       if (post && post.posted) note = post.results ? " — пост с итогами" : " — пост вышел";
-      else if (!c.admin) note = " (у бота нет прав)";
+      else if (!c.post) note = " (боту нужно право «Отправка публикаций»)";
       lab.append(cb, document.createTextNode(" " + (c.title || c.id) + note));
       if (post && post.url) {
         const a = document.createElement("a");
@@ -646,12 +649,47 @@
         a.textContent = " открыть ↗";
         lab.appendChild(a);
       }
+      if (post && post.posted && !post.results && S.cur && S.cur.status === "live" && c.post) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn small ga-repost";
+        b.textContent = "Выпустить заново";
+        b.title = "Новый пост в этот канал; старый бот удалит сам";
+        b.addEventListener("click", e => { e.preventDefault(); repost(c); });
+        lab.appendChild(b);
+      }
       box.appendChild(lab);
     });
   }
 
   function readPosts() {
     return Array.from($("fPosts").querySelectorAll("input:checked")).map(i => i.value);
+  }
+
+  const REPOST_OLD = {
+    deleted: "старый пост бот удалил",
+    gone: "старого поста в канале уже не было",
+    kept: "старый пост Telegram удалить не дал (ему больше 48 часов) — удалите его в канале сами, бот его больше не правит",
+    none: ""
+  };
+
+  // «Выпустить заново»: новый пост в канал, где розыгрыш уже выходил.
+  function repost(c) {
+    if (S.busy || !S.cur || !S.cur.id) return;
+    const name = c.title || c.id;
+    if (S.dirty && !window.confirm("Есть несохранённые правки — новый пост выйдет без них. Всё равно выпустить?")) return;
+    if (!window.confirm("Выпустить пост розыгрыша в «" + name + "» заново? Старый пост бот удалит сам, если Telegram даст.")) return;
+    busy(true);
+    msg("Публикуем пост в «" + name + "»…");
+    call({ action: "repost", id: S.cur.id, chat: c.id }).then(r => {
+      busy(false);
+      if (!r || !r.ok) { msg(errText(r), true); return; }
+      const ticked = readPosts();
+      S.cur.posts = r.giveaway.posts;
+      renderPostChecks(ticked);
+      const old = REPOST_OLD[r.old] || "";
+      msg("Пост в «" + name + "» вышел заново" + (old ? "; " + old : "") + ".", r.old === "kept");
+    });
   }
 
   function emojiRow(emoji, id, where) {
@@ -736,7 +774,10 @@
     if (p && p.posted) parts.push("пост вышел в каналах: " + p.posted);
     if (p && p.edited) parts.push("пост в канале обновлён");
     if (p && p.failed && p.failed.length) {
-      parts.push("пост не вышел или не обновился: " + p.failed.join(", ") + " (нет прав у бота, пост удалён в канале или Telegram не ответил — нажмите «Сохранить» ещё раз)");
+      parts.push("пост не вышел или не обновился: " + p.failed.join(", ") + " (у бота нет права «Отправка публикаций» или Telegram не ответил — нажмите «Сохранить» ещё раз)");
+    }
+    if (p && p.gone && p.gone.length) {
+      parts.push("пост удалён в канале: " + p.gone.join(", ") + " — бот его забыл; чтобы выпустить заново, отметьте канал и нажмите «Сохранить»");
     }
     if (r && r.post_failed) parts.push("итоги в пост канала не дописались — бот повторит сам через минуту");
     return parts.length ? " " + parts.join("; ") + "." : "";
@@ -1358,7 +1399,7 @@
         } else {
           hint(r.translate_failed ? "Сохранено, но перевод на английский не удался" : "Сохранено", r.translate_failed ? "bad" : "ok");
         }
-        if (r.post) msg("Сохранено:" + postNote(r), !!(r.post.failed && r.post.failed.length));
+        if (r.post) msg("Сохранено:" + postNote(r), !!((r.post.failed && r.post.failed.length) || (r.post.gone && r.post.gone.length)));
         return r.id;
       });
     });

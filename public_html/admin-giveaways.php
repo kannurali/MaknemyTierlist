@@ -27,7 +27,7 @@ echo <<<HTML
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
 <link rel="stylesheet" href="/css/giveaway.css?v=8" />
-<link rel="stylesheet" href="/css/giveaway-admin.css?v=8" />
+<link rel="stylesheet" href="/css/giveaway-admin.css?v=9" />
 </head>
 <body>
 {$nav}
@@ -163,7 +163,7 @@ echo <<<HTML
 
       <div class="f" id="fPostBox" hidden>Пост в Telegram <span class="muted">(ничего не отмечено — розыгрыш только на сайте; отмечен канал — бот опубликует туда розыгрыш: баннер, описание, призы, условия и кнопка «Участвовать», а после итогов допишет в этот же пост победителей)</span>
         <div class="pages" id="fPosts"></div>
-        <span class="muted small">У черновика пост выйдет при публикации, у идущего — сразу после «Сохранить». Пока розыгрыш идёт, каждое «Сохранить» обновляет пост. Вышедший пост галочкой не снять — удалите его в канале сами. Канал появится здесь, когда бот станет в нём админом (см. «Каналы бота» слева).</span>
+        <span class="muted small">У черновика пост выйдет при публикации, у идущего — сразу после «Сохранить». Пока розыгрыш идёт, каждое «Сохранить» обновляет пост. Вышедший пост галочкой не снять — удалите его в канале сами. «Выпустить заново» у канала опубликует пост ещё раз, а старый бот удалит сам (Telegram даёт удалять только посты моложе 48 часов). Посту боту хватает права «Отправка публикаций»; канал появится здесь, когда бот станет в нём админом (см. «Каналы бота» слева).</span>
         <span class="muted small">Чтобы кнопка «Участвовать» не пропадала в пересланном посте, включите боту мини-приложение: @BotFather → бот → Bot Settings → Configure Mini App → Enable Mini App, адрес https://maknemy.com/tg-app. После этого кнопка станет ссылкой на мини-приложение при следующем «Сохранить» или новом участнике.</span>
       </div>
 
@@ -225,7 +225,7 @@ echo <<<HTML
 {$i18nDictTag}<script src="/js/i18n.js?v=84"></script>
 <script src="/js/news-blocks.js?v=4"></script>
 <script src="/js/giveaway.js?v=17"></script>
-<script src="/js/giveaway-admin.js?v=14"></script>
+<script src="/js/giveaway-admin.js?v=15"></script>
 </body>
 </html>
 HTML;

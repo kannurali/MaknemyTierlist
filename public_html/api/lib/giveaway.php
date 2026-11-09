@@ -576,6 +576,18 @@ function gw_channels(PDO $pdo, ?array $ids = null): array {
     return $out;
 }
 
+// Выйдет ли сюда пост розыгрыша. Посту нужно одно право — «Отправка
+// публикаций» (в группе — просто быть админом); остальные из
+// TG_CHANNEL_RIGHTS нужны условиям розыгрыша, посту они не мешают — как и
+// у постов вкладки «Каналы» (tg_route_warning()). Бот не админ — missing
+// пустой, is_admin 0: не выйдет. До миграции 2026-10-14-tg-channel-rights.sql
+// колонки missing нет — тогда как раньше, по is_admin.
+function gw_can_post(array $c): bool {
+    if ((int)$c['is_admin'] === 1) { return true; }
+    $missing = gw_split_rights($c['missing'] ?? '');
+    return $missing && !in_array('can_post_messages', $missing, true);
+}
+
 // Ссылка «Подписаться»: приглашение, а без него — публичный адрес.
 function gw_channel_url(array $c): string {
     if ((string)$c['invite_url'] !== '') { return (string)$c['invite_url']; }
@@ -1310,6 +1322,7 @@ function gw_admin_channels(PDO $pdo): array {
             'kind'     => (string)$c['kind'],
             'url'      => gw_channel_url($c),
             'admin'    => (int)$c['is_admin'] === 1,
+            'post'     => gw_can_post($c),
             'missing'  => tg_right_names(gw_split_rights($c['missing'] ?? ''), 'ru'),
         ];
     }
@@ -2095,39 +2108,55 @@ function gw_post_edit_state(?array $res): string {
     return 'fail';
 }
 
+// Пост идущего розыгрыша как он есть сейчас: [отправка с премиум-эмодзи,
+// поля sendMessage / editMessageText без chat_id].
+function gw_post_live(PDO $pdo, callable $send, array $row): array {
+    $id = (int)$row['id'];
+    $map = gw_emoji_map($pdo);
+    $app = gw_post_app($pdo, $send);
+    $text = gw_post_text($pdo, $row, $map);
+    $keyboard = gw_post_keyboard($pdo, $row, $map, gw_entry_counts($pdo, [$id])[$id] ?? 0, $app);
+    return [gw_send_fancy($send, $map), gw_post_params($row, $text, false, $map, $keyboard)];
+}
+
+// Название канала для сообщений админке.
+function gw_channel_name(?array $c, int $chat): string {
+    return $c && (string)$c['title'] !== '' ? (string)$c['title'] : (string)$chat;
+}
+
 /**
  * Привести посты идущего розыгрыша к его виду: где поста ещё нет — выпустить,
  * где есть — поправить. Черновик и закончившийся не трогаются (итоги —
- * gw_post_results()). ['posted' => n, 'edited' => n, 'failed' => [канал, …]].
+ * gw_post_results()). ['posted' => n, 'edited' => n, 'failed' => [канал, …],
+ * 'gone' => [канал, …]]. gone — пост удалили в канале руками: бот его
+ * забывает, галочка канала снимается; поставить её снова — пост выйдет заново.
  */
 function gw_post_sync(PDO $pdo, callable $send, array $row, int $now): array {
-    $out = ['posted' => 0, 'edited' => 0, 'failed' => []];
+    $out = ['posted' => 0, 'edited' => 0, 'failed' => [], 'gone' => []];
     if ($row['status'] !== 'live' || !gw_has_posts($pdo)) { return $out; }
     $id = (int)$row['id'];
     $posts = gw_posts($pdo, $id);
     if (!$posts) { return $out; }
     $channels = gw_channels($pdo, array_keys($posts));
-    $map = gw_emoji_map($pdo);
-    $app = gw_post_app($pdo, $send);
-    $send = gw_send_fancy($send, $map);
-    $text = gw_post_text($pdo, $row, $map);
-    $keyboard = gw_post_keyboard($pdo, $row, $map, gw_entry_counts($pdo, [$id])[$id] ?? 0, $app);
+    [$send, $base] = gw_post_live($pdo, $send, $row);
     foreach ($posts as $chat => $p) {
         if ((int)$p['results_at'] > 0) { continue; }
         $c = $channels[$chat] ?? null;
-        $name = $c && (string)$c['title'] !== '' ? (string)$c['title'] : (string)$chat;
-        $params = ['chat_id' => $chat] + gw_post_params($row, $text, false, $map, $keyboard);
+        $name = gw_channel_name($c, $chat);
+        $params = ['chat_id' => $chat] + $base;
         $mid = (int)$p['message_id'];
         if ($mid > 0) {
             $state = gw_post_edit_state($send('editMessageText', $params + ['message_id' => $mid]));
             if ($state === 'ok') { $out['edited']++; continue; }
             if ($state === 'gone') {
                 $pdo->prepare('DELETE FROM giveaway_posts WHERE giveaway_id = :g AND chat_id = :c')->execute([':g' => $id, ':c' => $chat]);
+                $out['gone'][] = $name;
+                continue;
             }
             $out['failed'][] = $name;
             continue;
         }
-        if (!$c || (int)$c['is_admin'] !== 1) { $out['failed'][] = $name; continue; }
+        if (!$c || !gw_can_post($c)) { $out['failed'][] = $name; continue; }
         $res = $send('sendMessage', $params);
         $newId = is_array($res) && !empty($res['ok']) ? (int)($res['result']['message_id'] ?? 0) : 0;
         if ($newId <= 0) { $out['failed'][] = $name; continue; }
@@ -2136,6 +2165,52 @@ function gw_post_sync(PDO $pdo, callable $send, array $row, int $now): array {
         $out['posted']++;
     }
     return $out;
+}
+
+/**
+ * «Выпустить заново»: ещё один пост идущего розыгрыша в канал, где он уже
+ * был, — старый удалили в канале или он ушёл далеко вниз. Новый выходит
+ * первым, и бот правит дальше его; старый бот потом удаляет сам. Telegram не
+ * дал (посту больше 48 часов) — старый остаётся в канале как есть, бот его
+ * больше не трогает. Канала у розыгрыша не было — пост выходит, как от
+ * галочки. [код, тело]: в теле old — что со старым постом: none (не было),
+ * deleted (удалён), gone (его уже не было в канале), kept (остался).
+ */
+function gw_post_repost(PDO $pdo, callable $send, array $row, int $chat, int $now): array {
+    if (!gw_has_posts($pdo)) { return [409, ['ok' => false, 'error' => 'posts_migrate']]; }
+    if ($row['status'] !== 'live') { return [409, ['ok' => false, 'error' => 'not live']]; }
+    $id = (int)$row['id'];
+    $c = gw_channels($pdo, [$chat])[$chat] ?? null;
+    if (!$c) { return [404, ['ok' => false, 'error' => 'channel not found']]; }
+    if (!gw_can_post($c)) { return [409, ['ok' => false, 'error' => 'channel_cant_post']]; }
+    $all = gw_posts($pdo, $id);
+    $p = $all[$chat] ?? null;
+    if ($p && (int)$p['results_at'] > 0) { return [409, ['ok' => false, 'error' => 'not live']]; }
+    if (!$p && count($all) >= GW_CHANNELS_MAX) { return [400, ['ok' => false, 'error' => 'bad posts']]; }
+
+    [$fancy, $base] = gw_post_live($pdo, $send, $row);
+    $res = $fancy('sendMessage', ['chat_id' => $chat] + $base);
+    $newId = is_array($res) && !empty($res['ok']) ? (int)($res['result']['message_id'] ?? 0) : 0;
+    if ($newId <= 0) { return [502, ['ok' => false, 'error' => 'post_failed']]; }
+
+    $old = $p ? (int)$p['message_id'] : 0;
+    if ($p) {
+        $pdo->prepare('UPDATE giveaway_posts SET message_id = :m, posted_at = :t WHERE giveaway_id = :g AND chat_id = :c')
+            ->execute([':m' => $newId, ':t' => $now, ':g' => $id, ':c' => $chat]);
+    } else {
+        $pdo->prepare('INSERT INTO giveaway_posts (giveaway_id, chat_id, message_id, posted_at) VALUES (:g, :c, :m, :t)')
+            ->execute([':g' => $id, ':c' => $chat, ':m' => $newId, ':t' => $now]);
+    }
+    return [200, ['ok' => true, 'old' => $old > 0 ? gw_post_delete($send, $chat, $old) : 'none']];
+}
+
+// Удалить пост бота в канале: deleted — удалён, gone — его там уже нет,
+// kept — Telegram не дал (старше 48 часов) или не ответил.
+function gw_post_delete(callable $send, int $chat, int $messageId): string {
+    $res = $send('deleteMessage', ['chat_id' => $chat, 'message_id' => $messageId]);
+    if (is_array($res) && !empty($res['ok'])) { return 'deleted'; }
+    $d = is_array($res) ? (string)($res['description'] ?? '') : '';
+    return strpos($d, 'message to delete not found') !== false || strpos($d, 'MESSAGE_ID_INVALID') !== false ? 'gone' : 'kept';
 }
 
 /**
