@@ -181,6 +181,8 @@
 .ga-live-note[hidden] { display: none; }
 
 .ga-ch-off { opacity: .6; }
+#fPosts .page-chk:has(.ga-repost) { flex-wrap: wrap; }
+.ga-repost { margin-left: 2px; }
 .ga-quick { justify-content: flex-end; }
 .ga-max { max-width: 180px; }
 .ga-endby input[type="radio"] { width: auto; }

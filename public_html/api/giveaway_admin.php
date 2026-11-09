@@ -17,7 +17,9 @@ require_once __DIR__ . '/lib/giveaway.php';
 //                     победителям бот пишет после ответа
 //
 // Как прошли посты в каналах (save, publish), — поле post в ответе:
-// {posted, edited, failed: [канал, …]}; нет постов — поля нет.
+// {posted, edited, failed: [канал, …], gone: [канал, …]}; нет постов — поля нет.
+//   repost {id, chat} → выпустить пост идущего розыгрыша в канал заново;
+//                     старый бот удаляет сам (old: deleted / gone / kept / none)
 //   delete {id}     → удалить вместе с участниками
 //   channel {id}    → перечитать канал у Telegram (название, права, ссылку)
 //   emoji {rows}    → премиум-эмодзи бота: [{emoji, id}, …] целиком
@@ -27,7 +29,7 @@ require_once __DIR__ . '/lib/giveaway.php';
 
 // Итог постов в каналах — в ответ админке, если постов было что делать.
 function gw_admin_post_note(array $p, array $sync): array {
-    if ($sync['posted'] || $sync['edited'] || $sync['failed']) { $p['post'] = $sync; }
+    if ($sync['posted'] || $sync['edited'] || $sync['failed'] || $sync['gone']) { $p['post'] = $sync; }
     return $p;
 }
 
@@ -83,6 +85,16 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
         $row = gw_load($pdo, $id);
         if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], null]; }
         return [200, ['ok' => true, 'giveaway' => gw_admin_item($pdo, $row, $now)], null];
+    }
+    if ($action === 'repost') {
+        $chat = gw_chat_id($body['chat'] ?? null);
+        if ($chat === null) { return [400, ['ok' => false, 'error' => 'bad id'], null]; }
+        if (!tg_enabled($tg)) { return [503, ['ok' => false, 'error' => 'tg_off'], null]; }
+        $row = gw_load($pdo, $id);
+        if (!$row) { return [404, ['ok' => false, 'error' => 'not found'], null]; }
+        [$s, $p] = gw_post_repost($pdo, $send, $row, $chat, $now);
+        if ($s === 200) { $p['giveaway'] = gw_admin_item($pdo, $row, $now); }
+        return [$s, $p, null];
     }
     if ($action === 'report') {
         $row = gw_load($pdo, $id);

@@ -1933,7 +1933,7 @@ test('пост: отмечен у черновика — выходит при �
 
     [$s, $out] = handle_gw_admin($p, $cfg, $tg, ['action' => 'publish', 'id' => $id], GW_NOW - 5);
     assert_eq(200, $s);
-    assert_eq(['posted' => 1, 'edited' => 0, 'failed' => []], $out['post'], 'админка видит, что пост вышел');
+    assert_eq(['posted' => 1, 'edited' => 0, 'failed' => [], 'gone' => []], $out['post'], 'админка видит, что пост вышел');
     $posts = gw_posts_sent($log);
     assert_eq(1, count($posts), 'один пост');
     $m = $posts[0][1];
@@ -2008,7 +2008,7 @@ test('пост: правка идущего обновляет пост, нов�
     [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'id' => $id, 'posts' => [GW_CH_B]]
         + gw_draft(['title_ru' => 'Новое название']), GW_NOW);
     assert_eq(200, $s);
-    assert_eq(['posted' => 1, 'edited' => 1, 'failed' => []], $out['post']);
+    assert_eq(['posted' => 1, 'edited' => 1, 'failed' => [], 'gone' => []], $out['post']);
     $edits = gw_sent($log, 'editMessageText');
     assert_eq([GW_CH_A, 101], [$edits[0][1]['chat_id'], $edits[0][1]['message_id']], 'правится вышедший пост');
     assert_true(strpos($edits[0][1]['text'], 'НОВОЕ НАЗВАНИЕ') !== false, 'с новым названием');
@@ -2021,7 +2021,7 @@ test('пост: правка идущего обновляет пост, нов�
             ? ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: message to edit not found']
             : ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: message is not modified: specified new message content and reply markup are exactly the same'];
     }), ['action' => 'save', 'id' => $id] + gw_draft(['title_ru' => 'Новое название']), GW_NOW + 1);
-    assert_eq(['posted' => 0, 'edited' => 1, 'failed' => ['Канал A']], $out['post'], '«не изменилось» — успех, удалённый — ошибка');
+    assert_eq(['posted' => 0, 'edited' => 1, 'failed' => [], 'gone' => ['Канал A']], $out['post'], '«не изменилось» — успех, удалённый — отдельно');
     assert_eq([], gw_post_row($p, $id, GW_CH_A), 'удалённый в канале пост забыт');
 });
 
@@ -2032,8 +2032,143 @@ test('пост: канал без прав — пост не выходит, а�
     [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
     [$s, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
     assert_eq(200, $s, 'розыгрыш всё равно опубликован');
-    assert_eq(['posted' => 0, 'edited' => 0, 'failed' => ['Канал A']], $out['post']);
+    assert_eq(['posted' => 0, 'edited' => 0, 'failed' => ['Канал A'], 'gone' => []], $out['post']);
     assert_eq([], gw_posts_sent($log));
+});
+
+test('пост: удалённый в канале пост забыт — галочка снова, и он выходит заново', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    $cfg = gw_cfg();
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    $gone = function (array $m) { return ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: message to edit not found']; };
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log, $gone), ['action' => 'save', 'id' => $id, 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW);
+    assert_eq(['Канал A'], $out['post']['gone'], 'админка знает, что пост удалили');
+    [, $g] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'get', 'id' => $id], GW_NOW);
+    assert_eq([], $g['giveaway']['posts'], 'галочка снята');
+
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'id' => $id, 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW + 1);
+    assert_eq(1, $out['post']['posted'], 'отметили снова — пост вышел заново');
+    assert_eq(101, gw_post_row($p, $id, GW_CH_A)['message_id']);
+});
+
+test('пост: хватает права «Отправка публикаций», остальные нужны только условиям', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Без историй', false);
+    gw_channel($p, GW_CH_B, 'Без публикаций', false);
+    $p->prepare('UPDATE tg_channels SET missing = ? WHERE chat_id = ?')->execute(['can_post_stories,can_manage_direct_messages', GW_CH_A]);
+    $p->prepare('UPDATE tg_channels SET missing = ? WHERE chat_id = ?')->execute(['can_post_messages', GW_CH_B]);
+    $log = [];
+    [$s, $list] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'list'], GW_NOW - 20);
+    $flags = [];
+    foreach ($list['channels'] as $c) { $flags[$c['title']] = [$c['admin'], $c['post']]; }
+    ksort($flags);
+    assert_eq(['Без историй' => [false, true], 'Без публикаций' => [false, false]], $flags, 'админка: для поста — своё право');
+
+    [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A, GW_CH_B]] + gw_draft(), GW_NOW - 10);
+    [$s, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
+    assert_eq(200, $s);
+    assert_eq(['posted' => 1, 'edited' => 0, 'failed' => ['Без публикаций'], 'gone' => []], $out['post']);
+    assert_eq([GW_CH_A], array_map(function ($c) { return $c[1]['chat_id']; }, gw_posts_sent($log)), 'пост ушёл только туда, где можно');
+});
+
+// Подставной Telegram для «Выпустить заново»: deleteMessage отвечает $del,
+// пост в канал проходит, если $sendOk.
+function gw_tg_repost(array &$log, ?array $del = null, bool $sendOk = true): callable {
+    $base = gw_tg_posts($log);
+    return function (string $method, array $params) use (&$log, $base, $del, $sendOk): ?array {
+        if ($method === 'deleteMessage') {
+            $log[] = [$method, $params];
+            return $del ?? ['ok' => true, 'result' => true];
+        }
+        if ($method === 'sendMessage' && isset($params['parse_mode']) && !$sendOk) {
+            $log[] = [$method, $params];
+            return ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: not enough rights'];
+        }
+        return $base($method, $params);
+    };
+}
+
+test('пост: «Выпустить заново» — новый пост, старый бот удаляет сам', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A', true, 'maknemy_ch');
+    gw_channel($p, GW_CH_B, 'Канал B');
+    $cfg = gw_cfg();
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    assert_eq(101, gw_post_row($p, $id, GW_CH_A)['message_id']);
+
+    // Новый подставной Telegram снова начнёт с 101 — сдвинем старый пост.
+    $p->prepare('UPDATE giveaway_posts SET message_id = 50 WHERE giveaway_id = ? AND chat_id = ?')->execute([$id, GW_CH_A]);
+    $log = [];
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_A], GW_NOW);
+    assert_eq([200, 'deleted'], [$s, $out['old']]);
+    $posts = gw_posts_sent($log);
+    assert_eq(1, count($posts), 'один новый пост');
+    assert_true(strpos($posts[0][1]['text'], 'РОЗЫГРЫШ MAGNET') !== false, 'тот же пост');
+    assert_eq([[GW_CH_A, 50]], array_map(function ($c) { return [$c[1]['chat_id'], $c[1]['message_id']]; }, gw_sent($log, 'deleteMessage')), 'старый удалён');
+    $order = array_values(array_filter(array_map(function ($c) { return $c[0]; }, $log), function ($m) { return in_array($m, ['sendMessage', 'deleteMessage'], true); }));
+    assert_eq(['sendMessage', 'deleteMessage'], $order, 'сначала новый, потом удаление старого');
+    assert_eq(['message_id' => 101, 'results_at' => 0], gw_post_row($p, $id, GW_CH_A), 'бот правит новый');
+    assert_eq('https://t.me/maknemy_ch/101', $out['giveaway']['posts'][0]['url'], 'админка получила ссылку на новый');
+
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log, ['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: message to delete not found']),
+        ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_A], GW_NOW + 1);
+    assert_eq('gone', $out['old'], 'старый уже удалили руками');
+
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log, ['ok' => false, 'error_code' => 400, 'description' => "Bad Request: message can't be deleted"]),
+        ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_A], GW_NOW + 2);
+    assert_eq('kept', $out['old'], 'старше 48 часов — остался');
+
+    $log = [];
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_B], GW_NOW + 3);
+    assert_eq([200, 'none'], [$s, $out['old']], 'канала у розыгрыша не было — просто пост');
+    assert_eq(101, gw_post_row($p, $id, GW_CH_B)['message_id']);
+    assert_eq([], gw_sent($log, 'deleteMessage'), 'удалять нечего');
+});
+
+test('пост: «Выпустить заново» — Telegram не принял, без прав, не идёт', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A');
+    gw_channel($p, GW_CH_B, 'Канал B', false);
+    $cfg = gw_cfg();
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+
+    $log = [];
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log, null, false), ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_A], GW_NOW);
+    assert_eq([502, 'post_failed'], [$s, $out['error']]);
+    assert_eq([], gw_sent($log, 'deleteMessage'), 'новый не вышел — старый не трогаем');
+    assert_eq(101, gw_post_row($p, $id, GW_CH_A)['message_id'], 'в базе старый');
+
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_B], GW_NOW);
+    assert_eq([409, 'channel_cant_post'], [$s, $out['error']], 'бот не админ');
+    [$s] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => '-1009999999999'], GW_NOW);
+    assert_eq(404, $s, 'канал неизвестен');
+    [$s] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => 'x'], GW_NOW);
+    assert_eq(400, $s, 'кривой канал');
+    [$s] = handle_gw_admin($p, ['tg_bot_token' => ''], gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_A], GW_NOW);
+    assert_eq(503, $s, 'бот не настроен');
+
+    $p->prepare("UPDATE giveaways SET status = 'drawn' WHERE id = ?")->execute([$id]);
+    $log = [];
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $id, 'chat' => (string)GW_CH_A], GW_NOW);
+    assert_eq([409, 'not live'], [$s, $out['error']], 'после итогов нельзя');
+    assert_eq([], gw_posts_sent($log));
+
+    [, $d] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW);
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_repost($log), ['action' => 'repost', 'id' => $d['id'], 'chat' => (string)GW_CH_A], GW_NOW);
+    assert_eq([409, 'not live'], [$s, $out['error']], 'черновик — пост выйдет при публикации');
 });
 
 test('пост: итоги дописываются в пост, Telegram молчал — повтор через минуту', function () {
@@ -2265,7 +2400,7 @@ test('эмодзи: Telegram отказал — то же без премиум,
     };
     [, $out] = handle_gw_admin($p, gw_cfg(), $tg, ['action' => 'save', 'posts' => [GW_CH_A, GW_CH_B]] + gw_draft(), GW_NOW - 10);
     [$s, $out] = handle_gw_admin($p, gw_cfg(), $tg, ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);
-    assert_eq(['posted' => 2, 'edited' => 0, 'failed' => []], $out['post'], 'оба поста вышли');
+    assert_eq(['posted' => 2, 'edited' => 0, 'failed' => [], 'gone' => []], $out['post'], 'оба поста вышли');
     $sent = gw_sent($log);
     assert_eq(3, count($sent), 'отказ, повтор, второй канал сразу без премиум');
     $plain = $sent[1][1];
