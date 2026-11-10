@@ -6,6 +6,7 @@
   var SEEN_MS = 1000;
   var FLUSH_MS = 2500;
   var MAX_BATCH = 12;
+  var ROLL_MS = 3000;
 
   var PLACES = ["tier", "trade", "calc", "stock", "news", "hunt"];
 
@@ -34,10 +35,35 @@
     return { after: items[1] };
   }
 
+  function itemText(p) {
+    return (p.count > 1 ? p.count + " × " : "") + p.name;
+  }
+
   function prizeText(g, pickName) {
     var p = g && Array.isArray(g.prizes) ? g.prizes[0] : null;
     if (!p || !p.name) { return pickName(g); }
-    return (p.count > 1 ? p.count + " × " : "") + p.name;
+    return itemText(p);
+  }
+
+  function prizeItems(g) {
+    var list = g && Array.isArray(g.prizes) ? g.prizes : [];
+    var out = [];
+    var at = Object.create(null);
+    list.forEach(function (p) {
+      var name = p && typeof p.name === "string" ? p.name.trim() : "";
+      if (!name) { return; }
+      var key = name.toLowerCase();
+      var n = p.count > 0 ? p.count : 1;
+      var same = at[key];
+      if (same) {
+        same.count += n;
+        if (!same.icon && p.icon) { same.icon = p.icon; }
+        return;
+      }
+      at[key] = { name: name, count: n, icon: p.icon || "" };
+      out.push(at[key]);
+    });
+    return out;
   }
 
   var api = {
@@ -46,7 +72,9 @@
     liveOf: liveOf,
     choose: choose,
     feedRef: feedRef,
-    prizeText: prizeText
+    prizeText: prizeText,
+    prizeItems: prizeItems,
+    itemText: itemText
   };
 
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
@@ -63,6 +91,7 @@
   var counted = {};
   var watchers = {};
   var io = null;
+  var rollTimer = 0;
 
   function t(key, vars) { return GW.t(key, vars); }
 
@@ -89,6 +118,7 @@
   function prize(g) { return prizeText(g, function (x) { return GW.pick(x.title); }); }
 
   function extra(g) {
+    if (prizeItems(g).length) { return ""; }
     var n = Array.isArray(g.prizes) ? g.prizes.length - 1 : 0;
     return n > 0 ? t("gwc.more." + GW.plural(n), { n: n }) : "";
   }
@@ -128,8 +158,57 @@
   }
 
   function pic(g) {
-    var p = Array.isArray(g.prizes) ? g.prizes[0] : null;
-    return GW.prizePic(p, "gwc-pic");
+    var items = prizeItems(g);
+    if (items.length < 2) {
+      return GW.prizePic(items[0] || (Array.isArray(g.prizes) ? g.prizes[0] : null), "gwc-pic");
+    }
+    var box = el("span", "gwc-pic gwc-roll");
+    items.forEach(function (p, i) { box.appendChild(GW.prizePic(p, "gwc-alt" + (i ? "" : " is-on"))); });
+    return box;
+  }
+
+  function put(box, what) {
+    (Array.isArray(what) ? what : [what]).forEach(function (n) {
+      if (n == null || n === "") { return; }
+      box.appendChild(typeof n === "string" ? document.createTextNode(n) : n);
+    });
+  }
+
+  function roll(tag, cls, g, make) {
+    var items = prizeItems(g);
+    var list = items.length ? items.map(itemText) : [prize(g)];
+    var box = el(tag, cls);
+    if (list.length < 2) { put(box, make(list[0])); return box; }
+    box.classList.add("gwc-roll");
+    list.forEach(function (s, i) {
+      var alt = el("span", "gwc-alt" + (i ? "" : " is-on"));
+      put(alt, make(s));
+      box.appendChild(alt);
+    });
+    return box;
+  }
+
+  function tick() {
+    var cards = document.querySelectorAll(".gwc[data-gwc-n]");
+    if (!cards.length) { clearInterval(rollTimer); rollTimer = 0; return; }
+    if (document.visibilityState === "hidden") { return; }
+    Array.prototype.forEach.call(cards, function (a) {
+      if (a.matches(":hover") || a.matches(":focus-within")) { return; }
+      var n = +a.getAttribute("data-gwc-n");
+      var i = ((+a.getAttribute("data-gwc-i") || 0) + 1) % n;
+      a.setAttribute("data-gwc-i", String(i));
+      a.querySelectorAll(".gwc-roll").forEach(function (box) {
+        Array.prototype.forEach.call(box.children, function (c, k) { c.classList.toggle("is-on", k === i); });
+      });
+    });
+  }
+
+  function rollOn(a, g) {
+    var n = prizeItems(g).length;
+    if (n < 2) { return; }
+    a.setAttribute("data-gwc-n", String(n));
+    a.setAttribute("data-gwc-i", "0");
+    if (!rollTimer) { rollTimer = setInterval(tick, ROLL_MS); }
   }
 
   function check() {
@@ -160,17 +239,17 @@
     return box;
   }
 
-  function rich(cls, key, vars) {
+  function rich(key, vars) {
     var mark = String.fromCharCode(1);
     var copy = {};
     Object.keys(vars).forEach(function (k) { copy[k] = vars[k]; });
     copy.prize = mark;
-    var box = el("span", cls);
+    var out = [];
     t(key, copy).split(mark).forEach(function (part, i) {
-      if (i) { box.appendChild(el("b", "gwc-prize", vars.prize)); }
-      if (part) { box.appendChild(document.createTextNode(part)); }
+      if (i) { out.push(el("b", "gwc-prize", vars.prize)); }
+      if (part) { out.push(part); }
     });
-    return box;
+    return out;
   }
 
   function tag(key) {
@@ -185,7 +264,7 @@
       var body = el("span", "gwc-body");
       var line = el("span", "gwc-line");
       line.appendChild(GW.giftIcon("gwc-gift"));
-      line.appendChild(el("b", "gwc-title", t("gwc.tierLine", { prize: prize(g) })));
+      line.appendChild(roll("b", "gwc-title", g, function (s) { return t("gwc.tierLine", { prize: s }); }));
       body.appendChild(line);
       body.appendChild(meta(g, false));
       return [pic(g), body, button("gwc.see")];
@@ -193,35 +272,37 @@
     trade: function (g) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.tradeHead"));
-      var text = rich("gwc-text", "gwc.tradeLead", { prize: prize(g) });
-      text.appendChild(el("span", "gwc-when" + (byCount(g) ? " gwc-count" : ""), " " + when(g, true) + "."));
-      body.appendChild(text);
+      body.appendChild(roll("span", "gwc-text", g, function (s) {
+        return rich("gwc.tradeLead", { prize: s })
+          .concat(el("span", "gwc-when" + (byCount(g) ? " gwc-count" : ""), " " + when(g, true) + "."));
+      }));
       var sp = spots(g);
       if (sp) { body.appendChild(el("span", "gwc-spots gwc-count", sp)); }
       return [pic(g), body, button("gwc.open")];
     },
     calc: function (g) {
       var body = el("span", "gwc-body");
-      body.appendChild(rich("gwc-text", "gwc.calcText", { prize: prize(g) }));
+      body.appendChild(roll("span", "gwc-text", g, function (s) { return rich("gwc.calcText", { prize: s }); }));
       return [pic(g), body, button("gwc.watch")];
     },
     stock: function (g, info) {
-      var many = info.count > 1 || (Array.isArray(g.prizes) && g.prizes.length > 1);
+      var kinds = prizeItems(g).length || (Array.isArray(g.prizes) ? g.prizes.length : 0);
+      var key = info.count > 1 || kinds > 1 ? "gwc.stockText" : "gwc.stockTextOne";
       var body = el("span", "gwc-body");
-      body.appendChild(rich("gwc-text", many ? "gwc.stockText" : "gwc.stockTextOne", { prize: prize(g) }));
+      body.appendChild(roll("span", "gwc-text", g, function (s) { return rich(key, { prize: s }); }));
       return [pic(g), body, button("gwc.seeAll")];
     },
     news: function (g) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.kicker"));
-      body.appendChild(el("b", "gwc-title", prize(g)));
+      body.appendChild(roll("b", "gwc-title", g, function (s) { return s; }));
       body.appendChild(meta(g, true));
       return [pic(g), body, button("gwc.see")];
     },
     hunt: function (g) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.huntKicker"));
-      body.appendChild(el("b", "gwc-title", prize(g)));
+      body.appendChild(roll("b", "gwc-title", g, function (s) { return s; }));
       body.appendChild(meta(g, true));
       return [pic(g), body, button("gwc.huntBtn")];
     }
@@ -271,6 +352,7 @@
     a.href = hrefFor(place, g);
     a.setAttribute("data-gwc-id", String(g.id));
     BUILD[place](g, pick).forEach(function (n) { if (n) { a.appendChild(n); } });
+    rollOn(a, g);
     if (pick.joined && place !== "stock") {
       var body = a.querySelector(".gwc-body");
       if (body) { body.appendChild(joinedMark()); }

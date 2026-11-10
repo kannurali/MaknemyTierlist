@@ -46,7 +46,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=6" />
-<link rel="stylesheet" href="css/gw-card.css?v=2" />
+<link rel="stylesheet" href="css/gw-card.css?v=3" />
 
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -333,6 +333,6 @@ page_lscache();
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/hunt-page.js?v=5" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
-  <script src="js/gw-card.js?v=4" fetchpriority="high"></script>
+  <script src="js/gw-card.js?v=5" fetchpriority="high"></script>
 </body>
 </html>
