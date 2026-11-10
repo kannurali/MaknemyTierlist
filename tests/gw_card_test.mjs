@@ -24,16 +24,48 @@ test('places match the server list and become c-* sources', () => {
   });
 });
 
-test('choose: the first running giveaway the visitor has not joined', () => {
-  const d = { live: [live(1), live(2), live(3, { ends_at: NOW - 1 }), live(4, { phase: 'ended' })] };
-  assert.deepEqual(GWC.choose(d, () => false, NOW), { g: d.live[0], joined: false, count: 2 });
-  assert.equal(GWC.choose(d, id => id === 1, NOW).g.id, 2, 'skips the joined one');
-  const all = GWC.choose(d, () => true, NOW);
-  assert.equal(all.g.id, 1, 'all joined — still shows the first');
-  assert.equal(all.joined, true);
+test('choose: every running giveaway the visitor has not joined, all of them when every one is joined', () => {
+  const d = { live: [live(1), live(2), live(5), live(3, { ends_at: NOW - 1 }), live(4, { phase: 'ended' })] };
+  const ids = p => p.list.map(e => e.g.id);
+  const all = GWC.choose(d, () => false, NOW);
+  assert.deepEqual(ids(all), [1, 2, 5], 'owner 2026-11-10: the card goes round every live giveaway');
+  assert.equal(all.count, 3);
+  assert.ok(all.list.every(e => e.joined === false));
+  assert.deepEqual(ids(GWC.choose(d, id => id === 2, NOW)), [1, 5], 'skips the joined one');
+  const joined = GWC.choose(d, () => true, NOW);
+  assert.deepEqual(ids(joined), [1, 2, 5], 'all joined — still shows them, marked');
+  assert.ok(joined.list.every(e => e.joined === true));
   assert.equal(GWC.choose({ live: [] }, () => false, NOW), null, 'nothing running — no card');
   assert.equal(GWC.choose(null, () => false, NOW), null);
   assert.equal(GWC.choose({ live: [live(3, { ends_at: NOW })] }, () => false, NOW), null, 'ended exactly now');
+});
+
+test('turn: the round starts at another giveaway, order kept', () => {
+  const p = GWC.choose({ live: [live(1), live(2), live(3)] }, () => false, NOW);
+  const ids = q => q.list.map(e => e.g.id);
+  assert.deepEqual(ids(GWC.turn(p, 0)), [1, 2, 3]);
+  assert.deepEqual(ids(GWC.turn(p, 1)), [2, 3, 1]);
+  assert.deepEqual(ids(GWC.turn(p, 5)), [3, 1, 2]);
+  assert.equal(GWC.turn(p, 1).count, 3);
+  assert.deepEqual(ids(p), [1, 2, 3], 'the pick itself is not touched');
+  assert.equal(GWC.turn(null, 2), null);
+});
+
+test('slides: every prize of every giveaway, repeats folded, a giveaway without prizes shows its title', () => {
+  const venom = { name: 'Venom', count: 1, icon: '/i/v.webp' };
+  const d = { live: [
+    live(8, { prizes: [venom, venom, { name: 'Hellfire', count: 1, icon: '/i/h.png' }] }),
+    live(2, { prizes: [{ name: 'Werewolf', count: 1, icon: '' }, { name: 'Tiger Fruit', count: 2, icon: '' }] }),
+    live(9, { prizes: [], title: { ru: 'Сюрприз' } })
+  ] };
+  const p = GWC.choose(d, () => false, NOW);
+  const s = GWC.slides(p, g => g.title.ru);
+  assert.deepEqual(s.map(x => [x.g.id, x.text]), [
+    [8, '2 × Venom'], [8, 'Hellfire'], [2, 'Werewolf'], [2, '2 × Tiger Fruit'], [9, 'Сюрприз']
+  ]);
+  assert.equal(s[0].prize.icon, '/i/v.webp', 'the picture goes with its prize');
+  assert.equal(s[4].prize, null, 'no prize — the gift picture');
+  assert.deepEqual(GWC.slides(null, () => ''), []);
 });
 
 test('feedRef: after the second listing, after the third when an ad already sits there', () => {
