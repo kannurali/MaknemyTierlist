@@ -20,10 +20,19 @@
   function choose(d, joined, nowSec) {
     var live = liveOf(d, nowSec);
     if (!live.length) { return null; }
-    for (var i = 0; i < live.length; i++) {
-      if (!joined(live[i].id)) { return { g: live[i], joined: false, count: live.length }; }
-    }
-    return { g: live[0], joined: true, count: live.length };
+    var fresh = live.filter(function (g) { return !joined(g.id); });
+    var all = !fresh.length;
+    return {
+      list: (all ? live : fresh).map(function (g) { return { g: g, joined: all }; }),
+      count: live.length
+    };
+  }
+
+  function turn(p, k) {
+    if (!p || p.list.length < 2) { return p; }
+    var n = p.list.length;
+    var at = ((k % n) + n) % n;
+    return { list: p.list.slice(at).concat(p.list.slice(0, at)), count: p.count };
   }
 
   function feedRef(items, isAd, self) {
@@ -66,15 +75,31 @@
     return out;
   }
 
+  function slides(p, pickName) {
+    var out = [];
+    (p ? p.list : []).forEach(function (e) {
+      var items = prizeItems(e.g);
+      if (!items.length) {
+        var first = Array.isArray(e.g.prizes) ? e.g.prizes[0] || null : null;
+        out.push({ g: e.g, joined: e.joined, text: prizeText(e.g, pickName), prize: first });
+        return;
+      }
+      items.forEach(function (it) { out.push({ g: e.g, joined: e.joined, text: itemText(it), prize: it }); });
+    });
+    return out;
+  }
+
   var api = {
     PLACES: PLACES,
     src: src,
     liveOf: liveOf,
     choose: choose,
+    turn: turn,
     feedRef: feedRef,
     prizeText: prizeText,
     prizeItems: prizeItems,
-    itemText: itemText
+    itemText: itemText,
+    slides: slides
   };
 
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
@@ -114,8 +139,6 @@
   function writeHint(on) {
     try { localStorage.setItem(HINT_KEY, on ? "1" : "0"); } catch (_) {}
   }
-
-  function prize(g) { return prizeText(g, function (x) { return GW.pick(x.title); }); }
 
   function extra(g) {
     if (prizeItems(g).length) { return ""; }
@@ -157,58 +180,14 @@
     return b;
   }
 
-  function pic(g) {
-    var items = prizeItems(g);
-    if (items.length < 2) {
-      return GW.prizePic(items[0] || (Array.isArray(g.prizes) ? g.prizes[0] : null), "gwc-pic");
-    }
-    var box = el("span", "gwc-pic gwc-roll");
-    items.forEach(function (p, i) { box.appendChild(GW.prizePic(p, "gwc-alt" + (i ? "" : " is-on"))); });
-    return box;
-  }
+  function pic(s) { return GW.prizePic(s.prize, "gwc-pic"); }
 
   function put(box, what) {
-    (Array.isArray(what) ? what : [what]).forEach(function (n) {
+    what.forEach(function (n) {
       if (n == null || n === "") { return; }
       box.appendChild(typeof n === "string" ? document.createTextNode(n) : n);
     });
-  }
-
-  function roll(tag, cls, g, make) {
-    var items = prizeItems(g);
-    var list = items.length ? items.map(itemText) : [prize(g)];
-    var box = el(tag, cls);
-    if (list.length < 2) { put(box, make(list[0])); return box; }
-    box.classList.add("gwc-roll");
-    list.forEach(function (s, i) {
-      var alt = el("span", "gwc-alt" + (i ? "" : " is-on"));
-      put(alt, make(s));
-      box.appendChild(alt);
-    });
     return box;
-  }
-
-  function tick() {
-    var cards = document.querySelectorAll(".gwc[data-gwc-n]");
-    if (!cards.length) { clearInterval(rollTimer); rollTimer = 0; return; }
-    if (document.visibilityState === "hidden") { return; }
-    Array.prototype.forEach.call(cards, function (a) {
-      if (a.matches(":hover") || a.matches(":focus-within")) { return; }
-      var n = +a.getAttribute("data-gwc-n");
-      var i = ((+a.getAttribute("data-gwc-i") || 0) + 1) % n;
-      a.setAttribute("data-gwc-i", String(i));
-      a.querySelectorAll(".gwc-roll").forEach(function (box) {
-        Array.prototype.forEach.call(box.children, function (c, k) { c.classList.toggle("is-on", k === i); });
-      });
-    });
-  }
-
-  function rollOn(a, g) {
-    var n = prizeItems(g).length;
-    if (n < 2) { return; }
-    a.setAttribute("data-gwc-n", String(n));
-    a.setAttribute("data-gwc-i", "0");
-    if (!rollTimer) { rollTimer = setInterval(tick, ROLL_MS); }
   }
 
   function check() {
@@ -260,51 +239,52 @@
   }
 
   var BUILD = {
-    tier: function (g) {
+    tier: function (s) {
       var body = el("span", "gwc-body");
       var line = el("span", "gwc-line");
       line.appendChild(GW.giftIcon("gwc-gift"));
-      line.appendChild(roll("b", "gwc-title", g, function (s) { return t("gwc.tierLine", { prize: s }); }));
+      line.appendChild(el("b", "gwc-title", t("gwc.tierLine", { prize: s.text })));
       body.appendChild(line);
-      body.appendChild(meta(g, false));
-      return [pic(g), body, button("gwc.see")];
+      body.appendChild(meta(s.g, false));
+      return [pic(s), body, button("gwc.see")];
     },
-    trade: function (g) {
+    trade: function (s) {
+      var g = s.g;
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.tradeHead"));
-      body.appendChild(roll("span", "gwc-text", g, function (s) {
-        return rich("gwc.tradeLead", { prize: s })
-          .concat(el("span", "gwc-when" + (byCount(g) ? " gwc-count" : ""), " " + when(g, true) + "."));
-      }));
+      var text = put(el("span", "gwc-text"), rich("gwc.tradeLead", { prize: s.text }));
+      text.appendChild(el("span", "gwc-when" + (byCount(g) ? " gwc-count" : ""), " " + when(g, true) + "."));
+      body.appendChild(text);
       var sp = spots(g);
       if (sp) { body.appendChild(el("span", "gwc-spots gwc-count", sp)); }
-      return [pic(g), body, button("gwc.open")];
+      return [pic(s), body, button("gwc.open")];
     },
-    calc: function (g) {
+    calc: function (s) {
       var body = el("span", "gwc-body");
-      body.appendChild(roll("span", "gwc-text", g, function (s) { return rich("gwc.calcText", { prize: s }); }));
-      return [pic(g), body, button("gwc.watch")];
+      body.appendChild(put(el("span", "gwc-text"), rich("gwc.calcText", { prize: s.text })));
+      return [pic(s), body, button("gwc.watch")];
     },
-    stock: function (g, info) {
+    stock: function (s, info) {
+      var g = s.g;
       var kinds = prizeItems(g).length || (Array.isArray(g.prizes) ? g.prizes.length : 0);
       var key = info.count > 1 || kinds > 1 ? "gwc.stockText" : "gwc.stockTextOne";
       var body = el("span", "gwc-body");
-      body.appendChild(roll("span", "gwc-text", g, function (s) { return rich(key, { prize: s }); }));
-      return [pic(g), body, button("gwc.seeAll")];
+      body.appendChild(put(el("span", "gwc-text"), rich(key, { prize: s.text })));
+      return [pic(s), body, button("gwc.seeAll")];
     },
-    news: function (g) {
+    news: function (s) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.kicker"));
-      body.appendChild(roll("b", "gwc-title", g, function (s) { return s; }));
-      body.appendChild(meta(g, true));
-      return [pic(g), body, button("gwc.see")];
+      body.appendChild(el("b", "gwc-title", s.text));
+      body.appendChild(meta(s.g, true));
+      return [pic(s), body, button("gwc.see")];
     },
-    hunt: function (g) {
+    hunt: function (s) {
       var body = el("span", "gwc-body");
       body.appendChild(tag("gwc.huntKicker"));
-      body.appendChild(roll("b", "gwc-title", g, function (s) { return s; }));
-      body.appendChild(meta(g, true));
-      return [pic(g), body, button("gwc.huntBtn")];
+      body.appendChild(el("b", "gwc-title", s.text));
+      body.appendChild(meta(s.g, true));
+      return [pic(s), body, button("gwc.huntBtn")];
     }
   };
 
@@ -344,22 +324,59 @@
   function fill(shell, place) {
     shell.textContent = "";
     shell.classList.remove("is-wait");
+    shell.gwcSlides = null;
     if (!pick && IDLE[place]) { idle(shell, place); return; }
     if (!pick) { shell.hidden = true; return; }
     shell.hidden = false;
-    var g = pick.g;
-    var a = el("a", "gwc gwc--" + place + (pick.joined ? " is-joined" : ""));
-    a.href = hrefFor(place, g);
-    a.setAttribute("data-gwc-id", String(g.id));
-    BUILD[place](g, pick).forEach(function (n) { if (n) { a.appendChild(n); } });
-    rollOn(a, g);
-    if (pick.joined && place !== "stock") {
-      var body = a.querySelector(".gwc-body");
-      if (body) { body.appendChild(joinedMark()); }
-    }
-    a.addEventListener("click", function () { onClick(place, g.id); });
+    var list = slides(pick, function (x) { return GW.pick(x.title); });
+    var many = list.length > 1;
+    var a = el("a", "gwc gwc--" + place);
+    var btn = null;
+    list.forEach(function (s, i) {
+      var parts = BUILD[place](s, pick);
+      if (s.joined && place !== "stock") { parts[1].appendChild(joinedMark()); }
+      [parts[0], parts[1]].forEach(function (n) {
+        if (many) { n.setAttribute("data-gwc-s", String(i)); }
+        a.appendChild(n);
+      });
+      if (!btn) { btn = parts[2]; }
+    });
+    a.appendChild(btn);
+    a.addEventListener("click", function () { onClick(place, +a.getAttribute("data-gwc-id")); });
     shell.appendChild(a);
-    watch(shell, place, g.id);
+    shell.gwcSlides = list;
+    show(shell, a, place, 0);
+    if (many && !rollTimer) { rollTimer = setInterval(tick, ROLL_MS); }
+  }
+
+  function show(shell, a, place, i) {
+    var list = shell.gwcSlides;
+    var s = list[i];
+    a.href = hrefFor(place, s.g);
+    a.setAttribute("data-gwc-id", String(s.g.id));
+    a.classList.toggle("is-joined", !!s.joined);
+    if (list.length > 1) {
+      a.setAttribute("data-gwc-i", String(i));
+      Array.prototype.forEach.call(a.querySelectorAll("[data-gwc-s]"), function (n) {
+        n.classList.toggle("is-off", +n.getAttribute("data-gwc-s") !== i);
+      });
+    }
+    watch(shell, place, s.g.id);
+  }
+
+  function tick() {
+    if (document.visibilityState === "hidden") { return; }
+    var any = false;
+    Object.keys(nodes).forEach(function (place) {
+      var shell = nodes[place];
+      var list = shell.gwcSlides;
+      var a = shell.firstElementChild;
+      if (!list || list.length < 2 || !a) { return; }
+      any = true;
+      if (!shell.isConnected || a.matches(":hover") || a.matches(":focus-within")) { return; }
+      show(shell, a, place, ((+a.getAttribute("data-gwc-i") || 0) + 1) % list.length);
+    });
+    if (!any) { clearInterval(rollTimer); rollTimer = 0; }
   }
 
   function nodeFor(place) {
@@ -430,6 +447,8 @@
         });
       }, { threshold: [0, 0.5, 1] });
     }
+    if (shell.getAttribute("data-gwc-gid") === String(id)) { return; }
+    if (watchers[place]) { clearTimeout(watchers[place]); watchers[place] = 0; }
     shell.setAttribute("data-gwc-gid", String(id));
     io.unobserve(shell);
     io.observe(shell);
@@ -490,12 +509,17 @@
     if (feed) { placeFeed(feed, feed.getAttribute("data-gwc-feed") || "li"); }
   }
 
-  function sig(p) { return p ? p.g.id + ":" + p.joined + ":" + p.count : ""; }
+  function sig(p) {
+    return p ? p.list.map(function (e) { return e.g.id + ":" + e.joined; }).join(",") + "/" + p.count : "";
+  }
 
   function start() {
     mountAll();
+    var seed = Math.floor(Math.random() * 1000);
     GW.load().then(function (d) {
-      var next = function (s) { return choose(d, function (id) { return GW.isJoined(id, s); }, Date.now() / 1000) || false; };
+      var next = function (s) {
+        return turn(choose(d, function (id) { return GW.isJoined(id, s); }, Date.now() / 1000), seed) || false;
+      };
       pick = next(null);
       writeHint(!!pick);
       render();
