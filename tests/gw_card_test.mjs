@@ -67,6 +67,27 @@ test('prizeText: count × name, title when there are no prizes', () => {
   assert.equal(GWC.prizeText({ prizes: [], title: { ru: 'Розыгрыш' } }, title), 'Розыгрыш');
 });
 
+test('prizeItems: every item once, in prize order, repeats folded into one with the total count', () => {
+  const g = { prizes: [
+    { name: 'Venom', count: 1, icon: '' },
+    { name: 'Gas', count: 2, icon: '/i/gas.webp' },
+    { name: ' venom ', count: 2, icon: '/i/venom.webp' },
+    { name: '', count: 3, icon: '/i/x.webp' },
+    { name: 'Gas', count: 0, icon: '' }
+  ] };
+  assert.deepEqual(GWC.prizeItems(g), [
+    { name: 'Venom', count: 3, icon: '/i/venom.webp' },
+    { name: 'Gas', count: 3, icon: '/i/gas.webp' }
+  ]);
+  assert.deepEqual(GWC.prizeItems(g).map(GWC.itemText), ['3 × Venom', '3 × Gas']);
+  assert.deepEqual(GWC.prizeItems({ prizes: [{ name: 'Kitsune Fruit', count: 1 }] }).map(GWC.itemText), ['Kitsune Fruit']);
+  assert.deepEqual(GWC.prizeItems({ prizes: [] }), []);
+  assert.deepEqual(GWC.prizeItems(null), []);
+  assert.deepEqual(GWC.prizeItems({ prizes: [{ name: '__proto__', count: 1 }, { name: '__proto__', count: 1 }] }),
+    [{ name: '__proto__', count: 2, icon: '' }], 'odd names are plain keys');
+  assert.equal(g.prizes[0].count, 1, 'the giveaway itself is not touched');
+});
+
 test('i18n: every gwc key exists in both languages', () => {
   const keys = ['gwc.kicker', 'gwc.tierLine', 'gwc.endsAt', 'gwc.endsAtDash', 'gwc.endsCount',
     'gwc.people.one', 'gwc.people.few', 'gwc.people.many', 'gwc.more.one', 'gwc.more.few', 'gwc.more.many',
