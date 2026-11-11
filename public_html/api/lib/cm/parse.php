@@ -153,11 +153,16 @@ const CM_COMMANDS = [
     'вернуть брак'       => ['remarry', 'отношения', 0, true, false],
     'браки'              => ['marry_top', 'отношения', 0, true, false],
     '+клан'              => ['clan_add', 'кланы', 0, false, false],
-    '-клан'              => ['clan_del', 'кланы', 0, true, false],
+    '-клан'              => ['clan_del', 'кланы', 0, false, false],
+    'удалить клан'       => ['clan_del', 'кланы', 0, false, false],
+    'распустить клан'    => ['clan_del', 'кланы', 0, false, false],
     'клан'               => ['clan_show', 'кланы', 0, false, false],
     'кланы'              => ['clan_top', 'кланы', 0, true, false],
     'вступить'           => ['clan_join', 'кланы', 0, false, false],
     'покинуть клан'      => ['clan_leave', 'кланы', 0, true, false],
+    'выйти из клана'     => ['clan_leave', 'кланы', 0, true, false],
+    'выйти с клана'      => ['clan_leave', 'кланы', 0, true, false],
+    'уйти из клана'      => ['clan_leave', 'кланы', 0, true, false],
     'пригласить'         => ['clan_invite', 'кланы', 0, false, true],
     'исключить'          => ['clan_kick', 'кланы', 0, false, true],
     'клан открыт'        => ['clan_open', 'кланы', 0, true, false],
@@ -216,6 +221,7 @@ const CM_BARE_ARGS = [
     'marry'       => '~^$~',
     'clan_show'   => '~^$~',
     'clan_join'   => '~^[\p{L}\p{N}][\p{L}\p{N} -]{1,40}$~u',
+    'clan_del'    => '~^(?:[\p{L}\p{N}][\p{L}\p{N} -]{1,40})?$~u',
     'clan_invite' => '~^$~',
     'clan_kick'   => '~^$~',
 ];
@@ -438,32 +444,47 @@ function cm_target(PDO $pdo, array $msg, string &$args, ?string &$why = null): ?
         $u = $e['user'];
         return cm_target_full($pdo, ['id' => (int)($u['id'] ?? 0), 'name' => cm_display_name($u), 'is_bot' => !empty($u['is_bot']), 'msg_id' => 0]);
     }
-    $orig = $args;
-    $lead = '';
-    if (preg_match('~^(\d)\s+~', $args, $lm)) {
-        $lead = $lm[1];
-        $args = substr($args, strlen($lm[0]));
-    }
-    $found = null;
-    if (preg_match('~^(?:@|(?:https?://)?t\.me/)([A-Za-z]\w{3,31})(?!\w)~iu', $args, $m)) {
-        $u = cm_user_find($pdo, $m[1]);
+    $tok = cm_target_token($args);
+    if ($tok === null) { return null; }
+    if ($tok['nick'] !== '') {
+        $u = cm_user_find($pdo, $tok['nick']);
         if ($u === null) {
             $why = 'unknown';
-        } else {
-            $found = ['id' => $u['user_id'], 'name' => $u['name'], 'is_bot' => false, 'msg_id' => 0];
-            $args = ltrim(substr($args, strlen($m[0])));
+            return null;
         }
-    } elseif (preg_match('~^(\d{5,15})(?!\d)~', $args, $m)) {
-        $id = (int)$m[1];
-        $found = ['id' => $id, 'name' => cm_user_name($pdo, $id), 'is_bot' => false, 'msg_id' => 0];
-        $args = ltrim(substr($args, strlen($m[0])));
+        $found = ['id' => $u['user_id'], 'name' => $u['name'], 'is_bot' => false, 'msg_id' => 0];
+    } else {
+        $found = ['id' => $tok['id'], 'name' => cm_user_name($pdo, $tok['id']), 'is_bot' => false, 'msg_id' => 0];
     }
-    if ($found === null) {
-        $args = $orig;
-        return null;
-    }
-    $args = trim($lead . ' ' . $args);
+    $args = $tok['args'];
     return cm_target_full($pdo, $found);
+}
+
+/**
+ * @ник, t.me/ник или id в начале $args — сразу, после ранга («+модер 2 @ник»)
+ * или после срока («бан 1 месяц t.me/ник»: так пишут, когда человека нет
+ * под рукой ответом). null — цели нет; иначе nick (без @) или id и args —
+ * строка без цели, ранг и срок остаются первыми.
+ */
+function cm_target_token(string $args): ?array {
+    $heads = [''];
+    if (preg_match('~^\d\s+~', $args, $m)) { $heads[] = $m[0]; }
+    $rest = $args;
+    if (cm_take_term($rest) !== null) { $heads[] = substr($args, 0, strlen($args) - strlen($rest)); }
+    foreach ($heads as $head) {
+        $s = substr($args, strlen($head));
+        if (preg_match('~^(?:@|(?:https?://)?t\.me/)([A-Za-z]\w{3,31})(?!\w)~iu', $s, $m)) {
+            $nick = $m[1];
+            $id = 0;
+        } elseif (preg_match('~^(\d{5,15})(?!\d)~', $s, $m)) {
+            $nick = '';
+            $id = (int)$m[1];
+        } else {
+            continue;
+        }
+        return ['nick' => $nick, 'id' => $id, 'args' => trim(rtrim($head) . ' ' . ltrim(substr($s, strlen($m[0]))))];
+    }
+    return null;
 }
 
 // who — ник-ссылка с упоминанием (событие о человеке), tag — тихая ссылка

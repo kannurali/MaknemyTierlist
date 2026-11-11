@@ -2,9 +2,10 @@
 // Разбор апдейта и запуск команд. Вызывается из api/tg_webhook.php уже после
 // ответа Telegram: 200 ушёл сразу, вызовы Telegram идут следом.
 
-// В личке бот понимает только команды базы спамеров (для сотрудников сайта),
-// остальное в личке — уведомления, как раньше (tg_handle_update).
-const CM_PRIVATE_HANDLERS = ['spam_add', 'spam_del', 'spam_check'];
+// В личке бот понимает только команды базы спамеров (для сотрудников сайта)
+// и выход из клана, остальное в личке — уведомления, как раньше
+// (tg_handle_update).
+const CM_PRIVATE_HANDLERS = ['spam_add', 'spam_del', 'spam_check', 'clan_leave'];
 
 function cm_wants_update(array $update, string $botName): bool {
     foreach (['message', 'edited_message'] as $k) {
@@ -68,7 +69,7 @@ function cm_service_drop(array $ctx): void {
  *  -. служебное (вход, выход, закреп…) — вход и выход учесть, само убрать;
  *  0. от имени этой группы или автопересылка своего канала — не трогаем;
  *     от имени чужого канала — только удаляем (канал не замутить);
- *  1. запомнить автора;
+ *  1. запомнить автора; его ник ждёт бана (punish.php, cm_ban_nick_hit) — бан;
  *  2. спамер из базы — бан;
  *  3. +1 сообщение в статистику (этап 2, stats.php);
  *  4. ответ «+» / «спасибо» — голос репутации (этап 2, rep.php);
@@ -124,6 +125,10 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
         cm_user_touch($pdo, $from, $now);
         cm_member_touch($pdo, $chatId, $uid, $now);
         cm_msg_log($pdo, $chatId, (int)($msg['message_id'] ?? 0), $uid, cm_text_of($msg), $now);
+        if (cm_ban_nick_hit($ctx, $from)) {
+            $send('deleteMessage', ['chat_id' => $chatId, 'message_id' => (int)($msg['message_id'] ?? 0)]);
+            return;
+        }
     }
     if (!empty($chat['settings']['filters']['spam']) && !cm_exempt($ctx, $uid) && cm_spam_has($pdo, $uid)) {
         cm_apply_actions($ctx, $uid, (int)($msg['message_id'] ?? 0), cm_trigger_actions($chat, 'spam'), cm_t('reason_spam'), 0);
@@ -151,7 +156,8 @@ function cm_on_message(PDO $pdo, array $cfg, callable $send, array $msg, bool $e
  * неё не хватило ранга (иначе «!бан @ник ссылка» проносил бы ссылку мимо
  * фильтра).
  *  - команда уровня 0 без префикса — только если строка ровно команда;
- *  - команда с целью без префикса — только если цель нашлась;
+ *  - команда с целью без префикса — только если цель нашлась; у «бан» —
+ *    и незнакомый @ник: такой бан ждёт ника (cm_ban_later, punish.php);
  *  - без ранга: с префиксом, с найденной целью или ровно командой —
  *    ответ «нужен ранг», иначе молча, как обычная речь. Так «бан» ответом
  *    без точки не пропадает в тишине;
@@ -169,7 +175,9 @@ function cm_run_command(array $ctx, array $cmd): bool {
     if (!$cmd['prefixed'] && $cmd['exact'] && ($cmd['args'] !== '' || trim($cmd['body']) !== '')) { return false; }
     if (!$cmd['prefixed'] && $cmd['target']) {
         $a = $cmd['args'];
-        if (cm_target($ctx['pdo'], $ctx['msg'], $a) === null) { return false; }
+        $why = null;
+        $t = cm_target($ctx['pdo'], $ctx['msg'], $a, $why);
+        if ($t === null && !($why === 'unknown' && $cmd['handler'] === 'ban')) { return false; }
     }
     $fn = 'cm_cmd_' . $cmd['handler'];
     if (!function_exists($fn)) { return false; }

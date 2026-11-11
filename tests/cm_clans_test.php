@@ -262,4 +262,51 @@ test('без префикса — по правилам команд; дк кл�
     assert_eq(cm_t('not_ready2'), cm_last_text($log));
 });
 
+test('-клан Название: чужой распускает только ранг 5, свой — глава', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cl_people($pdo);
+    cl_do($pdo, $log, 7, '+клан Волки');
+    cl_do($pdo, $log, 20, 'вступить Волки');
+    cm_lvl($pdo, 21, 4);
+    cl_do($pdo, $log, 21, '-клан Волки');
+    assert_eq('Чужой клан распускает только ранг 5. Свой — «-клан».', cm_last_text($log));
+    cl_do($pdo, $log, CM_OWNER, '-клан Медведи');
+    assert_eq('Клана «Медведи» нет.', cm_last_text($log));
+    cl_do($pdo, $log, CM_OWNER, 'удалить клан волки');
+    assert_eq('💥 Клан «Волки» распущен.', cm_last_text($log));
+    assert_eq([0, 0], [(int)$pdo->query('SELECT COUNT(*) FROM cm_clans')->fetchColumn(),
+        (int)$pdo->query('SELECT COUNT(*) FROM cm_clan_members')->fetchColumn()]);
+    cl_do($pdo, $log, 22, '+клан Ёжики');
+    cl_do($pdo, $log, 22, 'распустить клан Ежики');
+    assert_eq('💥 Клан «Ёжики» распущен.', cm_last_text($log));
+    $run = function (string $text) use ($pdo, &$log): bool {
+        return cm_run_command(cm_ctx_for($pdo, $log, CM_OWNER, $text), cm_parse($text, CM_BOT));
+    };
+    assert_eq(false, $run('удалить клан нельзя?'), 'обычная речь');
+});
+
+test('выйти из клана — синонимами и в личке бота; глава не уходит', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cl_people($pdo);
+    cl_do($pdo, $log, 7, '+клан Волки');
+    cl_do($pdo, $log, 20, 'вступить Волки');
+    cl_do($pdo, $log, 21, 'вступить Волки');
+    cl_do($pdo, $log, 20, 'выйти из клана');
+    assert_eq('U20 покидает клан «Волки».', cm_last_text($log));
+    $log = [];
+    $p = ['message_id' => 1, 'chat' => ['id' => 21, 'type' => 'private'], 'from' => ['id' => 21, 'first_name' => 'Коля'], 'text' => 'уйти из клана'];
+    assert_eq(true, cm_wants_update(['message' => $p], CM_BOT));
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => $p], CM_NOW);
+    assert_eq([21, 'Коля покидает клан «Волки».'], [cm_calls($log, 'sendMessage')[0][1]['chat_id'], cm_last_text($log)]);
+    assert_eq([7], cl_members($pdo, 1));
+    cl_do($pdo, $log, 7, 'выйти с клана');
+    assert_eq(cm_t('clan_owner_stays'), cm_last_text($log));
+    $run = function (string $text) use ($pdo, &$log): bool {
+        return cm_run_command(cm_ctx_for($pdo, $log, 7, $text), cm_parse($text, CM_BOT));
+    };
+    assert_eq(false, $run('выйти из клана хочу'), 'обычная речь');
+});
+
 run_tests();

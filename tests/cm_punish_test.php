@@ -204,4 +204,109 @@ test('действия триггера: удаление первым, итог
     assert_eq('', cm_apply_actions($ctx, 20, 556, [['kind' => 'delete', 'secs' => 0]], 'тест', 0));
 });
 
+test('срок перед ником, ссылкой или id; причина строкой ниже; без точки — тоже команда', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = pn_mod($pdo, $log);
+    cm_do($ctx, "Бан 1 месяц https://t.me/Vasya\nНет революции");
+    $b = cm_calls($log, 'banChatMember')[0][1];
+    assert_eq([20, CM_NOW + 2592000], [$b['user_id'], $b['until_date']]);
+    assert_eq("⛔ Вася: бан 30 дней.\nПричина: Нет революции", cm_last_text($log));
+    cm_do($ctx, 'мут 2ч @vasya');
+    assert_eq(CM_NOW + 7200, cm_calls($log, 'restrictChatMember')[0][1]['until_date']);
+    cm_person($pdo, 123456789, 'creo', 'Creo');
+    cm_do($ctx, 'бан навсегда 123456789 спам');
+    assert_eq([123456789, 0], [cm_calls($log, 'banChatMember')[1][1]['user_id'], cm_calls($log, 'banChatMember')[1][1]['until_date']]);
+    assert_eq("⛔ Creo: бан навсегда.\nПричина: спам", cm_last_text($log));
+    $a = '1 месяц https://t.me/vasya';
+    assert_eq(20, cm_target($pdo, [], $a)['id']);
+    assert_eq('1 месяц', $a, 'срок остаётся в аргументах');
+    $a = '2 @vasya';
+    cm_target($pdo, [], $a);
+    assert_eq('2', $a, 'ранг перед целью — как раньше');
+    $text = "Бан 1 месяц https://t.me/vasya\nНет революции";
+    assert_eq(true, cm_run_command(cm_ctx_for($pdo, $log, 10, $text), cm_parse($text, CM_BOT)));
+});
+
+test('незнакомый ник: бан ждёт и встаёт, когда ник зайдёт; срок — от команды', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = pn_mod($pdo, $log);
+    cm_do($ctx, "бан 1 месяц https://t.me/lKpeo\nНет революции");
+    assert_eq(0, count(cm_calls($log, 'banChatMember')));
+    assert_eq("⏳ @lkpeo мне ещё не встречался. Бан 30 дней встанет сам, как только этот ник зайдёт или напишет в чат.\nПричина: Нет революции",
+        cm_last_text($log));
+    cm_do($ctx, 'баны');
+    assert_eq("В бане:\n• @lkpeo — ждёт входа, до " . cm_date(CM_NOW + 2592000), cm_last_text($log));
+    $log = [];
+    $join = cm_gmsg(77, '', ['new_chat_members' => [['id' => 77, 'is_bot' => false, 'first_name' => 'Creo', 'username' => 'LKpeo']]]);
+    unset($join['text']);
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => $join], CM_NOW + 3600);
+    $b = cm_calls($log, 'banChatMember')[0][1];
+    assert_eq([77, CM_NOW + 2592000], [$b['user_id'], $b['until_date']], 'срок от команды, а не от входа');
+    assert_eq('⛔ Creo: бан до ' . cm_date(CM_NOW + 2592000) . " — ждал по нику @lkpeo.\nПричина: Нет революции", cm_texts($log)[0]);
+    $row = $pdo->query("SELECT user_id, reason, by_id FROM cm_punishments WHERE kind = 'ban'")->fetch(PDO::FETCH_ASSOC);
+    assert_eq([77, 'Нет революции', 10], [(int)$row['user_id'], $row['reason'], (int)$row['by_id']]);
+    assert_eq([], cm_chat_row($pdo, CM_CHAT)['settings']['ban_nicks'], 'запись ушла');
+});
+
+test('незнакомый ник без точки, как в живом чате: модератору — ожидание, участнику — «нужен ранг»', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_lvl($pdo, 10, 3);
+    $text = "Бан 1 месяц https://t.me/lKpeo\nНет революции";
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => cm_gmsg(10, $text)], CM_NOW);
+    assert_eq(0, count(cm_calls($log, 'deleteMessage')), 'ссылку модератора фильтр не трогает');
+    assert_eq('lkpeo', cm_chat_row($pdo, CM_CHAT)['settings']['ban_nicks'][0]['nick']);
+    $log = [];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => cm_gmsg(11, 'бан @someone_new')], CM_NOW);
+    assert_eq(cm_t('no_rank', ['need' => 3]), cm_last_text($log));
+    assert_eq(1, count(cm_chat_row($pdo, CM_CHAT)['settings']['ban_nicks']));
+    $log = [];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => cm_gmsg(10, 'мут @someone_new')], CM_NOW);
+    assert_eq([], cm_texts($log), 'мут незнакомого без точки — обычная речь, как раньше');
+});
+
+test('ждущий ник написал — бан и сообщение удалено; разбан и истёкший срок снимают ожидание', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = pn_mod($pdo, $log);
+    $from = function (int $id, string $nick): array {
+        return ['from' => ['id' => $id, 'is_bot' => false, 'first_name' => 'U' . $id, 'username' => $nick]];
+    };
+    cm_do($ctx, 'бан @creo_x спам');
+    assert_eq("⏳ @creo_x мне ещё не встречался. Бан навсегда встанет сам, как только этот ник зайдёт или напишет в чат.\nПричина: спам",
+        cm_last_text($log));
+    $log = [];
+    $m = cm_gmsg(78, 'привет', $from(78, 'Creo_X'));
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => $m], CM_NOW);
+    assert_eq([78, 0], [cm_calls($log, 'banChatMember')[0][1]['user_id'], cm_calls($log, 'banChatMember')[0][1]['until_date']]);
+    assert_eq($m['message_id'], cm_calls($log, 'deleteMessage')[0][1]['message_id']);
+    cm_do($ctx, 'бан 1 день @ghost_one');
+    cm_do($ctx, 'разбан @ghost_one');
+    assert_eq('@ghost_one: бан по нику снят.', cm_last_text($log));
+    assert_eq([], cm_chat_row($pdo, CM_CHAT)['settings']['ban_nicks']);
+    cm_do($ctx, 'бан 1 день @late_one');
+    $log = [];
+    cm_handle_update($pdo, cm_cfg(), cm_rec($log), ['message' => cm_gmsg(79, 'привет', $from(79, 'late_one'))], CM_NOW + 86400 + 10);
+    assert_eq(0, count(cm_calls($log, 'banChatMember')), 'срок вышел — бан не встаёт');
+    cm_do($ctx, 'бан 2 года @far_one');
+    assert_eq(cm_t('term_bad'), cm_last_text($log));
+    cm_do($ctx, 'мут @nobody_here');
+    assert_eq(cm_t('target_unknown'), cm_last_text($log), 'ждёт только бан');
+});
+
+test('ник из лички бота (tg_people) знаком: бан сразу', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    $ctx = pn_mod($pdo, $log);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tg_people (chat_id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '',
+        username TEXT NOT NULL DEFAULT '', lang TEXT NOT NULL DEFAULT 'ru', roblox_nick TEXT NOT NULL DEFAULT '',
+        await_gw INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL)");
+    $pdo->exec("INSERT INTO tg_people (chat_id, name, username, updated_at) VALUES (555, 'Гость', 'Ghost_Two', 1)");
+    cm_do($ctx, 'бан 7 дней @ghost_two');
+    assert_eq([555, CM_NOW + 604800], [cm_calls($log, 'banChatMember')[0][1]['user_id'], cm_calls($log, 'banChatMember')[0][1]['until_date']]);
+    assert_eq('⛔ Гость: бан 7 дней.', cm_last_text($log));
+});
+
 run_tests();

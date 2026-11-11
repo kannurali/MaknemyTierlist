@@ -35,6 +35,9 @@ const CM_DEFAULTS = [
     // триггеров; [] — проигрыш без наказания, исход включает модератор
     'duel_outcome'  => [],
     'dice_outcome'  => [],
+    // бан по нику, которого бот ещё не видел: [{nick, until, reason, by}],
+    // общий для сети; встаёт, когда ник зайдёт или напишет (punish.php)
+    'ban_nicks'     => [],
     // чат Макнеми: только в таких бот работает (cm_ours ниже)
     'maknemy'       => false,
     // чат Макнеми вне сети (тестовый): бот работает, но настройки, ранги,
@@ -282,11 +285,24 @@ function cm_user_touch(PDO $pdo, array $from, int $now): void {
     }
 }
 
+// Ник → человек: кто писал в чатах (cm_users), иначе кто жал кнопки бота
+// в личке (tg_people, розыгрыши: chat_id лички = id человека).
 function cm_user_find(PDO $pdo, string $username): ?array {
+    $u = strtolower(ltrim($username, '@'));
     $st = $pdo->prepare('SELECT user_id, name FROM cm_users WHERE username = :u ORDER BY updated_at DESC LIMIT 1');
-    $st->execute([':u' => strtolower(ltrim($username, '@'))]);
+    $st->execute([':u' => $u]);
     $r = $st->fetch(PDO::FETCH_ASSOC);
-    return $r ? ['user_id' => (int)$r['user_id'], 'name' => (string)$r['name']] : null;
+    if ($r) { return ['user_id' => (int)$r['user_id'], 'name' => (string)$r['name']]; }
+    try {
+        $st = $pdo->prepare('SELECT chat_id, name FROM tg_people WHERE LOWER(username) = :u AND chat_id > 0 ORDER BY updated_at DESC LIMIT 1');
+        $st->execute([':u' => $u]);
+        $r = $st->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return null;   // таблицы розыгрышей в Telegram ещё нет
+    }
+    if (!$r) { return null; }
+    $name = trim((string)$r['name']);
+    return ['user_id' => (int)$r['chat_id'], 'name' => $name !== '' ? $name : '@' . $u];
 }
 
 function cm_user_name(PDO $pdo, int $id): string {
