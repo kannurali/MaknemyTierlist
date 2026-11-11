@@ -18,6 +18,7 @@ function cm_on_join(array $ctx, array $users): void {
         if ($id <= 0) { continue; }
         cm_user_touch($pdo, $u, $now);
         cm_member_touch($pdo, $chatId, $id, $now, true);
+        if (cm_ban_nick_hit($ctx, $u)) { continue; }
         if (!empty($ctx['chat']['settings']['filters']['spam']) && cm_spam_has($pdo, $id)) {
             cm_apply_actions($ctx, $id, 0, cm_trigger_actions($ctx['chat'], 'spam'), cm_t('reason_spam'), 0);
             continue;

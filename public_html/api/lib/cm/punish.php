@@ -214,8 +214,16 @@ function cm_cmd_ban(array $ctx, array $cmd): void { cm_punish_cmd($ctx, $cmd, 'b
 
 function cm_punish_cmd(array $ctx, array $cmd, string $kind): void {
     $args = $cmd['args'];
-    $t = cm_need_target($ctx, $args);
-    if ($t === null) { return; }
+    $why = null;
+    $t = cm_target($ctx['pdo'], $ctx['msg'], $args, $why);
+    if ($t === null) {
+        if ($kind === 'ban' && $why === 'unknown') {
+            cm_ban_later($ctx, $cmd);
+            return;
+        }
+        cm_reply($ctx, cm_t($why === 'unknown' ? 'target_unknown' : 'need_target'));
+        return;
+    }
     $why = cm_can_touch($ctx, $t);
     if ($why !== '') {
         cm_reply($ctx, cm_t($why));
@@ -259,6 +267,113 @@ function cm_punish_cmd(array $ctx, array $cmd, string $kind): void {
         return;
     }
     cm_reply($ctx, cm_t($kind . '_done', $vars), false);
+}
+
+// --------------------------------------------------------------------------
+//  Бан по нику
+// --------------------------------------------------------------------------
+// Bot API не ищет людей по нику, а banChatMember нужен id. Ник, которого бот
+// ещё не видел (не писал в чатах, не жал кнопки бота), ждёт в настройках
+// сети (ban_nicks): зайдёт или напишет — бан во всех чатах сети (решение
+// владельца 11.11.2026: «бан, даже если человек не в чате»). Срок — от
+// команды: «бан 1 день» через неделю уже не встанет. Сменит ник — не встанет
+// вовсе, поэтому ответом или по id надёжнее.
+
+const CM_BAN_NICKS_MAX = 100;
+
+// Ждущие записи без истёкших и битых.
+function cm_ban_nicks(array $chat, int $now): array {
+    $out = [];
+    foreach ((array)($chat['settings']['ban_nicks'] ?? []) as $b) {
+        if (!is_array($b) || !preg_match('~^[a-z]\w{3,31}$~', (string)($b['nick'] ?? ''))) { continue; }
+        $until = (int)($b['until'] ?? 0);
+        if ($until > 0 && $until - $now < CM_MIN_TERM) { continue; }
+        $out[] = ['nick' => (string)$b['nick'], 'until' => $until, 'reason' => (string)($b['reason'] ?? ''),
+                  'by' => (int)($b['by'] ?? 0)];
+    }
+    return $out;
+}
+
+function cm_ban_nicks_save(array &$ctx, array $list): void {
+    $s = $ctx['chat']['settings'];
+    $s['ban_nicks'] = array_slice(array_values($list), -CM_BAN_NICKS_MAX);
+    cm_settings_save($ctx['pdo'], $ctx['chat'], $s, (int)$ctx['now']);
+}
+
+function cm_until_text(int $until): string {
+    return $until > 0 ? cm_t('until_date', ['date' => cm_date($until)]) : cm_t('until_forever');
+}
+
+// «бан 1 месяц @ник причина» на незнакомый ник — в список ждущих.
+function cm_ban_later(array $ctx, array $cmd): void {
+    $tok = cm_target_token($cmd['args']);
+    $nick = strtolower((string)($tok['nick'] ?? ''));
+    if ($nick === '') {
+        cm_reply($ctx, cm_t('need_target'));
+        return;
+    }
+    $args = $tok['args'];
+    $term = cm_take_term($args);
+    if ($term === -1) {
+        cm_reply($ctx, cm_t('term_bad'));
+        return;
+    }
+    $secs = (int)$term;
+    $reason = cm_reason($args, $cmd['body']);
+    $now = (int)$ctx['now'];
+    $list = array_filter(cm_ban_nicks($ctx['chat'], $now), function ($b) use ($nick) { return $b['nick'] !== $nick; });
+    $list[] = ['nick' => $nick, 'until' => $secs > 0 ? $now + $secs : 0, 'reason' => $reason, 'by' => (int)$ctx['actor']];
+    cm_ban_nicks_save($ctx, $list);
+    cm_reply($ctx, cm_t('ban_later', ['nick' => '@' . $nick, 'term' => cm_term_text($secs), 'net' => cm_net_word($ctx),
+        'reason' => cm_reason_line($reason)]), false);
+}
+
+/**
+ * Человек $u (автор сообщения или новичок) с ником из списка ждущих — бан во
+ * всех чатах сети, запись уходит. Модератора и админа Telegram бот не банит —
+ * запись тоже уходит. Отказ Telegram (нет прав) запись оставляет: встанет,
+ * когда права дадут. true — забанен.
+ */
+function cm_ban_nick_hit(array &$ctx, array $u): bool {
+    $nick = strtolower((string)($u['username'] ?? ''));
+    $id = (int)($u['id'] ?? 0);
+    if ($nick === '' || $id <= 0 || empty($ctx['chat']['settings']['ban_nicks'])) { return false; }
+    $now = (int)$ctx['now'];
+    $hit = null;
+    $rest = [];
+    foreach (cm_ban_nicks($ctx['chat'], $now) as $b) {
+        if ($hit === null && $b['nick'] === $nick) {
+            $hit = $b;
+        } else {
+            $rest[] = $b;
+        }
+    }
+    if ($hit === null) { return false; }
+    if (cm_exempt($ctx, $id)) {
+        cm_ban_nicks_save($ctx, $rest);
+        return false;
+    }
+    $err = cm_punish($ctx, $id, 'ban', $hit['until'] > 0 ? $hit['until'] - $now : 0, $hit['reason'], $hit['by']);
+    if ($err !== '') {
+        if ($err === 'no_rights') { cm_rights_warn($ctx); }
+        return false;
+    }
+    cm_ban_nicks_save($ctx, $rest);
+    cm_say($ctx, (int)$ctx['chat']['chat_id'], cm_t('ban_later_done', ['name' => cm_who_from($u), 'nick' => '@' . $nick,
+        'until' => cm_until_text($hit['until']), 'net' => cm_net_word($ctx), 'reason' => cm_reason_line($hit['reason'])]));
+    return true;
+}
+
+// Убрать ник из ждущих («разбан @ник»). '' — его там не было, иначе «@ник».
+function cm_ban_nick_drop(array &$ctx, string $args): string {
+    $tok = cm_target_token($args);
+    $nick = strtolower((string)($tok['nick'] ?? ''));
+    if ($nick === '') { return ''; }
+    $list = cm_ban_nicks($ctx['chat'], (int)$ctx['now']);
+    $rest = array_filter($list, function ($b) use ($nick) { return $b['nick'] !== $nick; });
+    if (count($rest) === count($list)) { return ''; }
+    cm_ban_nicks_save($ctx, $rest);
+    return '@' . $nick;
 }
 
 function cm_cmd_unwarn(array $ctx, array $cmd): void {
@@ -332,8 +447,17 @@ function cm_cmd_unban(array $ctx, array $cmd): void { cm_lift_cmd($ctx, $cmd, 'b
 
 function cm_lift_cmd(array $ctx, array $cmd, string $kind): void {
     $args = $cmd['args'];
-    $t = cm_need_target($ctx, $args);
-    if ($t === null) { return; }
+    $why = null;
+    $t = cm_target($ctx['pdo'], $ctx['msg'], $args, $why);
+    $later = $kind === 'ban' ? cm_ban_nick_drop($ctx, $cmd['args']) : '';
+    if ($t === null) {
+        if ($later !== '') {
+            cm_reply($ctx, cm_t('unban_later_done', ['nick' => $later]), false);
+            return;
+        }
+        cm_reply($ctx, cm_t($why === 'unknown' ? 'target_unknown' : 'need_target'));
+        return;
+    }
     $err = cm_lift($ctx, (int)$t['id'], $kind, (int)$ctx['actor']);
     if ($err !== '') {
         cm_reply_err($ctx, $err);
@@ -355,8 +479,13 @@ function cm_active_list(array $ctx, string $kind, string $head): void {
         $uid = (int)$r['user_id'];
         if (isset($lines[$uid]) || count($lines) >= 20) { continue; }
         $until = (int)$r['until_at'];
-        $lines[$uid] = '• ' . cm_user_who($pdo, $uid, true) . ' — '
-            . ($until === 0 ? cm_t('until_forever') : cm_t('until_date', ['date' => cm_date($until)]));
+        $lines[$uid] = '• ' . cm_user_who($pdo, $uid, true) . ' — ' . cm_until_text($until);
+    }
+    if ($kind === 'ban') {
+        foreach (cm_ban_nicks($ctx['chat'], (int)$ctx['now']) as $b) {
+            if (count($lines) >= 20) { break; }
+            $lines[] = cm_t('ban_later_line', ['nick' => '@' . $b['nick'], 'until' => cm_until_text($b['until'])]);
+        }
     }
     cm_reply($ctx, cm_t($head) . "\n" . ($lines ? implode("\n", $lines) : cm_t('list_empty')), false);
 }

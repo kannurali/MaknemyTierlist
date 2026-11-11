@@ -3,7 +3,8 @@
 // и его участники хранятся с чатом, где клан создан, а ищутся по всей сети
 // ($chats — cm_scope). Человек — не больше чем в одном клане. Глава —
 // создатель; передачи главенства нет, и выйти глава не может — только
-// распустить клан («-клан»). Управляет кланом только глава. Рейтинг —
+// распустить клан («-клан»). Управляет кланом только глава; распустить
+// любой клан может ещё ранг 5 («-клан Название»). Рейтинг —
 // сообщения участников за 7 дней (cm_stats этапа 2), экономики нет. Уход из
 // чата из клана не выводит, но созыв таких не зовёт.
 
@@ -13,6 +14,7 @@ const CM_CLAN_CALL_MAX  = 30;
 const CM_CLAN_CALL_GAP  = 600;
 const CM_CLAN_DAYS      = 7;
 const CM_CLAN_TOP       = 10;
+const CM_CLAN_DEL_RANK  = 5;   // с какого ранга распускают чужой клан
 
 // «  Волки   Севера » → «Волки Севера»; '' — не подходит: 2–32 символа,
 // буквы, цифры, пробел, дефис, по краям — буква или цифра.
@@ -149,12 +151,27 @@ function cm_cmd_clan_add(array $ctx, array $cmd): void {
     cm_reply($ctx, cm_t('clan_created', ['name' => $name, 'owner' => cm_actor_name($ctx)]), false);
 }
 
-// «-клан»: глава распускает клан, участники выходят.
+// «-клан»: глава распускает свой клан, участники выходят. «-клан Название» —
+// любой клан сети, с ранга 5 (решение владельца 11.11.2026); глава так может
+// назвать и свой.
 function cm_cmd_clan_del(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
-    $c = cm_clan_owned($ctx);
-    if ($c === null) { return; }
     $pdo = $ctx['pdo'];
+    $raw = trim($cmd['args']);
+    if ($raw === '') {
+        $c = cm_clan_owned($ctx);
+        if ($c === null) { return; }
+    } else {
+        $c = cm_clan_by_name($pdo, cm_scope($ctx), cm_clan_name($raw));
+        if ($c === null) {
+            cm_reply($ctx, cm_t('clan_missing', ['name' => mb_substr($raw, 0, 32)]));
+            return;
+        }
+        if ($c['owner_id'] !== (int)$ctx['actor'] && (int)($ctx['rank'] ?? 0) < CM_CLAN_DEL_RANK) {
+            cm_reply($ctx, cm_t('clan_del_rank', ['n' => CM_CLAN_DEL_RANK]));
+            return;
+        }
+    }
     $pdo->prepare('DELETE FROM cm_clan_members WHERE clan_id = :k')->execute([':k' => $c['id']]);
     $pdo->prepare('DELETE FROM cm_clans WHERE id = :k')->execute([':k' => $c['id']]);
     cm_reply($ctx, cm_t('clan_deleted', ['name' => $c['name']]), false);
@@ -243,11 +260,14 @@ function cm_cmd_clan_join(array $ctx, array $cmd): void {
     cm_reply($ctx, cm_t('clan_joined', ['name' => cm_actor_name($ctx), 'clan' => $c['name']]), false);
 }
 
+// «покинуть клан», «выйти из клана» — в чате или в личке бота (там — клан
+// сети: своего у лички нет).
 function cm_cmd_clan_leave(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
     $pdo = $ctx['pdo'];
     $me = (int)$ctx['actor'];
-    $c = cm_clan_of($pdo, cm_scope($ctx), $me);
+    $chats = empty($ctx['chat']['private']) ? cm_scope($ctx) : cm_net($pdo, (int)$ctx['chat']['chat_id']);
+    $c = cm_clan_of($pdo, $chats, $me);
     if ($c === null) {
         cm_reply($ctx, cm_t('clan_none_me'));
         return;
