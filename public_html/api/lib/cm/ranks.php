@@ -180,6 +180,23 @@ function cm_cmd_rank_clear(array $ctx, array $cmd): void {
     if ($t !== null) { cm_rank_change($ctx, $t, 0); }
 }
 
+// Голое «снять»: после цели пусто, иначе непонятно, что снимать. Без префикса
+// хвост отсекает ещё роутер (CM_BARE_ARGS) — там это обычная речь.
+function cm_cmd_rank_drop(array $ctx, array $cmd): void {
+    $args = $cmd['args'];
+    $why = null;
+    $t = cm_target($ctx['pdo'], $ctx['msg'], $args, $why);
+    if ($why !== 'unknown' && trim($args) !== '') {
+        cm_reply($ctx, cm_t('rank_drop_what'));
+        return;
+    }
+    if ($t === null) {
+        cm_reply($ctx, cm_t($why === 'unknown' ? 'target_unknown' : 'need_target'));
+        return;
+    }
+    cm_rank_change($ctx, $t, 0);
+}
+
 function cm_cmd_rank_list(array $ctx, array $cmd): void {
     $pdo = $ctx['pdo'];
     $owner = (int)$ctx['chat']['owner_id'];

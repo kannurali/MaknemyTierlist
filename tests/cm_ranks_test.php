@@ -58,6 +58,44 @@ test('повысить, понизить, снять', function () {
     assert_eq(true, strpos(cm_last_text($log), 'уже участник') !== false);
 });
 
+test('снять и разжаловать', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'vasya');
+    cm_person($pdo, 21, 'petya');
+    cm_lvl($pdo, 20, 3);
+    cm_lvl($pdo, 21, 2);
+    $ctx = cm_ctx_for($pdo, $log, CM_OWNER);
+    cm_do($ctx, 'снять @vasya');
+    assert_eq(0, cm_member($pdo, CM_CHAT, 20)['lvl']);
+    cm_do($ctx, 'разжаловать @petya');
+    assert_eq(0, cm_member($pdo, CM_CHAT, 21)['lvl']);
+    cm_lvl($pdo, 21, 2);
+    cm_do($ctx, 'снять модератора @petya');
+    assert_eq(0, cm_member($pdo, CM_CHAT, 21)['lvl']);
+    cm_lvl($pdo, 21, 2);
+    cm_do($ctx, '!снять @petya кофту');
+    assert_eq(2, cm_member($pdo, CM_CHAT, 21)['lvl'], 'хвост после цели — не снятие ранга');
+    assert_eq(cm_t('rank_drop_what'), cm_last_text($log));
+    cm_do($ctx, '!снять');
+    assert_eq(cm_t('need_target'), cm_last_text($log));
+    cm_do($ctx, '!снять @nobody1');
+    assert_eq(cm_t('target_unknown'), cm_last_text($log));
+});
+
+test('модер 4 не снимает модера 4, создатель — снимает', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_person($pdo, 20, 'vasya');
+    cm_lvl($pdo, 10, 4);
+    cm_lvl($pdo, 20, 4);
+    cm_do(cm_ctx_for($pdo, $log, 10), 'снять @vasya');
+    assert_eq(4, cm_member($pdo, CM_CHAT, 20)['lvl']);
+    assert_eq(cm_t('rank_too_high'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'снять @vasya');
+    assert_eq(0, cm_member($pdo, CM_CHAT, 20)['lvl']);
+});
+
 test('модеры и журнал рангов', function () {
     $pdo = cm_test_pdo();
     $log = [];

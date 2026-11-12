@@ -42,6 +42,21 @@ test('у команды есть флаги для роутера', function () 
     assert_eq(['бан', 3, false, true], [$c['section'], $c['level'], $c['exact'], $c['target']]);
 });
 
+test('снять: ранг, а варн, мут и бан — своими фразами', function () {
+    $h = function (string $t) { return cm_parse($t, CM_BOT)['handler'] ?? null; };
+    assert_eq('rank_drop', $h('снять'));
+    assert_eq('rank_drop', $h('Снять @vasya'));
+    assert_eq('rank_clear', $h('разжаловать @vasya'));
+    assert_eq('rank_clear', $h('снять модератора'));
+    assert_eq('rank_clear', $h('снять модера'));
+    assert_eq('unwarn', $h('снять варн'));
+    assert_eq('unwarn_all', $h('снять варны'));
+    assert_eq('unmute', $h('снять мут @vasya'));
+    assert_eq('unban', $h('снять бан'));
+    assert_eq(null, $h('снятый'));
+    assert_eq(null, $h('снять?'));
+});
+
 test('тело команды — со второй строки как есть', function () {
     $c = cm_parse("+правила\n1. Не спамить\n2. Не ругаться", CM_BOT);
     assert_eq('rules_set', $c['handler']);
