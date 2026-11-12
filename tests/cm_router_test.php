@@ -62,6 +62,25 @@ test('без ранга: команда с целью — отказ и без �
     assert_eq($n, count(cm_calls($log, 'sendMessage')), 'без цели — обычная речь');
 });
 
+test('«снять» ответом без точки: ранг снимается, «снять кофту» — речь, «снять варн» — варн', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    cm_lvl($pdo, 10, 4);
+    cm_lvl($pdo, 20, 2);
+    $reply = ['reply_to_message' => ['message_id' => 5, 'from' => ['id' => 20, 'is_bot' => false, 'first_name' => 'Вася']]];
+    rt_run($pdo, cm_gmsg(10, 'снять кофту', $reply), $log);
+    assert_eq(2, cm_member($pdo, CM_CHAT, 20)['lvl']);
+    assert_eq(0, count(cm_calls($log, 'sendMessage')), 'обычная речь — тишина');
+    rt_run($pdo, cm_gmsg(10, 'варн флуд', $reply), $log);
+    rt_run($pdo, cm_gmsg(10, 'снять варн', $reply), $log);
+    assert_eq(2, cm_member($pdo, CM_CHAT, 20)['lvl'], '«снять варн» не трогает ранг');
+    assert_eq(true, strpos(cm_last_text($log), 'снят варн') !== false);
+    rt_run($pdo, cm_gmsg(10, 'Снять', $reply), $log);
+    assert_eq(0, cm_member($pdo, CM_CHAT, 20)['lvl']);
+    rt_run($pdo, cm_gmsg(7, 'снять', $reply), $log);
+    assert_eq(cm_t('no_rank', ['need' => 4]), cm_last_text($log), 'без ранга — отказ, а не тишина');
+});
+
 test('ответом без точки: бан модератора и РП участника', function () {
     $pdo = cm_test_pdo();
     $log = [];
