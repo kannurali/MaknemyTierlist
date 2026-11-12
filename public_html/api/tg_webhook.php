@@ -3,6 +3,7 @@ require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/telegram.php';
 require_once __DIR__ . '/lib/giveaway.php';
 require_once __DIR__ . '/lib/cm/cm.php';
+require_once __DIR__ . '/lib/tg_update.php';
 
 // Вебхук бота — сюда Telegram присылает всё, что люди пишут боту.
 // Адрес и секрет сообщает Telegram кнопка на /admin/support (api/tg_setup.php).
@@ -15,9 +16,9 @@ require_once __DIR__ . '/lib/cm/cm.php';
 // доставку, и одна ошибка базы превращалась бы в очередь повторов. Ответ на
 // сообщение уходит прямо в теле — Telegram выполняет его как вызов API.
 //
-// Сообщения групп и кнопки «cm:» — чат-менеджер (api/lib/cm/,
-// docs/chat-manager.md): 200 уходит сразу, вызовы Telegram — после, ошибка
-// модуля пишется в лог и остальное не задевает.
+// Сама обработка — tg_update_process() в api/lib/tg_update.php: её же
+// вызывает опрос по cron (api/tg_poll.php), когда Telegram не может
+// достучаться до вебхука.
 
 function tg_webhook_authorized(array $tg, array $server): bool {
     if (!tg_enabled($tg)) { return false; }
@@ -35,58 +36,8 @@ if (!defined('TESTING')) {
         exit;
     }
 
-    $update = read_json_body();
-    if (cm_wants_update($update, $tg['name'])) {
-        json_out(['ok' => true]);
-        tg_finish_response();
-        try {
-            cm_handle_update(db(), app_config(), tg_http($tg['token']), $update, time());
-        } catch (Throwable $e) {
-            error_log('cm: ' . $e->getMessage());
-        }
-        exit;
-    }
-
-    $reply = null;
-    $invite = null;
-    $left = [];
-    $joined = null;
-    try {
-        // Нажали «Участвовать» под постом розыгрыша в канале — участие прямо
-        // в Telegram, ответ всплывающим окном (api/lib/gw_tg.php).
-        $joined = gw_tg_callback(db(), app_config(), tg_http($tg['token']), $update, time());
-        // Прислали боту премиум-эмодзи — он отвечает их id для админки
-        // розыгрышей (раздел «Премиум-эмодзи» в api/lib/giveaway.php).
-        // «Забрать приз» и ник в Roblox от победителя — gw_tg_bot_reply().
-        // «тирлист», «/stock» в личке — кнопка в мини-приложение (tg_pages.php).
-        $reply = $joined['reply'] ?? gw_emoji_reply($update) ?? gw_tg_bot_reply(db(), $update, time())
-            ?? tg_handle_update(db(), $update, time(), $tg['name']);
-        // Бота добавили в канал или убрали — список каналов для условий
-        // розыгрышей (api/lib/giveaway.php). Ссылку-приглашение приватного
-        // канала просим уже после ответа Telegram. Добавившему бот сразу
-        // пишет, каких прав ему не дали.
-        $invite = gw_channel_update(db(), $update, time());
-        $reply = $reply ?? gw_channel_reply($update, $tg['name']);
-        // Кто-то вступил в канал по ссылке розыгрыша или вышел из канала —
-        // учёт подписчиков и снятие участия у отписавшихся.
-        $left = gw_member_update(db(), $update, time());
-    } catch (Throwable $e) {
-        error_log('tg webhook: ' . $e->getMessage());
-    }
-    // Новый участник меняет число на сайте — кеш выдачи розыгрышей сбрасывается.
-    if (!empty($joined['after'])) { header('X-LiteSpeed-Purge: tag=giveaways'); }
-    json_out($reply ?? ['ok' => true]);
-    if ($joined) { gw_tg_after(db(), app_config(), $joined['after'], time()); }
-    if ($invite !== null) { gw_after_channel(db(), app_config(), $invite, time()); }
-    if ($left) { gw_after_member(db(), app_config(), $left, time()); }
-    // Бота добавили в группу или убрали, человек вошёл или вышел — тот же
-    // апдейт нужен и чат-менеджеру: знакомство с группой, приветствие.
-    if (isset($update['my_chat_member']) || isset($update['chat_member'])) {
-        tg_finish_response();
-        try {
-            cm_on_membership(db(), app_config(), tg_http($tg['token']), $update, time());
-        } catch (Throwable $e) {
-            error_log('cm member: ' . $e->getMessage());
-        }
-    }
+    tg_update_process($tg, read_json_body(), function (?array $reply, bool $purge): void {
+        if ($purge) { header('X-LiteSpeed-Purge: tag=giveaways'); }
+        json_out($reply ?? ['ok' => true]);
+    }, 'tg_finish_response');
 }

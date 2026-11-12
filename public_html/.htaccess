@@ -302,6 +302,8 @@ RewriteRule ^api/stock_pull\.php$ - [R=404,L]
 # Тик чат-менеджера (таймеры, автоудаление) — тоже только cron. Скрипт и сам
 # отвечает 404 веб-запросу.
 RewriteRule ^api/cm_cron\.php$ - [R=404,L]
+# Опрос Telegram, когда вебхук недоступен, — тоже только cron.
+RewriteRule ^api/tg_poll\.php$ - [R=404,L]
 
 # ----------------------------- Центр обращений -----------------------------
 RewriteRule ^support/$ /support [L,R=301]
