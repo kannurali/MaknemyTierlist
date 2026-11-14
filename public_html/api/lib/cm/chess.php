@@ -298,6 +298,9 @@ function cm_chess_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
 // --------------------------------------------------------------------------
 
 // «шахматы» ответом или «шахматы @ник» — вызов; «шахматы 5 …» — по 5 минут;
+// «шахматы белый 5 минут», «шахматы 5 минут чёрными» — цвет зовущего, в любом
+// порядке (просьба владельца 15.11.2026); без цвета — жребий. Цвет едет в
+// ref_id приглашения сотнями: 5 — жребий, 105 — зовущий белыми, 205 — чёрными.
 // «шахматы» без цели — лучшие игроки.
 function cm_cmd_chess(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
@@ -308,7 +311,12 @@ function cm_cmd_chess(array $ctx, array $cmd): void {
     }
     $args = $cmd['args'];
     $min = 0;
-    if (preg_match('~(?:^|\s)(\d{1,2})(?:\s*(?:минуты|минута|минут|мин|м))?(?=\s|$)~u', $args, $m, PREG_OFFSET_CAPTURE)) {
+    $side = 0;
+    if (preg_match('~(?:^|\s)(?:за\s+)?(бел|ч[её]рн)(?:ыми|ый|ые|ым|ых|ое|ая)(?=\s|$)~iu', $args, $c, PREG_OFFSET_CAPTURE)) {
+        $side = mb_strtolower($c[1][0]) === 'бел' ? 1 : 2;
+        $args = trim(substr_replace($args, ' ', $c[0][1], strlen($c[0][0])));
+    }
+    if (preg_match('~(?:^|\s)(\d{1,2})(?:\s*(?:минуты|минута|минут|мин|м))?(?=\s|$)~iu', $args, $m, PREG_OFFSET_CAPTURE)) {
         $min = (int)$m[1][0];
         $args = trim(substr_replace($args, ' ', $m[0][1], strlen($m[0][0])));
     }
@@ -317,7 +325,7 @@ function cm_cmd_chess(array $ctx, array $cmd): void {
     if ($t === null) {
         if ($why === 'unknown') {
             cm_reply($ctx, cm_t('target_unknown'));
-        } elseif ($min > 0 || trim($args) !== '') {
+        } elseif ($min > 0 || $side > 0 || trim($args) !== '') {
             cm_reply($ctx, cm_t('need_target'));
         } else {
             cm_game_top($ctx, 'chess', 'chess_top_head', 'chess_top_empty', true);
@@ -338,16 +346,21 @@ function cm_cmd_chess(array $ctx, array $cmd): void {
     }
     $min = $min > 0 ? $min : CM_CHESS_DEFAULT;
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-    cm_offer_send($ctx, 'chess', (int)$t['id'], $min, cm_t('chess_offer', ['to' => $t['who'], 'from' => cm_who_from($from), 'min' => $min]));
+    $text = cm_t('chess_offer', ['to' => $t['who'], 'from' => cm_who_from($from), 'min' => $min]);
+    if ($side > 0) { $text .= ' ' . cm_t($side === 1 ? 'chess_offer_w' : 'chess_offer_b', ['from' => cm_who_from($from)]); }
+    cm_offer_send($ctx, 'chess', (int)$t['id'], $side * 100 + $min, $text);
 }
 
-// «Принять»: жребий цвета, партия, в сообщении — кто чем играет и кнопка доски.
+// «Принять»: цвет из приглашения или жребий, партия, в сообщении — кто чем
+// играет и кнопка доски.
 function cm_offer_yes_chess(array $ctx, array $o): string {
     $pdo = $ctx['pdo'];
     if (!cm_chess_ready($pdo)) { return 'not_ready2'; }
     if (!preg_match('/^[A-Za-z0-9_]{3,64}\z/', (string)$ctx['bot'])) { return 'chess_no_bot'; }
-    $min = $o['ref_id'] >= 1 && $o['ref_id'] <= CM_CHESS_MAX ? $o['ref_id'] : CM_CHESS_DEFAULT;
-    $fromWhite = cm_rand($ctx, 0, 1) === 0;
+    $side = intdiv((int)$o['ref_id'], 100);
+    $min = (int)$o['ref_id'] % 100;
+    $min = $min >= 1 && $min <= CM_CHESS_MAX ? $min : CM_CHESS_DEFAULT;
+    $fromWhite = $side === 1 || ($side !== 2 && cm_rand($ctx, 0, 1) === 0);
     $ms = (int)$ctx['now'] * 1000;
     $base = $min * 60000;
     $pdo->prepare("INSERT INTO cm_chess (chat_id, white_id, black_id, base_ms, white_ms, black_ms, fen, moves, san,
