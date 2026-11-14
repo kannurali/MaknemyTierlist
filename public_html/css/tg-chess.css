@@ -451,6 +451,25 @@ button { font: inherit; color: inherit; }
 }
 .tc-info.is-mine .tc-dot::after { animation: tc-ping 1.8s var(--out) infinite; }
 .tc-info-body { flex: 1; min-width: 0; }
+.tc-snd {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: 0 -6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mute);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .15s, color .15s;
+}
+.tc-snd:hover,
+.tc-snd:focus-visible { background: var(--tint); color: var(--ink); outline: none; }
+.tc-snd .tc-ico { width: 20px; height: 20px; }
 .tc-status {
   margin: 0;
   font-size: 18px;

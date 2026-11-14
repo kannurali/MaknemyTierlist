@@ -20,62 +20,73 @@
 
   var SHAPES = {
     p: [
-      ["b", "p", "M34 80C36 68 42 60 44.5 52h11C58 60 64 68 66 80z", "M50 52h5.5C58 60 64 68 66 80H50z"],
-      ["b", "c", 50, 33, 12.5],
-      ["b", "r", 37, 45, 26, 8, 4],
-      ["b", "r", 25, 79, 50, 11, 5]
+      ["b", "c", 50, 27, 10.5],
+      ["b", "c", 50, 47, 13.5],
+      ["b", "p", "M38 56C30 60 25 70 25 84H75C75 70 70 60 62 56z"]
     ],
     r: [
-      ["b", "p", "M34 80l3-34h26l3 34z", "M50 46h13l3 34H50z"],
-      ["b", "p", "M30 19h9.5v7.5h6V19h9v7.5h6V19H70v19l-4 6H34l-4-6z", "M50 19h4.5v7.5h6V19H70v19l-4 6H50z"],
-      ["b", "r", 33.5, 42, 33, 7, 3.5],
-      ["b", "r", 23, 79, 54, 11, 5],
-      ["l", "p", "M31 36h38"]
+      ["b", "p", "M27 16h9v6h9v-6h10v6h9v-6h9v16H27z"],
+      ["b", "p", "M29 32l6 7h30l6-7z"],
+      ["b", "p", "M35 39h30v30H35z"],
+      ["b", "p", "M35 69l-6 8h42l-6-8z"],
+      ["b", "p", "M22 77h56v9H22z"],
+      ["l", "p", "M33 32H67"],
+      ["l", "p", "M36 39H64"],
+      ["l", "p", "M36 69H64"],
+      ["l", "p", "M30 77H70"]
     ],
     b: [
-      ["b", "p", "M34 80C36 68 41 60 43.5 53h13C59 60 64 68 66 80z", "M50 53h6.5C59 60 64 68 66 80H50z"],
-      ["b", "c", 50, 13.5, 5],
-      ["b", "p", "M50 17C61 25 66 35 63 44c-1.5 3.5-5 5-13 5s-11.5-1.5-13-5c-3-9 2-19 13-27z", "M50 17C61 25 66 35 63 44c-1.5 3.5-5 5-13 5z"],
-      ["b", "r", 36, 47, 28, 8, 4],
-      ["b", "r", 24, 79, 52, 11, 5],
-      ["l", "p", "M57.5 26.5L48 37.5"]
+      ["b", "p", "M50 18C62 27 68 38 66 47C64.5 54 58 57 50 57C42 57 35.5 54 34 47C32 38 38 27 50 18z"],
+      ["b", "r", 37, 56, 26, 10, 5],
+      ["b", "p", "M43 64C43 72 38 76 24 76C18 76 16 79 17 83C17 85 19 86 22 85.5C32 84 42 86 50 81C58 86 68 84 78 85.5C81 86 83 85 83 83C84 79 82 76 76 76C62 76 57 72 57 64z"],
+      ["o", "c", 50, 13, 4.5],
+      ["l", "p", "M50 31V45M43 38H57"],
+      ["l", "p", "M39 57.5H61"]
     ],
     n: [
-      ["b", "p", "M48 18L54 8.5L59 20z", ""],
-      ["b", "p", "M31 80C31 70 36 63 42 57C38 58 33 61 27 61C22 61 17 58 17 53C17 49 19 46 22 43C26 37 31 30 36 24C38 21 41 18 43 17L46 7L52 16C62 19 70 28 73 42C76 56 75 68 71 80z", "M52 16C62 19 70 28 73 42C76 56 75 68 71 80H60C64 66 64 50 59 37C57 31 55 22 52 16z"],
-      ["b", "r", 22, 79, 56, 11, 5],
-      ["d", "c", 36.5, 31, 2.6],
-      ["d", "c", 22, 52, 1.8],
-      ["l", "p", "M55 19.5c8 4 13 12 14.5 24"]
+      ["b", "p", "M37 12L44 21L50 11C68 15 81 33 81 62V86H33C33 76 40 68 48 62C52 59 55 55 56 50C50 56 42 60 34 63C31 70 22 71 19 65C16 60 17 55 21 50C26 43 31 34 34 27C35.5 22 36.5 17 37 12z"],
+      ["d", "c", 38, 33, 2.4],
+      ["d", "c", 23, 60, 1.7],
+      ["lb", "p", "M56 17.5C68 24 75.5 40 75.5 62V84"]
     ],
     q: [
-      ["b", "p", "M32 80C34 68 38 59 40 51h20C62 59 66 68 68 80z", "M50 51h10C62 59 66 68 68 80H50z"],
-      ["b", "p", "M35 48L25 24l12 12 1-18 8 15 4-19 4 19 8-15 1 18 12-12-10 24z", "M50 14L54 33L62 18L63 36L75 24L65 48H50z"],
-      ["b", "c", 25, 21.5, 4.2],
-      ["b", "c", 38, 15.5, 4.2],
-      ["b", "c", 50, 11, 4.2],
-      ["b", "c", 62, 15.5, 4.2],
-      ["b", "c", 75, 21.5, 4.2],
-      ["b", "r", 34, 45, 32, 8, 4],
-      ["b", "r", 21, 79, 58, 11, 5]
+      ["b", "p", "M21 30L32 60H68L79 30L66 47L65 21L56 45L50 17L44 45L35 21L34 47z"],
+      ["b", "p", "M32 58L28 74C26 79 26 83 28 86H72C74 83 74 79 72 74L68 58z"],
+      ["o", "c", 20, 26, 4.5],
+      ["o", "c", 35, 17, 4.5],
+      ["o", "c", 50, 13, 4.5],
+      ["o", "c", 65, 17, 4.5],
+      ["o", "c", 80, 26, 4.5],
+      ["l", "p", "M33 61Q50 56 67 61"],
+      ["l", "p", "M30 70Q50 65 70 70"],
+      ["l", "p", "M29 78Q50 73 71 78"]
     ],
     k: [
-      ["b", "p", "M31 80C33 67 37 58 39 50h22C63 58 67 67 69 80z", "M50 50h11C63 58 67 67 69 80H50z"],
-      ["b", "p", "M46.5 7h7v6.5h6.5v7h-6.5V29h-7v-8.5H40v-7h6.5z", "M50 7h3.5v6.5H60v7h-6.5V29H50z"],
-      ["b", "p", "M37 46c-4-9 0-19 13-19s17 10 13 19z", "M50 27C63 27 67 37 63 46H50z"],
-      ["b", "r", 34, 44, 32, 8, 4],
-      ["b", "r", 21, 79, 58, 11, 5],
-      ["l", "p", "M37.5 38.5Q50 42 62.5 38.5"]
+      ["s", "p", "M50 5V24M43 11H57"],
+      ["b", "p", "M50 22C57 29 58 36 50 45C42 36 43 29 50 22z"],
+      ["b", "p", "M30 64C22 58 15 50 15 41C15 33 22 27 31 27C40 27 47 33 50 44C53 33 60 27 69 27C78 27 85 33 85 41C85 50 78 58 70 64z"],
+      ["b", "p", "M30 62H70V80Q50 88 30 80z"],
+      ["l", "p", "M50 22C57 29 58 36 50 45C42 36 43 29 50 22z"],
+      ["l", "p", "M50 45V62"],
+      ["l", "p", "M31 65Q50 59 69 65"],
+      ["l", "p", "M31 72Q50 66 69 72"],
+      ["l", "p", "M31 79Q50 73 69 79"],
+      ["lb", "p", "M33 59C26 54 21 48 21 41C21 36 25 32.5 31 32.5C38 32.5 43 38 45.5 46"],
+      ["lb", "p", "M67 59C74 54 79 48 79 41C79 36 75 32.5 69 32.5C62 32.5 57 38 54.5 46"]
     ]
   };
   var INK = {
-    w: { fill: "#fdfaff", shade: "#e2d5f2", line: "#1d0f2c", detail: "#1d0f2c", rim: "" },
-    b: { fill: "#3b2852", shade: "#22142f", line: "#0c0614", detail: "#d8c6f2", rim: "rgba(236,226,252,.72)" }
+    w: { fill: "#ffffff", line: "#140c1c", detail: "#140c1c", rim: "" },
+    b: { fill: "#140c1c", line: "#140c1c", detail: "#ffffff", rim: "rgba(236,226,252,.78)" }
   };
+  var EDGE = 7;
+  var THIN = 3.2;
 
   var ICONS = {
     flag: [["p", "M6 21V4"], ["p", "M6 4.5c4-2 7 2 12 0v9c-5 2-8-2-12 0"]],
     eye: [["p", "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"], ["c", 12, 12, 3]],
+    sound: [["p", "M4 9.5h3.5L12 6v12l-4.5-3.5H4z"], ["p", "M15.5 9.2a4.5 4.5 0 0 1 0 5.6"], ["p", "M18.2 6.6a8 8 0 0 1 0 10.8"]],
+    mute: [["p", "M4 9.5h3.5L12 6v12l-4.5-3.5H4z"], ["p", "M16 9.5l5 5"], ["p", "M21 9.5l-5 5"]],
     wifi: [["p", "M3 9.5a13 13 0 0 1 18 0"], ["p", "M6.5 13a8 8 0 0 1 11 0"], ["p", "M10 16.5a3 3 0 0 1 4 0"], ["p", "M4 4l16 16"]]
   };
 
@@ -126,7 +137,9 @@
     promoCancel: "Отменить превращение",
     to: ", сюда можно пойти",
     take: ", можно взять",
-    picked: ", выбрано"
+    picked: ", выбрано",
+    sndOn: "Выключить звук",
+    sndOff: "Включить звук"
   };
 
   var gameId = 0;
@@ -159,6 +172,11 @@
   var movesKey = "";
   var toastTimer = 0;
   var busyAct = "";
+  var snd = { ctx: null, out: null, noise: null, off: false };
+  var sounded = -1;
+  var live = false;
+  var lowSaid = false;
+  try { snd.off = window.localStorage.getItem("tc-snd") === "0"; } catch (e) {}
 
   function call(fn) {
     try { fn(); } catch (e) {}
@@ -243,19 +261,24 @@
     return n;
   }
 
-  function shadeOf(s) {
-    if (s[1] === "p") { return s[3] || ""; }
-    if (s[1] === "c") {
-      return "M" + s[2] + " " + (s[3] - s[4]) + "A" + s[4] + " " + s[4] + " 0 0 1 " + s[2] + " " + (s[3] + s[4]) + "z";
-    }
-    var x = s[2], y = s[3], w = s[4], h = s[5], r = s[6], m = x + w / 2;
-    return "M" + m + " " + y + "H" + (x + w - r) + "A" + r + " " + r + " 0 0 1 " + (x + w) + " " + (y + r) +
-      "V" + (y + h - r) + "A" + r + " " + r + " 0 0 1 " + (x + w - r) + " " + (y + h) + "H" + m + "z";
-  }
-
   function group(attrs) {
     var g = document.createElementNS(SVGNS, "g");
     for (var k in attrs) { if (attrs.hasOwnProperty(k)) { g.setAttribute(k, attrs[k]); } }
+    return g;
+  }
+
+  function solid(t) {
+    return t === "b" || t === "o" || t === "s";
+  }
+
+  function mass(list, color, width) {
+    var g = group({ fill: color, stroke: color, "stroke-width": String(width), "stroke-linejoin": "round", "stroke-linecap": "round" });
+    list.forEach(function (d) {
+      if (!solid(d[0])) { return; }
+      var n = shapeNode(d);
+      if (d[0] === "s") { n.setAttribute("fill", "none"); n.setAttribute("stroke-width", String(width - EDGE + THIN + 1)); }
+      g.appendChild(n);
+    });
     return g;
   }
 
@@ -264,40 +287,30 @@
     var list = SHAPES[code.toLowerCase()];
     var ink = INK[side];
     var s = svg("0 0 100 100");
-    var shadow = group({ transform: "translate(1.5 2.5)", fill: "rgba(8,3,14,.28)", stroke: "rgba(8,3,14,.28)", "stroke-width": "3", "stroke-linejoin": "round" });
-    list.forEach(function (d) { if (d[0] === "b") { shadow.appendChild(shapeNode(d)); } });
-    s.appendChild(shadow);
-    if (ink.rim) {
-      var rim = group({ fill: ink.rim, stroke: ink.rim, "stroke-width": "7.5", "stroke-linejoin": "round" });
-      list.forEach(function (d) { if (d[0] === "b") { rim.appendChild(shapeNode(d)); } });
-      s.appendChild(rim);
-    }
-    var g = group({ "stroke-width": "3", "stroke-linejoin": "round", "stroke-linecap": "round" });
+    if (ink.rim) { s.appendChild(mass(list, ink.rim, EDGE + 4)); }
+    s.appendChild(mass(list, ink.line, EDGE));
+    var g = group({ "stroke-width": String(THIN), "stroke-linejoin": "round", "stroke-linecap": "round" });
     list.forEach(function (d) {
+      if (d[0] !== "b") { return; }
       var n = shapeNode(d);
-      if (d[0] === "b") {
+      n.setAttribute("fill", ink.fill);
+      g.appendChild(n);
+    });
+    list.forEach(function (d) {
+      var t = d[0];
+      if (t === "b" || t === "s" || (t === "lb" && side !== "b") || (t === "lw" && side !== "w")) { return; }
+      var n = shapeNode(d);
+      if (t === "o") {
         n.setAttribute("fill", ink.fill);
-        g.appendChild(n);
-        var sd = shadeOf(d);
-        if (sd) {
-          var sp = document.createElementNS(SVGNS, "path");
-          sp.setAttribute("d", sd);
-          sp.setAttribute("fill", ink.shade);
-          g.appendChild(sp);
-        }
-        var o = shapeNode(d);
-        o.setAttribute("fill", "none");
-        o.setAttribute("stroke", ink.line);
-        g.appendChild(o);
-      } else if (d[0] === "l") {
+        n.setAttribute("stroke", ink.line);
+        n.setAttribute("stroke-width", String(EDGE / 2));
+      } else if (t === "d") {
+        n.setAttribute("fill", ink.detail);
+      } else {
         n.setAttribute("fill", "none");
         n.setAttribute("stroke", ink.detail);
-        n.setAttribute("stroke-width", "2.6");
-        g.appendChild(n);
-      } else {
-        n.setAttribute("fill", ink.detail);
-        g.appendChild(n);
       }
+      g.appendChild(n);
     });
     s.appendChild(g);
     return s;
@@ -312,12 +325,136 @@
     if (!glyphs[t]) {
       var s = svg("0 0 100 100");
       s.setAttribute("class", "tc-fig");
-      var g = group({ fill: "currentColor", stroke: "currentColor", "stroke-width": "4", "stroke-linejoin": "round" });
-      SHAPES[t].forEach(function (d) { if (d[0] === "b") { g.appendChild(shapeNode(d)); } });
-      s.appendChild(g);
+      s.appendChild(mass(SHAPES[t], "currentColor", EDGE));
       glyphs[t] = s;
     }
     return glyphs[t].cloneNode(true);
+  }
+
+  function sanCount(s) {
+    return s && Array.isArray(s.san) ? s.san.length : 0;
+  }
+
+  function sndWake(then) {
+    if (snd.off) { return; }
+    if (!snd.ctx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { return; }
+      try {
+        snd.ctx = new AC();
+        snd.out = snd.ctx.createGain();
+        snd.out.gain.value = 0.85;
+        snd.out.connect(snd.ctx.destination);
+      } catch (e) { snd.ctx = null; return; }
+    }
+    if (snd.ctx.state === "running") {
+      if (typeof then === "function") { then(); }
+      return;
+    }
+    call(function () {
+      var p = snd.ctx.resume();
+      if (p && typeof p.then === "function" && typeof then === "function") { p.then(then, function () {}); }
+    });
+  }
+
+  function sndTouch() {
+    sndWake();
+  }
+
+  function noise() {
+    if (!snd.noise) {
+      var c = snd.ctx, n = Math.floor(c.sampleRate * 0.25);
+      var buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) { d[i] = Math.random() * 2 - 1; }
+      snd.noise = buf;
+    }
+    return snd.noise;
+  }
+
+  function hit(t, f, g, d) {
+    var c = snd.ctx;
+    var src = c.createBufferSource();
+    src.buffer = noise();
+    var bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = f;
+    bp.Q.value = 1.1;
+    var gn = c.createGain();
+    gn.gain.setValueAtTime(g, t);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(bp); bp.connect(gn); gn.connect(snd.out);
+    src.start(t); src.stop(t + d + 0.02);
+    var o = c.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(f * 0.16, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.08, t + d);
+    var og = c.createGain();
+    og.gain.setValueAtTime(g * 0.8, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + d * 1.3);
+    o.connect(og); og.connect(snd.out);
+    o.start(t); o.stop(t + d * 1.3 + 0.02);
+  }
+
+  function tone(t, f, d, g, type) {
+    var c = snd.ctx;
+    var o = c.createOscillator();
+    o.type = type || "sine";
+    o.frequency.value = f;
+    var gn = c.createGain();
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.linearRampToValueAtTime(g, t + 0.008);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(gn); gn.connect(snd.out);
+    o.start(t); o.stop(t + d + 0.02);
+  }
+
+  var PLAY = {
+    move: function (t) { hit(t, 1500, 0.5, 0.07); },
+    capture: function (t) { hit(t, 850, 0.75, 0.1); hit(t + 0.04, 2300, 0.4, 0.05); },
+    castle: function (t) { hit(t, 1500, 0.5, 0.07); hit(t + 0.12, 1250, 0.55, 0.08); },
+    promote: function (t) { hit(t, 1500, 0.5, 0.07); tone(t + 0.04, 659, 0.14, 0.16); tone(t + 0.13, 988, 0.26, 0.16); },
+    check: function (t) { tone(t + 0.05, 932, 0.2, 0.15, "triangle"); tone(t + 0.05, 1245, 0.2, 0.11, "triangle"); },
+    win: function (t) { [523, 659, 784, 1047].forEach(function (f, i) { tone(t + 0.25 + i * 0.11, f, i === 3 ? 0.6 : 0.2, 0.17); }); },
+    loss: function (t) { [392, 311, 262].forEach(function (f, i) { tone(t + 0.25 + i * 0.16, f, i === 2 ? 0.7 : 0.26, 0.17); }); },
+    draw: function (t) { tone(t + 0.25, 523, 0.22, 0.15); tone(t + 0.45, 523, 0.5, 0.15); tone(t + 0.45, 659, 0.5, 0.1); },
+    illegal: function (t) { tone(t, 185, 0.09, 0.09, "square"); tone(t + 0.1, 156, 0.13, 0.09, "square"); },
+    offer: function (t) { tone(t, 659, 0.16, 0.13); tone(t + 0.12, 880, 0.3, 0.13); },
+    low: function (t) { tone(t, 1319, 0.08, 0.1, "triangle"); tone(t + 0.14, 1319, 0.08, 0.1, "triangle"); }
+  };
+
+  function sound(name) {
+    if (snd.off || !snd.ctx || snd.ctx.state !== "running" || !PLAY[name]) { return; }
+    call(function () { PLAY[name](snd.ctx.currentTime + 0.01); });
+  }
+
+  function sanSound(san) {
+    if (san.indexOf("O-O") === 0) { return "castle"; }
+    if (san.indexOf("=") >= 0) { return "promote"; }
+    return san.indexOf("x") >= 0 ? "capture" : "move";
+  }
+
+  function uciSound(board, uci) {
+    var f = idx(uci.slice(0, 2)), t = idx(uci.slice(2, 4));
+    var kind = (board[f] || "").toLowerCase();
+    var df = (t % 8) - (f % 8);
+    if (kind === "k" && Math.abs(df) === 2) { return "castle"; }
+    if (uci.length > 4) { return "promote"; }
+    return board[t] || (kind === "p" && df !== 0) ? "capture" : "move";
+  }
+
+  function paintSnd() {
+    if (!ui || !ui.snd) { return; }
+    clear(ui.snd);
+    ui.snd.appendChild(icon(snd.off ? "mute" : "sound"));
+    ui.snd.setAttribute("aria-label", snd.off ? T.sndOff : T.sndOn);
+    ui.snd.classList.toggle("is-off", snd.off);
+  }
+
+  function toggleSnd() {
+    snd.off = !snd.off;
+    try { window.localStorage.setItem("tc-snd", snd.off ? "0" : "1"); } catch (e) {}
+    paintSnd();
+    if (!snd.off) { sndWake(function () { sound("move"); }); }
   }
 
   function haptic(kind, style) {
@@ -683,6 +820,10 @@
     body.appendChild(ui.note);
     info.appendChild(ui.dot);
     info.appendChild(body);
+    ui.snd = btn("tc-snd");
+    ui.snd.addEventListener("click", toggleSnd);
+    info.appendChild(ui.snd);
+    paintSnd();
     ui.fuse = el("div", "tc-fuse");
     ui.fuse.setAttribute("aria-hidden", "true");
     ui.fuseBar = el("span", "");
@@ -866,6 +1007,16 @@
     if (same) { tick(); return; }
     zeroAsked = false;
     var oppMoved = !!(prev && s.moves && prev.moves && s.moves.length > prev.moves.length && s.me && s.turn === s.me);
+    var n = sanCount(s);
+    var lastSan = n ? String(s.san[n - 1]) : "";
+    if (!prev || sounded < 0) {
+      sounded = n;
+    } else {
+      if (n > sounded) { sound(sanSound(lastSan)); }
+      if (n > sanCount(prev) && s.status === "on" && lastSan.indexOf("+") >= 0) { sound("check"); }
+      sounded = n;
+    }
+    if (prev && s.status === "on" && s.me && s.draw && s.draw !== prev.draw && s.draw !== s.me) { sound("offer"); }
     view = fromState(s);
     if (sel >= 0) {
       if (view.legal && view.legal[sel] && view.board[sel]) { targets = view.legal[sel]; }
@@ -882,11 +1033,13 @@
     if (oppMoved) { haptic("impact", "medium"); }
     if (s.status === "done") { finish(); }
     else if (!tickTimer) { tickTimer = setInterval(tick, 100); }
+    live = true;
   }
 
   function revert() {
     if (!st) { return; }
     view = fromState(st);
+    sounded = sanCount(st);
     sel = -1;
     targets = null;
     placePieces(view.board, true);
@@ -974,6 +1127,10 @@
       var low = on && base > 30000 && left < 30000;
       bar.root.classList.toggle("is-low", low);
       bar.root.classList.toggle("is-crit", low && left < 10000 && view.turn === side);
+      if (low && left < 10000 && left > 0 && side === st.me && st.clock && st.clock.run === side && !lowSaid) {
+        lowSaid = true;
+        sound("low");
+      }
       if (on && left <= 0 && st.clock && st.clock.run === side && !zeroAsked) {
         zeroAsked = true;
         schedule(250);
@@ -1249,7 +1406,7 @@
       } else if (h.state) {
         adopt(h.state, true);
         toast(errText(h.code));
-        haptic("note", "error");
+        haptic("note", "error"); sound("illegal");
       } else {
         toast(h.rate ? T.rate : T.fail);
       }
@@ -1302,6 +1459,7 @@
       showEnd(true);
       if (o.kind === "win") { haptic("note", "success"); }
       else if (o.kind === "loss") { haptic("note", "warning"); }
+      if (live && o.kind !== "abort") { sound(o.kind === "win" || o.kind === "side" ? "win" : (o.kind === "loss" ? "loss" : "draw")); }
     }
   }
 
@@ -1625,6 +1783,8 @@
     pending = true;
     moveSeq = ++seq;
     var mover = sideOf(view.board[from]);
+    sound(uciSound(view.board, uci));
+    sounded = sanCount(st) + 1;
     var held = { w: clockLeft("w"), b: clockLeft("b") };
     if (uci.length > 4 && pcs[from]) {
       setPos(pcs[from], idx(uci.slice(2, 4)));
@@ -1659,18 +1819,18 @@
       } else if (h.state) {
         adopt(h.state, true);
         toast(h.rate ? T.rate : errText(h.code));
-        haptic("note", "error");
+        haptic("note", "error"); sound("illegal");
       } else {
         revert();
         toast(h.rate ? T.rate : T.fail);
-        haptic("note", "error");
+        haptic("note", "error"); sound("illegal");
       }
       if (st && st.status === "on") { schedule(POLL); }
     }, function () {
       pending = false;
       revert();
       toast(T.noSend);
-      haptic("note", "error");
+      haptic("note", "error"); sound("illegal");
       schedule(1000);
     });
   }
@@ -1783,6 +1943,8 @@
     return;
   }
   document.addEventListener("visibilitychange", wake);
+  document.addEventListener("pointerdown", sndTouch, true);
+  document.addEventListener("keydown", sndTouch, true);
   skeleton();
   poll();
 })();

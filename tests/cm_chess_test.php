@@ -70,6 +70,13 @@ test('вызов: своё время, неверное время, себя, б
     assert_eq(3, cm_offer_get($pdo, 2)['ref_id']);
     cm_do(cm_ctx_for($pdo, $log, 7, '', ['reply_to_message' => cm_gmsg(20, 'го')]), 'шахматы 15');
     assert_eq(15, cm_offer_get($pdo, 3)['ref_id'], 'ответом на сообщение');
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы белый 5 минут @petya');
+    assert_eq(105, cm_offer_get($pdo, 4)['ref_id'], 'цвет перед временем');
+    assert_eq('♟ Петя, U7 вызывает вас на партию в шахматы — по 5 мин на каждого! U7 играет белыми.', cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7, '', ['reply_to_message' => cm_gmsg(20, 'го')]), 'Шахматы 5 минут Чёрный');
+    assert_eq(205, cm_offer_get($pdo, 5)['ref_id'], 'цвет после времени, ответом');
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы @petya за белых');
+    assert_eq(110, cm_offer_get($pdo, 6)['ref_id'], 'цвет без времени');
     cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы 45 @petya');
     assert_eq(cm_t('chess_minutes', ['max' => 30]), cm_last_text($log));
     cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы @user7');
@@ -88,6 +95,12 @@ test('без префикса: ответом или с ником и време
     assert_eq(true, cm_bare_ok($ctx, cm_parse('шахматы 5', CM_BOT)));
     $ctx = cm_ctx_for($pdo, $log, 7, 'шахматы 5 @petya');
     assert_eq(true, cm_bare_ok($ctx, cm_parse('шахматы 5 @petya', CM_BOT)));
+    $ctx = cm_ctx_for($pdo, $log, 7, 'Шахматы 5 минут белый', ['reply_to_message' => cm_gmsg(20, 'го')]);
+    assert_eq(true, cm_bare_ok($ctx, cm_parse('Шахматы 5 минут белый', CM_BOT)));
+    $ctx = cm_ctx_for($pdo, $log, 7, 'шахматы чёрными 5 минут @petya');
+    assert_eq(true, cm_bare_ok($ctx, cm_parse('шахматы чёрными 5 минут @petya', CM_BOT)));
+    $ctx = cm_ctx_for($pdo, $log, 7, 'шахматы белый шоколад');
+    assert_eq(false, cm_bare_ok($ctx, cm_parse('шахматы белый шоколад', CM_BOT)));
     $ctx = cm_ctx_for($pdo, $log, 7, 'шахматы это скучно');
     assert_eq(false, cm_bare_ok($ctx, cm_parse('шахматы это скучно', CM_BOT)));
 });
@@ -106,6 +119,12 @@ test('«Принять»: жребий цвета, сообщение со сс�
     $id2 = chs_start($pdo, $log, 'шахматы 3 @petya', 1);
     $g2 = cm_chess_get($pdo, $id2);
     assert_eq([20, 7, 180000], [$g2['white_id'], $g2['black_id'], $g2['base_ms']], 'жребий: белыми — Петя');
+    $id3 = chs_start($pdo, $log, 'шахматы белый 5 минут @petya', 1);
+    $g3 = cm_chess_get($pdo, $id3);
+    assert_eq([7, 20, 300000], [$g3['white_id'], $g3['black_id'], $g3['base_ms']], 'цвет выбран: жребия нет');
+    $id4 = chs_start($pdo, $log, 'шахматы 5 минут чёрный @petya', 0);
+    $g4 = cm_chess_get($pdo, $id4);
+    assert_eq([20, 7, 300000], [$g4['white_id'], $g4['black_id'], $g4['base_ms']], 'зовущий чёрными');
 });
 
 test('состояние: разрешённые ходы только ходящему, зритель только смотрит', function () {
