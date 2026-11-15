@@ -37,7 +37,7 @@ function news_og_data(PDO $pdo): array {
 
     $meta = og_news_meta($summary);
     return [
-        'image'       => 'https://maknemy.com/api/og-news.php?v=' . $summary['version'],
+        'image'       => site_origin() . '/api/og-news.php?v=' . $summary['version'],
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/png',
@@ -122,7 +122,7 @@ function news_post_og_data(array $row): array {
 
     $meta = og_news_meta($summary);
     return [
-        'image'       => 'https://maknemy.com/api/og-news.php?id=' . $id . '&v=' . $summary['version'],
+        'image'       => site_origin() . '/api/og-news.php?id=' . $id . '&v=' . $summary['version'],
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/png',
@@ -192,6 +192,9 @@ $canonicalUrl = i18n_url($canonicalPath);
 // это уже даёт понять большинству краулеров, noindex просто не оставляет
 // шанса на исключение для тех, кто по какой-то причине проигнорирует статус.
 $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:large';
+// Сайт со своим скином рисует ленту своим шаблоном; всё посчитанное выше
+// ($og, $canonicalUrl, $canonicalPath, $robots, $linkedPostId) общее.
+if (site_skin() !== null && !defined('TESTING')) { require __DIR__ . '/' . site_skin() . '/news.php'; return; }
 ?>
 <?php if (!defined('TESTING')): ?>
 <!DOCTYPE html>
@@ -425,7 +428,7 @@ $robots = $notFound ? 'noindex, follow' : 'index, follow, max-image-preview:larg
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=33" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=34" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=6" fetchpriority="high"></script>

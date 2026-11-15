@@ -19,11 +19,13 @@
 
   const uid = () => "id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+  const SITE = window.NX_SITE || null;
+
   const DONATE_DA  = "https://www.donationalerts.com/r/maknemy";
   const DONATE_HUB = "https://dalink.to/maknemy";
   const DONATE_QR  = "assets/qr-donate.png?v=1";
 
-  function defaultState() {
+  function baseDefaultState() {
     const mk = (name, value, type, demand, trend) => ({
       id: uid(), name, value: String(value), icon: DEFAULT_ICON, type, demand, trend,
       desc: "", descEn: "", terms: "", termsEn: "", tag: "", tagEn: "",
@@ -81,6 +83,12 @@
         },
       ],
     };
+  }
+
+  function defaultState() {
+    const d = baseDefaultState();
+    if (SITE && typeof SITE.defaults === "function") Object.assign(d, SITE.defaults(uid));
+    return d;
   }
 
   function bootState() {
@@ -2134,7 +2142,7 @@
     });
   }
 
-  const PNG_NAME = "nexus-tier-list.png";
+  const PNG_NAME = (SITE && SITE.pngName) || "nexus-tier-list.png";
   let pendingBlobUrl = null;
 
   function anchorDownload(blob) {
@@ -2159,7 +2167,7 @@
         const file = new File([blob], PNG_NAME, { type: "image/png" });
         if (navigator.canShare({ files: [file] })) {
           dbg("сохранение: navigator.share");
-          navigator.share({ files: [file], title: "Maknemy Tier List" })
+          navigator.share({ files: [file], title: (SITE && SITE.shareTitle) || "Maknemy Tier List" })
             .catch(err => {
               dbg("share отклонён: " + (err && err.name));
               if (!err || err.name !== "AbortError") anchorDownload(blob);

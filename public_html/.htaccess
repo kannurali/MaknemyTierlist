@@ -30,8 +30,16 @@ RewriteEngine On
 # "maknemy.com:443", шаблон без порта не совпал бы, и КАЖДЫЙ запрос к
 # каноническому домену уезжал бы редиректом сам на себя — сайт лёг бы
 # целиком с ERR_TOO_MANY_REDIRECTS.
+# Второй сайт на том же коде — voxseas.fun (свой каталог и свой config.php,
+# см. api/lib/site.php). Его www сводится к нему самому, а не к maknemy.com,
+# и сам он под общий редирект ниже не попадает.
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteCond %{HTTP_HOST} ^www\.voxseas\.fun(:[0-9]+)?$ [NC]
+RewriteRule ^ https://voxseas.fun%{REQUEST_URI} [L,R=301]
+
 RewriteCond %{REQUEST_URI} !^/\.well-known/
 RewriteCond %{HTTP_HOST} !^maknemy\.com(:[0-9]+)?$ [NC]
+RewriteCond %{HTTP_HOST} !^voxseas\.fun(:[0-9]+)?$ [NC]
 RewriteRule ^ https://maknemy.com%{REQUEST_URI} [L,R=301]
 
 # Let ACME/AutoSSL validation through over plain HTTP. Without this the
@@ -191,6 +199,14 @@ RewriteRule ^(en|de|fr|es|it|pt|pl|tr|uk)/news/([0-9]+)$ /news.php?id=$2 [L]
 # деталь конфигурации cPanel, которую не стоит подразумевать молча. Без неё
 # Apache подхватил бы index.php и на "/" снова оказался бы тирлист.
 DirectoryIndex home.php
+
+# robots.txt и sitemap.xml в репозитории написаны под maknemy.com. Второму
+# сайту их собирает PHP из его собственного config.php.
+RewriteCond %{HTTP_HOST} ^voxseas\.fun(:[0-9]+)?$ [NC]
+RewriteRule ^(robots\.txt|sitemap\.xml)$ /api/site_meta.php [L]
+
+# Шаблоны скинов подключаются из index.php и news.php; по прямому адресу их нет.
+RewriteRule ^vx/ - [R=404,L]
 
 # ------------------------------- Тирлист -------------------------------
 # Тирлист переехал с "/" на /tierlist, потому что корень занят главной.

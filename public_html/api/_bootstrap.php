@@ -12,6 +12,7 @@ require_once __DIR__ . '/lib/remember.php';
 require_once __DIR__ . '/lib/halloween.php';
 require_once __DIR__ . '/lib/ban.php';
 require_once __DIR__ . '/lib/i18n.php';
+require_once __DIR__ . '/lib/site.php';
 
 function app_config(): array {
     static $cfg = null;
@@ -531,3 +532,7 @@ function parse_rev_param($raw): ?int {
     if (!is_string($raw) || $raw === '' || strlen($raw) > 18 || !ctype_digit($raw)) { return null; }
     return (int)$raw;
 }
+
+// Сайт с ограниченным набором страниц (см. api/lib/site.php) отвечает 404 на
+// всё, чего на нём нет. Стоит в конце файла: решению нужны app_config() и u().
+site_gate();

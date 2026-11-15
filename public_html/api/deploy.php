@@ -60,6 +60,31 @@ function deploy_paths_sane(string $repo, string $target): bool {
     return strpos($target . '/', $repo . '/') !== 0;
 }
 
+// Каталоги, в которые публикуется public_html: основной ('deploy_path') и
+// дополнительные ('deploy_extra_paths' — вторые сайты на том же коде, см.
+// api/lib/site.php). Основной не проходит проверку — деплоя нет вовсе, null.
+// Негодный дополнительный просто пропускается и попадает во второй список:
+// из-за опечатки в чужом пути основной сайт без обновления остаться не должен.
+function deploy_targets(array $cfg): ?array {
+    $repo = (string)($cfg['deploy_repo'] ?? '');
+    $main = (string)($cfg['deploy_path'] ?? '');
+    if (!deploy_paths_sane($repo, $main)) { return null; }
+    $targets = [$main];
+    $skipped = [];
+    $extra = $cfg['deploy_extra_paths'] ?? [];
+    foreach (is_array($extra) ? $extra : [] as $path) {
+        $path = is_string($path) ? $path : '';
+        $norm = rtrim(str_replace('\\', '/', $path), '/');
+        $dup = false;
+        foreach ($targets as $t) {
+            if (rtrim(str_replace('\\', '/', $t), '/') === $norm) { $dup = true; }
+        }
+        if ($dup) { continue; }
+        if (deploy_paths_sane($repo, $path)) { $targets[] = $path; } else { $skipped[] = $path; }
+    }
+    return ['targets' => $targets, 'skipped' => $skipped];
+}
+
 // --- effectful helpers -----------------------------------------------------
 
 function deploy_fn_enabled(string $fn): bool {
@@ -179,12 +204,12 @@ if (!defined('TESTING')) {
     $cfg    = app_config();
     $secret = (string)($cfg['deploy_secret'] ?? '');
     $repo   = (string)($cfg['deploy_repo'] ?? '');
-    $target = (string)($cfg['deploy_path'] ?? '');
+    $plan   = deploy_targets($cfg);
     $branch = (string)($cfg['deploy_branch'] ?? 'master');
     $log    = (string)($cfg['deploy_log'] ?? dirname(CONFIG_PATH) . '/deploy.log');
 
     // Unconfigured means disabled, not "deploy with an empty secret".
-    if ($secret === '' || !deploy_paths_sane($repo, $target)) {
+    if ($secret === '' || $plan === null) {
         json_out(['ok' => false, 'error' => 'deploy_not_configured'], 503);
         exit;
     }
@@ -241,11 +266,30 @@ if (!defined('TESTING')) {
     }
 
     try {
-        $published = deploy_publish(rtrim($repo, '/') . '/public_html', $target);
+        $published = deploy_publish(rtrim($repo, '/') . '/public_html', $plan['targets'][0]);
     } catch (Throwable $e) {
         deploy_log_line($log, 'FAIL publish: ' . $e->getMessage());
         json_out(['ok' => false, 'error' => 'step_failed', 'step' => 'publish'], 500);
         exit;
+    }
+
+    // Вторые сайты — после основного и каждый сам по себе: сбой в одном
+    // каталоге не отменяет уже состоявшийся деплой и не мешает остальным.
+    $extraFailed = 0;
+    foreach ($plan['skipped'] as $path) {
+        $extraFailed++;
+        deploy_log_line($log, 'FAIL extra path rejected: ' . $path);
+    }
+    foreach (array_slice($plan['targets'], 1) as $path) {
+        try {
+            $r = deploy_publish(rtrim($repo, '/') . '/public_html', $path);
+            $n = count($r['copied']);
+            deploy_log_line($log, "OK extra $path copied=$n same={$r['same']}"
+                . ($n ? ': ' . implode(' ', $r['copied']) : ''));
+        } catch (Throwable $e) {
+            $extraFailed++;
+            deploy_log_line($log, "FAIL extra $path: " . $e->getMessage());
+        }
     }
 
     $head = deploy_run_cmd($g . ' rev-parse HEAD')['out'];
@@ -260,5 +304,6 @@ if (!defined('TESTING')) {
     // пришёл, — здесь это запрос GitHub. Первый деплой с этой строкой
     // выполняет ещё старый deploy.php, но и кеша до него не было.
     header('X-LiteSpeed-Purge: *');
-    json_out(['ok' => true, 'deployed' => true, 'head' => $head, 'copied' => $copied, 'seconds' => $secs], 200);
+    json_out(['ok' => true, 'deployed' => true, 'head' => $head, 'copied' => $copied,
+        'extra' => count($plan['targets']) - 1, 'extra_failed' => $extraFailed, 'seconds' => $secs], 200);
 }

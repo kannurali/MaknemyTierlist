@@ -131,7 +131,7 @@ function og_tierlist_summary($rawData, $rawRev): ?array {
 // ---------------------------------------------------------------------------
 function og_brand_card(): array {
     return [
-        'image'       => 'https://maknemy.com/assets/og-card.jpg?v=1',
+        'image'       => site_origin() . (site_skin() === null ? '/assets/og-card.jpg?v=1' : '/assets/' . site_skin() . '/og-card.jpg?v=1'),
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/jpeg',
@@ -152,7 +152,7 @@ function og_tierlist_image(?array $summary): array {
         return og_brand_card();
     }
     return [
-        'image'       => 'https://maknemy.com/api/og-tierlist.php?v=' . $summary['version'],
+        'image'       => site_origin() . '/api/og-tierlist.php?v=' . $summary['version'],
         'imageWidth'  => 1200,
         'imageHeight' => 630,
         'imageType'   => 'image/png',
