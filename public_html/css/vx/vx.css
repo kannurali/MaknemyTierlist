@@ -539,3 +539,14 @@ html::-webkit-scrollbar-thumb {
   .mk-avatar,
   .mk-pill { transition: none; }
 }
+
+.vx-foot-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  font: 600 13px/1.4 var(--ui);
+}
+.vx-foot-legal a { color: #8fc3e0; text-decoration: none; }
+.vx-foot-legal a:hover { color: #fff; text-decoration: underline; }

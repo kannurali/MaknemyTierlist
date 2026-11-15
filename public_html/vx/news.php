@@ -54,7 +54,7 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
 
 <link rel="stylesheet" href="css/base.css?v=16" />
 <link rel="stylesheet" href="css/news.css?v=15" />
-<link rel="stylesheet" href="css/vx/vx.css?v=1" />
+<link rel="stylesheet" href="css/vx/vx.css?v=2" />
 <link rel="stylesheet" href="css/vx/news.css?v=1" />
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
@@ -120,6 +120,10 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
     <img class="vx-foot-logo" src="assets/vx/logo.png" alt="" width="480" height="367" loading="lazy" />
     <p class="vx-foot-name"><?= $vxEsc($vxName) ?></p>
     <p class="vx-foot-note" data-i18n="vx.foot"><?= te('vx.foot') ?></p>
+    <p class="vx-foot-legal">
+      <a href="/privacy" data-i18n="site.footPrivacy"><?= te('site.footPrivacy') ?></a>
+      <a href="/terms" data-i18n="site.footTerms"><?= te('site.footTerms') ?></a>
+    </p>
   </footer>
 
   <?= i18n_dict_tag() ?>

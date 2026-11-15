@@ -20,6 +20,9 @@ function site_meta_sitemap(array $site): string {
             $out .= '  <url><loc>' . htmlspecialchars($loc, ENT_XML1, 'UTF-8') . '</loc></url>' . "\n";
         }
     }
+    foreach (['/privacy', '/terms'] as $path) {
+        $out .= '  <url><loc>' . htmlspecialchars($site['origin'] . $path, ENT_XML1, 'UTF-8') . '</loc></url>' . "\n";
+    }
     return $out . "</urlset>\n";
 }
 

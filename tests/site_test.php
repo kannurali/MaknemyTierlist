@@ -71,7 +71,7 @@ test('второй сайт открывает тирлист, новости, �
         'api/state.php', 'api/tierlist.php', 'api/save.php', 'api/upload.php', 'api/like.php',
         'api/news.php', 'api/news_save.php', 'api/news_delete.php', 'api/news_like.php', 'api/promo.php',
         'api/session.php', 'api/logout.php', 'api/roblox_start.php', 'api/roblox_callback.php',
-        'api/deploy.php', 'api/site_meta.php',
+        'api/deploy.php', 'api/site_meta.php', 'privacy.php', 'terms.php',
     ];
     foreach ($open as $s) {
         assert_eq(['allow' => true], site_gate_decision($s, $site), $s);
@@ -83,7 +83,7 @@ test('всего остального на втором сайте нет', func
     $closed = [
         'chat.php', 'trading.php', 'trade-new.php', 'calculator.php', 'stock.php', 'giveaways.php',
         'halloween.php', 'promote.php', 'profile.php', 'support.php', 'bot.php', 'tg-app.php',
-        'privacy.php', 'terms.php', 'admin-promo.php', 'admin-giveaways.php', 'admin-bans.php',
+        'admin-promo.php', 'admin-giveaways.php', 'admin-bans.php',
         'api/chat_send.php', 'api/giveaways.php', 'api/hunt.php', 'api/tg_webhook.php',
         'api/trade_create.php', 'api/stock.php', 'api/og-tierlist.php', 'api/og-news.php', '',
     ];
@@ -133,11 +133,27 @@ test('шаблоны скина лежат там, откуда их подкл�
     foreach (SITE_SKINS as $skin) {
         assert_true(is_file($pub . $skin . '/tierlist.php'), "$skin/tierlist.php");
         assert_true(is_file($pub . $skin . '/news.php'), "$skin/news.php");
+        assert_true(is_file($pub . $skin . '/privacy.php'), "$skin/privacy.php");
+        assert_true(is_file($pub . $skin . '/terms.php'), "$skin/terms.php");
     }
     $index = file_get_contents($pub . 'index.php');
     $news = file_get_contents($pub . 'news.php');
     assert_true(strpos($index, "require __DIR__ . '/' . site_skin() . '/tierlist.php'") !== false, 'index.php');
     assert_true(strpos($news, "require __DIR__ . '/' . site_skin() . '/news.php'") !== false, 'news.php');
+    foreach (['privacy', 'terms'] as $doc) {
+        $src = file_get_contents($pub . $doc . '.php');
+        assert_true(strpos($src, "require __DIR__ . '/' . site_skin() . '/$doc.php'") !== false, "$doc.php");
+    }
+});
+
+test('юридические документы второго сайта не про maknemy.com', function () {
+    $pub = dirname(__DIR__) . '/public_html/vx/';
+    foreach (['privacy.php', 'terms.php', 'legal.php'] as $f) {
+        $src = file_get_contents($pub . $f);
+        assert_true(stripos($src, 'maknemy.com') === false, "$f без maknemy.com");
+        assert_true(stripos($src, 'Blox Fruits') === false, "$f без Blox Fruits");
+        assert_true(stripos($src, 'Google Analytics') === false, "$f без Google Analytics");
+    }
 });
 
 // --- robots.txt и sitemap.xml ---------------------------------------------
@@ -150,7 +166,9 @@ test('robots и sitemap второго сайта не упоминают осн
     assert_true(strpos($robots . $map, 'maknemy') === false, 'чужого домена нет');
     assert_true(strpos($map, '<loc>https://voxseas.fun/tierlist</loc>') !== false, 'тирлист');
     assert_true(strpos($map, '<loc>https://voxseas.fun/en/news</loc>') !== false, 'новости на английском');
-    assert_eq(2 * count(I18N_LANGS), substr_count($map, '<loc>'), 'по адресу на язык и раздел');
+    assert_eq(2 * count(I18N_LANGS) + 2, substr_count($map, '<loc>'), 'по адресу на язык и раздел плюс два документа');
+    assert_true(strpos($map, '<loc>https://voxseas.fun/privacy</loc>') !== false, 'политика');
+    assert_true(strpos($map, '<loc>https://voxseas.fun/terms</loc>') !== false, 'условия');
 });
 
 // --- .htaccess -------------------------------------------------------------
