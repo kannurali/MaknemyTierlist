@@ -11,6 +11,8 @@
 // предметами; неверно понятая «цена с сайта» — это чужие потерянные фрукты и
 // претензии к нам.
 require_once __DIR__ . '/api/_bootstrap.php';
+// Сайт со своим скином (см. api/lib/site.php) отдаёт свой документ.
+if (site_skin() !== null) { require __DIR__ . '/' . site_skin() . '/terms.php'; return; }
 require_once __DIR__ . '/api/lib/legal_page.php';
 
 legal_page_open(

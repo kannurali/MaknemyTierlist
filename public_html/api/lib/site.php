@@ -31,12 +31,14 @@ const SITE_PAGE_SCRIPTS = [
     ],
 ];
 
-// Вход, сессия, деплой и служебные файлы нужны любому сайту.
+// Вход, сессия, деплой, служебные файлы и юридические страницы (их требует
+// Roblox у OAuth-приложения) нужны любому сайту.
 const SITE_CORE_SCRIPTS = [
     'admin-logout.php',
     'api/session.php', 'api/login.php', 'api/logout.php',
     'api/roblox_start.php', 'api/roblox_callback.php',
     'api/deploy.php', 'api/site_meta.php',
+    'privacy.php', 'terms.php',
 ];
 
 function site_normalize(array $raw): array {
