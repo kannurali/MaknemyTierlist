@@ -435,7 +435,7 @@
   let copyStatusEl = null;
 
   async function copyPostLink(post, btn) {
-    const url = "https://maknemy.com" + I18N.url("/news/" + post.id);
+    const url = location.origin + I18N.url("/news/" + post.id);
     let ok = false;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {

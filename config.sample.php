@@ -89,8 +89,26 @@ return [
     // Web root the repo's public_html/ is copied into.
     'deploy_path'   => '/home/maknemyt/public_html',
     'deploy_branch' => 'master',
+    // Вторые сайты на том же коде: веб-корни, куда тот же вебхук копирует
+    // public_html/ следом за основным. Пишется только в config.php основного
+    // сайта — вебхук GitHub приходит на него. Каталог должен существовать.
+    // 'deploy_extra_paths' => ['/home/maknemyt/voxseas/public_html'],
     // Optional: absolute path to git if auto-detection fails.
     // 'deploy_git'  => '/usr/local/cpanel/3rdparty/bin/git',
     // Optional: defaults to deploy.log next to this file.
     // 'deploy_log'  => '/home/maknemyt/deploy.log',
+
+    // --- Второй сайт (api/lib/site.php) ---------------------------------
+    // Ключа нет — это основной сайт, maknemy.com, со всеми страницами.
+    // У второго сайта свой веб-корень и свой config.php уровнем выше него
+    // (например /home/maknemyt/voxseas/config.php при веб-корне
+    // /home/maknemyt/voxseas/public_html): своя база ('dsn'), свой каталог
+    // картинок ('images_dir'), свой 'admin_ids', свой Roblox redirect URI.
+    // Ключи бота, стока, рассылок и 'deploy_*' туда не переносятся.
+    // 'site' => [
+    //     'origin' => 'https://voxseas.fun',   // канонический адрес, без слэша в конце
+    //     'name'   => 'Vox Seas Tier List',    // og:site_name и заголовки
+    //     'skin'   => 'vx',                    // шаблоны public_html/vx/
+    //     'pages'  => ['tierlist', 'news'],    // остальные адреса отвечают 404
+    // ],
 ];

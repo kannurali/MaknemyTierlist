@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/site.php';
 // Язык страницы и тексты интерфейса.
 //
 // Язык определяется по приставке адреса: /en/tierlist — английский,
@@ -15,7 +16,6 @@ const I18N_OG_LOCALES = [
     'ru' => 'ru_RU', 'en' => 'en_US', 'de' => 'de_DE', 'fr' => 'fr_FR', 'es' => 'es_ES',
     'it' => 'it_IT', 'pt' => 'pt_BR', 'pl' => 'pl_PL', 'tr' => 'tr_TR', 'uk' => 'uk_UA',
 ];
-const I18N_ORIGIN = 'https://maknemy.com';
 
 function i18n_lang_from_uri(string $uri): string {
     $path = parse_url($uri, PHP_URL_PATH);
@@ -81,7 +81,7 @@ function u(string $path, ?string $lang = null): string {
 }
 
 function i18n_url(string $path, ?string $lang = null): string {
-    return I18N_ORIGIN . u($path, $lang);
+    return site_origin() . u($path, $lang);
 }
 
 function i18n_og_locale(?string $lang = null): string {

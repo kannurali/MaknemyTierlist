@@ -29,7 +29,7 @@ if ($html === null) {
 }
 
 // Заголовок вкладки: рядом с открытым сайтом их надо различать.
-$html = preg_replace('~<title>.*?</title>~su', '<title>Редактор тирлиста — MAKNEMY</title>', $html, 1);
+$html = preg_replace('~<title>.*?</title>~su', '<title>Редактор тирлиста — ' . htmlspecialchars(site_skin() === null ? 'MAKNEMY' : site_name(), ENT_QUOTES, 'UTF-8') . '</title>', $html, 1);
 
 // Индексация. Заголовок X-Robots-Tag уже ушёл из admin_page_guard(), но мета
 // нужна на случай, если страницу сохранят на диск и откроют локально.

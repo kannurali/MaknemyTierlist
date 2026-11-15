@@ -87,6 +87,9 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
     // текущую ревизию, а следующий опрос state.php всё выровняет.
     page_lscache();
 }
+// Сайт со своим скином (см. api/lib/site.php) рисует ту же страницу своим
+// шаблоном: данные, $og и $nxRev посчитаны выше и общие для обоих.
+if (site_skin() !== null) { require __DIR__ . '/' . site_skin() . '/tierlist.php'; return; }
 ?>
 <!DOCTYPE html>
 <html lang="<?= i18n_lang() ?>">
@@ -596,7 +599,7 @@ if (!defined('TESTING') && !defined('NX_ADMIN_RENDER')) {
   <script src="js/promo-dock.js?v=12" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/app.js?v=101" fetchpriority="high"></script>
+  <script src="js/app.js?v=102" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>

@@ -149,6 +149,14 @@ function admin_nav(string $active): string {
             'filter'  => ['/admin/chat-filter', 'Фильтр чата'],
             'photos'  => ['/admin/chat-photos', 'Жалобы на фото'],
         ];
+    // На сайте с ограниченным набором страниц остаются вкладки его разделов.
+    if (site_cfg()['pages'] !== null) {
+        $own = ['tier' => 'tierlist', 'news' => 'news'];
+        foreach (array_keys($tabs) as $key) {
+            if (!isset($own[$key]) || !site_has($own[$key])) { unset($tabs[$key]); }
+        }
+    }
+    $brand = site_skin() === null ? 'MAKNEMY' : htmlspecialchars(strtoupper(explode(' Tier', site_name())[0]), ENT_QUOTES, 'UTF-8');
     $links = '';
     foreach ($tabs as $key => [$href, $label]) {
         $on = $key === $active ? ' is-active' : '';
@@ -156,7 +164,7 @@ function admin_nav(string $active): string {
     }
     return <<<HTML
 <nav class="adm-nav">
-  <span class="adm-nav-brand">MAKNEMY<b>ADMIN</b></span>
+  <span class="adm-nav-brand">{$brand}<b>ADMIN</b></span>
 {$links}  <span class="adm-nav-gap"></span>
   <a class="adm-nav-out" href="/" target="_blank" rel="noopener">Сайт ↗</a>
   <form class="adm-nav-exit" method="post" action="/admin/logout">

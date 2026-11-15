@@ -1213,5 +1213,12 @@
     "ads.135": "<strong>Przerwy techniczne.</strong> Jeśli emisja jest niedostępna z naszej winy, rekompensujemy czas przedłużeniem lub zwrotem za niezrealizowany okres, zgodnie z ustaleniami.",
     "ads.136": "<strong>Warunki wyświetlania i wyłączność.</strong> Strony, miejsca reklamowe, rotacja i ograniczenia dla konkurencji są ustalane przy rezerwacji. Wyłączność obowiązuje tylko po osobnym uzgodnieniu.",
     "ads.137": "Zamów reklamę",
-    "ads.138": "Napisz do <a href=\"https://t.me/mksvtn\" target=\"_blank\" rel=\"noopener\">@mksvtn</a> i wyślij link do projektu, cel reklamy, budżet i preferowane terminy. Dobierzemy format i potwierdzimy wolne miejsca."
+    "ads.138": "Napisz do <a href=\"https://t.me/mksvtn\" target=\"_blank\" rel=\"noopener\">@mksvtn</a> i wyślij link do projektu, cel reklamy, budżet i preferowane terminy. Dobierzemy format i potwierdzimy wolne miejsca.",
+    "vx.play": "Graj",
+    "vx.foot": "Tier lista i wiadomości Vox Seas",
+    "vx.meta.tierlist.title": "Vox Seas Tier List — wartości przedmiotów w Vox Seas",
+    "vx.meta.tierlist.desc": "Aktualna tier lista Vox Seas: wartości przedmiotów, popyt oraz trendy wzrostowe i spadkowe. Aktualizowana ręcznie.",
+    "vx.meta.news.title": "Wiadomości Vox Seas i aktualizacje tier listy | Vox Seas Tier List",
+    "vx.meta.news.desc": "Wiadomości Vox Seas: aktualizacje gry, zmiany wartości w tier liście i zapowiedzi.",
+    "vx.meta.news.ogTitle": "Wiadomości Vox Seas i aktualizacje tier listy"
 }
