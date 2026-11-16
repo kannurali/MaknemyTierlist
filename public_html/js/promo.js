@@ -815,11 +815,11 @@
     pages: ["tierlist"],
     slots: ["strip", "rail", "dock", "popup"],
     creatives: {
-      strip:    { src: "/assets/promo/kupa-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
-      rail:     { src: "/assets/promo/kupa-rail.webp",      w: 300,  h: 1200, anim: false, poster: "" },
-      dock:     { src: "/assets/promo/kupa-dock.webp",      w: 640,  h: 200,  anim: false, poster: "" },
-      dockMini: { src: "/assets/promo/kupa-dock-mini.webp", w: 374,  h: 47,   anim: false, poster: "" },
-      popup:    { src: "/assets/promo/kupa-popup.webp",     w: 800,  h: 800,  anim: false, poster: "" }
+      strip:    { src: "/assets/promo/kupa-robux-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
+      rail:     { src: "/assets/promo/kupa-robux-rail.webp",      w: 300,  h: 1200, anim: false, poster: "" },
+      dock:     { src: "/assets/promo/kupa-robux-dock.webp",      w: 640,  h: 200,  anim: false, poster: "" },
+      dockMini: { src: "/assets/promo/kupa-robux-dock-mini.webp", w: 374,  h: 47,   anim: false, poster: "" },
+      popup:    { src: "/assets/promo/kupa-popup.webp",           w: 800,  h: 800,  anim: false, poster: "" }
     },
     popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
     notes: ""

@@ -419,7 +419,7 @@ if (site_skin() !== null && !defined('TESTING')) { require __DIR__ . '/' . site_
   <script src="js/news.js?v=6" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=39" fetchpriority="high"></script>
+  <script src="js/promo.js?v=40" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
 
