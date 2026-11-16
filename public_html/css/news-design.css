@@ -101,7 +101,7 @@
   margin: 0 0 calc(13.5 * var(--u)) calc(-50.9 * var(--u));
   padding: calc(12 * var(--u)) calc(26 * var(--u)) calc(12 * var(--u)) calc(50.9 * var(--u));
   border-radius: 0 calc(10 * var(--u)) calc(10 * var(--u)) 0;
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: linear-gradient(90deg, var(--nw-accent-a), var(--nw-accent-b));
   font-family: var(--display);
   font-size: calc(26 * var(--u));
   line-height: 1.15;
@@ -154,7 +154,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: linear-gradient(135deg, var(--nw-accent-a), var(--nw-accent-b));
   color: #fff;
   cursor: pointer;
 }
@@ -206,7 +206,7 @@
   inset: 0;
   border-radius: inherit;
   padding: calc(2 * var(--u));
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: linear-gradient(180deg, var(--nw-accent-a), var(--nw-accent-b));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -246,7 +246,7 @@
 .nw-card .nw-copy-fail::before { display: none; }
 .nw-card .nw-date {
   color: #bbb;
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: linear-gradient(180deg, var(--nw-accent-a), var(--nw-accent-b));
   -webkit-background-clip: text;
   background-clip: text;
   transition: color var(--nw-hover) var(--ease-quick);

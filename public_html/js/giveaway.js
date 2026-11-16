@@ -299,7 +299,7 @@
     g.setAttribute("y1", "0");
     g.setAttribute("x2", "0");
     g.setAttribute("y2", "1");
-    [["0", "#8400ff"], ["1", "#bb00ff"]].forEach(function (s) {
+    [["0", "#61b5e9"], ["1", "#2d4aed"]].forEach(function (s) {
       var stop = document.createElementNS(SVG_NS, "stop");
       stop.setAttribute("offset", s[0]);
       stop.setAttribute("stop-color", s[1]);

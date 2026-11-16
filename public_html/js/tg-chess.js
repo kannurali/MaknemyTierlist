@@ -7,7 +7,7 @@
 
   var API = "api/cm_chess.php";
   var SVGNS = "http://www.w3.org/2000/svg";
-  var PAL = { dark: "#0d0613", light: "#f3eef9" };
+  var PAL = { dark: "#302e2b", light: "#f1f1ef" };
   var FILES = "abcdefgh";
   var POLL = 2000;
   var VAL = { q: 9, r: 5, b: 3, n: 3, p: 1, k: 0 };
@@ -16,7 +16,7 @@
   var PROMO = ["q", "r", "b", "n"];
   var NAME = { k: "король", q: "ферзь", r: "ладья", b: "слон", n: "конь", p: "пешка" };
   var FEM = { r: true, p: true };
-  var AVA = ["#8b00ff", "#b03cf0", "#5a3df0", "#d6338a", "#e0730c", "#1f9e95"];
+  var AVA = ["#81b64c", "#3d9bd1", "#5a3df0", "#d6338a", "#e0730c", "#1f9e95"];
 
   var SHAPES = {
     p: [
@@ -76,8 +76,8 @@
     ]
   };
   var INK = {
-    w: { fill: "#ffffff", line: "#140c1c", detail: "#140c1c", rim: "" },
-    b: { fill: "#140c1c", line: "#140c1c", detail: "#ffffff", rim: "rgba(236,226,252,.78)" }
+    w: { fill: "#ffffff", line: "#1d1b19", detail: "#1d1b19", rim: "" },
+    b: { fill: "#1d1b19", line: "#1d1b19", detail: "#ffffff", rim: "rgba(255,255,255,.72)" }
   };
   var EDGE = 7;
   var THIN = 3.2;
@@ -1518,7 +1518,7 @@
     if (calm()) { return; }
     var box = el("div", "tc-confetti");
     box.setAttribute("aria-hidden", "true");
-    var cols = ["#ffe27a", "#ffc142", "#ff8c12", "#ffffff", "#bb00ff", "#ffd75e"];
+    var cols = ["#ffe27a", "#ffc142", "#ff8c12", "#ffffff", "#81b64c", "#ffd75e"];
     for (var k = 0; k < 44; k++) {
       var p = el("i", k % 4 === 0 ? "is-dot" : k % 7 === 0 ? "is-long" : "");
       var a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;

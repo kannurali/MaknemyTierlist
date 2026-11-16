@@ -8,8 +8,8 @@
   var API = "api/gw_tg_app.php";
   var ALL = "https://maknemy.com/giveaways";
   var SVGNS = "http://www.w3.org/2000/svg";
-  var PAL = { dark: "#0d0613", light: "#f3eef9" };
-  var BRAND = "#8b00ff";
+  var PAL = { dark: "#060913", light: "#eef2f9" };
+  var BRAND = "#2d5bf0";
 
   var TEXT = {
     ru: {
@@ -706,7 +706,7 @@
     c.height = Math.round(h * d);
     document.body.appendChild(c);
     ctx.setTransform(d, 0, 0, d, 0, 0);
-    var cols = ["#ffe27a", "#ffc142", "#ff8c12", "#ffe27a", "#bb00ff", "#8b00ff", "#ffffff"];
+    var cols = ["#ffe27a", "#ffc142", "#ff8c12", "#ffe27a", "#61b5e9", "#2d5bf0", "#ffffff"];
     var ps = [];
     for (var i = 0; i < 120; i++) {
       var a = -Math.PI / 2 + (Math.random() - 0.5) * 2.8;

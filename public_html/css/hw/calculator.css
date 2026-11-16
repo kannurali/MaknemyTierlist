@@ -290,7 +290,7 @@
   font-size: calc(17 * var(--u));
   letter-spacing: 0.03em;
   isolation: isolate;
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: var(--tc-grad);
   transition: scale var(--dur-gentle) var(--ease-gentle);
 }
 .tc-pill-l::before,
@@ -416,7 +416,7 @@
   line-height: 1;
   letter-spacing: .03em;
   text-transform: uppercase;
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: var(--tc-grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -966,7 +966,7 @@
   border-radius: 19px;
 }
 .tc-cat-grid::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #8400ff, #bb00ff);
+  background: var(--tc-grad);
   border-radius: 7px;
 }
 .tc-cat-grid::-webkit-scrollbar-thumb:hover,
@@ -975,7 +975,7 @@
 @supports not selector(::-webkit-scrollbar) {
   .tc-cat-grid {
     scrollbar-width: thin;
-    scrollbar-color: #a000ff #d9d9d9;
+    scrollbar-color: #b04ae0 #d9d9d9;
   }
 }
 

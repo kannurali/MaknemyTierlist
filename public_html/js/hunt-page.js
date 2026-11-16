@@ -6,7 +6,7 @@
   var ACT = "/api/hunt_act.php";
   var SESSION = "/api/session.php";
   var COIN = "/assets/hunt/token-96.webp";
-  var PRIZE_ART = "/assets/halloween/card-fruits.webp";
+  var PRIZE_ART = "/assets/design/home/card-fruits.webp";
   var NS = "http://www.w3.org/2000/svg";
   var MSK_OFFSET = -180;
   var DRAW_POLL_MS = 8000;

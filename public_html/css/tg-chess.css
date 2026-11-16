@@ -8,17 +8,17 @@
 :root {
   color-scheme: dark;
 
-  --bg: #0d0613;
-  --panel: #190c26;
-  --raise: #24123a;
+  --bg: #302e2b;
+  --panel: #262421;
+  --raise: #3c3a37;
   --line: rgba(255, 255, 255, .08);
   --ink: #ffffff;
-  --mute: #a99bba;
-  --link: #d09cff;
-  --violet: #8b00ff;
-  --flag: linear-gradient(180deg, #8400ff, #bb00ff);
-  --flag-shadow: rgba(110, 0, 210, .95);
-  --tint: rgba(139, 0, 255, .2);
+  --mute: #bab9b7;
+  --link: #a3d160;
+  --violet: #81b64c;
+  --flag: linear-gradient(180deg, #8fc15a, #5d9948);
+  --flag-shadow: rgba(69, 117, 60, .95);
+  --tint: rgba(129, 182, 76, .2);
   --gold: linear-gradient(118deg, #ffe58a 0%, #ffc142 36%, #ff8c12 100%);
   --gold-ink: #2b1200;
   --danger: #ff5b6b;
@@ -27,15 +27,15 @@
   --clock: rgba(255, 255, 255, .06);
   --sk: rgba(255, 255, 255, .07);
   --sk-shine: rgba(255, 255, 255, .06);
-  --dim: rgba(13, 6, 19, .62);
+  --dim: rgba(38, 36, 33, .62);
 
-  --sq-l: #ddd0ee;
-  --sq-d: #7d62a6;
-  --hl-last-l: #f1dca4;
-  --hl-last-d: #cfa760;
-  --hl-sel-l: #ffd36b;
-  --hl-sel-d: #f0b33f;
-  --hint: rgba(36, 10, 64, .34);
+  --sq-l: #ebecd0;
+  --sq-d: #739552;
+  --hl-last-l: #f5f682;
+  --hl-last-d: #b9ca43;
+  --hl-sel-l: #f5f682;
+  --hl-sel-d: #b9ca43;
+  --hint: rgba(0, 0, 0, .14);
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --display: "Bootshaus", var(--font);
@@ -44,21 +44,21 @@
 }
 :root[data-scheme="light"] {
   color-scheme: light;
-  --bg: #f3eef9;
+  --bg: #f1f1ef;
   --panel: #ffffff;
-  --raise: #f1eaf9;
-  --line: rgba(70, 0, 140, .1);
-  --ink: #1a0b29;
-  --mute: #75688a;
-  --link: #7a00e6;
-  --flag-shadow: rgba(140, 0, 255, .55);
-  --tint: rgba(139, 0, 255, .1);
+  --raise: #ebebe8;
+  --line: rgba(0, 0, 0, .1);
+  --ink: #312e2b;
+  --mute: #6f6d6a;
+  --link: #5d9948;
+  --flag-shadow: rgba(93, 153, 72, .55);
+  --tint: rgba(129, 182, 76, .14);
   --danger: #e0313c;
-  --track: rgba(70, 0, 140, .09);
-  --clock: #ece4f6;
-  --sk: #e9e1f3;
+  --track: rgba(0, 0, 0, .09);
+  --clock: #e8e8e5;
+  --sk: #e6e6e3;
   --sk-shine: rgba(255, 255, 255, .7);
-  --dim: rgba(243, 238, 249, .7);
+  --dim: rgba(241, 241, 239, .7);
 }
 
 html {
@@ -154,9 +154,9 @@ button { font: inherit; color: inherit; }
   border: 3px solid var(--bg);
   border-radius: 50%;
 }
-.tc-pip.is-w { background: #fdfaff; }
-.tc-pip.is-b { background: #3b2852; }
-:root[data-scheme="light"] .tc-pip.is-w { background: #fff; box-shadow: inset 0 0 0 1px rgba(26, 11, 41, .35); }
+.tc-pip.is-w { background: #f9f9f9; }
+.tc-pip.is-b { background: #575451; }
+:root[data-scheme="light"] .tc-pip.is-w { background: #fff; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35); }
 .tc-who {
   display: flex;
   flex: 1;
@@ -290,8 +290,8 @@ button { font: inherit; color: inherit; }
 .tc-sq.is-check::before {
   background-image: radial-gradient(circle at 50% 54%, #ff2d4a 0, rgba(255, 45, 74, .85) 26%, rgba(255, 45, 74, .35) 52%, rgba(255, 45, 74, 0) 72%);
 }
-.tc-sq.is-to::after { background: radial-gradient(circle, var(--hint) 0, var(--hint) 17%, rgba(36, 10, 64, 0) 18.5%); }
-.tc-sq.is-take::after { background: radial-gradient(circle, rgba(36, 10, 64, 0) 0, rgba(36, 10, 64, 0) 62%, var(--hint) 64%); }
+.tc-sq.is-to::after { background: radial-gradient(circle, var(--hint) 0, var(--hint) 17%, rgba(0, 0, 0, 0) 18.5%); }
+.tc-sq.is-take::after { background: radial-gradient(circle, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 62%, var(--hint) 64%); }
 .tc-sq.is-over::after {
   background: rgba(255, 255, 255, .28);
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .9);
@@ -304,7 +304,7 @@ button { font: inherit; color: inherit; }
 }
 @media (hover: hover) {
   .tc-sq.is-to:hover::after,
-  .tc-sq.is-take:hover::after { background: rgba(36, 10, 64, .2); }
+  .tc-sq.is-take:hover::after { background: rgba(0, 0, 0, .2); }
 }
 .tc-co {
   position: absolute;
@@ -432,10 +432,10 @@ button { font: inherit; color: inherit; }
   border-radius: 50%;
   transition: background-color .2s;
 }
-.tc-dot.is-w { background: #fdfaff; box-shadow: inset 0 0 0 1px rgba(26, 11, 41, .3); }
-.tc-dot.is-b { background: #3b2852; box-shadow: inset 0 0 0 1.5px rgba(236, 226, 252, .55); }
-:root[data-scheme="light"] .tc-dot.is-w { box-shadow: inset 0 0 0 1.5px rgba(26, 11, 41, .55); }
-:root[data-scheme="light"] .tc-dot.is-b { background: #2a1a3c; box-shadow: none; }
+.tc-dot.is-w { background: #f9f9f9; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3); }
+.tc-dot.is-b { background: #575451; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .45); }
+:root[data-scheme="light"] .tc-dot.is-w { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .55); }
+:root[data-scheme="light"] .tc-dot.is-b { background: #312e2b; box-shadow: none; }
 .tc-dot[hidden] { display: none; }
 .tc-dot::after {
   content: "";
@@ -445,7 +445,7 @@ button { font: inherit; color: inherit; }
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: rgba(160, 60, 255, .45);
+  background: rgba(129, 182, 76, .45);
   opacity: 0;
   transform: scale(.6);
 }
@@ -654,7 +654,7 @@ button { font: inherit; color: inherit; }
   padding: 10px;
   border-radius: 16px;
   background: var(--tint);
-  box-shadow: inset 0 0 0 1.5px rgba(187, 0, 255, .55);
+  box-shadow: inset 0 0 0 1.5px rgba(129, 182, 76, .55);
   animation: tc-pop .45s var(--spring) both;
 }
 .tc-offer-head {
@@ -842,7 +842,7 @@ button { font: inherit; color: inherit; }
   max-width: calc(100% - 32px);
   padding: 11px 16px;
   border-radius: 12px;
-  background: #2a1440;
+  background: #3c3a37;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -868,7 +868,7 @@ button { font: inherit; color: inherit; }
   width: 100%;
   height: 100%;
   padding: 24px;
-  background: rgba(8, 3, 14, .6);
+  background: rgba(0, 0, 0, .6);
   animation: tc-fade .2s ease both;
 }
 .tc-dlg-card {
@@ -911,7 +911,7 @@ button { font: inherit; color: inherit; }
   width: 148px;
   height: 148px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(168, 0, 240, .5) 0, rgba(168, 0, 240, .18) 46%, rgba(168, 0, 240, 0) 70%);
+  background: radial-gradient(circle, rgba(129, 182, 76, .5) 0, rgba(129, 182, 76, .18) 46%, rgba(129, 182, 76, 0) 70%);
   animation: tc-pop .6s var(--spring) both;
 }
 .tc-screen-art svg { width: 104px; height: 104px; }
