@@ -49,7 +49,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=30" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=30" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/calculator.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/calculator.css?v=31" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 
 <link rel="stylesheet" href="css/promo-dock.css?v=4" />
@@ -57,7 +57,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=6" />
+<link rel="stylesheet" href="css/hunt.css?v=7" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>

@@ -18,7 +18,7 @@
   --mute: #a99bba;
   --link: #9cb6ff;
   --violet: #2d5bf0;
-  --flag: linear-gradient(180deg, #8400ff, #bb00ff);
+  --flag: linear-gradient(90deg, #61b5e9, #2d4aed);
   --brand: linear-gradient(180deg, #61b5e9, #2d4aed);
   --glow: rgba(45, 91, 240, .5);
   --tint: rgba(45, 91, 240, .2);
@@ -897,7 +897,7 @@ button { font: inherit; color: inherit; }
   background-image: linear-gradient(100deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .7) 50%, rgba(255, 255, 255, 0) 70%);
 }
 .ta-skel-stage { margin: -20px -16px 0; aspect-ratio: 16 / 10; max-height: 300px; }
-.ta-skel-flag { position: relative; width: 70%; height: 42px; margin: -30px 0 0 -16px; border-radius: 0 12px 12px 0; background-color: #3a1460; }
+.ta-skel-flag { position: relative; width: 70%; height: 42px; margin: -30px 0 0 -16px; border-radius: 0 12px 12px 0; background-color: #16233f; }
 .ta-skel-card { height: 132px; margin-top: 20px; border-radius: 18px; animation-delay: .1s; }
 .ta-skel-row { width: 34%; height: 18px; margin-top: 30px; border-radius: 9px; animation-delay: .15s; }
 .ta-skel-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }

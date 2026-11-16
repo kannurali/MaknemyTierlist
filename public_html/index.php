@@ -158,7 +158,7 @@ if (site_skin() !== null) { require __DIR__ . '/' . site_skin() . '/tierlist.php
 <link rel="stylesheet" href="css/promo-stamp.css?v=3" />
 <link rel="stylesheet" href="css/promo-dock-mini.css?v=3" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=6" />
+<link rel="stylesheet" href="css/hunt.css?v=7" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <link rel="stylesheet" href="css/gw-card.css?v=4" />

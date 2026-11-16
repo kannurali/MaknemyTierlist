@@ -45,7 +45,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=6" />
+<link rel="stylesheet" href="css/hunt.css?v=7" />
 <link rel="stylesheet" href="css/gw-card.css?v=4" />
 
 <?php echo metrika_counter_html(); ?>
@@ -148,36 +148,36 @@ page_lscache();
     <svg class="hn-defs" width="0" height="0" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="hnGlassLit" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#c43dff" />
-          <stop offset=".55" stop-color="#8400ff" />
-          <stop offset="1" stop-color="#3d0a78" />
+          <stop offset="0" stop-color="#3d57ff" />
+          <stop offset=".55" stop-color="#0044ff" />
+          <stop offset="1" stop-color="#0a2d78" />
         </linearGradient>
         <linearGradient id="hnGlassNow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#f2d6ff" />
-          <stop offset=".35" stop-color="#d266ff" />
-          <stop offset="1" stop-color="#7a00e6" />
+          <stop offset="0" stop-color="#d6dbff" />
+          <stop offset=".35" stop-color="#667aff" />
+          <stop offset="1" stop-color="#003ae6" />
         </linearGradient>
         <linearGradient id="hnGlassDark" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#1f1030" />
-          <stop offset="1" stop-color="#0a0611" />
+          <stop offset="0" stop-color="#101a30" />
+          <stop offset="1" stop-color="#060b11" />
         </linearGradient>
         <radialGradient id="hnBrew" gradientUnits="userSpaceOnUse" cx="120" cy="60" r="92" gradientTransform="matrix(1 0 0 .2 0 48)">
-          <stop offset="0" stop-color="#f6e2ff" />
-          <stop offset=".3" stop-color="#d266ff" />
-          <stop offset=".72" stop-color="#8400ff" />
-          <stop offset="1" stop-color="#3d0a78" />
+          <stop offset="0" stop-color="#e2e6ff" />
+          <stop offset=".3" stop-color="#667aff" />
+          <stop offset=".72" stop-color="#0044ff" />
+          <stop offset="1" stop-color="#0a2d78" />
         </radialGradient>
         <linearGradient id="hnIron" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#2c1a3b" />
-          <stop offset=".5" stop-color="#150b20" />
-          <stop offset="1" stop-color="#08050d" />
+          <stop offset="0" stop-color="#1a223b" />
+          <stop offset=".5" stop-color="#0b1120" />
+          <stop offset="1" stop-color="#05080d" />
         </linearGradient>
       </defs>
     </svg>
 
     <header class="hn-hero">
       <div class="hn-hero-in">
-        <img class="hn-hero-branch" src="assets/halloween/branch-r.webp" alt="" aria-hidden="true" />
+        <img class="hn-hero-branch" src="assets/design/home/sakura.webp" alt="" aria-hidden="true" />
         <span class="hn-ghost" aria-hidden="true">Spooky Tokens</span>
         <h1 class="hn-title">Spooky Tokens</h1>
         <p class="hn-kicker" data-i18n="hunt.kicker"><?= te('hunt.kicker') ?></p>
@@ -331,7 +331,7 @@ page_lscache();
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
-  <script src="js/hunt-page.js?v=5" fetchpriority="high"></script>
+  <script src="js/hunt-page.js?v=6" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=6" fetchpriority="high"></script>
 </body>

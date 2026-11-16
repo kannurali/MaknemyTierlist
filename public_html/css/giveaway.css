@@ -6,7 +6,7 @@
   --gw-grad: linear-gradient(252deg, #61b5e9, #2d4aed);
   --gw-grad-hover: linear-gradient(109deg, #61b5e9, #2d4aed);
   --gw-tile: linear-gradient(135deg, #61b5e9, #2d4aed);
-  --gw-flag: linear-gradient(180deg, #8400ff, #bb00ff);
+  --gw-flag: linear-gradient(90deg, #61b5e9, #2d4aed);
   --gw-ink: #fff;
   --gw-soft: rgba(255, 255, 255, .84);
   --gw-mute: rgba(255, 255, 255, .6);
