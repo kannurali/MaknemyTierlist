@@ -1204,7 +1204,10 @@ test('ивент: без токена и без таблиц — ничего', 
 
 test('предупреждение вкладки: только то, что мешает постам', function () {
     assert_eq('', tg_route_warning(['is_admin' => 1, 'missing' => '']));
-    assert_eq('', tg_route_warning(['is_admin' => 0, 'missing' => 'can_restrict_members']), 'нужно только розыгрышам');
+    assert_eq('', tg_route_warning(['is_admin' => 0, 'missing' => 'can_restrict_members']), 'старая запись: админ без ненужного посту права');
+    assert_eq('', tg_route_warning(['is_admin' => 1, 'missing' => 'can_restrict_members']));
+    assert_true(strpos(tg_route_warning(['is_admin' => 1, 'missing' => 'can_post_messages']), 'Отправка публикаций') !== false,
+        'админ, но без права публиковать');
     assert_true(strpos(tg_route_warning(['is_admin' => 0, 'missing' => 'can_post_messages,can_invite_users']), 'Отправка публикаций') !== false);
     assert_true(strpos(tg_route_warning(['is_admin' => 0, 'missing' => '']), 'не админ') !== false);
     assert_true(strpos(tg_route_warning(['is_admin' => 0]), 'не админ') !== false, 'до миграции колонки нет');

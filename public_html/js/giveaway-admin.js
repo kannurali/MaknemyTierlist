@@ -24,10 +24,10 @@
     no_prizes: "нет призов",
     ends_in_past: "время конца уже прошло",
     ends_too_far: "конец дальше чем через 90 дней",
-    channel_not_admin: "у бота нет нужных прав в одном из отмеченных каналов или каналов своих условий (см. «Каналы бота» слева)",
+    channel_not_admin: "бот не админ в одном из отмеченных каналов или каналов своих условий (см. «Каналы бота» слева)",
     max_below_prizes: "лимит участников меньше числа призов",
     no_max: "не указано, сколько нужно участников",
-    invite_link: "бот не смог создать ссылку-приглашение (дайте ему в канале право «Добавление подписчиков»)"
+    invite_link: "у приватного канала нет ссылки, а создать её бот не может (дайте ему право «Добавление подписчиков» и нажмите «Обновить» у канала — или поставьте канал своим условием со своей ссылкой)"
   };
 
   const ERRORS = {
@@ -546,7 +546,7 @@
     sel.textContent = "";
     sel.add(new Option("Бот не проверяет", ""));
     S.channels.forEach(c => {
-      sel.add(new Option("Проверять: " + (c.title || c.id) + (c.admin ? "" : " (у бота нет прав)"), c.id));
+      sel.add(new Option("Проверять: " + (c.title || c.id) + (c.admin ? "" : " (бот не админ)"), c.id));
     });
     if (cur && !S.channels.some(c => c.id === cur)) sel.add(new Option("Проверять: канал " + cur + " (нет в списке)", cur));
     sel.value = cur;
@@ -602,7 +602,7 @@
       cb.value = c.id;
       cb.checked = selected.indexOf(c.id) >= 0;
       cb.addEventListener("change", changed);
-      lab.append(cb, document.createTextNode(" " + (c.title || c.id) + (c.admin ? "" : " (у бота нет прав)")));
+      lab.append(cb, document.createTextNode(" " + (c.title || c.id) + (c.admin ? "" : " (бот не админ)")));
       box.appendChild(lab);
     });
   }
@@ -797,17 +797,18 @@
       name.textContent = c.title || c.id;
       const st = document.createElement("span");
       st.className = "pill " + (c.admin ? "live" : "off");
-      st.textContent = c.admin ? "права есть" : "нет прав";
+      st.textContent = c.admin ? "бот админ" : "бот не админ";
       top.append(name, st);
       const sub = document.createElement("div");
       sub.className = "li-sub";
       sub.textContent = (c.username ? "@" + c.username : "приватный") + (c.url ? "" : " · нет ссылки");
       const miss = document.createElement("div");
+      const optional = c.missing && c.missing.length ? c.missing : [];
       miss.className = "li-sub ga-ch-miss";
-      miss.hidden = c.admin;
-      miss.textContent = c.missing && c.missing.length
-        ? "Не хватает: " + c.missing.join(", ")
-        : "Бот не админ канала или права ещё не проверены — нажмите «Обновить».";
+      miss.hidden = c.admin && !optional.length;
+      miss.textContent = c.admin
+        ? "Нет необязательных прав: " + optional.join(", ")
+        : "Бот не админ канала или ещё не проверен — нажмите «Обновить».";
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn small";
@@ -833,9 +834,9 @@
     const help = $("gwChHelp");
     const bot = S.bot ? "@" + S.bot : "бота";
     help.textContent = (S.channels.length ? "" : "Каналов пока нет. ")
-      + "Чтобы канал появился здесь, добавьте " + bot + " в канал администратором с правами: "
-      + (S.rights.length ? S.rights.join(", ") : "—")
-      + ". Без них канал нельзя поставить в условия. Если канал не появился — нажмите «Подключить вебхук» на /admin/support и добавьте бота заново.";
+      + "Чтобы канал появился здесь, добавьте " + bot + " в канал администратором — права любые, можно снять все: для условия и проверки подписки хватает админки. "
+      + "Необязательные права: " + (S.rights.length ? S.rights.join(", ") : "—")
+      + " — с ними бот публикует пост розыгрыша в канале и считает, кто подписался по ссылке сайта. Если канал не появился — нажмите «Подключить вебхук» на /admin/support и добавьте бота заново.";
     if (S.addUrl) {
       const add = document.createElement("a");
       add.className = "btn small primary ga-ch-add";
@@ -1395,7 +1396,7 @@
       if (!r || !r.ok) { hint("", ""); msg(errText(r), true); return null; }
       return loadList(r.id).then(() => {
         if (r.link_failed && r.link_failed.length) {
-          hint("Сохранено, но в каналах " + r.link_failed.join(", ") + " бот не смог создать ссылку для учёта подписчиков", "bad");
+          hint("Сохранено. В каналах " + r.link_failed.join(", ") + " у бота нет права «Добавление подписчиков» — подписываются по обычной ссылке канала, без учёта подписчиков", "bad");
         } else {
           hint(r.translate_failed ? "Сохранено, но перевод на английский не удался" : "Сохранено", r.translate_failed ? "bad" : "ok");
         }
@@ -1488,7 +1489,11 @@
         test
           ? "Опубликовать тестовый? Посетители его не увидят, рассылки не будет — только по ссылке /giveaways?test."
           : "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
-        r => (test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.") + postNote(r));
+        r => (test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.")
+          + (r.link_failed && r.link_failed.length
+            ? " В каналах " + r.link_failed.join(", ") + " у бота нет права «Добавление подписчиков» — подписываются по обычной ссылке канала, без учёта подписчиков."
+            : "")
+          + postNote(r));
     });
     $("aEnd").addEventListener("click", () => act("end",
       "Закончить приём заявок прямо сейчас?", () => "Приём заявок закрыт. Теперь можно разыграть."));
