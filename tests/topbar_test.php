@@ -511,4 +511,30 @@ test('js/topbar.js подключён одной версией на всех ш
     assert_eq(1, count(array_unique($seen)), 'версии: ' . json_encode($seen));
 });
 
+// Ивент Spooky Tokens закрыт (17.11.2026, слово владельца): пункт «Ивент»
+// в меню всех 13 страниц остаётся на месте, но серый и без ссылки, а сама
+// /halloween уводит на главную до вывода разметки. Админка /admin/hunt цела.
+test('«Ивент» в меню серый и без ссылки, /halloween уводит на главную', function () use ($PUB) {
+    $all = ['home.php', 'index.php', 'news.php', 'calculator.php', 'profile.php', 'chat.php',
+            'stock.php', 'trading.php', 'trade-new.php', 'support.php', 'giveaways.php',
+            'promote.php', 'halloween.php'];
+    foreach ($all as $f) {
+        $s = top_header($PUB, $f);
+        assert_true((bool)preg_match(
+            '/<a class="mk-pill" aria-disabled="true">\s*<svg[^>]*>.*?<\/svg>\s*<span class="mk-pill-text" data-i18n="nav.event">/s',
+            $s), "$f: «Ивент» — пилюля без href");
+        assert_eq(false, strpos($s, "/halloween"), "$f: ссылки на /halloween в шапке нет");
+    }
+    $css = top_read($PUB . '/css/topbar.css');
+    assert_true((bool)preg_match('/\.mk-pill\[aria-disabled="true"\] \{[^}]*pointer-events: none;/s', $css),
+        'серая пилюля не ловит касания');
+    $page = top_read($PUB . '/halloween.php');
+    $go = strpos($page, "header('Location: ' . u('/'), true, 302);");
+    assert_true($go !== false && $go < strpos($page, '<!DOCTYPE html>'), 'редирект раньше разметки');
+    assert_true(strpos($page, 'lscache_off();') !== false && strpos($page, 'lscache_off();') < $go,
+        'LiteSpeed не кладёт редирект в кеш');
+    assert_eq(false, strpos(top_read($PUB . '/sitemap.xml'), '/halloween'), 'в sitemap /halloween нет');
+    assert_true(is_file($PUB . '/admin-hunt.php'), 'админка ивента на месте');
+});
+
 run_tests();
