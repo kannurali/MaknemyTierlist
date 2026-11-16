@@ -1143,25 +1143,38 @@ test('нужные права — те, что на скриншоте влад�
     assert_eq('', tg_add_channel_url(''), 'бота нет — ссылки нет');
 });
 
-test('админ без нужных прав — канал не годится и админка говорит, чего нет', function () {
+test('права не обязательны: админ без части прав годится, админка говорит, чего нет', function () {
     $p = gw_db();
-    $upd = gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_post_stories', 'can_manage_direct_messages']));
-    assert_eq(null, gw_channel_update($p, $upd, GW_NOW), 'ссылку без прав не просим');
+    $upd = gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_post_stories', 'can_invite_users']));
+    assert_eq(null, gw_channel_update($p, $upd, GW_NOW), 'без права приглашать ссылку не просим');
     $c = gw_admin_channels($p)[0];
-    assert_eq([false, ['Публикация историй', 'Доступ к сообщениям канала']], [$c['admin'], $c['missing']]);
+    assert_eq([true, ['Публикация историй', 'Добавление подписчиков']], [$c['admin'], $c['missing']]);
     [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
-    [$s, $res] = gw_publish($p, $out['id'], GW_NOW);
-    assert_eq([409, ['channel_not_admin']], [$s, $res['problems']], 'в условия не ставится');
+    [$s] = gw_publish($p, $out['id'], GW_NOW);
+    assert_eq(200, $s, 'в условия ставится');
 
-    assert_eq(GW_CH_A, gw_channel_update($p, gw_promo_upd(gw_bot_admin(['can_post_stories']), gw_bot_admin()), GW_NOW + 1),
-        'права выдали — теперь и ссылку');
+    assert_eq(GW_CH_A, gw_channel_update($p, gw_promo_upd(gw_bot_admin(['can_invite_users']), gw_bot_admin(['can_post_stories'])), GW_NOW + 1),
+        'право приглашать выдали — теперь и ссылку');
     $c = gw_admin_channels($p)[0];
-    assert_eq([true, []], [$c['admin'], $c['missing']]);
+    assert_eq([true, ['Публикация историй']], [$c['admin'], $c['missing']]);
+});
+
+test('админ совсем без прав — тоже годится', function () {
+    $p = gw_db();
+    gw_channel_update($p, gw_promo_upd(['status' => 'left'], gw_bot_admin(array_keys(TG_CHANNEL_RIGHTS))), GW_NOW);
+    $c = gw_admin_channels($p)[0];
+    assert_eq([true, false], [$c['admin'], $c['post']], 'для условия хватает админки, а пост не выйдет');
+    $p->exec("UPDATE tg_channels SET username = 'public_a'");
+    [, $out] = gw_save($p, gw_draft(['conds' => [gw_cond('Канал', 'https://t.me/public_a', '', '', '', (string)GW_CH_A)]]), GW_NOW);
+    [$s] = gw_publish($p, $out['id'], GW_NOW);
+    assert_eq(200, $s, 'и в своё условие с проверкой');
 });
 
 test('бот пишет добавившему, каких прав не хватает', function () {
     $r = gw_channel_reply(gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_invite_users'])), 'MaknemyBot');
     assert_eq(['sendMessage', 501], [$r['method'], $r['chat_id']]);
+    assert_true(strpos($r['text'], '✅') === 0, 'канал подключён и без этих прав');
+    assert_true(strpos($r['text'], 'Необязательные права') !== false, 'права — не условие');
     assert_true(strpos($r['text'], '• Добавление подписчиков') !== false, 'право по-русски, как в Telegram');
     assert_true(strpos($r['text'], 'Публикация историй') === false, 'выданные не перечисляет');
     assert_eq(tg_add_channel_url('MaknemyBot'), $r['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка «Выдать права»');
@@ -1191,7 +1204,18 @@ test('«Обновить» видит, каких прав не хватает',
     };
     assert_true(gw_channel_refresh($p, tg_config(gw_cfg()), $send, GW_CH_A, GW_NOW));
     $c = gw_admin_channels($p)[0];
-    assert_eq([false, ['Блокировка пользователей']], [$c['admin'], $c['missing']]);
+    assert_eq([true, ['Блокировка пользователей']], [$c['admin'], $c['missing']]);
+});
+
+test('«Обновить»: бота выгнали — канал не годится, хоть права и были записаны', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A', false);
+    $p->exec("UPDATE tg_channels SET missing = 'can_post_stories'");
+    assert_eq(true, gw_admin_channels($p)[0]['admin'], 'старая запись: админ без части прав');
+    $send = function (string $m, array $a): ?array { return ['ok' => false, 'error_code' => 403]; };
+    assert_eq(false, gw_channel_refresh($p, tg_config(gw_cfg()), $send, GW_CH_A, GW_NOW));
+    $c = gw_admin_channels($p)[0];
+    assert_eq([false, []], [$c['admin'], $c['missing']]);
 });
 
 test('перед публикацией права перечитываются у Telegram', function () {
@@ -1206,16 +1230,16 @@ test('перед публикацией права перечитываются 
             return ['ok' => true, 'result' => []];
         };
     };
-    [$s, $res] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => true, 'result' => gw_bot_admin(['can_post_messages'])]), $bot);
-    assert_eq([409, ['channel_not_admin']], [$s, $res['problems']], 'канал записан как готовый, а прав уже нет');
-    assert_eq(['Отправка публикаций'], gw_admin_channels($p)[0]['missing']);
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => true, 'result' => ['status' => 'member']]), $bot);
+    assert_eq([409, ['channel_not_admin']], [$s, $res['problems']], 'канал записан как готовый, а бот уже не админ');
 
     [$s] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => false, 'error_code' => 403]), $bot);
     assert_eq(409, $s, 'бота выгнали из канала');
     assert_eq(false, gw_admin_channels($p)[0]['admin']);
 
-    [$s] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => true, 'result' => gw_bot_admin()]), $bot);
-    assert_eq(200, $s, 'права вернули — публикуется');
+    [$s] = gw_publish($p, $out['id'], GW_NOW, $tg(['ok' => true, 'result' => gw_bot_admin(['can_post_messages'])]), $bot);
+    assert_eq(200, $s, 'снова админ, пусть и не со всеми правами — публикуется');
+    assert_eq(['Отправка публикаций'], gw_admin_channels($p)[0]['missing']);
 });
 
 test('Telegram не ответил при публикации — права остаются как записаны', function () {
@@ -1231,7 +1255,7 @@ test('Telegram не ответил при публикации — права о
     assert_eq(200, $s);
 });
 
-test('до миграции прав каналы всё равно пишутся, а без прав не годятся', function () {
+test('до миграции прав каналы всё равно пишутся, а годятся по админке', function () {
     $p = gw_db();
     $p->exec('DROP TABLE tg_channels');
     $p->exec("CREATE TABLE tg_channels (
@@ -1240,9 +1264,9 @@ test('до миграции прав каналы всё равно пишутс
         updated_at INTEGER NOT NULL)");
     gw_channel_update($p, gw_promo_upd(['status' => 'left'], gw_bot_admin(['can_post_stories'])), GW_NOW);
     $c = gw_admin_channels($p)[0];
-    assert_eq(['Канал A', false, []], [$c['title'], $c['admin'], $c['missing']], 'каких прав нет — не знаем, но канал неготов');
-    assert_eq(GW_CH_A, gw_channel_update($p, gw_promo_upd(gw_bot_admin(['can_post_stories']), gw_bot_admin()), GW_NOW + 1));
-    assert_eq(true, gw_admin_channels($p)[0]['admin']);
+    assert_eq(['Канал A', true, []], [$c['title'], $c['admin'], $c['missing']], 'каких прав нет — не знаем, но бот админ');
+    gw_channel_update($p, gw_promo_upd(gw_bot_admin(['can_post_stories']), ['status' => 'left']), GW_NOW + 1);
+    assert_eq(false, gw_admin_channels($p)[0]['admin'], 'бота убрали');
 });
 
 // --------------------------------------------------------------------------
@@ -1322,15 +1346,24 @@ test('публикация заводит свою ссылку-приглаше
         'кнопка «Подписаться» ведёт на ссылку розыгрыша, даже у публичного канала');
 });
 
-test('нет права на ссылки — публикация не проходит и говорит, где', function () {
+test('нет права на ссылки — подписка по обычной ссылке канала, а без неё публикации нет', function () {
     $p = gw_db();
     gw_channel($p, GW_CH_A, 'Канал A');
-    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
+    gw_channel($p, GW_CH_B, 'Канал B', true, 'public_b');
     $deny = function (string $m, array $a): ?array {
         return $m === 'createChatInviteLink' ? ['ok' => false, 'error_code' => 400, 'description' => 'not enough rights'] : ['ok' => true];
     };
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A, GW_CH_B]]), GW_NOW);
     [$s, $res] = gw_publish($p, $out['id'], GW_NOW, $deny);
-    assert_eq([409, ['invite_link'], ['Канал A']], [$s, $res['problems'], $res['channels']]);
+    assert_eq([200, ['Канал A', 'Канал B']], [$s, $res['link_failed']], 'публикуется, админка знает, где нет учёта');
+    $list = handle_giveaways(function () use ($p) { return $p; }, GW_NOW);
+    assert_eq(['https://t.me/+secret', 'https://t.me/public_b'], array_column($list['live'][0]['channels'], 'url'),
+        'кнопка «Подписаться» ведёт на обычную ссылку канала');
+
+    $p->exec("UPDATE tg_channels SET invite_url = '' WHERE chat_id = " . GW_CH_A);
+    [, $out] = gw_save($p, gw_draft(['channels' => [GW_CH_A]]), GW_NOW);
+    [$s, $res] = gw_publish($p, $out['id'], GW_NOW, $deny);
+    assert_eq([409, ['invite_link'], ['Канал A']], [$s, $res['problems'], $res['channels']], 'приватный без приглашения — подписаться нечем');
     assert_eq('draft', gw_load($p, $out['id'])['status'], 'остался черновиком');
 });
 
@@ -2056,7 +2089,7 @@ test('пост: удалённый в канале пост забыт — га�
     assert_eq(101, gw_post_row($p, $id, GW_CH_A)['message_id']);
 });
 
-test('пост: хватает права «Отправка публикаций», остальные нужны только условиям', function () {
+test('пост: хватает права «Отправка публикаций», остальные не нужны', function () {
     $p = gw_db();
     gw_channel($p, GW_CH_A, 'Без историй', false);
     gw_channel($p, GW_CH_B, 'Без публикаций', false);
@@ -2067,7 +2100,7 @@ test('пост: хватает права «Отправка публикаци�
     $flags = [];
     foreach ($list['channels'] as $c) { $flags[$c['title']] = [$c['admin'], $c['post']]; }
     ksort($flags);
-    assert_eq(['Без историй' => [false, true], 'Без публикаций' => [false, false]], $flags, 'админка: для поста — своё право');
+    assert_eq(['Без историй' => [true, true], 'Без публикаций' => [true, false]], $flags, 'админка: для поста — своё право');
 
     [, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'save', 'posts' => [GW_CH_A, GW_CH_B]] + gw_draft(), GW_NOW - 10);
     [$s, $out] = handle_gw_admin($p, gw_cfg(), gw_tg_posts($log), ['action' => 'publish', 'id' => $out['id']], GW_NOW - 5);

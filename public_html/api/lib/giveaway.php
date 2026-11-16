@@ -18,10 +18,14 @@
 // из списка: ссылка своя (например, приглашение, созданное вручную), а
 // проверка та же (gw_checked_channels()).
 //
-// Админ без нужных прав (TG_CHANNEL_RIGHTS в telegram.php) — всё равно что
-// не админ: is_admin = 0, в колонке missing — каких прав не хватает. Бот
-// сразу пишет добавившему, чего ему не дали; перед публикацией права
-// перечитываются у Telegram.
+// Каналу условия хватает, что бот в нём админ — с любыми правами, хоть без
+// всех: проверить подписку (getChatMember) Telegram даёт любому админу.
+// Права из TG_CHANNEL_RIGHTS (telegram.php) бот просит, но они не
+// обязательны: без «Отправки публикаций» не выйдет пост розыгрыша, без
+// «Добавления подписчиков» нет своей ссылки для учёта рекламодателю —
+// подписываются тогда по обычной ссылке канала. is_admin = 1 — бот админ,
+// в колонке missing — каких прав из списка нет. Бот сразу пишет добавившему,
+// чего ему не дали; перед публикацией права перечитываются у Telegram.
 //
 // Когда итоги, админ выбирает сам (поле end_by): «по времени» — дата конца
 // без лимита участников; «по числу участников» — лимит без даты. У второго в
@@ -544,7 +548,7 @@ function gw_publish_problems(array $row, array $channels, int $now): array {
     elseif ($ends > $now + GW_MAX_SPAN) { $out[] = 'ends_too_far'; }
     foreach (gw_checked_channels($row) as $id) {
         $c = $channels[$id] ?? null;
-        if (!$c || (int)$c['is_admin'] !== 1) { $out[] = 'channel_not_admin'; break; }
+        if (!$c || !gw_ch_admin($c)) { $out[] = 'channel_not_admin'; break; }
     }
     if (gw_max($row) > 0 && gw_max($row) < gw_slots_total($row)) { $out[] = 'max_below_prizes'; }
     return $out;
@@ -576,16 +580,21 @@ function gw_channels(PDO $pdo, ?array $ids = null): array {
     return $out;
 }
 
+// Админ ли бот в канале. Раньше is_admin = 1 значило «админ со всеми
+// правами», а админ без части прав писался как is_admin 0 с непустым
+// missing. Такие строки остались в базе, пока канал не перечитают, —
+// непустой missing тоже значит «админ» (не админу missing пишется пустым).
+function gw_ch_admin(array $c): bool {
+    return (int)$c['is_admin'] === 1 || gw_split_rights($c['missing'] ?? '') !== [];
+}
+
 // Выйдет ли сюда пост розыгрыша. Посту нужно одно право — «Отправка
 // публикаций» (в группе — просто быть админом); остальные из
-// TG_CHANNEL_RIGHTS нужны условиям розыгрыша, посту они не мешают — как и
-// у постов вкладки «Каналы» (tg_route_warning()). Бот не админ — missing
-// пустой, is_admin 0: не выйдет. До миграции 2026-10-14-tg-channel-rights.sql
-// колонки missing нет — тогда как раньше, по is_admin.
+// TG_CHANNEL_RIGHTS посту не мешают — как и у постов вкладки «Каналы»
+// (tg_route_warning()). До миграции 2026-10-14-tg-channel-rights.sql
+// колонки missing нет — тогда по is_admin.
 function gw_can_post(array $c): bool {
-    if ((int)$c['is_admin'] === 1) { return true; }
-    $missing = gw_split_rights($c['missing'] ?? '');
-    return $missing && !in_array('can_post_messages', $missing, true);
+    return gw_ch_admin($c) && !in_array('can_post_messages', gw_split_rights($c['missing'] ?? ''), true);
 }
 
 // Ссылка «Подписаться»: приглашение, а без него — публичный адрес.
@@ -1057,10 +1066,16 @@ function gw_publish(PDO $pdo, int $id, int $now, ?callable $send = null, int $bo
     if ($send !== null) { gw_recheck_rights($pdo, $send, $botId, $checked, $now); }
     $problems = gw_publish_problems($row, gw_channels($pdo, $checked), $now);
     if ($problems) { return [409, ['ok' => false, 'error' => 'incomplete', 'problems' => $problems], null]; }
+    // Своей ссылки нет (у бота нет права «Добавление подписчиков») —
+    // подписываются по обычной ссылке канала, только без учёта рекламодателю.
+    // Нет и её (приватный канал без сохранённого приглашения) — подписаться
+    // нечем, публиковать нельзя.
+    $failed = [];
     if ($send !== null) {
         $failed = gw_ensure_links($pdo, $send, $row, $now);
-        if ($failed) {
-            return [409, ['ok' => false, 'error' => 'incomplete', 'problems' => ['invite_link'], 'channels' => $failed], null];
+        $dead = gw_channels_without_url($pdo, $row);
+        if ($dead) {
+            return [409, ['ok' => false, 'error' => 'incomplete', 'problems' => ['invite_link'], 'channels' => $dead], null];
         }
     }
 
@@ -1069,7 +1084,7 @@ function gw_publish(PDO $pdo, int $id, int $now, ?callable $send = null, int $bo
     if ($st->rowCount() !== 1) { return [409, ['ok' => false, 'error' => 'not draft'], null]; }
     $row['status'] = 'live';
     $row['published_at'] = $now;
-    return [200, ['ok' => true], $row];
+    return [200, ['ok' => true] + ($failed ? ['link_failed' => $failed] : []), $row];
 }
 
 // Завершить досрочно: время конца — сейчас, дальше всё как у закончившегося.
@@ -1321,7 +1336,7 @@ function gw_admin_channels(PDO $pdo): array {
             'username' => (string)$c['username'],
             'kind'     => (string)$c['kind'],
             'url'      => gw_channel_url($c),
-            'admin'    => (int)$c['is_admin'] === 1,
+            'admin'    => gw_ch_admin($c),
             'post'     => gw_can_post($c),
             'missing'  => tg_right_names(gw_split_rights($c['missing'] ?? ''), 'ru'),
         ];
@@ -1364,9 +1379,9 @@ function gw_post_last(PDO $pdo): array {
 // --------------------------------------------------------------------------
 
 /**
- * Готов ли бот к розыгрышам по объекту ChatMember бота в канале:
- * [1 — админ со всеми нужными правами, иначе 0; каких прав не хватает].
- * Не админ — [0, []]: тут дело не в правах.
+ * Бот в канале по объекту ChatMember бота: [1 — админ (права любые),
+ * иначе 0; каких прав из TG_CHANNEL_RIGHTS нет]. Не админ — [0, []]: тут
+ * дело не в правах.
  */
 function gw_bot_state(array $member, string $kind): array {
     if ((string)($member['status'] ?? '') !== 'administrator') { return [0, []]; }
@@ -1374,7 +1389,7 @@ function gw_bot_state(array $member, string $kind): array {
     foreach (tg_admin_rights($kind === 'channel') as $k) {
         if (empty($member[$k])) { $missing[] = $k; }
     }
-    return [$missing ? 0 : 1, $missing];
+    return [1, $missing];
 }
 
 function gw_split_rights($v): array {
@@ -1429,7 +1444,9 @@ function gw_channel_update(PDO $pdo, array $update, int $now): ?int {
         return null;
     }
     gw_store_missing($pdo, $id, $missing);
-    return ($admin && $user === '' && ($prev === false || (string)$prev === '')) ? $id : null;
+    // Приглашение даёт только право «Добавление подписчиков».
+    $canInvite = $admin && !in_array('can_invite_users', $missing, true);
+    return ($canInvite && $user === '' && ($prev === false || (string)$prev === '')) ? $id : null;
 }
 
 /**
@@ -1462,15 +1479,18 @@ function gw_channel_reply(array $update, string $botName): ?array {
     return ['method' => 'sendMessage'] + tg_message($from['id'], $text, $lang === 'en' ? 'Grant the rights' : 'Выдать права', $url);
 }
 
+// Права не обязательны: канал годится в условия уже потому, что бот админ.
 function gw_rights_text(string $title, array $missing, string $lang): string {
     if ($lang === 'en') {
         if (!$missing) { return '✅ The channel «' . $title . '» is ready for maknemy.com giveaways: I have all the rights I need.'; }
-        return '⚠️ In the channel «' . $title . "» I'm missing rights for giveaways:\n• " . implode("\n• ", $missing)
-            . "\n\nWithout them the channel can't be a giveaway condition. Turn them on: channel → Administrators → me.";
+        return '✅ The channel «' . $title . "» is connected to maknemy.com giveaways: I can check subscriptions to it.\n\n"
+            . "Optional rights I don't have:\n• " . implode("\n• ", $missing)
+            . "\n\nWith them I can post giveaways to the channel and count who subscribed via the site link. Turn them on: channel → Administrators → me.";
     }
     if (!$missing) { return '✅ Канал «' . $title . '» готов к розыгрышам maknemy.com: все нужные права у меня есть.'; }
-    return '⚠️ В канале «' . $title . "» мне не хватает прав для розыгрышей:\n• " . implode("\n• ", $missing)
-        . "\n\nБез них канал нельзя поставить в условия розыгрыша. Включите их: канал → Администраторы → я.";
+    return '✅ Канал «' . $title . "» подключён к розыгрышам maknemy.com: подписку на него я проверю.\n\n"
+        . "Необязательные права, которых у меня нет:\n• " . implode("\n• ", $missing)
+        . "\n\nС ними я смогу публиковать в канале пост розыгрыша и считать, кто подписался по ссылке сайта. Включить: канал → Администраторы → я.";
 }
 
 /**
@@ -1484,6 +1504,7 @@ function gw_channel_refresh(PDO $pdo, array $tg, callable $send, int $chatId, in
         if (is_array($info) && in_array((int)($info['error_code'] ?? 0), [400, 403], true)) {
             $pdo->prepare('UPDATE tg_channels SET is_admin = 0, updated_at = :now WHERE chat_id = :c')
                 ->execute([':now' => $now, ':c' => $chatId]);
+            gw_store_missing($pdo, $chatId, []);
         }
         return false;
     }
@@ -1495,7 +1516,7 @@ function gw_channel_refresh(PDO $pdo, array $tg, callable $send, int $chatId, in
     [$admin, $missing] = gw_bot_state($botId > 0 ? (gw_bot_member($send, $chatId, $botId) ?? []) : [], (string)($c['type'] ?? ''));
 
     $invite = '';
-    if ($admin && $user === '') {
+    if ($admin && $user === '' && !in_array('can_invite_users', $missing, true)) {
         $link = $send('exportChatInviteLink', ['chat_id' => $chatId]);
         if (is_array($link) && !empty($link['ok']) && is_string($link['result'] ?? null)
             && preg_match('~^https://t\.me/\S{1,200}\z~', $link['result'])) {
@@ -3043,6 +3064,23 @@ function gw_ensure_links(PDO $pdo, callable $send, array $row, int $now): array 
             ->execute([':g' => $id, ':c' => $cid, ':u' => $url, ':at' => $now]);
     }
     return $failed;
+}
+
+// Отмеченные каналы, на которые нечем подписаться: ни ссылки розыгрыша, ни
+// адреса канала, ни приглашения. Названия — для админки.
+function gw_channels_without_url(PDO $pdo, array $row): array {
+    $id = (int)$row['id'];
+    $have = gw_links($pdo, [$id])[$id] ?? [];
+    $ids = gw_decode_list($row['channels_json']);
+    $channels = gw_channels($pdo, $ids);
+    $out = [];
+    foreach ($ids as $cid) {
+        $cid = (int)$cid;
+        $c = $channels[$cid] ?? null;
+        if (isset($have[$cid]) || ($c && gw_channel_url($c) !== '')) { continue; }
+        $out[] = $c ? (string)$c['title'] : (string)$cid;
+    }
+    return $out;
 }
 
 // Ссылка-приглашение в одном виде: https://t.me/+хеш. t.me/joinchat/хеш —

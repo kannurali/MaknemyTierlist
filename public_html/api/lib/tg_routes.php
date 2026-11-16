@@ -582,12 +582,10 @@ function tg_route_prices(PDO $pdo, callable $send, array $changes, int $now, ?ca
 // --------------------------------------------------------------------------
 
 // Что мешает постам в этом чате, по тому, что о нём знает бот. Другие
-// недостающие права нужны только условиям розыгрышей, постам они не мешают.
+// недостающие права постам не мешают.
 function tg_route_warning(array $channel): string {
-    if ((int)$channel['is_admin'] === 1) { return ''; }
-    $missing = gw_split_rights($channel['missing'] ?? '');
-    if (in_array('can_post_messages', $missing, true)) {
+    if (in_array('can_post_messages', gw_split_rights($channel['missing'] ?? ''), true)) {
         return 'У бота нет права «Отправка публикаций» — посты сюда не выйдут.';
     }
-    return $missing ? '' : 'Бот здесь не админ — посты могут не выйти.';
+    return gw_ch_admin($channel) ? '' : 'Бот здесь не админ — посты могут не выйти.';
 }
