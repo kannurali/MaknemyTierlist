@@ -277,7 +277,7 @@ function hunt_award(PDO $pdo, int $huntId, string $uid, string $kind, string $re
 }
 
 function hunt_title_out(array $hunt, string $kind): array {
-    return ['kind' => $kind, 'title' => hunt_titles_cfg($hunt)[$kind]];
+    return hunt_title_entry($hunt, $kind);
 }
 
 /**
@@ -1042,6 +1042,7 @@ function hunt_admin_out(array $hunt, int $now): array {
         'prizes'       => gw_prizes($hunt['prizes_json'] ?? null),
         'claim_days'   => (int)$hunt['claim_days'],
         'titles'       => hunt_titles_cfg($hunt),
+        'title_icons'  => hunt_title_icons($hunt),
         'drawn_at'     => (int)$hunt['drawn_at'],
     ];
 }
@@ -1129,7 +1130,8 @@ function hunt_admin_defaults(int $now): array {
         'start_date' => hunt_ts_date($start), 'sales_end_at' => $sales, 'draw_at' => $sales + 3600,
         'login' => HUNT_LOGIN_DEFAULT, 'hours' => HUNT_HOURS_DEFAULT,
         'prizes' => [['name' => 'Gas', 'count' => 1, 'icon' => '']], 'claim_days' => 7,
-        'titles' => HUNT_TITLES_DEFAULT, 'status' => 'draft',
+        'titles' => HUNT_TITLES_DEFAULT, 'title_icons' => ['login' => '', 'hours' => ''],
+        'status' => 'draft',
     ];
 }
 
@@ -1154,6 +1156,25 @@ function hunt_clean_ints($v, int $n): ?array {
 function hunt_clean_ts($v): ?int {
     if (is_string($v) && $v !== '' && ctype_digit($v)) { $v = (int)$v; }
     return is_int($v) && $v >= 0 ? $v : null;
+}
+
+// Титулы из формы админки: {login: {ru, en, icon}, hours: …}. Текст обязателен
+// на обоих языках, иконка — '' (жетон по умолчанию) или картинка, загруженная
+// на сайт. Ошибка — код строкой.
+function hunt_parse_titles($tin) {
+    $tin = is_array($tin) ? $tin : [];
+    $titles = [];
+    foreach (HUNT_TITLE_KINDS as $k) {
+        $t = is_array($tin[$k] ?? null) ? $tin[$k] : [];
+        $ru = hunt_clean_text($t['ru'] ?? '', 40);
+        $en = hunt_clean_text($t['en'] ?? '', 40);
+        if ($ru === null || $en === null || $ru === '' || $en === '') { return 'bad_titles'; }
+        $icon = gw_prize_icon($t['icon'] ?? '');
+        if ($icon === null) { return 'bad_title_icon'; }
+        $titles[$k] = ['ru' => $ru, 'en' => $en];
+        if ($icon !== '') { $titles[$k]['icon'] = $icon; }
+    }
+    return $titles;
 }
 
 /**
@@ -1198,14 +1219,8 @@ function hunt_admin_save(PDO $pdo, array $in, int $now): array {
     }
     if (!$prizes || count($prizes) > 10) { return hunt_fail(400, 'bad_prizes'); }
 
-    $titles = [];
-    $tin = is_array($in['titles'] ?? null) ? $in['titles'] : [];
-    foreach (HUNT_TITLE_KINDS as $k) {
-        $ru = hunt_clean_text($tin[$k]['ru'] ?? '', 40);
-        $en = hunt_clean_text($tin[$k]['en'] ?? '', 40);
-        if ($ru === null || $en === null || $ru === '' || $en === '') { return hunt_fail(400, 'bad_titles'); }
-        $titles[$k] = ['ru' => $ru, 'en' => $en];
-    }
+    $titles = hunt_parse_titles($in['titles'] ?? null);
+    if (is_string($titles)) { return hunt_fail(400, $titles); }
 
     $row = [
         'title_ru' => $title_ru, 'title_en' => $title_en, 'rules_ru' => $rules_ru, 'rules_en' => $rules_en,
@@ -1242,4 +1257,22 @@ function hunt_admin_save(PDO $pdo, array $in, int $now): array {
         $id = (int)$pdo->lastInsertId();
     }
     return [200, ['ok' => true, 'hunt' => hunt_admin_out(hunt_load($pdo, $id), $now)]];
+}
+
+/**
+ * Только титулы — тексты и иконки. В отличие от hunt_admin_save, работает и
+ * у разыгранного сезона (решение владельца 17.11.2026): титул остаётся у
+ * людей навсегда, а текст и иконка берутся из сезона, так что правка меняет
+ * их у всех, кто титул уже получил, и у выданных в коде тоже.
+ */
+function hunt_admin_save_titles(PDO $pdo, array $in, int $now): array {
+    $titles = hunt_parse_titles($in['titles'] ?? null);
+    if (is_string($titles)) { return hunt_fail(400, $titles); }
+    $cur = hunt_admin_current($pdo);
+    if (!$cur) { return hunt_fail(404, 'bad'); }
+    $pdo->prepare('UPDATE hunts SET titles_json = :t, updated_at = :now WHERE id = :id')->execute([
+        ':t' => json_encode($titles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ':now' => $now, ':id' => (int)$cur['id'],
+    ]);
+    return [200, ['ok' => true, 'hunt' => hunt_admin_out(hunt_load($pdo, (int)$cur['id']), $now)]];
 }

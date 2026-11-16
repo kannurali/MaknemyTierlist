@@ -38,6 +38,10 @@ const HUNT_TITLES_GRANTED = [
     ],
 ];
 
+// Своя иконка титула — картинка, загруженная в админке (/api/upload.php).
+// Другое значение в titles_json — как если бы иконки не было.
+const HUNT_TITLE_ICON_RE = '#^/images/[0-9a-f]{40}\.(png|jpg|webp)$#';
+
 function hunt_json($json): array {
     if (!is_string($json) || $json === '') { return []; }
     $v = json_decode($json, true);
@@ -56,6 +60,27 @@ function hunt_titles_cfg(array $hunt): array {
         ];
     }
     return $out;
+}
+
+// Иконки титулов сезона: {login: путь или '', hours: …}. Пусто — у плашки
+// жетон по умолчанию из css/hunt.css.
+function hunt_title_icons(array $hunt): array {
+    $v = hunt_json($hunt['titles_json'] ?? null);
+    $out = [];
+    foreach (HUNT_TITLE_KINDS as $k) {
+        $icon = is_array($v[$k] ?? null) && is_string($v[$k]['icon'] ?? null) ? $v[$k]['icon'] : '';
+        $out[$k] = preg_match(HUNT_TITLE_ICON_RE, $icon) ? $icon : '';
+    }
+    return $out;
+}
+
+// Титул сезона для списка у ника: {kind, title:{ru,en}} и icon, только
+// если в админке загружена своя, — иначе форма записи прежняя.
+function hunt_title_entry(array $hunt, string $kind): array {
+    $t = ['kind' => $kind, 'title' => hunt_titles_cfg($hunt)[$kind]];
+    $icon = hunt_title_icons($hunt)[$kind];
+    if ($icon !== '') { $t['icon'] = $icon; }
+    return $t;
 }
 
 /**
@@ -80,7 +105,7 @@ function hunt_titles_for(PDO $pdo, array $uids): array {
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $kind = (string)$r['kind'];
             if (!in_array($kind, HUNT_TITLE_KINDS, true)) { continue; }
-            $out[(string)$r['user_id']][] = ['kind' => $kind, 'title' => hunt_titles_cfg($r)[$kind]];
+            $out[(string)$r['user_id']][] = hunt_title_entry($r, $kind);
         }
     } catch (PDOException $e) {
         $out = [];
@@ -148,15 +173,21 @@ function hunt_title_pick(PDO $pdo, string $uid, string $kind, int $now): string 
     return 'ok';
 }
 
-// Тексты титулов последнего сезона; нет таблицы или сезона — по умолчанию.
-function hunt_titles_latest(PDO $pdo): array {
+// titles_json последнего сезона; нет таблицы или сезона — пусто, тексты
+// по умолчанию, иконок нет.
+function hunt_titles_latest_row(PDO $pdo): array {
     try {
         $row = $pdo->query("SELECT titles_json FROM hunts WHERE status IN ('live', 'drawn') ORDER BY id DESC LIMIT 1")
             ->fetch(PDO::FETCH_ASSOC);
-        return hunt_titles_cfg($row ?: []);
+        return $row ?: [];
     } catch (PDOException $e) {
-        return hunt_titles_cfg([]);
+        return [];
     }
+}
+
+// Тексты титулов последнего сезона; нет таблицы или сезона — по умолчанию.
+function hunt_titles_latest(PDO $pdo): array {
+    return hunt_titles_cfg(hunt_titles_latest_row($pdo));
 }
 
 // Дописать выданные в коде титулы (HUNT_TITLES_GRANTED): личный — первым,
@@ -176,8 +207,8 @@ function hunt_titles_granted(PDO $pdo, array $uids, array $out): array {
                 $own[] = ['kind' => $g['kind'], 'title' => $g['title']];
                 continue;
             }
-            if ($season === null) { $season = hunt_titles_latest($pdo); }
-            $event[] = ['kind' => $g['kind'], 'title' => $season[$g['kind']]];
+            if ($season === null) { $season = hunt_titles_latest_row($pdo); }
+            $event[] = hunt_title_entry($season, $g['kind']);
         }
         $out[$uid] = array_merge($own, $earned, $event);
     }
@@ -194,6 +225,18 @@ function hunt_titles_attach(PDO $pdo, array $people): array {
         $people[$id]['titles'] = $main !== null ? [$main] : [];
     }
     return $people;
+}
+
+// Плашка титула для разметки страницы (профиль): та же, что собирают js чата
+// и трейдинга. Своя иконка — класс has-ic и переменная --nx-ic; путь
+// проверен регуляркой, в url() он безопасен.
+function hunt_title_chip(array $t, string $lang): string {
+    $icon = is_string($t['icon'] ?? null) ? $t['icon'] : '';
+    $attrs = $icon !== '' && preg_match(HUNT_TITLE_ICON_RE, $icon)
+        ? ' class="nx-title has-ic" style="--nx-ic: url(\'' . $icon . '\')"'
+        : ' class="nx-title"';
+    return '<span' . $attrs . ' data-kind="' . htmlspecialchars((string)$t['kind'], ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars(hunt_title_text($t['title'], $lang), ENT_QUOTES, 'UTF-8') . '</span>';
 }
 
 // Титул на языке страницы: русский — русский, остальные — английский.

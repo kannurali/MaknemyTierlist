@@ -777,4 +777,62 @@ test('админка: сводка, участники с билетами, ан
     assert_eq(503, handle_hunt_admin(test_db(), [], ['action' => 'get'], ht_at(1))[0], 'таблиц нет');
 });
 
+// 17.11.2026, слово владельца: ивент закрыт, а титулы — тексты и иконки —
+// правятся в админке и у разыгранного сезона. Текст и иконка берутся из
+// сезона, так что правка доходит до всех, кто титул уже получил.
+test('админка: тексты и иконки титулов правятся и у разыгранного сезона', function () {
+    $owner = '2841062255';
+    $icon = '/images/' . str_repeat('ab', 20) . '.webp';
+    $p = ht_db();
+    assert_eq([404, 'bad'], [hunt_admin_save_titles($p, ['titles' => HUNT_TITLES_DEFAULT], ht_at(1))[0],
+        hunt_admin_save_titles($p, ['titles' => HUNT_TITLES_DEFAULT], ht_at(1))[1]['status']], 'сезона нет');
+
+    $h = ht_hunt($p, ['status' => 'drawn']);
+    ht_user($p, $owner, 'maknemy');
+    $a = ht_user($p, '1', 'ann');
+    ht_insert($p, 'hunt_titles', ['user_id' => $a, 'hunt_id' => $h, 'kind' => 'login', 'created_at' => ht_at(7)]);
+    assert_eq(false, array_key_exists('icon', hunt_titles_for($p, [$a])[$a][0]), 'своей иконки нет — поля нет');
+
+    $titles = ['login' => ['ru' => 'Страж', 'en' => 'Guard', 'icon' => 'https://maknemy.com' . $icon],
+               'hours' => HUNT_TITLES_DEFAULT['hours']];
+    assert_eq('drawn', hunt_admin_save($p, ht_form(['titles' => $titles]), ht_at(20))[1]['status'],
+        'весь сезон по-прежнему не правится');
+    [$c, $b] = hunt_admin_save_titles($p, ['titles' => $titles], ht_at(20));
+    assert_eq([200, ['ru' => 'Страж', 'en' => 'Guard'], ['login' => $icon, 'hours' => '']],
+        [$c, $b['hunt']['titles']['login'], $b['hunt']['title_icons']], 'сохранено, адрес сайта у иконки срезан');
+    assert_eq('drawn', $b['hunt']['status'], 'статус сезона не тронут');
+    assert_eq(['kind' => 'login', 'title' => ['ru' => 'Страж', 'en' => 'Guard'], 'icon' => $icon, 'main' => true],
+        hunt_titles_for($p, [$a])[$a][0], 'у получившего — новые текст и иконка');
+    $own = hunt_titles_for($p, [$owner])[$owner];
+    assert_eq(['frost', 'login', 'hours'], array_column($own, 'kind'));
+    assert_eq([false, $icon, false], [isset($own[0]['icon']), $own[1]['icon'] ?? null, isset($own[2]['icon'])],
+        'у выданного в коде титула ивента — тоже, у личного — нет');
+
+    $bad = ['login' => ['ru' => 'a', 'en' => 'b', 'icon' => 'https://evil.example/x.png'], 'hours' => HUNT_TITLES_DEFAULT['hours']];
+    assert_eq('bad_title_icon', hunt_admin_save_titles($p, ['titles' => $bad], ht_at(20))[1]['status'], 'чужая картинка');
+    assert_eq('bad_titles', hunt_admin_save_titles($p, ['titles' => ['login' => ['ru' => '', 'en' => 'b']]], ht_at(20))[1]['status']);
+    assert_eq(['ru' => 'Страж', 'en' => 'Guard'], hunt_titles_for($p, [$a])[$a][0]['title'], 'отказ ничего не меняет');
+
+    [$c, $b] = handle_hunt_admin($p, [], ['action' => 'titles', 'titles' => HUNT_TITLES_DEFAULT], ht_at(20));
+    assert_eq([200, ['login' => '', 'hours' => '']], [$c, $b['hunt']['title_icons']], 'действие titles в API, иконку можно снять');
+    assert_eq(false, array_key_exists('icon', hunt_titles_for($p, [$a])[$a][0]), 'снятая иконка — снова жетон');
+});
+
+test('плашка титула со своей иконкой: профиль, чат, трейдинг', function () {
+    $icon = '/images/' . str_repeat('0f', 20) . '.png';
+    assert_eq('<span class="nx-title has-ic" style="--nx-ic: url(\'' . $icon . '\')" data-kind="login">Страж &lt;b&gt;</span>',
+        hunt_title_chip(['kind' => 'login', 'title' => ['ru' => 'Страж <b>', 'en' => 'Guard'], 'icon' => $icon], 'ru'));
+    assert_eq('<span class="nx-title" data-kind="hours">Guard</span>',
+        hunt_title_chip(['kind' => 'hours', 'title' => ['ru' => 'Х', 'en' => 'Guard'], 'icon' => "x') no"], 'en'),
+        'путь не из /images/ — без иконки');
+    $css = file_get_contents(HT_ROOT . '/public_html/css/hunt.css');
+    assert_true((bool)preg_match('/\.nx-title\.has-ic::before \{[^}]*background: var\(--nx-ic\)/', $css), 'css берёт иконку из --nx-ic');
+    foreach (['chat-page.js', 'trade-cards.js'] as $f) {
+        $js = file_get_contents(HT_ROOT . '/public_html/js/' . $f);
+        assert_true(strpos($js, 'has-ic') !== false && strpos($js, '--nx-ic') !== false, "$f ставит иконку");
+    }
+    $profile = file_get_contents(HT_ROOT . '/public_html/profile.php');
+    assert_eq(3, substr_count($profile, 'hunt_title_chip('), 'профиль рисует плашки одной функцией');
+});
+
 run_tests();

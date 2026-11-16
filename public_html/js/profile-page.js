@@ -148,6 +148,8 @@
     var head = titleMain ? titleMain.querySelector('.nx-title') : null;
     if (chip && head) {
       head.setAttribute('data-kind', chip.getAttribute('data-kind'));
+      head.className = chip.className;
+      head.style.cssText = chip.style.cssText;
       head.textContent = chip.textContent;
     }
   }
