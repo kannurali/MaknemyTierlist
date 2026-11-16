@@ -8,6 +8,8 @@ require_once __DIR__ . '/lib/hunt.php';
 //   get                      → сезон, сводка, участники с билетами, выигрыши
 //   save {hunt}              → сохранить сезон (после старта дата и награды
 //                              не меняются)
+//   titles {titles}          → только тексты и иконки титулов, в том числе
+//                              у разыгранного сезона
 //   draw                     → разыграть призы (после конца продажи билетов)
 //   win {id, status, note}   → выдача: won → confirmed → queued → given
 //   redraw {id}              → приз просроченного — следующему по очереди
@@ -23,6 +25,9 @@ function handle_hunt_admin(PDO $pdo, array $cfg, array $body, int $now): array {
     }
     if ($action === 'save') {
         return hunt_admin_save($pdo, is_array($body['hunt'] ?? null) ? $body['hunt'] : [], $now);
+    }
+    if ($action === 'titles') {
+        return hunt_admin_save_titles($pdo, $body, $now);
     }
     if ($action === 'draw') {
         $hunt = hunt_admin_current($pdo);

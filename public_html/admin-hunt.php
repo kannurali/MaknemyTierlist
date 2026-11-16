@@ -21,7 +21,7 @@ echo <<<HTML
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="stylesheet" href="/css/admin-shell.css?v=4" />
 <link rel="stylesheet" href="/css/promo-admin.css?v=4" />
-<link rel="stylesheet" href="/css/hunt-admin.css?v=1" />
+<link rel="stylesheet" href="/css/hunt-admin.css?v=2" />
 </head>
 <body>
 {$nav}
@@ -89,21 +89,29 @@ echo <<<HTML
       <p class="ha-sum" id="fSum"></p>
       <p class="ha-note" id="fLocked" hidden>Ивент уже начался: дата начала и награды заперты — у людей собраны токены по этим числам, и цена билета зависит от них.</p>
 
-      <div class="row">
-        <label class="f grow">Титул за все 7 дней входа
-          <input type="text" id="fTLoginRu" maxlength="40" />
-        </label>
-        <label class="f grow">по-английски
-          <input type="text" id="fTLoginEn" maxlength="40" />
-        </label>
-      </div>
-      <div class="row">
-        <label class="f grow">Титул за все часы на сайте
-          <input type="text" id="fTHoursRu" maxlength="40" />
-        </label>
-        <label class="f grow">по-английски
-          <input type="text" id="fTHoursEn" maxlength="40" />
-        </label>
+      <div class="ha-titles" id="haTitles">
+        <p class="ha-note" id="fDrawnNote" hidden>Сезон разыгран: менять можно только титулы. Новый текст и иконка появятся у всех, кто титул уже получил.</p>
+        <div class="row">
+          <label class="f grow">Титул за все 7 дней входа
+            <input type="text" id="fTLoginRu" maxlength="40" />
+          </label>
+          <label class="f grow">по-английски
+            <input type="text" id="fTLoginEn" maxlength="40" />
+          </label>
+        </div>
+        <div class="ha-ticon" id="fTLoginIcon"></div>
+        <div class="row">
+          <label class="f grow">Титул за все часы на сайте
+            <input type="text" id="fTHoursRu" maxlength="40" />
+          </label>
+          <label class="f grow">по-английски
+            <input type="text" id="fTHoursEn" maxlength="40" />
+          </label>
+        </div>
+        <div class="ha-ticon" id="fTHoursIcon"></div>
+        <div class="row end">
+          <button class="btn" id="haSaveTitles" type="button" hidden>Сохранить титулы</button>
+        </div>
       </div>
 
       <div class="f">Призы <span class="muted">(разыгрываются по порядку: сначала первый; один человек — один приз)</span>
@@ -150,7 +158,7 @@ echo <<<HTML
   </main>
 </div>
 
-<script src="/js/hunt-admin.js?v=2"></script>
+<script src="/js/hunt-admin.js?v=3"></script>
 </body>
 </html>
 HTML;
