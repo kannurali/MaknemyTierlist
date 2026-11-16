@@ -798,7 +798,34 @@
     notes: ""
   };
 
-  var BOOKED = [HOUSE_HELLFIRE, PLAYEROK, STARVELL];
+  var KUPA = {
+    id: "kupa-2026-11",
+    name: "kupa-2026-11",
+    advertiser: "Kupa.gg",
+    enabled: true,
+    weight: 1,
+    start: "2026-11-16",
+    end: "",
+    href: "https://kupa.gg/cc/bf",
+    text: "",
+    cta: "",
+    textKey: "promo.kupaText",
+    ctaKey: "promo.kupaCta",
+    erid: "",
+    pages: ["tierlist"],
+    slots: ["strip", "rail", "dock", "popup"],
+    creatives: {
+      strip:    { src: "/assets/promo/kupa-strip.webp",     w: 1200, h: 300,  anim: false, poster: "" },
+      rail:     { src: "/assets/promo/kupa-rail.webp",      w: 300,  h: 1200, anim: false, poster: "" },
+      dock:     { src: "/assets/promo/kupa-dock.webp",      w: 640,  h: 200,  anim: false, poster: "" },
+      dockMini: { src: "/assets/promo/kupa-dock-mini.webp", w: 374,  h: 47,   anim: false, poster: "" },
+      popup:    { src: "/assets/promo/kupa-popup.webp",     w: 800,  h: 800,  anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
+    notes: ""
+  };
+
+  var BOOKED = [KUPA, HOUSE_HELLFIRE, PLAYEROK, STARVELL];
 
   function bookedFor(campaign, slot, now, page) {
     return campaign.enabled
@@ -876,6 +903,7 @@
     HOUSE_CHANNEL: HOUSE_CHANNEL,
     PLAYEROK: PLAYEROK,
     STARVELL: STARVELL,
+    KUPA: KUPA,
     bookedOn: bookedOn,
     houseFor: houseFor,
     popupPick: popupPick,

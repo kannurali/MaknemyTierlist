@@ -23,15 +23,21 @@ a collapsed-dock face ("Mobile mini", 810x224); it is not converted.  At most
 48 px tall its tagline is unreadable, so the folded bar shows the dock creative
 as a thumbnail next to the line promo.starvellDockText, the way Playerok does.
 
-The source PNGs are not in the repository: they are the advertiser's originals
+Kupa: the popup arrives as a 1254x1254 square and is scaled down to 800x800.
+Kupa's collapsed-dock face is a 374x47 line ("kupa.gg - cheap fruits") whose
+text stays legible at the 48 px the folded bar allows, so unlike Starvell's it
+ships as dockMini, at its delivered size (inside the 640x80 dockMini spec).
+
+The source images are not in the repository: they are the advertiser's originals
 and weigh ~2 MB together.  Point --src at the directory holding them (searched
-recursively, so unpacked zip folders work); files are matched by pixel size, not
-by name, because the delivered names mix Latin "x" and Cyrillic "x" as the
-separator.
+recursively, so unpacked zip folders work); PNG and WebP are both read.  Files
+are matched by pixel size, not by name, because the delivered names mix Latin
+"x" and Cyrillic "x" as the separator.
 
 Usage:
     python tools/make-promo-creatives.py --advertiser playerok --src ~/Downloads
     python tools/make-promo-creatives.py --advertiser starvell --src ~/Downloads/starvell
+    python tools/make-promo-creatives.py --advertiser kupa --src ~/Downloads/kupa
 """
 
 import argparse
@@ -42,7 +48,8 @@ from PIL import Image
 
 # advertiser -> slot -> (source width, source height, output width, output height,
 # max bytes).  The byte ceilings mirror CREATIVE_SPECS for a still image.  Output
-# geometry differs from the source only for the Playerok rail; see above.  Slots
+# geometry differs from the source only for the Playerok rail (widened) and the
+# Kupa popup (scaled down); see above.  Slots
 # are written as <advertiser>-<file>.webp, file being the slot name except for
 # dockMini (dock-mini).
 ADVERTISERS = {
@@ -58,6 +65,13 @@ ADVERTISERS = {
         "dock": (640, 200, 640, 200, 200000),
         "popup": (800, 800, 800, 800, 400000),
     },
+    "kupa": {
+        "strip": (1200, 300, 1200, 300, 400000),
+        "rail": (300, 1200, 300, 1200, 300000),
+        "dock": (640, 200, 640, 200, 200000),
+        "dockMini": (374, 47, 374, 47, 100000),
+        "popup": (1254, 1254, 800, 800, 400000),
+    },
 }
 
 FILE_NAMES = {"dockMini": "dock-mini"}
@@ -70,7 +84,7 @@ def find_sources(src_dir, slots):
     by_size = {}
     for dirpath, _dirs, names in sorted(os.walk(src_dir)):
         for name in sorted(names):
-            if not name.lower().endswith(".png"):
+            if not name.lower().endswith((".png", ".webp")):
                 continue
             path = os.path.join(dirpath, name)
             try:
@@ -84,7 +98,7 @@ def find_sources(src_dir, slots):
         path = by_size.get((sw, sh))
         if path is None:
             raise SystemExit(
-                "no %dx%d PNG in %s (needed for the %s slot)" % (sw, sh, src_dir, slot)
+                "no %dx%d image in %s (needed for the %s slot)" % (sw, sh, src_dir, slot)
             )
         found[slot] = path
     return found
@@ -111,6 +125,16 @@ def widen(im, out_w):
     return canvas
 
 
+def fit(im, out_w, out_h):
+    """Scale im down to out_w x out_h when the shape is the same, else pad its width."""
+    src_w, src_h = im.size
+    if (src_w, src_h) != (out_w, out_h) and src_w * out_h == src_h * out_w:
+        if out_w > src_w:
+            raise SystemExit("fit() only scales down, cannot grow %d -> %d" % (src_w, out_w))
+        return im.resize((out_w, out_h), Image.LANCZOS)
+    return widen(im, out_w)
+
+
 def encode(im, dest_path, cap):
     """Write im as WebP at the highest quality that stays under cap bytes."""
     for quality in range(92, 39, -2):
@@ -124,7 +148,7 @@ def encode(im, dest_path, cap):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--advertiser", required=True, choices=sorted(ADVERTISERS))
-    ap.add_argument("--src", required=True, help="directory with the source PNGs")
+    ap.add_argument("--src", required=True, help="directory with the source PNG/WebP files")
     ap.add_argument("--out", default=OUT_DIR, help="output directory")
     args = ap.parse_args()
 
@@ -136,7 +160,7 @@ def main():
         name = "%s-%s.webp" % (args.advertiser, FILE_NAMES.get(slot, slot))
         dest = os.path.join(args.out, name)
         with Image.open(sources[slot]) as src:
-            im = widen(src.convert("RGB"), ow)
+            im = fit(src.convert("RGB"), ow, oh)
         if im.size != (ow, oh):
             raise SystemExit("%s came out %dx%d, expected %dx%d" % ((slot,) + im.size + (ow, oh)))
         quality, size = encode(im, dest, cap)

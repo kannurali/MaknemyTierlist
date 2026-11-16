@@ -16,6 +16,7 @@ const {
     shouldShowPopup, recordPopupShown, recordPopupClicked,
     normalizeDoc, migrateLegacyAd,
     HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_HELLFIRE, HOUSE_CHANNEL, PLAYEROK, STARVELL,
+    KUPA,
     houseFor, popupPick
 } = PROMO;
 
@@ -1260,6 +1261,96 @@ test('выключенный Starvell возвращает место кампа
         assert.equal(houseFor('rail', STARVELL_RUN, 'trading').id, HOUSE_CHANNEL.id);
     } finally {
         STARVELL.enabled = true;
+    }
+});
+
+// ============================================================================
+//  Kupa.gg
+// ============================================================================
+
+// Kupa.gg с 16 ноября 2026 года занимает тирлист, и владелец поставил её
+// впереди розыгрыша Hellfire: тот остаётся на остальных страницах.
+const KUPA_RUN = Date.parse('2026-11-20T12:00:00Z');
+
+test('KUPA занимает все четыре места тирлиста', () => {
+    assert.deepEqual(KUPA.slots, ['strip', 'rail', 'dock', 'popup']);
+    assert.deepEqual(KUPA.pages, ['tierlist']);
+    assert.equal(KUPA.enabled, true);
+    assert.equal(KUPA.start, '2026-11-16');
+    assert.equal(KUPA.end, '');
+    assert.equal(safeHref(KUPA.href), 'https://kupa.gg/cc/bf');
+    assert.equal(KUPA.advertiser, 'Kupa.gg');
+    const size = { strip: [1200, 300], rail: [300, 1200], dock: [640, 200], popup: [800, 800], dockMini: [374, 47] };
+    for (const key of Object.keys(size)) {
+        const cre = PROMO.creativeFor(KUPA, key);
+        assert.ok(cre, `у ${key} должен быть макет`);
+        assert.ok(cre.src.startsWith('/assets/promo/kupa-'),
+            'макеты лежат в репозитории рядом с остальными');
+        assert.deepEqual([cre.w, cre.h], size[key], `размер макета ${key}`);
+        assert.equal(cre.anim, false, key);
+    }
+    assert.ok(KUPA.textKey && KUPA.ctaKey);
+    assert.equal(KUPA.popup.maxPerWeek, 3);
+    assert.equal(KUPA.erid, '');
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_HELLFIRE,
+        HOUSE_CHANNEL, PLAYEROK, STARVELL]) {
+        assert.notEqual(KUPA.id, other.id);
+    }
+});
+
+test('макеты Kupa лежат в assets/promo', () => {
+    const fs = require('node:fs');
+    for (const key of PROMO.CREATIVE_KEYS) {
+        const cre = PROMO.creativeFor(KUPA, key);
+        const file = new URL('../public_html' + cre.src, import.meta.url);
+        assert.ok(fs.existsSync(file), cre.src);
+    }
+});
+
+test('текст Kupa переведён на все языки', () => {
+    const I18N = require('../public_html/js/i18n.js');
+    for (const lang of I18N.supported()) {
+        for (const key of [KUPA.textKey, KUPA.ctaKey]) {
+            const s = I18N.t(key, lang);
+            assert.ok(s && s !== key, `${lang}: ${key}`);
+        }
+    }
+    assert.equal(I18N.t(KUPA.ctaKey, 'ru'), 'Купить');
+});
+
+test('на тирлисте Kupa перебивает розыгрыш, Playerok и кампанию из админки', () => {
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, KUPA_RUN, 'tierlist').id, KUPA.id, slot);
+        assert.deepEqual(eligible(PAID_EVERYWHERE, slot, KUPA_RUN, 'tierlist'), [KUPA], slot);
+    }
+    assert.equal(popupPick({}, {}, KUPA_RUN, 0, 'tierlist').id, KUPA.id);
+    assert.equal(popupPick(PAID_EVERYWHERE, {}, KUPA_RUN, 0, 'tierlist').id, KUPA.id);
+    assert.equal(PROMO.bookedOn('strip', KUPA_RUN, 'tierlist'), KUPA);
+});
+
+test('Kupa не выходит за тирлист: остальные страницы у розыгрыша Hellfire', () => {
+    for (const slot of SLOTS) {
+        for (const page of ['news', 'calc', 'trading', 'stock']) {
+            assert.equal(houseFor(slot, KUPA_RUN, page).id, HOUSE_HELLFIRE.id, `${page} / ${slot}`);
+        }
+    }
+    assert.notEqual(houseFor('rail', KUPA_RUN).id, KUPA.id, 'без страницы (предпросмотр админки)');
+});
+
+test('Kupa начинается 16 ноября по Москве', () => {
+    const first = dayBoundsMsk('2026-11-16');
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, first.startMs - 1, 'tierlist').id, HOUSE_HELLFIRE.id, `15 ноября ещё розыгрыш: ${slot}`);
+        assert.equal(houseFor(slot, first.startMs, 'tierlist').id, KUPA.id, `16 ноября уже Kupa: ${slot}`);
+    }
+});
+
+test('выключенный Kupa возвращает тирлист розыгрышу', () => {
+    KUPA.enabled = false;
+    try {
+        assert.equal(houseFor('rail', KUPA_RUN, 'tierlist').id, HOUSE_HELLFIRE.id);
+    } finally {
+        KUPA.enabled = true;
     }
 });
 
