@@ -3,6 +3,8 @@
 
   const API = "/api/hunt_admin.php";
   const TIERLIST = "/api/tierlist.php";
+  const UPLOAD = "/api/upload.php";
+  const TOKEN_ICON = "/assets/hunt/token-96.webp";
   const MSK = 3 * 3600;
   const DAY = 86400;
 
@@ -28,6 +30,7 @@
     bad_draw: "Итоги не могут быть раньше конца продажи билетов.",
     bad_prizes: "Призы: от 1 до 10, у каждого название и количество от 1 до 100.",
     bad_titles: "У обоих титулов нужен текст на двух языках (до 40 знаков).",
+    bad_title_icon: "Иконка титула — картинка, загруженная на сайт (PNG, JPG или WebP).",
     locked: "Ивент уже идёт: дату начала и награды менять нельзя, снять в черновик тоже.",
     drawn: "Сезон уже разыгран.",
     not_ended: "Продажа билетов ещё идёт — разыграть можно после неё.",
@@ -229,6 +232,71 @@
     return row;
   }
 
+  function titleIcon(box) {
+    if (box.dataset.ready) return;
+    box.dataset.ready = "1";
+    const img = el("img");
+    img.alt = "";
+    const label = el("span", "", "Иконка:");
+    const file = el("input");
+    file.type = "file";
+    file.accept = "image/png,image/jpeg,image/webp";
+    const pick = el("button", "btn small", "Загрузить картинку");
+    pick.type = "button";
+    const item = el("input");
+    item.type = "text";
+    item.placeholder = "или предмет из тирлиста";
+    item.setAttribute("list", "haItems");
+    const reset = el("button", "btn small", "Жетон по умолчанию");
+    reset.type = "button";
+    const note = el("span", "ha-ticon-note", "PNG, JPG или WebP до 500 КБ, лучше квадратная с прозрачным фоном.");
+    pick.addEventListener("click", () => file.click());
+    file.addEventListener("change", () => {
+      const f = file.files && file.files[0];
+      file.value = "";
+      if (!f) return;
+      const rd = new FileReader();
+      note.textContent = "Загружается…";
+      rd.onload = () => {
+        fetch(UPLOAD, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: rd.result, kind: "" })
+        }).then(r => r.json()).then(r => {
+          const url = iconPath(r && r.url);
+          if (!url) { note.textContent = "Не загрузилась: " + ((r && r.error) || "ошибка"); return; }
+          item.value = "";
+          setTitleIcon(box, url);
+          note.textContent = "Загружена. Нажмите «Сохранить титулы».";
+        }).catch(() => { note.textContent = "Не загрузилась"; });
+      };
+      rd.readAsDataURL(f);
+    });
+    item.addEventListener("input", () => {
+      const v = item.value.trim().toLowerCase();
+      const hit = catalog.filter(it => it.name.toLowerCase() === v)[0];
+      if (hit) setTitleIcon(box, hit.icon);
+    });
+    reset.addEventListener("click", () => { item.value = ""; setTitleIcon(box, ""); });
+    box.append(label, img, pick, item, reset, file, note);
+  }
+
+  function setTitleIcon(box, url) {
+    titleIcon(box);
+    box.dataset.icon = iconPath(url);
+    const img = box.querySelector("img");
+    img.src = box.dataset.icon || TOKEN_ICON;
+    img.title = box.dataset.icon ? "Своя иконка" : "Жетон по умолчанию";
+  }
+
+  function readTitles() {
+    return {
+      login: { ru: $("fTLoginRu").value.trim(), en: $("fTLoginEn").value.trim(), icon: $("fTLoginIcon").dataset.icon || "" },
+      hours: { ru: $("fTHoursRu").value.trim(), en: $("fTHoursEn").value.trim(), icon: $("fTHoursIcon").dataset.icon || "" }
+    };
+  }
+
   function readPrizes() {
     return Array.prototype.map.call($("fPrizes").children, row => {
       const inputs = row.querySelectorAll("input");
@@ -250,6 +318,9 @@
     $("fTLoginEn").value = h.titles.login.en;
     $("fTHoursRu").value = h.titles.hours.ru;
     $("fTHoursEn").value = h.titles.hours.en;
+    const icons = h.title_icons || {};
+    setTitleIcon($("fTLoginIcon"), icons.login || "");
+    setTitleIcon($("fTHoursIcon"), icons.hours || "");
     intsBox($("fLogin"), [1, 2, 3, 4, 5, 6, 7].map(n => "День " + n), h.login);
     intsBox($("fHours"), ["1 час", "2 часа"], h.hours);
     const box = $("fPrizes");
@@ -262,6 +333,14 @@
     $("fHours").querySelectorAll("input").forEach(i => { i.disabled = started; });
     $("fStatus").disabled = started;
     $("haSave").disabled = h.phase === "drawn";
+    const drawn = h.phase === "drawn";
+    $("fDrawnNote").hidden = !drawn;
+    $("haSaveTitles").hidden = !h.id;
+    if (drawn) {
+      $("haSeason").querySelectorAll("input, select, textarea, button").forEach(n => {
+        if (!n.closest("#haTitles")) n.disabled = true;
+      });
+    }
     recalc();
   }
 
@@ -279,10 +358,7 @@
       login: readInts($("fLogin")),
       hours: readInts($("fHours")),
       prizes: readPrizes(),
-      titles: {
-        login: { ru: $("fTLoginRu").value.trim(), en: $("fTLoginEn").value.trim() },
-        hours: { ru: $("fTHoursRu").value.trim(), en: $("fTHoursEn").value.trim() }
-      }
+      titles: readTitles()
     };
   }
 
@@ -466,6 +542,9 @@
     if (f.status === "live" && (!state.hunt || state.hunt.status !== "live")
       && !confirm("Опубликовать ивент? Он появится на сайте, а с " + $("fStart").value + " начнут копиться токены.")) return;
     run({ action: "save", hunt: f }, "Сохранено.");
+  });
+  $("haSaveTitles").addEventListener("click", () => {
+    run({ action: "titles", titles: readTitles() }, "Титулы сохранены — у ников они обновятся в течение минуты.");
   });
   $("haDrawBtn").addEventListener("click", () => {
     if (confirm("Разыграть призы? Повторить нельзя.")) run({ action: "draw" }, "Разыграно.");

@@ -84,7 +84,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=32" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=32" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/protect.js?v=3" fetchpriority="high"></script>
@@ -99,7 +99,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/promo-popup.css?v=3" /><?php else: ?><link rel="stylesheet" href="css/promo-popup.css?v=3" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=7" />
+<link rel="stylesheet" href="css/hunt.css?v=8" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <link rel="stylesheet" href="css/gw-card.css?v=4" />
@@ -155,7 +155,7 @@ page_lscache();
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="<?= u('/halloween') ?>">
+          <a class="mk-pill" aria-disabled="true">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 1.45L11.73 6.93L17.63 7.36L13.11 11.17L14.53 16.92L9.5 13.8L4.47 16.92L5.89 11.17L1.37 7.36L7.27 6.93L9.5 1.45Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.event"><?= te('nav.event') ?></span>
           </a>
@@ -319,7 +319,7 @@ page_lscache();
 
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/trade-cards.js?v=6" fetchpriority="high"></script>
+  <script src="js/trade-cards.js?v=7" fetchpriority="high"></script>
   <script src="js/trading-page.js?v=9" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>

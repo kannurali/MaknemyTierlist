@@ -161,7 +161,7 @@ $pfTitle = $pfNick !== ''
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=32" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=32" /><?php endif; ?>
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/protect.js?v=3" fetchpriority="high"></script>
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
@@ -171,7 +171,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=7" />
+<link rel="stylesheet" href="css/hunt.css?v=8" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
@@ -223,7 +223,7 @@ $pfTitle = $pfNick !== ''
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="<?= u('/halloween') ?>">
+          <a class="mk-pill" aria-disabled="true">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 1.45L11.73 6.93L17.63 7.36L13.11 11.17L14.53 16.92L9.5 13.8L4.47 16.92L5.89 11.17L1.37 7.36L7.27 6.93L9.5 1.45Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.event"><?= te('nav.event') ?></span>
           </a>
@@ -325,7 +325,7 @@ $pfTitle = $pfNick !== ''
 
       <h1 class="pf-nick" id="pfNick"><?= htmlspecialchars($pfNick, ENT_QUOTES, 'UTF-8') ?><?php if ($pfLogo !== null): ?><span class="nx-nick-badge" tabindex="0" role="img" data-tip="<?= $pfLogoKey ?>" data-i18n-label="<?= $pfLogoKey ?>" aria-label="<?= ta($pfLogoKey) ?>"><img class="pf-nick-logo" src="<?= $pfLogo['src'] ?>" alt="" /></span><?php endif; ?></h1>
 <?php if ($pfTitleMain !== null): ?>
-      <p class="nx-titles pf-titles" id="pfTitleMain"><span class="nx-title" data-kind="<?= $pfTitleMain['kind'] ?>"><?= htmlspecialchars(hunt_title_text($pfTitleMain['title'], i18n_lang()), ENT_QUOTES, 'UTF-8') ?></span></p>
+      <p class="nx-titles pf-titles" id="pfTitleMain"><?= hunt_title_chip($pfTitleMain, i18n_lang()) ?></p>
 <?php endif; ?>
 <?php if ($pfCard['handle'] !== null): ?>
       <p class="pf-handle" id="pfHandle"><?= htmlspecialchars($pfCard['handle'], ENT_QUOTES, 'UTF-8') ?></p>
@@ -450,9 +450,9 @@ $pfTitle = $pfNick !== ''
 <?php foreach ($pfTitles as $pfT): ?>
           <li class="pf-tl-row">
 <?php if ($pfTitlePick): ?>
-            <button class="pf-tl-item" type="button" data-kind="<?= $pfT['kind'] ?>" aria-pressed="<?= $pfT['main'] ? 'true' : 'false' ?>"><span class="nx-titles"><span class="nx-title" data-kind="<?= $pfT['kind'] ?>"><?= htmlspecialchars(hunt_title_text($pfT['title'], i18n_lang()), ENT_QUOTES, 'UTF-8') ?></span></span><span class="pf-tl-mark" data-i18n="profile.titlesMain"><?= te('profile.titlesMain') ?></span></button>
+            <button class="pf-tl-item" type="button" data-kind="<?= $pfT['kind'] ?>" aria-pressed="<?= $pfT['main'] ? 'true' : 'false' ?>"><span class="nx-titles"><?= hunt_title_chip($pfT, i18n_lang()) ?></span><span class="pf-tl-mark" data-i18n="profile.titlesMain"><?= te('profile.titlesMain') ?></span></button>
 <?php else: ?>
-            <span class="pf-tl-item"><span class="nx-titles"><span class="nx-title" data-kind="<?= $pfT['kind'] ?>"><?= htmlspecialchars(hunt_title_text($pfT['title'], i18n_lang()), ENT_QUOTES, 'UTF-8') ?></span></span></span>
+            <span class="pf-tl-item"><span class="nx-titles"><?= hunt_title_chip($pfT, i18n_lang()) ?></span></span>
 <?php endif; ?>
           </li>
 <?php endforeach; ?>
@@ -643,14 +643,14 @@ $pfTitle = $pfNick !== ''
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
-  <script src="js/profile-page.js?v=8" defer></script>
+  <script src="js/profile-page.js?v=9" defer></script>
   <script src="js/profile-chart.js?v=5" defer></script>
 <?php if ($pfTg !== null): ?>
   <script src="js/profile-notify.js?v=2" defer></script>
 <?php endif; ?>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=6" defer></script>
+  <script src="js/trade-cards.js?v=7" defer></script>
   <script src="js/profile-trades.js?v=4" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>

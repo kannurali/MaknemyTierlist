@@ -301,6 +301,13 @@ html { -webkit-tap-highlight-color: transparent; }
 .mk-chat[data-soon]:hover,
 .mk-avatar[data-soon]:hover { filter: brightness(1.05); }
 
+.mk-pill[aria-disabled="true"] {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.34);
+  cursor: default;
+  pointer-events: none;
+}
+
 .mk-tg,
 .mk-chat,
 .mk-avatar {

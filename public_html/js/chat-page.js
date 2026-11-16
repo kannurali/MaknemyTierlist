@@ -58,6 +58,10 @@
       chip.className = 'nx-title';
       chip.setAttribute('data-kind', t.kind);
       chip.textContent = ru ? t.title.ru : t.title.en;
+      if (t.icon && /^\/images\/[0-9a-f]{40}\.(png|jpg|webp)$/.test(t.icon)) {
+        chip.classList.add('has-ic');
+        chip.style.setProperty('--nx-ic', "url('" + t.icon + "')");
+      }
       box.appendChild(chip);
     });
     return box;

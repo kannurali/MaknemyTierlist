@@ -37,6 +37,10 @@
     user.titles.forEach(t => {
       const chip = el("span", "nx-title", ru ? t.title.ru : t.title.en);
       chip.setAttribute("data-kind", t.kind);
+      if (t.icon && /^\/images\/[0-9a-f]{40}\.(png|jpg|webp)$/.test(t.icon)) {
+        chip.classList.add("has-ic");
+        chip.style.setProperty("--nx-ic", "url('" + t.icon + "')");
+      }
       box.appendChild(chip);
     });
     return box;
