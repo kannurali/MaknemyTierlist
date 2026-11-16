@@ -30,7 +30,6 @@ echo <<<HTML
   <header class="top">
     <div class="brand">ИВЕНТ<span>Spooky Tokens</span></div>
     <div class="top-actions">
-      <a class="btn" href="/halloween" target="_blank" rel="noopener">Страница на сайте ↗</a>
       <span class="hint" id="haHint"></span>
     </div>
   </header>

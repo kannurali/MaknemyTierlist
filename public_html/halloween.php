@@ -2,6 +2,16 @@
 require_once __DIR__ . '/api/_bootstrap.php';
 require_once __DIR__ . '/api/lib/metrika.php';
 
+// Ивент закрыт 17.11.2026 по слову владельца: страница больше не открывается
+// и уводит на главную, пункт «Ивент» в меню всех страниц серый и без ссылки
+// (<a class="mk-pill" aria-disabled="true">). Админка /admin/hunt работает
+// как раньше. Новый ивент — убрать этот блок и вернуть в меню 13 страниц
+// ссылку на /halloween вместо aria-disabled.
+lscache_off();
+header('Cache-Control: no-store');
+header('Location: ' . u('/'), true, 302);
+exit;
+
 // Хэллоуинский ивент Spooky Tokens — /halloween. Разметка от сессии не
 // зависит и лежит в кеше LiteSpeed: календарь, шкалы, билеты и итоги рисует
 // js/hunt-page.js по /api/hunt.php и /api/hunt_me.php.
@@ -37,7 +47,7 @@ page_lscache();
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/base.css?v=16" /><?php else: ?><link rel="stylesheet" href="css/base.css?v=16" /><?php endif; ?>
 
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=31" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=31" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/topbar.css?v=32" /><?php else: ?><link rel="stylesheet" href="css/topbar.css?v=32" /><?php endif; ?>
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/protect.js?v=3" fetchpriority="high"></script>
@@ -100,7 +110,7 @@ page_lscache();
           </a>
         </li>
         <li>
-          <a class="mk-pill" href="<?= u('/halloween') ?>" aria-current="page">
+          <a class="mk-pill" aria-disabled="true">
             <svg viewBox="0 0 19 19" fill="none" aria-hidden="true"><path d="M9.5 1.45L11.73 6.93L17.63 7.36L13.11 11.17L14.53 16.92L9.5 13.8L4.47 16.92L5.89 11.17L1.37 7.36L7.27 6.93L9.5 1.45Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
             <span class="mk-pill-text" data-i18n="nav.event"><?= te('nav.event') ?></span>
           </a>
