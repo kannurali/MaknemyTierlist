@@ -363,7 +363,7 @@ for (const [theme, size] of [['dark', 390], ['light', 390], ['dark', 320], ['bla
         JSON.stringify(await page.locator('.ta-qty').allTextContents()) === '["×3","×2","×5"]' && await loaded(page, '.ta-slot img') === 3,
         await page.locator('.ta-qty').allTextContents());
     check(`joined ${theme} ${size}: аватар пользователя на корешке`, await loaded(page, '.ta-me img') === 1);
-    check(`joined ${theme} ${size}: MainButton в цвет сайта`, c.some(x => x[0] === 'main.params' && x[1].color === '#8b00ff'), c.filter(x => x[0] === 'main.params'));
+    check(`joined ${theme} ${size}: MainButton в цвет сайта`, c.some(x => x[0] === 'main.params' && x[1].color === '#2d5bf0'), c.filter(x => x[0] === 'main.params'));
     if (theme === 'dark' && size === 390) {
         await page.getByRole('button', { name: 'Открыть на сайте' }).click();
         check('joined: «Открыть на сайте» → openLink(gw.site)', (await calls(page)).some(x => x[0] === 'openLink' && x[1] === GW.site));

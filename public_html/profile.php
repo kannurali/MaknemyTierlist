@@ -172,7 +172,7 @@ $pfTitle = $pfNick !== ''
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=6" />
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=8" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
@@ -654,7 +654,7 @@ $pfTitle = $pfNick !== ''
   <script src="js/profile-trades.js?v=4" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=18" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
 </body>
 </html>

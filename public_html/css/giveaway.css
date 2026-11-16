@@ -68,9 +68,9 @@
 .gw-card {
   --gw-poiret: "Poiret One", var(--ui);
   --gw-inter: "Inter", var(--ui);
-  --gw-violet: #8b00ff;
-  --gw-fill: #a800f0;
-  --gw-off: #2c193c;
+  --gw-violet: #2d5bf0;
+  --gw-fill: linear-gradient(135deg, #61b5e9, #2d4aed);
+  --gw-off: #18233a;
   --gw-off-ink: #949494;
 
   container: gwc / inline-size;
@@ -152,7 +152,7 @@
   max-width: 100%;
   aspect-ratio: 727 / 372;
   border-radius: calc(32 * var(--k));
-  background: #0d0613;
+  background: #060a16;
 }
 .gw-img {
   position: absolute;
@@ -172,7 +172,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: radial-gradient(60% 70% at 50% 60%, rgba(168, 0, 240, .45), rgba(13, 6, 19, 0) 70%), #0d0613;
+  background: radial-gradient(60% 70% at 50% 60%, rgba(45, 110, 237, .45), rgba(6, 10, 22, 0) 70%), #060a16;
 }
 .gw-media.is-stage .gw-over { z-index: 3; }
 .gw-stage {
@@ -276,12 +276,12 @@
   margin-left: calc(19 * var(--k));
   padding: calc(6 * var(--k)) calc(26 * var(--k));
   border-radius: calc(32 * var(--k));
-  background: #0d0613;
+  background: #060a16;
 }
 .gw-stat-text { white-space: nowrap; }
 .gw-stat-pill.is-val { margin-left: auto; }
 .gw-stat-val {
-  color: #bb00ff;
+  color: #61b5e9;
   font-family: var(--gw-inter);
   font-size: calc(23 * var(--k));
   font-weight: 800;
@@ -563,7 +563,7 @@ button.gw-step-label:disabled { cursor: default; }
 @media (hover: hover) {
   .gw-step:not(.is-ok) a.gw-step-label:hover,
   .gw-step:not(.is-ok) button.gw-step-label:enabled:hover {
-    background: #45285e;
+    background: #26375e;
     color: #fff;
   }
 }
@@ -593,7 +593,7 @@ button.gw-step-label:disabled { cursor: default; }
 }
 .gw-path-fill { display: none; }
 .gw-path[data-fill="both"] .gw-path-base {
-  stroke: #8a00ff;
+  stroke: #2d5bf0;
   stroke-dasharray: none;
 }
 .gw-path:is([data-fill="low"], [data-fill="high"]) .gw-path-fill { display: inline; }
@@ -663,7 +663,7 @@ button.gw-step-label:disabled { cursor: default; }
   ry: calc(47.5 * var(--k));
 }
 @media (hover: hover) {
-  .gw-cta:enabled:hover { background: #9a1fff; }
+  .gw-cta:enabled:hover { background: #4a72ff; }
 }
 .gw-cta:enabled:active { scale: .98; }
 .gw-cta:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
@@ -793,7 +793,7 @@ button.gw-step-label:disabled { cursor: default; }
   overscroll-behavior: contain;
   padding: 28px 28px 30px;
   border-radius: 21px;
-  background: rgba(10, 7, 15, .97);
+  background: rgba(6, 10, 22, .97);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
   color: #fff;
   font-family: var(--ui);
@@ -859,7 +859,7 @@ button.gw-step-label:disabled { cursor: default; }
   width: 58px;
   height: 58px;
   border-radius: 13px;
-  background: #a800f0;
+  background: var(--gw-fill);
 }
 .gw-wl-pic img,
 .gw-wl-pic .gw-gift-art {
@@ -892,7 +892,7 @@ button.gw-step-label:disabled { cursor: default; }
   box-sizing: border-box;
   padding: 4px 14px 4px 4px;
   border-radius: 999px;
-  background: #2c193c;
+  background: #18233a;
   color: #fff;
   font-family: var(--gw-inter);
   font-size: 15px;
@@ -903,7 +903,7 @@ button.gw-step-label:disabled { cursor: default; }
 }
 .gw-wl-win:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @media (hover: hover) {
-  .gw-wl-win:hover { background: #45285e; }
+  .gw-wl-win:hover { background: #26375e; }
 }
 .gw-wl-ava {
   display: block;
@@ -911,7 +911,7 @@ button.gw-step-label:disabled { cursor: default; }
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #45285e;
+  background: #26375e;
   object-fit: cover;
 }
 .gw-wl-ava.is-empty {
@@ -1066,13 +1066,13 @@ button.gw-step-label:disabled { cursor: default; }
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: rgba(10, 7, 15, .96);
+  background: rgba(6, 10, 22, .96);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, .25) transparent;
 }
 .gw-card.is-pop::before,
 .gw-card.is-pop::after { display: none; }
-.gw-card.is-pop.is-joined { box-shadow: inset 0 0 0 3px #9a00ff; }
+.gw-card.is-pop.is-joined { box-shadow: inset 0 0 0 3px #2d5bf0; }
 body.gw-locked { overflow: hidden; }
 
 @keyframes gw-in {

@@ -332,7 +332,7 @@ page_lscache();
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
   <script src="js/hunt-page.js?v=5" fetchpriority="high"></script>
-  <script src="js/giveaway.js?v=17" fetchpriority="high"></script>
+  <script src="js/giveaway.js?v=18" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=6" fetchpriority="high"></script>
 </body>
 </html>
