@@ -337,8 +337,8 @@ https://maknemy.com/?signin
 а не только по прямой ссылке из карточки приложения.
 
 `tests/legal_pages_test.php` держит текст в согласии с кодом: если из политики
-пропадёт упоминание Google Analytics и его cookie или фраза о том, что
-паролей мы не храним, тест упадёт. Документ, разошедшийся с поведением сайта, — это не
+пропадёт упоминание вебвизора Метрики, Google Analytics и его cookie или фраза
+о том, что паролей мы не храним, тест упадёт. Документ, разошедшийся с поведением сайта, — это не
 устаревший текст, а неправда.
 
 ### Публикация приложения в Roblox
@@ -461,7 +461,7 @@ php tools/downscale-images.php --config=/home/maknemyt/config.php --dry-run
 ## Content-Security-Policy
 
 `.htaccess` отдаёт на все ответы заголовок CSP. Главное в нём — `script-src
-'self' https://www.googletagmanager.com`
+'self' https://mc.yandex.ru https://yastatic.net https://www.googletagmanager.com`
 **без `'unsafe-inline'`**:
 если в чат, объявление или профиль пролезет разметка со скриптом или
 `onerror=`, браузер её не исполнит, и чужой код не сможет действовать от имени
@@ -474,10 +474,12 @@ php tools/downscale-images.php --config=/home/maknemyt/config.php --dry-run
   через `<meta>` (`nx-rev` в тирлисте, `nx-post` в новостях) или отдельным
   файлом (`js/admin-flag.js`). `<script type="application/ld+json">` —
   данные, их можно.
-- Статистика — только Google Analytics: `metrika_counter_html()` печатает его
-  блок (`js/ga.js`, номер — `GA_ID` в `api/lib/google_analytics.php`; пустой
-  номер выключает GA). Цели по кликам на рекламу шлёт `PROMO.goal()` из
-  `js/promo.js`. Яндекс Метрику сняли 2026-10-20; имя функции осталось от неё.
+- Счётчик Яндекс Метрики (111127188) — `js/metrika.js`, подключается
+  `metrika_counter_html()`. Она же печатает блок Google Analytics (`js/ga.js`,
+  номер — `GA_ID` в `api/lib/google_analytics.php`; пустой номер выключает GA).
+  Оба счётчика работают только на `maknemy.com`. Цели по кликам на рекламу
+  шлёт `PROMO.goal()` из `js/promo.js` — сразу в оба счётчика. Метрику
+  снимали 2026-10-20 и вернули 2026-11-17 под будущую РСЯ.
 - Новый внешний домен (картинки, скрипты, запросы) не заработает, пока его
   не впишут в политику.
 

@@ -1431,7 +1431,7 @@ test('у TG-канала в свёрнутой полосе свой текст,
     assert.equal(PROMO.dockTextKey(null), '');
 });
 
-test('goal() шлёт цель в GA (id → promo_id), Метрику не зовёт, без счётчика молчит', () => {
+test('goal() шлёт цель в Метрику и в GA (id → promo_id), без счётчиков молчит', () => {
     const saved = { ym: globalThis.ym, gtag: globalThis.gtag };
     try {
         delete globalThis.ym; delete globalThis.gtag;
@@ -1442,8 +1442,15 @@ test('goal() шлёт цель в GA (id → promo_id), Метрику не зо
         globalThis.gtag = (...a) => calls.push(['gtag', ...a]);
         PROMO.goal('promo_click', { id: 'c1', slot: 'popup', page: 'calc' });
         assert.deepEqual(calls, [
+            ['ym', 111127188, 'reachGoal', 'promo_click', { id: 'c1', slot: 'popup', page: 'calc' }],
             ['gtag', 'event', 'promo_click', { promo_id: 'c1', slot: 'popup', page: 'calc' }]
         ]);
+
+        calls.length = 0;
+        globalThis.ym = () => { throw new Error('boom'); };
+        PROMO.goal('promo_dock_mini', { id: 'c2' });
+        assert.deepEqual(calls, [['gtag', 'event', 'promo_dock_mini', { promo_id: 'c2' }]],
+            'упавшая Метрика не мешает GA');
 
         globalThis.gtag = () => { throw new Error('boom'); };
         PROMO.goal('promo_dock_mini', { id: 'c2' });
