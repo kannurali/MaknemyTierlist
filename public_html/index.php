@@ -599,7 +599,7 @@ if (site_skin() !== null) { require __DIR__ . '/' . site_skin() . '/tierlist.php
   <script src="js/promo-dock.js?v=12" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/app.js?v=102" fetchpriority="high"></script>
+  <script src="js/app.js?v=103" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>

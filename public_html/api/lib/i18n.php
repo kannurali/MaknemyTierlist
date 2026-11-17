@@ -147,7 +147,7 @@ function th(string $key, array $vars = []): string {
 // перевод его названия на язык страницы.
 const I18N_NAMES = [
     'ru' => 'Русский', 'en' => 'English', 'de' => 'Deutsch', 'fr' => 'Français', 'es' => 'Español',
-    'it' => 'Italiano', 'pt' => 'Português', 'pl' => 'Polski', 'tr' => 'Türkçe', 'uk' => 'Українська',
+    'it' => 'Italiano', 'pt' => 'Português (Brasil)', 'pl' => 'Polski', 'tr' => 'Türkçe', 'uk' => 'Українська',
 ];
 
 // Текущий адрес без языковой приставки, с query: /en/news/92?x=1 → /news/92?x=1.

@@ -11,6 +11,7 @@ function vx_legal_open(string $slug, string $title, string $description): void {
     $t    = $esc($title);
     $d    = $esc($description);
     $name = $esc(site_name());
+    $main = $esc(SITE_DEFAULT_ORIGIN . '/');
     header('Cache-Control: no-cache, must-revalidate');
     page_lscache();
     echo <<<HTML
@@ -39,8 +40,8 @@ function vx_legal_open(string $slug, string $title, string $description): void {
 <link rel="apple-touch-icon" href="/assets/vx/favicon.png" />
 
 <link rel="stylesheet" href="css/base.css?v=16" />
-<link rel="stylesheet" href="css/vx/vx.css?v=2" />
-<link rel="stylesheet" href="css/vx/legal.css?v=1" />
+<link rel="stylesheet" href="css/vx/vx.css?v=3" />
+<link rel="stylesheet" href="css/vx/legal.css?v=2" />
 </head>
 <body class="vx vx-legal">
 
@@ -52,6 +53,13 @@ function vx_legal_open(string $slug, string $title, string $description): void {
       <ul class="mk-nav">
         <li><a class="mk-pill" href="/tierlist">Тирлист</a></li>
         <li><a class="mk-pill" href="/news">Новости</a></li>
+        <li class="mk-nav-main">
+          <a class="vx-main" href="{$main}" target="_blank" rel="noopener" title="Основной сайт Maknemy">
+            <img src="assets/design/logo-mk-square.png" alt="" width="160" height="160" />
+            <span class="vx-main-text">Maknemy</span>
+            <svg class="vx-main-out" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 1.75h5.75V7.5M10.25 1.75 2 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </li>
       </ul>
       <a class="vx-play" href="https://www.roblox.com/games/104067066727140/Vox-Seas" target="_blank" rel="noopener">Играть</a>
     </nav>

@@ -1634,9 +1634,10 @@
     e.target.value = "";
   });
 
-  const FILTER_KEYS = ["configurators", "fruits", "perms", "passes"];
-  const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
   const filtersEl = $("#filters");
+  const FILTER_KEYS = ["configurators", "fruits", "perms", "passes"]
+    .filter(k => filtersEl.querySelector(`.chip[data-f="${k}"]`));
+  const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
 
   function applyFilters() {
     FILTER_KEYS.forEach(key => {
