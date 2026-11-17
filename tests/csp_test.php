@@ -84,9 +84,9 @@ test('мини-приложение: telegram.org в скриптах, фрей�
     assert_true($ifm !== false && $ifm > strpos($HT, 'Header always set Content-Security-Policy'), 'отдельный <IfModule> после общего');
 });
 
-test('скрипты — только свои и GA, без unsafe-inline и eval', function () use ($POLICY) {
+test('скрипты — только свои, Метрика и GA, без unsafe-inline и eval', function () use ($POLICY) {
     $s = $POLICY['script-src'] ?? [];
-    assert_eq(["'self'", 'https://www.googletagmanager.com'], $s, 'script-src');
+    assert_eq(["'self'", 'https://mc.yandex.ru', 'https://yastatic.net', 'https://www.googletagmanager.com'], $s, 'script-src');
     foreach (["'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", '*', 'data:', 'blob:', 'https:', 'http:'] as $bad) {
         assert_eq(false, in_array($bad, $s, true), "script-src без $bad");
     }
@@ -117,18 +117,36 @@ test('картинки: свои, data/blob для экспорта и кроп�
     assert_eq(false, in_array('https:', $img, true), 'img-src без https:');
 });
 
-// Яндекс Метрику сняли 2026-10-20 (api/lib/metrika.php). Её адреса в
-// политике — лишние открытые двери: скрипт с mc.yandex.ru исполнился бы, даже
-// когда сайт его не ставит.
-test('адресов Метрики и Вебвизора в политике нет', function () use ($POLICY) {
-    foreach ($POLICY as $d => $list) {
-        foreach ($list as $src) {
-            assert_eq(0, preg_match('~yandex|webvisor|yastatic~i', $src), "$d: $src");
-        }
+// Метрику вернули 2026-11-17 (api/lib/metrika.php). Адреса — из её инструкции
+// «Установка счетчика на сайт с CSP»: общий список доменов https и wss, без
+// него Вебвизор и часть хитов молча теряются.
+test('адреса Метрики и Вебвизора — по её инструкции', function () use ($POLICY) {
+    $tlds = ['ru', 'az', 'by', 'co.il', 'com', 'com.am', 'com.ge', 'com.tr', 'ee', 'fr',
+             'kg', 'kz', 'lt', 'lv', 'md', 'tj', 'tm', 'uz'];
+    $https = array_merge(array_map(function ($t) { return 'https://mc.yandex.' . $t; }, $tlds),
+        ['https://mc.webvisor.com', 'https://mc.webvisor.org']);
+    foreach ($https as $h) {
+        assert_true(in_array($h, $POLICY['connect-src'] ?? [], true), "connect-src: $h");
+        assert_true(in_array(str_replace('https://', 'wss://', $h), $POLICY['connect-src'] ?? [], true), "connect-src: wss для $h");
+        assert_true(in_array($h, $POLICY['img-src'] ?? [], true), "img-src: $h");
     }
     foreach (['frame-src', 'child-src'] as $d) {
-        assert_eq(["'self'", 'blob:'], $POLICY[$d] ?? [], $d);
+        assert_eq(["'self'", 'blob:', 'https://mc.yandex.ru'], $POLICY[$d] ?? [], $d);
     }
+    // Пиксель yandex.ru/an/mapuid/… (сверка кук рекламной сети) не пускаем,
+    // пока на сайте нет РСЯ: статистике он не нужен.
+    foreach ($POLICY as $d => $list) {
+        foreach ($list as $src) {
+            assert_true(!in_array($src, ['https://yandex.ru', 'https://*.yandex.ru', 'https://an.yandex.ru'], true), "$d: $src — адреса РСЯ отдельно, вместе с ней");
+        }
+    }
+});
+
+test('Метрика подключается внешним файлом, асинхронно', function () use ($PUB) {
+    $html = metrika_counter_html();
+    assert_true((bool)preg_match('~<script src="/js/metrika\.js\?v=\d+" async></script>~', $html), 'тег js/metrika.js');
+    $js = csp_read($PUB . '/js/metrika.js');
+    assert_true(strpos($js, "'https://mc.yandex.ru/metrika/tag.js?id=" . METRIKA_ID . "'") !== false, 'tag.js с адреса из script-src');
 });
 
 // Адреса из инструкции Google для GA4 с CSP. Signals и рекламная

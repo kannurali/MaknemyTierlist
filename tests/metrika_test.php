@@ -3,16 +3,16 @@ define('TESTING', 1);
 require __DIR__ . '/lib.php';
 require __DIR__ . '/../public_html/api/lib/metrika.php';
 
-// Счётчик статистики (Google Analytics) на публичных страницах — и его
-// отсутствие на админских. Имя файла осталось от Яндекс Метрики, которую
-// сняли 2026-10-20 (почему — в api/lib/metrika.php).
+// Счётчики статистики (Яндекс Метрика и Google Analytics) на публичных
+// страницах — и их отсутствие на админских. Метрику снимали 2026-10-20 и
+// вернули 2026-11-17 (история — в api/lib/metrika.php).
 //
 // Регресс, который этот файл ловит: счётчик стоял ТОЛЬКО в index.php. Главная,
 // калькулятор и лента новостей не считались вовсе, и увидеть это по отчётам
 // нельзя в принципе — раздел без счётчика выглядит там как «туда не ходят», а
 // не как «там нечем считать». Проверяются поэтому не исходники страниц
-// (счётчик подключается вызовом функции, и grep по ga.js в home.php ничего не
-// найдёт), а РЕАЛЬНЫЙ отрендеренный вывод каждой страницы.
+// (счётчик подключается вызовом функции, и grep по mc.yandex.ru в home.php
+// ничего не найдёт), а РЕАЛЬНЫЙ отрендеренный вывод каждой страницы.
 
 $PUB = dirname(__DIR__) . '/public_html';
 
@@ -82,48 +82,46 @@ function mt_read(string $path): string {
 }
 
 // --------------------------------------------------------------------------
-//  Метрика снята целиком
+//  Номер счётчика и цели
 // --------------------------------------------------------------------------
 
-// Полуснятый счётчик хуже любого из двух состояний: адрес tag.js без файла
-// даёт 404 на каждой странице, ym() без счётчика молча теряет цели, а
-// политика конфиденциальности обещает то, чего нет (или наоборот).
-test('от Метрики не осталось ни загрузки, ни вызовов', function () use ($PUB) {
-    assert_true(!is_file($PUB . '/js/metrika.js'), 'js/metrika.js удалён');
-    $left = [];
-    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($PUB));
-    foreach ($it as $f) {
-        if (!$f->isFile()) { continue; }
-        $ext = strtolower($f->getExtension());
-        $name = $f->getFilename();
-        if (!in_array($ext, ['php', 'js', 'html', 'json'], true) && $name !== '.htaccess') { continue; }
-        $path = str_replace('\\', '/', $f->getPathname());
-        $src = (string)file_get_contents($path);
-        foreach (['mc.yandex.', 'mc.webvisor.', 'yastatic.net', 'metrika.js', '111127188'] as $needle) {
-            if (strpos($src, $needle) !== false) { $left[] = "$path: $needle"; }
-        }
-        if ($ext === 'js' && substr($name, -7) !== '.min.js' && preg_match('/\bym\(/', $src)) {
-            $left[] = "$path: ym(";
-        }
-    }
-    assert_eq([], $left, 'следы Метрики в public_html');
+// Номер — тот самый, с которым Метрика жила до снятия: новый счётчик начал
+// бы историю и Вебвизор с нуля, а РСЯ привязывается к счётчику по номеру.
+test('номер счётчика прежний', function () {
+    assert_eq(111127188, METRIKA_ID, 'счётчик не менялся молча');
+});
+
+// Номер зашит литералом в трёх местах: PHP, js/metrika.js и js/promo.js —
+// общей константы у PHP и браузерного кода нет. Разъедутся — хиты или цели
+// начнут уходить в несуществующий счётчик, и ошибки в консоли при этом не
+// будет.
+test('номер счётчика один и тот же в PHP, js/metrika.js и js/promo.js', function () use ($PUB) {
+    $id = (string)METRIKA_ID;
+    $promo = mt_read($PUB . '/js/promo.js');
+    assert_true((bool)preg_match('/\bvar METRIKA_ID = (\d+);/', $promo, $m), 'в promo.js должен быть METRIKA_ID');
+    assert_eq($id, $m[1] ?? '', 'номер счётчика в promo.js должен совпадать с METRIKA_ID');
+    assert_true(strpos($promo, 'root.ym(METRIKA_ID, "reachGoal", name, p)') !== false, 'PROMO.goal шлёт цель в Метрику');
+
+    $js = mt_read($PUB . '/js/metrika.js');
+    preg_match_all('/\d{6,}/', $js, $all);
+    assert_eq([$id, $id], $all[0], 'в metrika.js номер встречается дважды (tag.js и init), и только этот');
 });
 
 // Раньше каждый скрипт звал ym(111127188, ...) сам — шесть копий номера и
 // ни одной цели в GA. Теперь все цели идут через PROMO.goal(), и прямой вызов
-// мимо него разъехался бы с ним при следующей смене счётчика.
-test('цели шлются только через PROMO.goal()', function () use ($PUB) {
+// мимо него оставил бы один из счётчиков без цели.
+test('цели шлются только через PROMO.goal(), прямых вызовов ym и gtag нет', function () use ($PUB) {
     foreach (glob($PUB . '/js/*.js') as $f) {
         $name = basename($f);
-        if ($name === 'promo.js' || substr($name, -7) === '.min.js') { continue; }
-        assert_eq(0, preg_match('/\bgtag\(\s*["\']event/', mt_read($f)), "$name: цель мимо PROMO.goal()");
+        if ($name === 'metrika.js' || $name === 'promo.js' || substr($name, -7) === '.min.js') { continue; }
+        assert_eq(0, preg_match('/\bym\(|\bgtag\(\s*["\']event/', mt_read($f)), "$name: цель мимо PROMO.goal()");
     }
     $promo = mt_read($PUB . '/js/promo.js');
     assert_true(strpos($promo, 'root.gtag("event", name, g)') !== false, 'PROMO.goal шлёт цель в GA');
 });
 
 // --------------------------------------------------------------------------
-//  Сама разметка счётчика
+//  Сама разметка счётчиков
 // --------------------------------------------------------------------------
 
 test('номер GA — пустой (выключен) или вида G-XXXXXXXXXX', function () {
@@ -131,25 +129,55 @@ test('номер GA — пустой (выключен) или вида G-XXXXXX
     assert_eq('', ga_counter_html(''), 'без номера блок GA не печатается');
 });
 
-test('metrika_counter_html() печатает ровно блок GA', function () {
-    assert_eq(ga_counter_html(), metrika_counter_html(), 'других счётчиков нет');
+test('блок Метрики собирается целиком, с маркерами и noscript, за ним — GA', function () use ($PUB) {
+    $html = metrika_counter_html();
+    $id = (string)METRIKA_ID;
+    $close = '<!-- /Yandex.Metrika counter -->';
+    assert_eq(0, strpos($html, '<!-- Yandex.Metrika counter -->'),
+        'блок начинается маркером — по нему его вырезает админка');
+    $end = strpos($html, $close);
+    assert_true($end !== false, 'и закрывается маркером');
+    assert_eq("\n" . ga_counter_html(), substr($html, $end + strlen($close)), 'за Метрикой — только блок GA');
+    // Сам код счётчика — во внешнем js/metrika.js: CSP сайта не пускает
+    // встроенные скрипты (см. tests/csp_test.php).
+    assert_true((bool)preg_match('~<script src="/js/metrika\.js\?v=\d+" async></script>~', $html),
+        'блок подключает js/metrika.js асинхронно');
+    // <noscript> — единственный способ посчитать посетителя с отключённым JS.
+    assert_true(strpos($html, 'https://mc.yandex.ru/watch/' . $id) !== false, 'noscript-пиксель на месте');
+});
+
+test('js/metrika.js: tag.js, init с Вебвизором, только боевой хост', function () use ($PUB) {
+    $id = (string)METRIKA_ID;
+    $js = mt_read($PUB . '/js/metrika.js');
+    assert_true(strpos($js, "'https://mc.yandex.ru/metrika/tag.js?id=$id'") !== false, 'загрузка tag.js с номером счётчика');
+    assert_true(strpos($js, "ym($id, 'init'") !== false, 'инициализация счётчика');
+    // Вебвизор и карта кликов включены осознанно и раскрыты в /privacy; их
+    // отключение выглядит безобидной правкой, а политика тогда разойдётся с
+    // делом.
+    foreach (['webvisor: true', 'clickmap: true', 'trackLinks: true', 'accurateTrackBounce: true'] as $opt) {
+        assert_true(strpos($js, $opt) !== false, "опция $opt должна остаться включённой");
+    }
+    // Как и ga.js — только с боевого хоста: локальные прогоны и превью в
+    // статистику не попадают, и tag.js там даже не грузится.
+    assert_true(strpos($js, 'maknemy\\.com$/.test(m.location.hostname)') !== false, 'metrika.js ограничен maknemy.com');
 });
 
 // Ровно с этого начиналась проблема: копия разметки жила в index.php, и
 // добавить её на остальные страницы никто не вспомнил.
-test('разметка счётчика лежит в одном файле, а не расползлась копиями', function () use ($PUB) {
+test('разметка счётчиков лежит в одном месте, а не расползлась копиями', function () use ($PUB) {
     $copies = [];
     $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($PUB));
     foreach ($it as $f) {
         if (!$f->isFile() || strtolower($f->getExtension()) !== 'php') { continue; }
         $path = str_replace('\\', '/', $f->getPathname());
+        if (substr($path, -strlen('api/lib/metrika.php')) === 'api/lib/metrika.php') { continue; }
         if (substr($path, -strlen('api/lib/google_analytics.php')) === 'api/lib/google_analytics.php') { continue; }
         $src = mt_read($path);
-        foreach (['googletagmanager.com/gtag', '/js/ga.js?v='] as $needle) {
+        foreach (['mc.yandex.ru/metrika/tag.js', 'mc.yandex.ru/watch/', 'js/metrika.js', 'googletagmanager.com/gtag', '/js/ga.js?v='] as $needle) {
             if (strpos($src, $needle) !== false) { $copies[] = "$path: $needle"; }
         }
     }
-    assert_eq([], $copies, 'счётчик подключают вызовом metrika_counter_html(), а не копией разметки');
+    assert_eq([], $copies, 'счётчики подключают вызовом metrika_counter_html(), а не копией разметки');
 });
 
 test('блок GA: внешний js/ga.js с номером в data-id, внутри своих маркеров', function () use ($PUB) {
@@ -163,11 +191,13 @@ test('блок GA: внешний js/ga.js с номером в data-id, вну�
     assert_true(strpos($js, 'maknemy\\.com$/.test(w.location.hostname)') !== false, 'ga.js ограничен maknemy.com');
 });
 
-test('metrika_strip() вырезает GA и оставляет след', function () {
-    $page = "<head>\n" . ga_counter_html('G-TEST123') . "</head>";
+test('metrika_strip() вырезает и Метрику, и GA и оставляет след', function () {
+    $page = "<head>\n" . "<!-- Yandex.Metrika counter -->\n<script src=\"/js/metrika.js?v=2\" async></script>\n<!-- /Yandex.Metrika counter -->\n"
+        . ga_counter_html('G-TEST123') . "</head>";
     $out = metrika_strip($page);
+    assert_true(strpos($out, 'metrika.js') === false && strpos($out, 'Yandex.Metrika') === false, 'Метрика вырезана');
     assert_true(strpos($out, 'ga.js') === false && strpos($out, 'Google Analytics') === false, 'GA вырезан');
-    assert_true(strpos($out, 'Счётчик вырезан') !== false, 'след на месте');
+    assert_true(strpos($out, 'Счётчики вырезаны') !== false, 'след на месте');
     assert_true(strpos($out, "-->\n</head>") !== false, '</head> остался на своей строке');
 });
 
@@ -175,22 +205,24 @@ test('metrika_strip() вырезает GA и оставляет след', funct
 //  Публичные страницы
 // --------------------------------------------------------------------------
 
-test('счётчик приезжает на все публичные страницы, по одному разу и внутри <head>', function () use ($PUB, $PAGES) {
+test('счётчики приезжают на все публичные страницы, по одному разу и внутри <head>', function () use ($PUB, $PAGES) {
     foreach ($PAGES as $page) {
         $html = mt_render_public($PUB . '/' . $page);
         assert_true($html !== null, "$page: страница должна отрендериться");
         if ($html === null) { continue; }
 
-        assert_true(strpos($html, 'mc.yandex.') === false, "$page: Метрики нет");
+        assert_eq(1, substr_count($html, '<!-- Yandex.Metrika counter -->'), "$page: Метрика ровно одна");
+        assert_true((bool)preg_match('~<script src="/js/metrika\.js\?v=\d+" async></script>~', $html),
+            "$page: нет загрузки Метрики");
+        assert_true(strpos($html, 'mc.yandex.ru/watch/' . METRIKA_ID) !== false, "$page: нет noscript-пикселя");
         assert_eq(GA_ID === '' ? 0 : 1, substr_count($html, '<!-- Google Analytics -->'),
             "$page: блок GA — ровно один при заданном GA_ID и ни одного без него");
-        if (GA_ID === '') { continue; }
 
         // Счётчик обязан стоять в <head>: из <body> он поехал бы позже
         // разметки и терял бы часть коротких визитов.
         $head = strpos($html, '</head>');
-        $ga   = strpos($html, '<!-- Google Analytics -->');
-        assert_true($head !== false && $ga !== false && $ga < $head,
+        $ym   = strpos($html, '<!-- Yandex.Metrika counter -->');
+        assert_true($head !== false && $ym !== false && $ym < $head,
             "$page: счётчик должен стоять до </head>");
     }
 });
@@ -200,17 +232,18 @@ test('счётчик приезжает на все публичные стра�
 // --------------------------------------------------------------------------
 
 // /admin и /admin/news исполняют публичные index.php и news.php целиком,
-// поэтому счётчик приезжает к ним вместе со всей разметкой и снимается уже из
+// поэтому счётчики приезжают к ним вместе со всей разметкой и снимаются уже из
 // готового HTML — см. admin_render_public_page().
-test('на админских страницах счётчика нет', function () use ($PUB) {
+test('на админских страницах счётчиков нет', function () use ($PUB) {
     foreach (['admin.php' => 'id="stage"', 'admin-news.php' => 'id="feed"'] as $page => $mark) {
         $html = mt_render_admin($PUB . '/' . $page);
         assert_true($html !== null, "$page: страница должна отрендериться до конца");
         if ($html === null) { continue; }
         assert_true(strpos($html, $mark) !== false, "$page: это действительно разметка раздела");
-        assert_true(strpos($html, 'js/ga.js') === false, "$page: свои клики и визиты в статистике сайта — мусор");
-        if (GA_ID === '') { continue; }
-        assert_true(strpos($html, 'Счётчик вырезан') !== false,
+        assert_true(strpos($html, 'mc.yandex.ru') === false && strpos($html, 'js/metrika.js') === false,
+            "$page: свои клики и Вебвизор в статистике сайта — мусор");
+        assert_true(strpos($html, 'js/ga.js') === false, "$page: и в GA тоже");
+        assert_true(strpos($html, 'Счётчики вырезаны') !== false,
             "$page: на месте счётчика должен остаться след — иначе пропажу не отличить от того, что счётчика там и не было");
     }
 });
