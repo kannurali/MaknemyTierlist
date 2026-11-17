@@ -597,6 +597,72 @@ test('анониму диалог не завести', function () {
     assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'строки нет');
 });
 
+// Жалоба 11.11: «никому не могу написать, кидает к людям, с которыми уже
+// общался». Предел стоял на каждом нажатии «Написать», в том числе старым
+// собеседникам, и после тридцати за час не открывался никто. Теперь предел
+// спрашивают только перед новой веткой.
+test('предел частоты не мешает вернуться в старый диалог', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    $a  = ch_user($pdo, '22', 'A');
+    $old = ch_thread($pdo, $me, $a, CH_NOW - 100);
+    $asked = 0;
+    $deny = function () use (&$asked): bool { $asked++; return false; };
+
+    [$st, $p] = chat_open($pdo, $me, $a, CH_NOW, $deny);
+    assert_eq(200, $st, 'старый диалог открывается');
+    assert_eq($old, $p['thread'], 'тот самый');
+    assert_eq(0, $asked, 'предел даже не спрашивали');
+});
+
+test('предел частоты останавливает только новую ветку', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    $b  = ch_user($pdo, '33', 'B');
+
+    [$st, $p] = chat_open($pdo, $me, $b, CH_NOW, function (): bool { return false; });
+    assert_eq(429, $st, 'новая ветка упёрлась в предел');
+    assert_eq('rate_limited', $p['error'], 'причина названа — странице есть что показать');
+    assert_eq(0, (int)$pdo->query('SELECT COUNT(*) FROM chat_threads')->fetchColumn(), 'строки нет');
+
+    [$st2, $p2] = chat_open($pdo, $me, $b, CH_NOW, function (): bool { return true; });
+    assert_eq(200, $st2, 'предел пропустил — ветка завелась');
+    assert_true($p2['thread'] > 0, 'номер есть');
+});
+
+// Несуществующий собеседник — отказ ДО предела: опечатка в ссылке не должна
+// съедать попытку из тридцати.
+test('отказ по собеседнику не тратит предел', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    $asked = 0;
+    $count = function () use (&$asked): bool { $asked++; return true; };
+    chat_open($pdo, $me, '999', CH_NOW, $count);
+    chat_open($pdo, $me, $me, CH_NOW, $count);
+    assert_eq(0, $asked, 'предел не трогали');
+});
+
+// После неудачного «Написать» страница просит список с pick=0: самый свежий
+// диалог НЕ выбирается, и человек видит причину отказа, а не чужую переписку.
+test('pick=false: список есть, ветка не выбрана', function () {
+    $pdo = ch_db();
+    $me = ch_user($pdo, '11', 'ME');
+    $a  = ch_user($pdo, '22', 'A');
+    $t = ch_thread($pdo, $me, $a, CH_NOW - 100);
+    chat_send($pdo, $a, $t, 'привет', CH_NOW - 100);
+
+    [, $auto] = handle_chat($pdo, ch_session($me), null, CH_NOW);
+    assert_eq($t, $auto['thread'], 'по умолчанию — самая свежая, как раньше');
+
+    [, $p] = handle_chat($pdo, ch_session($me), null, CH_NOW, [], false);
+    assert_eq(0, $p['thread'], 'ветка не выбрана');
+    assert_eq([], $p['messages'], 'чужая переписка не открыта');
+    assert_eq(1, count($p['threads']), 'список на месте');
+
+    [, $byId] = handle_chat($pdo, ch_session($me), (string)$t, CH_NOW, [], false);
+    assert_eq($t, $byId['thread'], 'явный номер pick не отменяет');
+});
+
 // Таблиц чата на бою может не быть до миграции. Тогда «открыть диалог» —
 // не ошибка кода, а «раздел ещё не включён».
 test('без таблиц чата открытие честно отвечает 503', function () {
