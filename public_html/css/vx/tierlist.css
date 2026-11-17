@@ -319,7 +319,7 @@
     .16cqw .16cqw 0 var(--tinta), -.16cqw .16cqw 0 var(--tinta), .16cqw -.16cqw 0 var(--tinta), -.16cqw -.16cqw 0 var(--tinta),
     0 .5cqw 0 var(--tinta);
 }
-.legend-grid { margin-top: 2.4cqw; grid-template-columns: 43% 27% auto; }
+.legend-grid { margin-top: 2.4cqw; grid-template-columns: 1fr 1fr auto; }
 .lg {
   font-family: var(--vx-head);
   font-size: 1.5cqw;
