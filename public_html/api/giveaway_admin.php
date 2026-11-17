@@ -12,6 +12,7 @@ require_once __DIR__ . '/lib/giveaway.php';
 //   save {id?, …}   → сохранить черновик или правку (пустой EN переводит Google);
 //                     у идущего бот сразу выпускает и правит посты в каналах
 //   publish {id}    → старт; посты в каналы — до ответа, рассылка — после
+//                     (у тестового и у розыгрыша только в Telegram её нет)
 //   end {id}        → закончить досрочно
 //   draw {id}       → выбрать победителей и дописать их в посты каналов;
 //                     победителям бот пишет после ответа
@@ -104,8 +105,8 @@ function handle_gw_admin(PDO $pdo, array $cfg, callable $send, array $body, int 
     if ($action === 'publish') {
         [$s, $p, $row] = gw_publish($pdo, $id, $now, $send, tg_enabled($tg) ? (int)strtok((string)$tg['token'], ':') : 0);
         if ($row) { $p = gw_admin_post_note($p, gw_post_sync($pdo, $send, $row, $now)); }
-        // О тестовом бот не пишет никому.
-        return [$s, $p, $row && !gw_is_test($row) ? ['announce', $row] : null];
+        // О тестовом и о розыгрыше только в Telegram бот не пишет никому.
+        return [$s, $p, $row && gw_announces($row) ? ['announce', $row] : null];
     }
     if ($action === 'end') {
         [$s, $p] = gw_end($pdo, $id, $now);
@@ -155,8 +156,10 @@ if (!defined('TESTING')) {
     // Восемь языков сайта — после ответа, как и у новостей. EN уже
     // переведён внутри сохранения (gw_save()). Кеш выдачи при этом не
     // сбрасывается — заголовок ушёл с ответом; переводы появятся у
-    // посетителей не позже чем через GW_PUBLIC_CACHE секунд.
-    if ($action === 'save' && $status === 200) {
+    // посетителей не позже чем через GW_PUBLIC_CACHE секунд. Розыгрышу
+    // только в Telegram они не нужны: на сайте его нет, пост — по-русски.
+    $saved = $action === 'save' && $status === 200 ? gw_load(db(), (int)$payload['id']) : null;
+    if ($saved && gw_on_site($saved)) {
         $id = (int)$payload['id'];
         i18n_after_save(function (float $deadline) use ($id) {
             gw_i18n_job(db(), $id, 'i18n_google_for', $deadline);

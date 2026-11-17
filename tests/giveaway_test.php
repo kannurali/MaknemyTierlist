@@ -44,10 +44,10 @@ function gw_db(): PDO {
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
     // Зеркалит docs/migrations/2026-10-14-giveaways.sql, 2026-10-15-giveaway-conds.sql,
     // 2026-10-15-giveaway-test.sql, 2026-10-15-giveaway-max-entries.sql и
-    // 2026-10-18-giveaway-unsub.sql.
+    // 2026-10-18-giveaway-unsub.sql и 2026-11-17-giveaway-place.sql.
     $pdo->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
-        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        place TEXT NOT NULL DEFAULT 'all', title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
         body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
         drop_unsub INTEGER NOT NULL DEFAULT 1, max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
@@ -2949,6 +2949,160 @@ test('мини-приложение: аватарка человека — фо�
     foreach (glob($dir . '/*') ?: [] as $f) { @unlink($f); }
     @rmdir($dir);
     @unlink($state);
+});
+
+// --------------------------------------------------------------------------
+//  Где проходит: сайт и Telegram, только сайт, только Telegram
+// --------------------------------------------------------------------------
+
+test('только в Telegram: без поста не опубликовать, на сайте его нет, о старте не рассылает', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A', true, 'maknemy_ch');
+    gw_user($p, '1', 'u1', 501);
+    $cfg = gw_cfg();
+    $log = [];
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'place' => 'tg', 'posts' => []] + gw_draft(), GW_NOW - 10);
+    assert_eq(200, $s);
+    $id = $out['id'];
+    [$s, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 9);
+    assert_eq([409, ['no_post']], [$s, $out['problems']], 'без канала для поста участвовать негде');
+
+    handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'id' => $id, 'place' => 'tg', 'posts' => [(string)GW_CH_A]] + gw_draft(), GW_NOW - 8);
+    [$s, $out, $after] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    assert_eq([200, 1, null], [$s, $out['post']['posted'], $after], 'пост вышел, рассылки о старте нет');
+    $m = gw_posts_sent($log)[0][1];
+    assert_true(strpos($m['text'], 'Участвовать на сайте') === false && strpos($m['text'], TG_SITE . '/giveaways') === false, 'в посте сайта нет');
+    assert_eq([[['text' => '🎁 Участвовать', 'callback_data' => 'gw:' . $id]]], $m['reply_markup']['inline_keyboard'], 'участие — кнопкой под постом');
+
+    $db = function () use ($p) { return $p; };
+    $real = gw_live($p, ['title_ru' => 'На сайте']);
+    assert_eq([$real], array_column(handle_giveaways($db, GW_NOW)['live'], 'id'), 'сайт его не показывает');
+    assert_eq([$real], array_column(handle_giveaways($db, GW_NOW, true)['live'], 'id'), 'и по ?test=1 тоже');
+
+    [$s, $r] = gw_enter($p, $cfg, gw_tg($log), '1', $id, GW_NOW, 'page');
+    assert_eq([409, 'closed'], [$s, $r['error']], 'с сайта не вступить');
+    [$s, $r] = gw_enter($p, $cfg, gw_tg($log), '1', $id, GW_NOW, 'cb');
+    assert_eq([409, 'closed'], [$s, $r['error']], 'и подделав src');
+    $r = gw_tg_callback($p, $cfg, gw_tg($log), gw_tap($id, 501), GW_NOW);
+    assert_eq('join', $r['after'][0], 'тот же человек кнопкой под постом — участвует своим аккаунтом');
+    $r = gw_tg_callback($p, $cfg, gw_tg($log), gw_tap($id, 7001), GW_NOW + 1);
+    assert_eq('places', $r['after'][0], 'и без аккаунта сайта');
+    assert_eq(2, gw_entry_counts($p, [$id])[$id]);
+    assert_eq([], gw_joined_ids($p, '1', GW_NOW), 'окно сайта о нём не знает');
+
+    [, $g] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'list'], GW_NOW);
+    $places = array_column($g['giveaways'], 'place', 'id');
+    assert_eq(['tg', 'all'], [$places[$id], $places[$real]], 'админка видит, где проходит');
+    [, $g] = handle_gw_admin($p, $cfg, gw_tg($log), ['action' => 'get', 'id' => $id], GW_NOW);
+    assert_eq('tg', $g['giveaway']['place']);
+});
+
+test('только в Telegram: бот пишет без сайта, кнопки ведут на пост, итоги без ссылки на сайт', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A', true, 'maknemy_ch');
+    gw_user($p, '1', 'u1', 501);
+    $cfg = gw_cfg();
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'place' => 'tg', 'posts' => [GW_CH_A]]
+        + gw_draft(['prizes' => [['name' => 'Magnet', 'count' => 2]]]), GW_NOW - 10);
+    $id = $out['id'];
+    handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    $post = 'https://t.me/maknemy_ch/101';
+
+    $r = gw_tg_callback($p, $cfg, gw_tg($log), gw_tap($id, 501), GW_NOW);
+    $log = [];
+    gw_after_join($p, $cfg, $r['after'][1], gw_tg($log));
+    $m = gw_sent($log)[0][1];
+    assert_true(strpos($m['text'], '✅ Вы участвуете в розыгрыше «Розыгрыш Magnet».') === 0, 'без «на maknemy.com»: ' . $m['text']);
+    assert_eq($post, $m['reply_markup']['inline_keyboard'][0][0]['url'], '«Открыть розыгрыш» — пост в канале');
+    gw_tg_callback($p, $cfg, gw_tg($log), gw_tap($id, 7001), GW_NOW + 1);
+
+    $row = gw_load($p, $id);
+    assert_true(strpos(gw_left_text($row, 'Канал A', 'ru', GW_NOW), 'нажмите «Участвовать» под постом розыгрыша') !== false, 'отписавшемуся — вернуться под постом');
+    assert_true(strpos(gw_left_text($row, 'Канал A', 'en', GW_NOW), 'under the giveaway post') !== false);
+
+    $log = [];
+    $res = gw_after_due($p, $cfg, GW_NOW + 86400, gw_tg_posts($log), gw_lock_file(), function () {});
+    assert_eq(1, $res['drawn']);
+    $edit = gw_sent($log, 'editMessageText')[0][1];
+    assert_true(strpos($edit['text'], 'на сайте') === false && strpos($edit['text'], TG_SITE . '/giveaways') === false, 'в итогах сайта нет');
+    assert_eq([[['text' => '🎁 Забрать приз', 'url' => 'https://t.me/MaknemyBot?start=gwp' . $id]]], $edit['reply_markup']['inline_keyboard'], 'под постом — «Забрать приз»');
+    $dm = array_values(array_filter(gw_sent($log), function ($c) { return ($c[1]['chat_id'] ?? 0) === 501; }))[0][1];
+    assert_true(strpos($dm['text'], 'Вы победили в розыгрыше «Розыгрыш Magnet».') !== false && strpos($dm['text'], 'maknemy.com') === false, 'поздравление без сайта: ' . $dm['text']);
+    assert_true(strpos($dm['text'], 'свяжется организатор') !== false, 'связывается организатор');
+    assert_eq($post, $dm['reply_markup']['inline_keyboard'][0][0]['url'], 'кнопка — на пост');
+
+    $p->exec('UPDATE giveaway_entries SET prize = NULL WHERE chat_id = 7001');
+    $p->exec('UPDATE giveaway_posts SET results_at = 0');
+    $log = [];
+    gw_post_results($p, gw_tg_posts($log), gw_load($p, $id), GW_NOW + 86401, 'MaknemyBot');
+    assert_eq([], gw_sent($log, 'editMessageText')[0][1]['reply_markup']['inline_keyboard'], 'победители только с сайта — под постом ничего, не «Итоги на сайте»');
+});
+
+test('только на сайте: поста нет, в Telegram — «участвуйте на сайте»', function () {
+    $p = gw_db();
+    gw_channel($p, GW_CH_A, 'Канал A', true, 'maknemy_ch');
+    $cfg = gw_cfg();
+    $log = [];
+    [, $out] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'save', 'place' => 'site', 'posts' => [GW_CH_A]] + gw_draft(), GW_NOW - 10);
+    $id = $out['id'];
+    assert_eq([], gw_posts($p, $id), 'канал для поста не запомнен');
+    [$s, , $after] = handle_gw_admin($p, $cfg, gw_tg_posts($log), ['action' => 'publish', 'id' => $id], GW_NOW - 5);
+    assert_eq([200, 'announce', []], [$s, $after[0], gw_posts_sent($log)], 'рассылка о старте есть, поста нет');
+    $db = function () use ($p) { return $p; };
+    assert_eq([$id], array_column(handle_giveaways($db, GW_NOW)['live'], 'id'), 'на сайте виден');
+    $r = gw_tg_callback($p, $cfg, gw_tg($log), gw_tap($id, 7001), GW_NOW);
+    assert_true(strpos($r['reply']['text'], 'Участвуйте на сайте') === 0, 'кнопка в Telegram — на сайт');
+    $none = gw_tg_app_auth(gw_init(['id' => 7001]), GW_TOKEN, GW_NOW);
+    [, $b] = gw_tg_app_join($p, $cfg, gw_tg($log), $none, GW_NOW);
+    assert_eq('none', $b['state'], 'мини-приложение из профиля бота его не берёт');
+    assert_eq(0, gw_entry_counts($p, [$id])[$id] ?? 0, 'никто не вступил из Telegram');
+    assert_true(strpos(gw_win_text(gw_load($p, $id), 'Magnet', 'ru'), '» на maknemy.com.') !== false, 'тексты бота — с сайтом');
+});
+
+test('где проходит: меняется только у черновика, мусор не проходит', function () {
+    $p = gw_db();
+    [, $out] = gw_save($p, gw_draft(['place' => 'tg']), GW_NOW - 20);
+    $id = $out['id'];
+    assert_eq('tg', gw_place(gw_load($p, $id)));
+    gw_save($p, gw_draft(['id' => $id, 'place' => 'all']), GW_NOW - 15);
+    assert_eq('all', gw_place(gw_load($p, $id)), 'у черновика меняется');
+    gw_publish($p, $id, GW_NOW - 10);
+    gw_save($p, gw_draft(['id' => $id, 'place' => 'tg', 'title_ru' => 'Правка']), GW_NOW);
+    $row = gw_load($p, $id);
+    assert_eq(['Правка', 'all'], [$row['title_ru'], gw_place($row)], 'у идущего — остался где был');
+    [$s, $out] = gw_save($p, gw_draft(['place' => 'telegram']), GW_NOW);
+    assert_eq([400, 'bad place'], [$s, $out['error']]);
+    [, $out] = gw_save($p, gw_draft(), GW_NOW);
+    assert_eq('all', gw_place(gw_load($p, $out['id'])), 'без поля — и на сайте, и в Telegram');
+});
+
+test('до миграции place: всё как раньше, «только…» просит миграцию', function () {
+    $p = gw_db();
+    $p->exec('DROP TABLE giveaways');
+    $p->exec("CREATE TABLE giveaways (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
+        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
+        body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
+        drop_unsub INTEGER NOT NULL DEFAULT 1, max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+        published_at INTEGER NOT NULL DEFAULT 0, drawn_at INTEGER NOT NULL DEFAULT 0)");
+    foreach (['tg', 'site'] as $pl) {
+        [$s, $out] = gw_save($p, gw_draft(['place' => $pl]), GW_NOW);
+        assert_eq([409, 'place_migrate'], [$s, $out['error']], $pl);
+    }
+    $id = gw_live($p, ['place' => 'all']);
+    assert_eq('all', gw_place(gw_load($p, $id)));
+    $db = function () use ($p) { return $p; };
+    assert_eq([$id], array_column(handle_giveaways($db, GW_NOW)['live'], 'id'), 'сайт показывает');
+    $log = [];
+    $none = gw_tg_app_auth(gw_init(['id' => 7001]), GW_TOKEN, GW_NOW);
+    [, $b] = gw_tg_app_join($p, gw_cfg(), gw_tg($log), $none, GW_NOW);
+    assert_eq([$id, 'joined'], [$b['gw']['id'], $b['state']], 'мини-приложение берёт как раньше');
+    gw_user($p, '1', 'u1', 501);
+    $id2 = gw_live($p);
+    [$s] = gw_enter($p, gw_cfg(), gw_tg($log), '1', $id2, GW_NOW, 'page');
+    assert_eq(200, $s, 'с сайта вступают');
 });
 
 run_tests();
