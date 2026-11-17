@@ -309,8 +309,14 @@ function chat_last_messages(PDO $pdo, array $threadIds): array {
  * Сам с собой — нет. Пара нормализуется как a_id < b_id (chat_pair), и для
  * такой «пары» обе колонки совпали бы: диалог с собой прошёл бы проверку
  * членства и выглядел бы как обычный, но собеседника в нём нет.
+ *
+ * $mayCreate — предел частоты. Спрашивается ТОЛЬКО перед заведением новой
+ * ветки: вернуться в уже существующий диалог можно сколько угодно. Раньше
+ * предел стоял на каждом вызове, и трейдер, нажавший «Написать» тридцать раз
+ * за час (в том числе старым собеседникам), дальше час не мог открыть никого,
+ * а страница молча показывала ему последний старый диалог.
  */
-function chat_open(PDO $pdo, string $me, string $peerRaw, int $now): array {
+function chat_open(PDO $pdo, string $me, string $peerRaw, int $now, ?callable $mayCreate = null): array {
     if ($me === '') { return [401, ['ok' => false, 'error' => 'unauthorized']]; }
     if (!chat_ready($pdo)) { return [503, ['ok' => false, 'error' => 'unavailable']]; }
 
@@ -327,6 +333,10 @@ function chat_open(PDO $pdo, string $me, string $peerRaw, int $now): array {
     $sel->execute([':a' => $a, ':b' => $b]);
     $id = $sel->fetchColumn();
     if ($id !== false) { return [200, ['ok' => true, 'thread' => (int)$id]]; }
+
+    if ($mayCreate !== null && !$mayCreate()) {
+        return [429, ['ok' => false, 'error' => 'rate_limited']];
+    }
 
     // last_at нулевой: переписки ещё нет, и пустая ветка не должна вытеснять
     // из списка те, где people действительно говорили.

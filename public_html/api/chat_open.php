@@ -13,19 +13,19 @@ if (!defined('TESTING')) {
     start_site_session();
 
     // Предел по ВОШЕДШЕМУ, а не по адресу: за одним IP сидит целый
-    // интернет-клуб. Порог низкий — открыть диалог это разовое действие, а не
-    // то, что делают сотнями.
+    // интернет-клуб. Считаются только НОВЫЕ собеседники (chat_open спросит
+    // перед вставкой ветки): вернуться к старому диалогу — не то, от чего
+    // нужна защита, а тридцать новых людей за час — уже рассылка.
     $me = chat_me($_SESSION);
-    if ($me !== '' && !rate_limit_allow('chat_open', $me, 30, 3600, time())) {
-        json_out(['ok' => false, 'error' => 'rate_limited'], 429);
-        exit;
-    }
 
     header('Cache-Control: no-store');
     $body = read_json_body();
     $to   = isset($body['to']) && (is_string($body['to']) || is_int($body['to']))
         ? (string)$body['to'] : '';
 
-    [$status, $payload] = chat_open(db(), $me, $to, time());
+    $mayCreate = function () use ($me): bool {
+        return rate_limit_allow('chat_open', $me, 30, 3600, time());
+    };
+    [$status, $payload] = chat_open(db(), $me, $to, time(), $mayCreate);
     json_out($payload, $status);
 }

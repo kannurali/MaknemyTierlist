@@ -88,6 +88,13 @@
   var offerRef = {};
   var reviewDrafts = {};
 
+  var OPEN_ERRORS = {
+    rate_limited: ['chat.openLimit', 'За этот час вы уже начали слишком много новых диалогов. Старые чаты открываются как обычно, а новому собеседнику напишите через час.'],
+    no_peer: ['chat.openNoPeer', 'Этот игрок ещё не заходил на сайт, написать ему пока нельзя.'],
+    failed: ['chat.openFailed', 'Не удалось открыть диалог. Обновите страницу и попробуйте ещё раз.']
+  };
+  var openError = '';
+
   var PROFILE_PATH = '/profile';
 
   var BODY_MAX = 2000;
@@ -1036,9 +1043,11 @@
 
     if (!open) {
       roomEmpty.hidden = false;
-      roomEmpty.textContent = state.threads.length
-        ? tx('chat.pick', 'Выберите диалог слева')
-        : railEmpty.textContent;
+      roomEmpty.textContent = openError
+        ? tx(OPEN_ERRORS[openError][0], OPEN_ERRORS[openError][1])
+        : state.threads.length
+          ? tx('chat.pick', 'Выберите диалог слева')
+          : railEmpty.textContent;
       return;
     }
 
@@ -1123,9 +1132,12 @@
 
   async function load(threadId, quiet) {
     var mine = quiet ? seq : ++seq;
+    if (threadId) { openError = ''; }
     if (!quiet) { shell.classList.add('is-loading'); }
     try {
-      var url = '/api/chat.php' + (threadId ? '?thread=' + encodeURIComponent(threadId) : '');
+      var url = '/api/chat.php' + (threadId
+        ? '?thread=' + encodeURIComponent(threadId)
+        : (openError ? '?pick=0' : ''));
       var res = await fetch(url, { cache: 'no-store' });
       if (mine !== seq) { return; }
       if (!res.ok) { throw new Error('HTTP ' + res.status); }
@@ -1593,6 +1605,10 @@
   async function openWith(peer) {
     var r = await post('/api/chat_open.php', { to: peer });
     if (r.ok && r.data && r.data.ok) { return r.data.thread; }
+    if (r.status !== 401) {
+      var code = r.data && r.data.error;
+      openError = OPEN_ERRORS[code] ? code : 'failed';
+    }
     return 0;
   }
 
