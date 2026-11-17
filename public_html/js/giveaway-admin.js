@@ -19,6 +19,14 @@
     drawn: ["Разыгран", ""]
   };
 
+  const WHERE = {
+    all: ["", "Окно и карточки на сайте. Отметьте канал в «Пост в Telegram» — бот опубликует туда пост, и участвовать можно будет прямо под ним."],
+    site: ["Только сайт", "Только окно и карточки на сайте. Поста в канале нет, а кнопка бота в Telegram ответит «участвуйте на сайте»."],
+    tg: ["Только TG", "На сайте розыгрыша нет: ни окна, ни карточек, ни страницы /giveaways. Участвуют кнопкой под постом в канале — отметьте канал в «Пост в Telegram», без него не опубликовать. Рассылки о старте и напоминаний подписчикам сайта нет, кнопки бота ведут на пост."]
+  };
+  const PLACE_LOCK = " Меняется только до публикации.";
+  const POST_HELP_TG = "(обязательно: отметьте хотя бы один канал — участвуют кнопкой «Участвовать» под постом, а после итогов бот допишет в этот же пост победителей)";
+
   const PROBLEMS = {
     no_title: "нет названия",
     no_prizes: "нет призов",
@@ -27,6 +35,8 @@
     channel_not_admin: "бот не админ в одном из отмеченных каналов или каналов своих условий (см. «Каналы бота» слева)",
     max_below_prizes: "лимит участников меньше числа призов",
     no_max: "не указано, сколько нужно участников",
+    no_post: "розыгрыш только в Telegram, а канал для поста не отмечен — участвовать будет негде (см. «Пост в Telegram»)",
+    no_tg_entry: "для участия прямо в Telegram выполните docs/migrations/2026-10-28-giveaway-tg-entry.sql",
     invite_link: "у приватного канала нет ссылки, а создать её бот не может (дайте ему право «Добавление подписчиков» и нажмите «Обновить» у канала — или поставьте канал своим условием со своей ссылкой)"
   };
 
@@ -54,6 +64,8 @@
     max_migrate: "Для лимита участников выполните docs/migrations/2026-10-15-giveaway-max-entries.sql.",
     drop_migrate: "Чтобы снять гарантию, выполните docs/migrations/2026-10-18-giveaway-unsub.sql.",
     posts_migrate: "Для постов в канале выполните docs/migrations/2026-10-27-giveaway-posts.sql.",
+    place_migrate: "Чтобы выбрать «только на сайте» или «только в Telegram», выполните docs/migrations/2026-11-17-giveaway-place.sql.",
+    "bad place": "Выберите, где проходит розыгрыш.",
     "bad posts": "Каналов для поста — не больше пяти.",
     channel_cant_post: "Боту в этом канале нужно право «Отправка публикаций» — включите и нажмите «Обновить» у канала в «Каналы бота».",
     post_failed: "Telegram не принял пост — старый пост не тронут. Попробуйте ещё раз через минуту.",
@@ -611,9 +623,23 @@
     return Array.from($("fChannels").querySelectorAll("input:checked")).map(i => i.value);
   }
 
+  function place() {
+    const on = document.querySelector('input[name="fPlace"]:checked');
+    return on ? on.value : "all";
+  }
+
+  function syncPlace() {
+    const p = place();
+    $("fPlaceNote").textContent = (WHERE[p] || WHERE.all)[1] + PLACE_LOCK;
+    $("fPostBox").hidden = !S.postsOn || p === "site";
+    const help = $("fPostHelp");
+    if (!help.dataset.all) help.dataset.all = help.textContent;
+    help.textContent = p === "tg" ? POST_HELP_TG : help.dataset.all;
+  }
+
   function renderPostChecks(selected) {
     const sec = $("fPostBox");
-    sec.hidden = !S.postsOn;
+    sec.hidden = !S.postsOn || place() === "site";
     if (!S.postsOn) return;
     const box = $("fPosts");
     box.textContent = "";
@@ -872,6 +898,12 @@
         tp.textContent = "Тест";
         top.appendChild(tp);
       }
+      if (g.place && WHERE[g.place] && WHERE[g.place][0]) {
+        const pp = document.createElement("span");
+        pp.className = "pill";
+        pp.textContent = WHERE[g.place][0];
+        top.appendChild(pp);
+      }
       const sub = document.createElement("div");
       sub.className = "li-sub";
       const when = g.end_by === "entries" ? " · итоги на " + g.max + " участниках"
@@ -900,6 +932,8 @@
     const st = STATUS[phase] || STATUS.draft;
     let text = g && g.id ? st[0] : "Новый розыгрыш — ещё не сохранён";
     if (g && g.test) text += " · тестовый";
+    if (g && g.place === "tg") text += " · только в Telegram";
+    if (g && g.place === "site") text += " · только на сайте";
     if (g && g.id && g.drop_unsub === false) text += " · без гарантии: отписавшиеся занимают места";
     if (g && g.id && g.status !== "draft" && g.max_entries && g.entries >= g.max_entries) text += " · лимит участников набран";
     if (g && g.published_at) text += " · опубликован " + fmtDate(g.published_at) + " МСК";
@@ -917,6 +951,7 @@
     const dis = locked();
     $("gwEditor").querySelectorAll("input, textarea, select").forEach(i => { i.disabled = dis; });
     $("fTest").disabled = !!(g && g.id && g.status !== "draft");
+    document.querySelectorAll('input[name="fPlace"]').forEach(i => { i.disabled = !!(g && g.id && g.status !== "draft"); });
     $("fBody").contentEditable = dis ? "false" : "true";
     $("fTools").querySelectorAll("button").forEach(b => { b.disabled = dis; });
     $("fPrizeAdd").disabled = dis;
@@ -1236,9 +1271,10 @@
       ends_at: endBy() === "time" ? fromInput($("fEnds").value) : 0,
       max_entries: endBy() === "entries" ? readMax() : 0,
       test: $("fTest").checked,
-      drop_unsub: $("fDropUnsub").checked
+      drop_unsub: $("fDropUnsub").checked,
+      place: place()
     };
-    if (S.postsOn) out.posts = readPosts();
+    if (S.postsOn) out.posts = out.place === "site" ? [] : readPosts();
     return out;
   }
 
@@ -1264,7 +1300,10 @@
     prevTimer = setTimeout(() => {
       const box = $("gwPrevBox");
       box.textContent = "";
-      if (!S.cur || !GW) return;
+      const tgOnly = place() === "tg";
+      $("gwPrevTg").hidden = !tgOnly;
+      box.hidden = tgOnly;
+      if (!S.cur || !GW || tgOnly) return;
       const d = collect();
       const chans = d.channels.map(id => S.channels.find(c => c.id === id)).filter(Boolean)
         .map(c => ({ id: c.id, title: c.title, url: c.url }));
@@ -1319,10 +1358,13 @@
     syncEndBy();
     $("fTest").checked = !!g.test;
     $("fDropUnsub").checked = g.drop_unsub !== false;
+    const pl = $(g.place === "tg" ? "fPlaceTg" : g.place === "site" ? "fPlaceSite" : "fPlaceAll");
+    pl.checked = true;
     msg("");
     hint("");
     renderStatus();
     renderPostChecks(g.posts ? [] : S.postLast);
+    syncPlace();
     renderPeople();
     loadReport();
     renderList();
@@ -1333,7 +1375,7 @@
     return {
       id: 0, status: "draft", phase: "draft", title_ru: "", title_en: "", image: null,
       body: { v: 1, blocks: [] }, prizes: [], channels: [], conds: [], ends_at: Math.floor(Date.now() / 1000) + 3 * 86400,
-      published_at: 0, drawn_at: 0, test: false, drop_unsub: true, entries: 0, max_entries: 0, list: []
+      published_at: 0, drawn_at: 0, test: false, drop_unsub: true, place: "all", entries: 0, max_entries: 0, list: []
     };
   }
 
@@ -1471,6 +1513,7 @@
     ["fTitleRu", "fTitleEn", "fEnds", "fMax"].forEach(id => $(id).addEventListener("input", changed));
     ["fTest", "fDropUnsub"].forEach(id => $(id).addEventListener("change", changed));
     ["fEndTime", "fEndEntries"].forEach(id => $(id).addEventListener("change", () => { syncEndBy(); changed(); }));
+    ["fPlaceAll", "fPlaceSite", "fPlaceTg"].forEach(id => $(id).addEventListener("change", () => { syncPlace(); changed(); }));
     document.querySelectorAll("[data-plus]").forEach(b => b.addEventListener("click", () => {
       const base = Math.max(Math.floor(Date.now() / 1000), fromInput($("fEnds").value) || 0);
       $("fEnds").value = toInput(base + (+b.dataset.plus) * 86400);
@@ -1485,11 +1528,14 @@
     });
     $("aPublish").addEventListener("click", () => {
       const test = $("fTest").checked;
+      const tgOnly = place() === "tg";
       act("publish",
-        test
-          ? "Опубликовать тестовый? Посетители его не увидят, рассылки не будет — только по ссылке /giveaways?test."
-          : "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
-        r => (test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.")
+        tgOnly
+          ? "Опубликовать? Бот выпустит пост в отмеченные каналы, участвовать можно будет только под ним. На сайте розыгрыша не будет, рассылки о старте нет." + (test ? " Пост будет с пометкой «Тестовый розыгрыш»." : "")
+          : test
+            ? "Опубликовать тестовый? Посетители его не увидят, рассылки не будет — только по ссылке /giveaways?test."
+            : "Опубликовать? Розыгрыш появится на сайте, и бот сразу напишет об этом всем, кто его подключил.",
+        r => (tgOnly ? "Опубликован в Telegram." : test ? "Тестовый опубликован. Откройте /giveaways?test." : "Опубликован. Бот рассылает сообщение о старте.")
           + (r.link_failed && r.link_failed.length
             ? " В каналах " + r.link_failed.join(", ") + " у бота нет права «Добавление подписчиков» — подписываются по обычной ссылке канала, без учёта подписчиков."
             : "")

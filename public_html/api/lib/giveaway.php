@@ -65,6 +65,16 @@
 // Пометка ставится только у черновика: идущий розыгрыш тестом не станет и
 // тестом быть не перестанет.
 //
+// Где проходит (колонка place, миграция 2026-11-17-giveaway-place.sql).
+// all — как всегда: окно и карточки на сайте, а с отмеченными каналами ещё и
+// пост. tg — только в Telegram: на сайте розыгрыша нет нигде (ни окна, ни
+// карточек, ни /giveaways), участвуют кнопкой под постом (gw_tg.php), поэтому
+// без канала для поста его не опубликовать; о старте бот не рассылает,
+// напоминаний подписчикам сайта нет, а кнопки в сообщениях бота ведут на пост
+// в канале, а не на сайт. site — только на сайте: поста нет, кнопка в
+// Telegram отвечает «участвуйте на сайте». Выбор, как и тест, меняется только
+// у черновика. До миграции все розыгрыши — all.
+//
 // Отписка. Вышел из канала условий — у его строки giveaway_entries ставится
 // left_at, бот пишет ему, и выиграть он уже не может. Строка не удаляется:
 // это доказательство, что человек вступал подписанным. Окно снова зовёт его
@@ -123,6 +133,9 @@ const GW_STATUSES        = ['draft', 'live', 'drawn'];
 const GW_NO_DEADLINE     = 4102444800;
 const GW_END_BY          = ['time', 'entries'];
 const GW_TZ              = 'Europe/Moscow';
+// Где проходит розыгрыш (колонка place): all — на сайте и постом в каналах,
+// site — только на сайте, tg — только в Telegram, кнопкой под постом.
+const GW_PLACES          = ['all', 'site', 'tg'];
 
 // --------------------------------------------------------------------------
 //  Таблицы
@@ -263,6 +276,9 @@ function gw_validate(array $in): array {
     if ($endBy === 'entries') { $ends = GW_NO_DEADLINE; }
     if ($endBy === 'time') { $max = 0; }
 
+    $place = $in['place'] ?? 'all';
+    if (!in_array($place, GW_PLACES, true)) { return $fail('bad place'); }
+
     return ['ok' => true, 'error' => '', 'row' => [
         'title_ru'      => $titleRu,
         'title_en'      => $titleEn,
@@ -281,6 +297,7 @@ function gw_validate(array $in): array {
         'max_entries'   => (int)$max,
         'test'          => ($in['test'] ?? false) === true,
         'drop_unsub'    => ($in['drop_unsub'] ?? true) !== false,
+        'place'         => $place,
     ]];
 }
 
@@ -359,6 +376,40 @@ function gw_has_test(PDO $pdo): bool {
 
 function gw_is_test(array $row): bool {
     return !empty($row['test']);
+}
+
+// Колонку place добавляет миграция 2026-11-17-giveaway-place.sql. До неё все
+// розыгрыши и на сайте, и в Telegram, а выбрать другое админка не даёт.
+function gw_has_place(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT place FROM giveaways LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// Где проходит: all, site или tg. Нет колонки или мусор в ней — all.
+function gw_place(array $row): string {
+    $v = (string)($row['place'] ?? 'all');
+    return in_array($v, GW_PLACES, true) ? $v : 'all';
+}
+
+// Виден ли на сайте: окно, карточки, /giveaways.
+function gw_on_site(array $row): bool {
+    return gw_place($row) !== 'tg';
+}
+
+// « на maknemy.com» в сообщениях бота — у розыгрыша, который есть на сайте.
+function gw_where(array $row, string $lang): string {
+    if (!gw_on_site($row)) { return ''; }
+    return $lang === 'en' ? ' on maknemy.com' : ' на maknemy.com';
+}
+
+// Отбор в SQL: розыгрыши, которые видны на сайте. $g — псевдоним таблицы
+// giveaways с точкой или ''.
+function gw_site_sql(PDO $pdo, string $g = ''): string {
+    return gw_has_place($pdo) ? ' AND ' . $g . "place <> 'tg'" : '';
 }
 
 // Колонку max_entries добавляет миграция 2026-10-15-giveaway-max-entries.sql.
@@ -700,10 +751,11 @@ function gw_public_item(array $row, int $now, array $counts, array $channels, ar
 /**
  * Для окна и страницы: идущие (новые первыми) и прошедшие (недавние
  * первыми). Одинаково для всех посетителей — ответ кешируется.
- * $withTest — вместе с тестовыми (/api/giveaways.php?test=1).
+ * $withTest — вместе с тестовыми (/api/giveaways.php?test=1). Розыгрышей
+ * только для Telegram тут нет ни в каком виде.
  */
 function gw_public_list(PDO $pdo, int $now, bool $withTest = false): array {
-    $real = !$withTest && gw_has_test($pdo) ? ' AND test = 0' : '';
+    $real = (!$withTest && gw_has_test($pdo) ? ' AND test = 0' : '') . gw_site_sql($pdo);
     $live = $pdo->prepare(
         "SELECT * FROM giveaways WHERE status = 'live' AND ends_at > :now" . $real . " ORDER BY published_at DESC, id DESC"
     );
@@ -762,14 +814,14 @@ function gw_i18n_job(PDO $pdo, int $id, callable $requestFor, float $deadline): 
     return i18n_fill($pdo, 'gw', $load, I18N_CONTENT_LANGS, $requestFor, $deadline);
 }
 
-// Где человек уже участвует среди идущих розыгрышей — для окна: оно не
+// Где человек уже участвует среди идущих розыгрышей сайта — для окна: оно не
 // зовёт туда, где человек уже есть. Нет таблиц — пусто.
 function gw_joined_ids(PDO $pdo, string $me, int $now): array {
     if ($me === '') { return []; }
     try {
         $st = $pdo->prepare(
             "SELECT e.giveaway_id FROM giveaway_entries e JOIN giveaways g ON g.id = e.giveaway_id
-              WHERE e.user_id = :u AND g.status = 'live' AND g.ends_at > :now" . gw_active_sql($pdo)
+              WHERE e.user_id = :u AND g.status = 'live' AND g.ends_at > :now" . gw_active_sql($pdo) . gw_site_sql($pdo, 'g.')
         );
         $st->execute([':u' => $me, ':now' => $now]);
         return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
@@ -825,19 +877,22 @@ function gw_check_channels(callable $send, array $channels, int $tgUser): array 
  * читает окно:
  *   login     — не вошёл через Roblox;
  *   banned    — забанен;
- *   closed    — розыгрыша нет, он не опубликован или время вышло;
+ *   closed    — розыгрыша нет, он не опубликован, время вышло или он
+ *               только в Telegram, а нажали на сайте ($fromTg — нажали в
+ *               Telegram: кнопка под постом, мини-приложение);
  *   full      — набран лимит участников;
  *   tg        — бот не подключён (окно предложит подключить);
  *   tg_used   — этот Telegram уже участвует с другого аккаунта;
  *   channels  — не подписан: missing — на какие каналы;
  *   tg_down   — Telegram не ответил, попробовать позже.
  */
-function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int $now, string $src = ''): array {
+function gw_enter(PDO $pdo, array $cfg, callable $send, string $me, int $id, int $now, string $src = '', bool $fromTg = false): array {
     if ($me === '') { return [401, ['ok' => false, 'error' => 'login']]; }
     if (!gw_ready($pdo) || !tg_ready($pdo)) { return [503, ['ok' => false, 'error' => 'closed']]; }
     if (site_banned($me, $cfg, $now, $pdo)) { return [403, ['ok' => false, 'error' => 'banned']]; }
 
     $row = $id > 0 ? gw_load($pdo, $id) : null;
+    if ($row && !$fromTg && !gw_on_site($row)) { return [409, ['ok' => false, 'error' => 'closed']]; }
     if (!$row || gw_phase($row, $now) !== 'live') {
         return [409, ['ok' => false, 'error' => $row && $row['status'] === 'live' && gw_full($pdo, $row) ? 'full' : 'closed']];
     }
@@ -982,6 +1037,8 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     if (!$r['drop_unsub'] && !$hasDrop) { return [409, ['ok' => false, 'error' => 'drop_migrate']]; }
     $hasPosts = gw_has_posts($pdo);
     if ($r['posts'] && !$hasPosts) { return [409, ['ok' => false, 'error' => 'posts_migrate']]; }
+    $hasPlace = gw_has_place($pdo);
+    if ($r['place'] !== 'all' && !$hasPlace) { return [409, ['ok' => false, 'error' => 'place_migrate']]; }
 
     $old = null;
     if ($id > 0) {
@@ -989,7 +1046,10 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         if (!$old) { return [404, ['ok' => false, 'error' => 'not found']]; }
         if ($old['status'] === 'drawn') { return [409, ['ok' => false, 'error' => 'drawn']]; }
         $r['blocks'] = gw_reuse_en($r['blocks'], gw_decode_blocks($old['body_json']));
-        if ($old['status'] !== 'draft') { $r['test'] = gw_is_test($old); }
+        if ($old['status'] !== 'draft') {
+            $r['test'] = gw_is_test($old);
+            $r['place'] = gw_place($old);
+        }
         // Закончившийся (лимит набран или «Завершить досрочно») правка
         // «по числу участников» не открывает заново: даты в форме нет, и
         // сохранение описания иначе вернуло бы приём.
@@ -1024,13 +1084,14 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
     if ($hasTest) { $cols[':test'] = $r['test'] ? 1 : 0; }
     if ($hasMax) { $cols[':max'] = $r['max_entries']; }
     if ($hasDrop) { $cols[':drop'] = $r['drop_unsub'] ? 1 : 0; }
+    if ($hasPlace) { $cols[':place'] = $r['place']; }
     if ($id > 0) {
         $pdo->prepare(
             'UPDATE giveaways SET title_ru = :title_ru, title_en = :title_en, image_url = :image_url,
                     image_w = :image_w, image_h = :image_h, body_json = :body, prizes_json = :prizes,
                     channels_json = :channels, ' . ($hasConds ? 'conds_json = :conds, ' : '')
                     . ($hasTest ? 'test = :test, ' : '') . ($hasMax ? 'max_entries = :max, ' : '')
-                    . ($hasDrop ? 'drop_unsub = :drop, ' : '')
+                    . ($hasDrop ? 'drop_unsub = :drop, ' : '') . ($hasPlace ? 'place = :place, ' : '')
                     . 'ends_at = :ends, updated_at = :now
               WHERE id = :id'
         )->execute($cols + [':id' => $id]);
@@ -1041,15 +1102,18 @@ function gw_save(PDO $pdo, array $body, int $now, ?callable $translate = null): 
         $pdo->prepare(
             "INSERT INTO giveaways (status, title_ru, title_en, image_url, image_w, image_h, body_json,
                     prizes_json, channels_json, " . ($hasConds ? 'conds_json, ' : '') . ($hasTest ? 'test, ' : '')
-                    . ($hasMax ? 'max_entries, ' : '') . ($hasDrop ? 'drop_unsub, ' : '') . "ends_at, created_at, updated_at)
+                    . ($hasMax ? 'max_entries, ' : '') . ($hasDrop ? 'drop_unsub, ' : '') . ($hasPlace ? 'place, ' : '')
+                    . "ends_at, created_at, updated_at)
              VALUES ('draft', :title_ru, :title_en, :image_url, :image_w, :image_h, :body, :prizes,
                     :channels, " . ($hasConds ? ':conds, ' : '') . ($hasTest ? ':test, ' : '') . ($hasMax ? ':max, ' : '')
-                    . ($hasDrop ? ':drop, ' : '') . ":ends, :now, :now2)"
+                    . ($hasDrop ? ':drop, ' : '') . ($hasPlace ? ':place, ' : '') . ":ends, :now, :now2)"
         )->execute($cols + [':now2' => $now]);
         $id = (int)$pdo->lastInsertId();
     }
-    // Без поля posts (старая админка) план постов не трогается.
-    if ($hasPosts && array_key_exists('posts', $body)) { gw_posts_plan($pdo, $id, $r['posts']); }
+    // Без поля posts (старая админка) план постов не трогается. Только на
+    // сайте — постов нет: из плана уходит всё, что ещё не вышло.
+    if ($r['place'] === 'site') { $r['posts'] = []; }
+    if ($hasPosts && (array_key_exists('posts', $body) || $r['place'] === 'site')) { gw_posts_plan($pdo, $id, $r['posts']); }
     return [200, ['ok' => true, 'id' => $id, 'translate_failed' => $failed]];
 }
 
@@ -1065,6 +1129,12 @@ function gw_publish(PDO $pdo, int $id, int $now, ?callable $send = null, int $bo
     $checked = gw_checked_channels($row);
     if ($send !== null) { gw_recheck_rights($pdo, $send, $botId, $checked, $now); }
     $problems = gw_publish_problems($row, gw_channels($pdo, $checked), $now);
+    // Только в Telegram участвуют кнопкой под постом: без поста — негде, а без
+    // таблицы tg_people кнопка вела бы на сайт, где розыгрыша нет.
+    if (gw_place($row) === 'tg') {
+        if (!gw_has_posts($pdo) || !gw_posts($pdo, $id)) { $problems[] = 'no_post'; }
+        if (!gw_has_tg_entry($pdo)) { $problems[] = 'no_tg_entry'; }
+    }
     if ($problems) { return [409, ['ok' => false, 'error' => 'incomplete', 'problems' => $problems], null]; }
     // Своей ссылки нет (у бота нет права «Добавление подписчиков») —
     // подписываются по обычной ссылке канала, только без учёта рекламодателю.
@@ -1294,6 +1364,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
         'published_at' => (int)$row['published_at'],
         'drawn_at'     => (int)$row['drawn_at'],
         'test'         => gw_is_test($row),
+        'place'        => gw_place($row),
         'drop_unsub'   => gw_drops_unsub($row),
         'entries'      => $count,
         'left'         => $left,
@@ -1322,6 +1393,7 @@ function gw_admin_list(PDO $pdo, int $now): array {
             'entries' => $counts[(int)$r['id']] ?? 0,
             'max'     => gw_max($r),
             'test'    => gw_is_test($r),
+            'place'   => gw_place($r),
         ];
     }
     return $out;
@@ -1607,6 +1679,35 @@ function gw_link(int $id, bool $fromBot = false, bool $test = false): string {
     return TG_SITE . '/giveaways' . ($test ? '?test' : '') . '#g' . $id . ($fromBot ? '-tg' : '');
 }
 
+// Куда ведёт кнопка «Открыть розыгрыш» в сообщении бота: карточка на сайте, а
+// у розыгрыша только в Telegram — его пост в канале. Поста ещё нет — ''.
+function gw_open_url(PDO $pdo, array $row, bool $fromBot = false): string {
+    if (gw_on_site($row)) { return gw_link((int)$row['id'], $fromBot, gw_is_test($row)); }
+    return gw_tg_post_link($pdo, (int)$row['id']);
+}
+
+// Вышедший пост розыгрыша: сначала в публичном канале — такая ссылка
+// открывается у всех, ссылку приватного (t.me/c/…) — только у подписчиков.
+function gw_tg_post_link(PDO $pdo, int $id): string {
+    if (!gw_has_posts($pdo)) { return ''; }
+    $posts = array_filter(gw_posts($pdo, $id), function (array $p): bool { return (int)$p['message_id'] > 0; });
+    $channels = gw_channels($pdo, array_keys($posts));
+    $best = '';
+    foreach ($posts as $chat => $p) {
+        $c = $channels[$chat] ?? null;
+        $url = $c ? gw_post_url($c, (int)$p['message_id']) : '';
+        if ($url === '') { continue; }
+        if ((string)$c['username'] !== '') { return $url; }
+        if ($best === '') { $best = $url; }
+    }
+    return $best;
+}
+
+// Кнопка «Открыть розыгрыш» для tg_message_buttons(); ссылки нет — кнопки нет.
+function gw_open_buttons(string $url, string $lang): array {
+    return $url === '' ? [] : [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', $url]];
+}
+
 // Картинка розыгрыша — превью над текстом сообщения.
 function gw_preview(array $row): array {
     if ((string)$row['image_url'] === '') { return ['link_preview_options' => ['is_disabled' => true]]; }
@@ -1641,12 +1742,19 @@ function gw_announce_text(array $row, string $lang): string {
 
 function gw_win_text(array $row, string $prize, string $lang): string {
     $title = gw_title($row, $lang);
+    $site  = gw_on_site($row);
     if ($lang === 'en') {
-        return "🎉 Congratulations! You won the giveaway «" . $title . "» on maknemy.com.\n\nYour prize: " . $prize
-            . "\n\nThe site owner will contact you soon.";
+        return "🎉 Congratulations! You won the giveaway «" . $title . "»" . gw_where($row, $lang) . ".\n\nYour prize: " . $prize
+            . "\n\n" . ($site ? 'The site owner' : 'The organizer') . " will contact you soon.";
     }
-    return "🎉 Поздравляем! Вы победили в розыгрыше «" . $title . "» на maknemy.com.\n\nВаш приз: " . $prize
-        . "\n\nСкоро с вами свяжется владелец сайта.";
+    return "🎉 Поздравляем! Вы победили в розыгрыше «" . $title . "»" . gw_where($row, $lang) . ".\n\nВаш приз: " . $prize
+        . "\n\nСкоро с вами свяжется " . ($site ? 'владелец сайта' : 'организатор') . '.';
+}
+
+// Пишет ли бот о старте: о тестовом — никому, о розыгрыше только в
+// Telegram — тоже (рассылка зовёт на сайт, а его там нет).
+function gw_announces(array $row): bool {
+    return !gw_is_test($row) && gw_on_site($row);
 }
 
 // Кому писать о старте: всем подключившим бота, кроме отписавшихся от
@@ -1690,6 +1798,7 @@ function gw_notify_winners(PDO $pdo, callable $send, array $row, array $winners,
     $prizes = gw_decode_list($row['prizes_json']);
     $map = gw_emoji_map($pdo);
     $send = gw_send_fancy($send, $map);
+    $url = gw_open_url($pdo, $row);
     $sent = 0;
     foreach ($winners as $i => $w) {
         $lang = tg_lang($w['lang']);
@@ -1700,8 +1809,7 @@ function gw_notify_winners(PDO $pdo, callable $send, array $row, array $winners,
         $text = gw_is_tg_uid($w['user_id'] ?? '') && gw_has_tg_entry($pdo)
             ? gw_tg_won_text($pdo, $row, $prize, (int)$w['chat_id'], $lang)
             : gw_win_text($row, $prize, $lang);
-        $msg = gw_text_emoji(tg_message_buttons((int)$w['chat_id'], $text,
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$row['id'], false, gw_is_test($row))]]), $map);
+        $msg = gw_text_emoji(tg_message_buttons((int)$w['chat_id'], $text, gw_open_buttons($url, $lang)), $map);
         if ($i > 0) { $sleep(TG_BROADCAST_GAP); }
         if (tg_after_send($pdo, (int)$w['chat_id'], $send('sendMessage', $msg))) { $sent++; }
     }
@@ -1937,7 +2045,8 @@ function gw_post_when(array $row): string {
 // владелец (RandomGodBot): заголовок капсом, приз, сколько победителей,
 // условия списком @каналов, срок итогов, пожелание удачи. Описание из
 // админки — между заголовком и призом. Под постом кнопка бота — в конце
-// ссылка «Участвовать на сайте». $map — премиум-эмодзи (gw_emoji_map()).
+// ссылка «Участвовать на сайте» (у розыгрыша только в Telegram её нет).
+// $map — премиум-эмодзи (gw_emoji_map()).
 function gw_post_text(PDO $pdo, array $row, array $map = []): string {
     $prizes = gw_decode_list($row['prizes_json']);
     $lines = [];
@@ -1949,7 +2058,7 @@ function gw_post_text(PDO $pdo, array $row, array $map = []): string {
     if (!preg_match('/[.!?…]\z/u', $title)) { $title .= '!'; }
     $body = gw_body_html(gw_decode_blocks($row['body_json']));
     $conds = gw_post_conds($pdo, $row);
-    $site = gw_has_tg_entry($pdo) ? gw_post_site_html(gw_post_link((int)$row['id'], gw_is_test($row)), 'Участвовать на сайте') : '';
+    $site = gw_has_tg_entry($pdo) && gw_on_site($row) ? gw_post_site_html(gw_post_link((int)$row['id'], gw_is_test($row)), 'Участвовать на сайте') : '';
     return gw_fancy_html((gw_is_test($row) ? "🧪 Тестовый розыгрыш\n" : '')
         . '🌟 <b>' . gw_html($title) . '</b>'
         . ($body !== '' ? "\n\n" . $body : '')
@@ -2014,7 +2123,7 @@ function gw_post_results_text(PDO $pdo, array $row, array $map = [], string $sit
             $shown += count($group);
         }
     }
-    if ($total > $shown) { $lines[] = '…и ещё ' . ($total - $shown) . ' — все победители на сайте'; }
+    if ($total > $shown) { $lines[] = '…и ещё ' . ($total - $shown) . (gw_on_site($row) ? ' — все победители на сайте' : ''); }
     return gw_fancy_html($head . "\n\n🏆 <b>Победители</b>\n<blockquote" . ($total > GW_POST_FOLD ? ' expandable' : '') . '>'
         . implode("\n", $lines) . '</blockquote>' . $foot, $map);
 }
@@ -2250,11 +2359,14 @@ function gw_post_results(PDO $pdo, callable $send, array $row, int $now, string 
     if (!$rows) { return 0; }
     $map = gw_emoji_map($pdo);
     $send = gw_send_fancy($send, $map);
-    $keyboard = null;
+    // Только в Telegram — ссылки на сайт нет: под постом «Забрать приз» или
+    // ничего.
+    $onSite = gw_on_site($row);
+    $keyboard = $onSite ? null : [];
     $site = '';
     if ($bot !== '' && gw_has_tg_entry($pdo) && gw_tg_has_winners($pdo, $id)) {
         $keyboard = [[gw_tg_prize_button($row, $bot)]];
-        $site = gw_link($id, false, gw_is_test($row));
+        $site = $onSite ? gw_link($id, false, gw_is_test($row)) : '';
     }
     $text = gw_post_results_text($pdo, $row, $map, $site);
     $mark = $pdo->prepare('UPDATE giveaway_posts SET results_at = :t WHERE giveaway_id = :g AND chat_id = :c');
@@ -2686,8 +2798,10 @@ function gw_after_channel(PDO $pdo, array $cfg, int $chatId, int $now): void {
 
 // Правило «тестовый — только участникам». До миграции
 // 2026-10-15-giveaway-test.sql колонки test нет, и тестовых не бывает.
+// Розыгрыши только в Telegram напоминаний не шлют: подписка на них — на сайте,
+// а кнопка напоминания ведёт на /giveaways.
 function gw_remind_test_sql(PDO $pdo): string {
-    return gw_has_test($pdo) ? ' AND (g.test = 0 OR e.user_id IS NOT NULL)' : '';
+    return (gw_has_test($pdo) ? ' AND (g.test = 0 OR e.user_id IS NOT NULL)' : '') . gw_site_sql($pdo, 'g.');
 }
 
 /**
@@ -3400,13 +3514,13 @@ function gw_joined_text(array $row, string $lang, bool $last = false): string {
     $cond  = gw_checked_channels($row) ? true : false;
     $drop  = gw_drops_unsub($row);
     if ($lang === 'en') {
-        return "✅ You're in the giveaway «" . $title . "» on maknemy.com.\n\n"
+        return "✅ You're in the giveaway «" . $title . "»" . gw_where($row, $lang) . ".\n\n"
             . ($last ? "You took the last spot: " . gw_max($row) . " entries, so entries are closed. Results soon." : 'Results: ' . $date . '.')
             . ($cond ? "\n\nDon't unsubscribe from the channels in the conditions: if you do, "
                 . ($drop ? 'your entry is removed automatically.' : "you won't be able to win.") : '')
             . "\n\nIf you win, I'll message you here.";
     }
-    return "✅ Вы участвуете в розыгрыше «" . $title . "» на maknemy.com.\n\n"
+    return "✅ Вы участвуете в розыгрыше «" . $title . "»" . gw_where($row, $lang) . ".\n\n"
         . ($last ? 'Вы заняли последнее место: участников ' . gw_max($row) . ', приём закрыт. Итоги — скоро.' : 'Итоги — ' . $date . '.')
         . ($cond ? "\n\nНе отписывайтесь от каналов из условий: если отпишетесь, "
             . ($drop ? 'участие снимется автоматически.' : 'выиграть уже не получится.') : '')
@@ -3422,15 +3536,18 @@ function gw_left_text(array $row, string $channel, string $lang, int $now): stri
     $open  = gw_phase($row, $now) === 'live';
     $byMax = gw_no_deadline($row);
     $date  = $byMax ? '' : gw_date((int)$row['ends_at'], $lang);
+    $site  = gw_on_site($row);
     if ($lang === 'en') {
         return "❌ You unsubscribed from «" . $channel . "», so "
             . ($drop ? 'your entry in the giveaway «' . $title . '» was removed.' : "you can't win the giveaway «" . $title . '» anymore.')
-            . ($open ? "\n\n" . ($drop ? 'To get back in' : 'To be in the running again') . ', subscribe again and tap «Enter» on the site '
+            . ($open ? "\n\n" . ($drop ? 'To get back in' : 'To be in the running again') . ', subscribe again and tap «Enter» '
+                . ($site ? 'on the site ' : 'under the giveaway post ')
                 . ($byMax ? ($drop ? 'while spots remain.' : 'while entries are open.') : 'before ' . $date . '.') : '');
     }
     return "❌ Вы отписались от канала «" . $channel . "», поэтому "
         . ($drop ? 'участие в розыгрыше «' . $title . '» снято.' : 'выиграть в розыгрыше «' . $title . '» вы уже не сможете.')
-        . ($open ? "\n\n" . ($drop ? 'Чтобы вернуться' : 'Чтобы снова побороться за приз') . ', подпишитесь снова и нажмите «Участвовать» на сайте '
+        . ($open ? "\n\n" . ($drop ? 'Чтобы вернуться' : 'Чтобы снова побороться за приз') . ', подпишитесь снова и нажмите «Участвовать» '
+            . ($site ? 'на сайте ' : 'под постом розыгрыша ')
             . ($byMax ? ($drop ? 'пока есть места.' : 'пока идёт приём.') : 'до ' . $date . '.') : '');
 }
 
@@ -3443,7 +3560,7 @@ function gw_after_join(PDO $pdo, array $cfg, array $note, ?callable $send = null
         $lang = tg_lang($note['lang']);
         $map = gw_emoji_map($pdo);
         $msg = gw_text_emoji(tg_message_buttons((int)$note['chat_id'], gw_joined_text($note['row'], $lang, !empty($note['last'])),
-            [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$note['row']['id'], false, gw_is_test($note['row']))]]), $map);
+            gw_open_buttons(gw_open_url($pdo, $note['row']), $lang)), $map);
         $chat = (int)$note['chat_id'];
         tg_after_send($pdo, $chat, gw_send_fancy($send ?? tg_http($tg['token']), $map)('sendMessage', $msg));
     } catch (Throwable $e) {
@@ -3461,7 +3578,7 @@ function gw_left_send(PDO $pdo, callable $send, array $notes, int $now, ?callabl
             if ($i > 0) { $sleep(TG_BROADCAST_GAP); }
             $lang = tg_lang($n['lang']);
             $msg = tg_message_buttons((int)$n['chat_id'], gw_left_text($n['row'], $n['channel'], $lang, $now),
-                [[$lang === 'en' ? 'Open the giveaway' : 'Открыть розыгрыш', gw_link((int)$n['row']['id'], false, gw_is_test($n['row']))]]);
+                gw_open_buttons(gw_open_url($pdo, $n['row']), $lang));
             $res = $send('sendMessage', $msg);
             if (tg_after_send($pdo, (int)$n['chat_id'], $res)) {
                 $sent++;

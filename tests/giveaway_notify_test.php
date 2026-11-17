@@ -37,7 +37,7 @@ function gn_db(bool $prefs = true): PDO {
         user_id INTEGER NOT NULL PRIMARY KEY, prices INTEGER NOT NULL DEFAULT 1, news INTEGER NOT NULL DEFAULT 1)');
     $pdo->exec("CREATE TABLE giveaways (
         id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT NOT NULL DEFAULT 'draft', test INTEGER NOT NULL DEFAULT 0,
-        title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
+        place TEXT NOT NULL DEFAULT 'all', title_ru TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '', image_w INTEGER NOT NULL DEFAULT 0, image_h INTEGER NOT NULL DEFAULT 0,
         body_json TEXT NULL, prizes_json TEXT NULL, channels_json TEXT NULL, conds_json TEXT NULL,
         max_entries INTEGER NOT NULL DEFAULT 0, ends_at INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
@@ -275,6 +275,25 @@ test('тестовый розыгрыш напоминает только уча
     for ($i = 0; $i < 6; $i++) { gn_entry($p, $id, (string)(100 + $i), 9000 + $i, GN_NOW - 50); }
     gn_entry($p, $id, '1', 501, GN_NOW - 40);
     assert_eq(['1'], array_column(gw_remind_places_due($p, gw_load($p, $id), GN_NOW), 'user_id'), 'по местам — участнику');
+});
+
+test('розыгрыш только в Telegram не напоминает никому', function () {
+    $p = gn_db();
+    gn_user($p, '1', 501);
+    gn_user($p, '2', 502);
+    gn_prefs($p, '1', ['time_left' => 3600, 'places_left' => 5], GN_NOW - 86400);
+    gn_prefs($p, '2', ['time_left' => 3600, 'places_left' => 5], GN_NOW - 86400);
+    $id = gn_live($p, GN_NOW + 1800, GN_NOW - 86400);
+    $p->exec("UPDATE giveaways SET place = 'tg' WHERE id = " . $id);
+    gn_entry($p, $id, '1', 501, GN_NOW - 100);
+    assert_eq([], gw_remind_time_due($p, GN_NOW), 'по времени — ни участнику, ни остальным');
+
+    $id = gn_live($p, GN_NOW + 86400, GN_NOW - 86400, 10);
+    $p->exec("UPDATE giveaways SET place = 'tg' WHERE id = " . $id);
+    for ($i = 0; $i < 6; $i++) { gn_entry($p, $id, (string)(100 + $i), 9000 + $i, GN_NOW - 50); }
+    assert_eq([], gw_remind_places_due($p, gw_load($p, $id), GN_NOW), 'по местам — тоже');
+    $p->exec("UPDATE giveaways SET place = 'site' WHERE id = " . $id);
+    assert_eq(['1', '2'], array_column(gw_remind_places_due($p, gw_load($p, $id), GN_NOW), 'user_id'), 'только на сайте — как обычно');
 });
 
 // --------------------------------------------------------------------------

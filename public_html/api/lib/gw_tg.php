@@ -256,6 +256,8 @@ function gw_tg_join(PDO $pdo, array $cfg, callable $send, array $from, int $id, 
     $lang = tg_lang_from_telegram($from['language_code'] ?? '');
     $row = gw_load($pdo, $id);
     if (!$row || $row['status'] === 'draft') { return $out('closed'); }
+    // Розыгрыш только на сайте — в Telegram в нём не участвуют.
+    if (gw_place($row) === 'site') { return $out('site', $row); }
 
     // Telegram подключён к аккаунту сайта — участвует аккаунт, как с сайта.
     $site = false;
@@ -267,7 +269,7 @@ function gw_tg_join(PDO $pdo, array $cfg, callable $send, array $from, int $id, 
         $site = false;
     }
     if ($site !== false) {
-        $res = gw_enter($pdo, $cfg, $send, (string)$site, $id, $now, 'cb');
+        $res = gw_enter($pdo, $cfg, $send, (string)$site, $id, $now, 'cb', true);
         $note = $res[2] ?? null;
         $key = gw_tg_enter_key($res[1], $note);
         return $out($key, $note['row'] ?? $row, $key === 'missing' ? array_map('strval', $res[1]['missing'] ?? []) : [], $note ? ['join', $note] : null);
@@ -364,10 +366,11 @@ function gw_tg_app_auth(string $init, string $token, int $now): ?array {
 }
 
 // Какой розыгрыш открыть: из ссылки кнопки (startapp=gw<id>), а без неё
-// (мини-приложение открыли из профиля бота) — последний идущий.
+// (мини-приложение открыли из профиля бота) — последний идущий, кроме
+// тестовых и тех, что только на сайте.
 function gw_tg_app_target(PDO $pdo, string $start, int $now): int {
     if (preg_match('/^gw([1-9][0-9]{0,8})\z/', $start, $m)) { return (int)$m[1]; }
-    $real = gw_has_test($pdo) ? ' AND test = 0' : '';
+    $real = (gw_has_test($pdo) ? ' AND test = 0' : '') . (gw_has_place($pdo) ? " AND place <> 'site'" : '');
     $st = $pdo->prepare("SELECT id FROM giveaways WHERE status = 'live' AND ends_at > :now" . $real . ' ORDER BY published_at DESC, id DESC LIMIT 1');
     $st->execute([':now' => $now]);
     return (int)$st->fetchColumn();
@@ -420,7 +423,8 @@ function gw_tg_app_card(PDO $pdo, array $row, string $lang, int $now): array {
         'entries' => gw_entry_counts($pdo, [$id])[$id] ?? 0,
         'max'     => gw_max($row),
         'phase'   => gw_phase($row, $now),
-        'site'    => gw_post_link($id, gw_is_test($row)),
+        // Розыгрыш только в Telegram на сайте не открыть.
+        'site'    => gw_on_site($row) ? gw_post_link($id, gw_is_test($row)) : '',
     ];
 }
 
