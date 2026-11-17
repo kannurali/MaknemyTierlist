@@ -1646,7 +1646,11 @@
     var box = el("div", "tc-promo");
     var dim = btn("tc-promo-dim", null);
     dim.setAttribute("aria-label", T.promoCancel);
-    dim.addEventListener("click", function () { closePromo(false); });
+    var armed = false;
+    function arm() { armed = true; }
+    box.addEventListener("pointerdown", arm, true);
+    box.addEventListener("keydown", arm, true);
+    dim.addEventListener("click", function () { if (armed) { closePromo(false); } });
     box.appendChild(dim);
     var colm = el("div", "tc-promo-col" + (d.row === 0 ? "" : " is-up"));
     colm.setAttribute("role", "group");
@@ -1659,6 +1663,7 @@
       b.setAttribute("aria-label", NAME[t]);
       b.appendChild(piece(c));
       b.addEventListener("click", function () {
+        if (!armed) { return; }
         var p = promo;
         closePromo(true);
         if (p) { commit(sqName(p.from) + sqName(p.to) + t); }
