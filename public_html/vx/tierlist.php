@@ -61,7 +61,7 @@ $vxLd = json_encode([
 <link rel="stylesheet" href="css/base.css?v=16" />
 <link rel="stylesheet" href="css/styles.css?v=73" />
 <link rel="stylesheet" href="css/vx/vx.css?v=4" />
-<link rel="stylesheet" href="css/vx/tierlist.css?v=2" />
+<link rel="stylesheet" href="css/vx/tierlist.css?v=3" />
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
 <script src="js/topbar.js?v=32" defer fetchpriority="high"></script>
@@ -174,7 +174,6 @@ $vxLd = json_encode([
     <div class="stage" id="stage">
 
       <header class="tl-header">
-        <img class="vx-tl-logo" src="assets/vx/logo.png" alt="Vox Seas" width="480" height="367" />
         <div class="title-block">
           <h1 class="tl-title" id="tlTitle">VOX SEAS<br/>TIER LIST</h1>
           <div class="date" id="tlDate" spellcheck="false" data-i18n-title="stage.dateTitle" title="<?= ta('stage.dateTitle') ?>">17.02.2026</div>
