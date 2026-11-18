@@ -171,6 +171,45 @@ test('robots и sitemap второго сайта не упоминают осн
     assert_true(strpos($map, '<loc>https://voxseas.fun/terms</loc>') !== false, 'условия');
 });
 
+// --- IndexNow --------------------------------------------------------------
+
+test('ключ IndexNow: 32 hex, адрес файла ловит правило .htaccess', function () {
+    assert_true(preg_match('~^[0-9a-f]{32}$~', INDEXNOW_KEY) === 1, 'формат ключа');
+    assert_eq('/' . INDEXNOW_KEY . '.txt', indexnow_key_path(), 'путь файла');
+    $ht = str_replace("\r\n", "\n", file_get_contents(dirname(__DIR__) . '/public_html/.htaccess'));
+    assert_true(strpos($ht, "RewriteRule ^[0-9a-f]{32}\\.txt$ /api/site_meta.php [L]") !== false, 'правило без условия на домен');
+    assert_true(preg_match('~^[0-9a-f]{32}\.txt$~', ltrim(indexnow_key_path(), '/')) === 1, 'путь совпадает с шаблоном правила');
+});
+
+test('IndexNow шлёт все адреса из своей карты сайта', function () {
+    $site = site_normalize(VOX);
+    $urls = indexnow_sitemap_urls(site_meta_sitemap($site));
+    assert_eq(2 * count(I18N_LANGS) + 2, count($urls), 'все loc');
+    $p = indexnow_payload('https://voxseas.fun/', $urls);
+    assert_eq('voxseas.fun', $p['host'], 'host без схемы');
+    assert_eq('https://voxseas.fun/' . INDEXNOW_KEY . '.txt', $p['keyLocation'], 'keyLocation на своём домене');
+    assert_eq(INDEXNOW_KEY, $p['key'], 'ключ');
+    assert_eq($urls, $p['urlList'], 'список без потерь');
+});
+
+test('IndexNow отсеивает чужие хосты и повторы', function () {
+    $p = indexnow_payload('https://voxseas.fun', [
+        'https://voxseas.fun/tierlist',
+        'https://maknemy.com/tierlist',
+        'https://www.voxseas.fun/news',
+        'https://VOXSEAS.fun/news',
+        'https://voxseas.fun/tierlist',
+        42,
+    ]);
+    assert_eq(['https://voxseas.fun/tierlist', 'https://VOXSEAS.fun/news'], $p['urlList'], 'только свой хост, без дублей');
+    assert_eq(['https://voxseas.fun/a?x=1&y=2'], indexnow_sitemap_urls("<loc> https://voxseas.fun/a?x=1&amp;y=2 </loc>"), 'сущности XML раскрыты');
+});
+
+test('корень второго сайта уводит на первую страницу постоянным редиректом', function () {
+    $src = file_get_contents(dirname(__DIR__) . '/public_html/api/lib/site.php');
+    assert_true(strpos($src, "header('Location: ' . u(\$verdict['redirect']), true, 301);") !== false, '301, не 302');
+});
+
 // --- .htaccess -------------------------------------------------------------
 
 test('.htaccess не уводит второй домен на основной', function () {

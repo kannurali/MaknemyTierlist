@@ -124,7 +124,6 @@
       merged.ad = Object.assign({}, d.ad, data.ad || {});
       merged.donate = Object.assign({}, d.donate, data.donate || {});
       merged.filters = normalizeFilters(data.filters, d.filters);
-      merged.filters.perms = false;
       if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
       if (!Array.isArray(merged.footer) || !merged.footer.length) merged.footer = d.footer;
       if (typeof merged.autoSort !== "boolean") merged.autoSort = true;
@@ -406,6 +405,10 @@
     return "fruits";
   }
 
+  function itemGroup(type) {
+    return (SITE && SITE.groups && SITE.groups[type]) || groupOf(type);
+  }
+
   const GLOW_COLORS = ["gold", "green", "red"];
   function glowOf(item) {
     if (item.glow === true) return "gold";
@@ -420,6 +423,8 @@
     }
     delete out.skins;
     delete out.mutations;
+    if (SITE && SITE.allFilters) Object.keys(out).forEach(k => { out[k] = true; });
+    out.perms = false;
     return out;
   }
 
@@ -456,7 +461,7 @@
   }
 
   function visibleItemsOf(tier) {
-    return tier.items.filter(it => state.filters[groupOf(it.type)]);
+    return tier.items.filter(it => state.filters[itemGroup(it.type)]);
   }
 
   const ITEMS_PER_BLOCK = 11;
@@ -646,7 +651,7 @@
     const glow = glowOf(item);
     cell.className = glow ? "cell glow glow-" + glow : "cell";
     cell.dataset.id = item.id;
-    cell.dataset.group = groupOf(item.type);
+    cell.dataset.group = itemGroup(item.type);
     cell.draggable = true;
 
     if (item.demand) {
@@ -1635,7 +1640,7 @@
   });
 
   const filtersEl = $("#filters");
-  const FILTER_KEYS = ["configurators", "fruits", "perms", "passes"]
+  const FILTER_KEYS = ["configurators", "materials", "fruits", "perms", "passes"]
     .filter(k => filtersEl.querySelector(`.chip[data-f="${k}"]`));
   const allFiltersOn = () => FILTER_KEYS.every(k => state.filters[k]);
 
@@ -2562,7 +2567,6 @@
     merged.ad      = Object.assign({}, d.ad,      data.ad      || {});
     merged.donate  = Object.assign({}, d.donate,  data.donate  || {});
     merged.filters = normalizeFilters(data.filters, d.filters);
-    merged.filters.perms = false;
     if (!Array.isArray(merged.credits) || !merged.credits.length) merged.credits = d.credits;
     if (!Array.isArray(merged.footer)  || !merged.footer.length)  merged.footer  = d.footer;
     normalizeTierLogos(merged.tiers, true);

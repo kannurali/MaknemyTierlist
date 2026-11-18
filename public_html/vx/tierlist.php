@@ -13,9 +13,16 @@ $vxLd = json_encode([
     '@context'    => 'https://schema.org',
     '@type'       => 'WebSite',
     'name'        => $vxName,
+    'alternateName' => ['Vox Seas Values', 'Vox Seas Value List', 'Тир лист Vox Seas'],
     'url'         => i18n_url('/tierlist'),
     'inLanguage'  => i18n_lang(),
     'description' => t('vx.meta.tierlist.desc'),
+    'about'       => [
+        '@type'        => 'VideoGame',
+        'name'         => 'Vox Seas',
+        'gamePlatform' => 'Roblox',
+        'url'          => 'https://www.roblox.com/games/104067066727140/Vox-Seas',
+    ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
 ?>
 <!DOCTYPE html>
@@ -135,6 +142,7 @@ $vxLd = json_encode([
       <button class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="<?= ta('filters.permsTitle') ?>"><?= te('filters.perms') ?></button>
       <button class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="<?= ta('filters.passesTitle') ?>"><?= te('filters.passes') ?></button>
       <button class="chip" data-f="configurators" data-i18n="vx.armor" data-i18n-title="vx.armor" title="<?= ta('vx.armor') ?>"><?= te('vx.armor') ?></button>
+      <button class="chip" data-f="materials" data-i18n="vx.materials" data-i18n-title="vx.materials" title="<?= ta('vx.materials') ?>"><?= te('vx.materials') ?></button>
       <button class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="<?= ta('filters.allTitle') ?>"><?= te('filters.all') ?></button>
     </div>
 
@@ -190,6 +198,7 @@ $vxLd = json_encode([
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-pm.svg" alt="PM" /><span class="lgl" data-i18n="legend.pm"><?= te('legend.pm') ?></span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-gp.svg" alt="GP" /><span class="lgl" data-i18n="legend.gp"><?= te('legend.gp') ?></span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-cr.svg" alt="CR" /><span class="lgl" data-i18n="vx.armor"><?= te('vx.armor') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cm.svg" alt="CM" /><span class="lgl" data-i18n="vx.materials"><?= te('vx.materials') ?></span></div>
           </div>
 
           <div class="legend-col lc-demand">
@@ -287,6 +296,7 @@ $vxLd = json_encode([
             <button data-v="" class="active">—</button>
             <button data-v="gp" class="t-gp" data-i18n="modal.catPass"><?= te('modal.catPass') ?></button>
             <button data-v="cr" class="t-cr" data-i18n="vx.catArmor"><?= te('vx.catArmor') ?></button>
+            <button data-v="cm" class="t-cm" data-i18n="vx.catMaterials"><?= te('vx.catMaterials') ?></button>
           </div>
         </div>
         <div class="field">
@@ -375,8 +385,8 @@ $vxLd = json_encode([
   <script src="js/content.js?v=4" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/vx-site.js?v=2" fetchpriority="high"></script>
-  <script src="js/app.js?v=104" fetchpriority="high"></script>
+  <script src="js/vx-site.js?v=3" fetchpriority="high"></script>
+  <script src="js/app.js?v=105" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
 </body>
 </html>

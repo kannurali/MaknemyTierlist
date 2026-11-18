@@ -1,9 +1,11 @@
 <?php
 // robots.txt и sitemap.xml для сайта, которому не подходят файлы из
 // репозитория (они написаны под maknemy.com). Сюда запрос приводит .htaccess,
-// адреса собираются из config.php этого сайта.
+// адреса собираются из config.php этого сайта. Здесь же файл ключа IndexNow
+// (/<ключ>.txt, см. api/lib/indexnow.php) — его отдаёт любой сайт.
 
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/lib/indexnow.php';
 
 function site_meta_robots(array $site): string {
     return "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /images/\nDisallow: /admin\n\n"
@@ -35,6 +37,9 @@ if (!defined('TESTING')) {
     } elseif ($path === '/robots.txt') {
         header('Content-Type: text/plain; charset=utf-8');
         echo site_meta_robots(site_cfg());
+    } elseif ($path === indexnow_key_path()) {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo INDEXNOW_KEY;
     } else {
         http_response_code(404);
     }

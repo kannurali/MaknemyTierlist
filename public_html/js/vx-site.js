@@ -1,11 +1,14 @@
 window.NX_SITE = {
   pngName: "vox-seas-tier-list.png",
   shareTitle: "Vox Seas Tier List",
-  kinds: { cr: ["vx.kindArmor", ""] },
+  kinds: { cr: ["vx.kindArmor", ""], cm: ["vx.kindMaterials", ""] },
+  groups: { cm: "materials" },
+  allFilters: true,
   defaults: function (uid) {
     return {
       title: "VOX SEAS\nTIER LIST",
       date: "",
+      filters: { configurators: true, materials: true, fruits: true, perms: false, passes: true },
       ad: { text: "", image: "", link: "" },
       donate: { da: "", hub: "", qr: "" },
       credits: [],
