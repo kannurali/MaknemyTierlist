@@ -205,6 +205,10 @@ DirectoryIndex home.php
 RewriteCond %{HTTP_HOST} ^voxseas\.fun(:[0-9]+)?$ [NC]
 RewriteRule ^(robots\.txt|sitemap\.xml)$ /api/site_meta.php [L]
 
+# Файл ключа IndexNow (/<ключ>.txt, api/lib/indexnow.php) — на любом домене:
+# по нему Яндекс и Bing проверяют, что адреса прислал владелец сайта.
+RewriteRule ^[0-9a-f]{32}\.txt$ /api/site_meta.php [L]
+
 # Шаблоны скинов подключаются из index.php и news.php; по прямому адресу их нет.
 RewriteRule ^vx/ - [R=404,L]
 

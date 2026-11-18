@@ -125,7 +125,12 @@ function site_gate(): void {
     $verdict = site_gate_decision(site_script_path($_SERVER), $site);
     if ($verdict['allow']) { return; }
     if (isset($verdict['redirect'])) {
-        header('Location: ' . u($verdict['redirect']), true, 302);
+        // Постоянный: главной на таком сайте нет, и поисковик должен склеить
+        // корень домена с первой страницей. На 302 Яндекс держал бы в выдаче
+        // пустой «/», а вес ссылок на корень не доставался бы тирлисту. Адрес
+        // зависит только от языка в самом URL (u()), так что кеш браузера
+        // запомнит верную цель.
+        header('Location: ' . u($verdict['redirect']), true, 301);
         exit;
     }
     http_response_code(404);
