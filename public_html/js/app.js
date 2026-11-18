@@ -1718,7 +1718,7 @@
     $("#vName").textContent = (it.name || "").trim() || tx("view.noName");
     $("#vValue").textContent = it.value || "—";
 
-    const [mainKey, subKey] = KIND_LABEL[it.type] || KIND_LABEL.f;
+    const [mainKey, subKey] = (SITE && SITE.kinds && SITE.kinds[it.type]) || KIND_LABEL[it.type] || KIND_LABEL.f;
     $("#vKindMain").textContent = tx(mainKey);
     const subEl = $("#vKindSub");
     subEl.textContent = subKey ? tx(subKey) : "";

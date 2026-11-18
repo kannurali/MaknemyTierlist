@@ -214,35 +214,10 @@ html::-webkit-scrollbar-thumb {
 .mk-lang-btn:focus-visible,
 .mk-lang-item:focus-visible,
 .mk-avatar:focus-visible,
-.mk-top-toggle:focus-visible,
-.vx-play:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
-
-.vx-play {
-  flex: none;
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 158px;
-  height: 49px;
-  padding: 3px 20px 0;
-  background: url("../../assets/vx/botao-liso.webp") center / 100% 100% no-repeat;
-  font-family: var(--vx-head);
-  font-size: 19px;
-  line-height: 1;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  text-decoration: none;
-  white-space: nowrap;
-  color: #eaffff;
-  text-shadow: var(--vx-outline);
-  filter: drop-shadow(0 0 8px rgba(57, 255, 106, .55));
-  transition: transform .12s, filter .12s;
-  -webkit-tap-highlight-color: transparent;
-}
-.vx-play:hover { transform: scale(1.05); filter: drop-shadow(0 0 14px rgba(57, 255, 106, .9)) brightness(1.1); }
-.vx-play:active { transform: scale(.97); }
+.mk-top-toggle:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
 .vx-main {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -459,13 +434,6 @@ html::-webkit-scrollbar-thumb {
   .mk-pill { padding: 3px 10px 0; font-size: 17px; }
   .mk-pill svg { display: none; }
   .mk-lang-btn { padding: 2px 10px 0; }
-  .vx-play { width: 132px; height: 41px; padding: 2px 14px 0; font-size: 16px; }
-}
-
-@media (min-width: 761px) and (max-width: 1099px) {
-  .vx-main { padding: 2px 8px 0; }
-  .vx-main-text,
-  .vx-main-out { display: none; }
 }
 
 @media (max-width: 760px) {
@@ -475,7 +443,8 @@ html::-webkit-scrollbar-thumb {
   .mk-top { gap: 10px; padding: 0 10px 0 12px; }
   .mk-top-brand { height: calc(var(--vx-top-h) + 20px); }
   .mk-top-bar { justify-content: flex-end; gap: 9px; }
-  .vx-play { width: 126px; height: 39px; padding: 2px 14px 0; font-size: 15px; }
+  .vx-main { height: 38px; padding: 2px 10px 0 8px; gap: 7px; font-size: 14px; }
+  .vx-main img { width: 22px; height: 22px; }
   .mk-avatar { width: 42px; height: 42px; }
   .mk-avatar svg { width: 23px; height: 23px; }
 
@@ -553,9 +522,6 @@ html::-webkit-scrollbar-thumb {
     box-shadow: none;
   }
   .mk-lang-item { padding: 12px; background: rgba(4, 18, 31, .4); }
-  .vx-main { height: 48px; padding: 2px 14px 0 12px; gap: 10px; font-size: 17px; }
-  .vx-main img { width: 26px; height: 26px; }
-  .vx-main-out { margin-left: auto; width: 12px; height: 12px; }
 
   .mk-soon { bottom: 18px; font-size: 14px; }
   .vx-sea i:nth-child(n+4) { display: none; }
@@ -564,7 +530,9 @@ html::-webkit-scrollbar-thumb {
 
 @media (max-width: 380px) {
   .mk-top-bar { gap: 6px; }
-  .vx-play { width: 108px; height: 34px; padding: 2px 10px 0; font-size: 13px; }
+  .vx-main { height: 34px; padding: 2px 8px 0 6px; gap: 6px; font-size: 13px; }
+  .vx-main img { width: 20px; height: 20px; }
+  .vx-main-out { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -573,7 +541,6 @@ html::-webkit-scrollbar-thumb {
   .mk-nav,
   .mk-top.is-nav-open .mk-nav,
   .mk-soon,
-  .vx-play,
   .vx-main,
   .vx-main-out,
   .mk-avatar,
