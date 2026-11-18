@@ -73,8 +73,6 @@
   color: var(--ouro-claro);
 }
 
-.vx-legal .mk-nav-main { margin-left: auto; }
-
 @media (max-width: 760px) {
   .vx-legal .mk-nav {
     position: static;
@@ -93,8 +91,6 @@
     transform: none;
   }
   .vx-legal .mk-pill { height: 38px; padding: 2px 10px 0; font-size: 15px; background: none; }
-  .vx-legal .vx-play { display: none; }
-  .vx-legal .mk-nav-main { margin-left: 0; }
   .vx-legal .vx-main { height: 38px; padding: 2px 7px 0; }
   .vx-legal .vx-main img { width: 22px; height: 22px; }
   .vx-legal .vx-main-text,

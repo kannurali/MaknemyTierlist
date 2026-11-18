@@ -11,7 +11,6 @@ $vxEsc = function (string $s): string { return htmlspecialchars($s, ENT_QUOTES, 
 $vxOgTitle = (string)$og['title'] === t('meta.news.ogTitle') ? t('vx.meta.news.ogTitle') : (string)$og['title'];
 $vxOgDesc = (string)$og['description'] === t('meta.news.ogDesc') ? t('vx.meta.news.desc') : (string)$og['description'];
 $vxCard = og_brand_card();
-$vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
 ?>
 <!DOCTYPE html>
 <html lang="<?= i18n_lang() ?>">
@@ -54,7 +53,7 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
 
 <link rel="stylesheet" href="css/base.css?v=16" />
 <link rel="stylesheet" href="css/news.css?v=15" />
-<link rel="stylesheet" href="css/vx/vx.css?v=3" />
+<link rel="stylesheet" href="css/vx/vx.css?v=4" />
 <link rel="stylesheet" href="css/vx/news.css?v=1" />
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
@@ -84,16 +83,13 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
           </a>
         </li>
         <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
-        <li class="mk-nav-main">
-          <a class="vx-main" href="<?= SITE_DEFAULT_ORIGIN . u('/') ?>" target="_blank" rel="noopener" data-i18n-title="vx.main" title="<?= ta('vx.main') ?>">
-            <img src="assets/design/logo-mk-square.png" alt="" width="160" height="160" />
-            <span class="vx-main-text">Maknemy</span>
-            <svg class="vx-main-out" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 1.75h5.75V7.5M10.25 1.75 2 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
-        </li>
       </ul>
 
-      <a class="vx-play" href="<?= $vxPlay ?>" target="_blank" rel="noopener" data-i18n="vx.play"><?= te('vx.play') ?></a>
+      <a class="vx-main" href="<?= SITE_DEFAULT_ORIGIN . u('/') ?>" target="_blank" rel="noopener" data-i18n-title="vx.main" title="<?= ta('vx.main') ?>">
+        <img src="assets/design/logo-mk-square.png" alt="" width="160" height="160" />
+        <span class="vx-main-text">Maknemy</span>
+        <svg class="vx-main-out" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 1.75h5.75V7.5M10.25 1.75 2 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
 
       <button class="mk-avatar" type="button" aria-label="<?= ta('topbar.profile') ?>" data-soon data-i18n-title="topbar.soon" title="<?= ta('topbar.soon') ?>">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>

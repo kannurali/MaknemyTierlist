@@ -1,6 +1,7 @@
 window.NX_SITE = {
   pngName: "vox-seas-tier-list.png",
   shareTitle: "Vox Seas Tier List",
+  kinds: { cr: ["vx.kindArmor", ""] },
   defaults: function (uid) {
     return {
       title: "VOX SEAS\nTIER LIST",

@@ -17,7 +17,6 @@ $vxLd = json_encode([
     'inLanguage'  => i18n_lang(),
     'description' => t('vx.meta.tierlist.desc'),
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
-$vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
 ?>
 <!DOCTYPE html>
 <html lang="<?= i18n_lang() ?>">
@@ -61,7 +60,7 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
 <link rel="preload" as="font" type="font/woff2" href="/assets/vx/fonts/luckiest-guy.woff2" crossorigin />
 <link rel="stylesheet" href="css/base.css?v=16" />
 <link rel="stylesheet" href="css/styles.css?v=73" />
-<link rel="stylesheet" href="css/vx/vx.css?v=3" />
+<link rel="stylesheet" href="css/vx/vx.css?v=4" />
 <link rel="stylesheet" href="css/vx/tierlist.css?v=2" />
 
 <script src="js/auth.js?v=2" fetchpriority="high"></script>
@@ -97,16 +96,13 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
           </a>
         </li>
         <li class="mk-nav-lang"><?= i18n_lang_menu() ?></li>
-        <li class="mk-nav-main">
-          <a class="vx-main" href="<?= SITE_DEFAULT_ORIGIN . u('/') ?>" target="_blank" rel="noopener" data-i18n-title="vx.main" title="<?= ta('vx.main') ?>">
-            <img src="assets/design/logo-mk-square.png" alt="" width="160" height="160" />
-            <span class="vx-main-text">Maknemy</span>
-            <svg class="vx-main-out" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 1.75h5.75V7.5M10.25 1.75 2 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
-        </li>
       </ul>
 
-      <a class="vx-play" href="<?= $vxPlay ?>" target="_blank" rel="noopener" data-i18n="vx.play"><?= te('vx.play') ?></a>
+      <a class="vx-main" href="<?= SITE_DEFAULT_ORIGIN . u('/') ?>" target="_blank" rel="noopener" data-i18n-title="vx.main" title="<?= ta('vx.main') ?>">
+        <img src="assets/design/logo-mk-square.png" alt="" width="160" height="160" />
+        <span class="vx-main-text">Maknemy</span>
+        <svg class="vx-main-out" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 1.75h5.75V7.5M10.25 1.75 2 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
 
       <button class="mk-avatar" type="button" aria-label="<?= ta('topbar.profile') ?>" data-soon data-i18n-title="topbar.soon" title="<?= ta('topbar.soon') ?>">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
@@ -138,6 +134,7 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
       <button class="chip" data-f="fruits" data-i18n="filters.fruits" data-i18n-title="filters.fruitsTitle" title="<?= ta('filters.fruitsTitle') ?>"><?= te('filters.fruits') ?></button>
       <button class="chip" data-f="perms" data-i18n="filters.perms" data-i18n-title="filters.permsTitle" title="<?= ta('filters.permsTitle') ?>"><?= te('filters.perms') ?></button>
       <button class="chip" data-f="passes" data-i18n="filters.passes" data-i18n-title="filters.passesTitle" title="<?= ta('filters.passesTitle') ?>"><?= te('filters.passes') ?></button>
+      <button class="chip" data-f="configurators" data-i18n="vx.armor" data-i18n-title="vx.armor" title="<?= ta('vx.armor') ?>"><?= te('vx.armor') ?></button>
       <button class="chip all" data-f="all" data-i18n="filters.all" data-i18n-title="filters.allTitle" title="<?= ta('filters.allTitle') ?>"><?= te('filters.all') ?></button>
     </div>
 
@@ -193,6 +190,7 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-fr.svg" alt="FR" /><span class="lgl" data-i18n="legend.fv"><?= te('legend.fv') ?></span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-pm.svg" alt="PM" /><span class="lgl" data-i18n="legend.pm"><?= te('legend.pm') ?></span></div>
             <div class="lg"><img class="lgb" src="assets/design/legend/badge-gp.svg" alt="GP" /><span class="lgl" data-i18n="legend.gp"><?= te('legend.gp') ?></span></div>
+            <div class="lg"><img class="lgb" src="assets/design/legend/badge-cr.svg" alt="CR" /><span class="lgl" data-i18n="vx.armor"><?= te('vx.armor') ?></span></div>
           </div>
 
           <div class="legend-col lc-demand">
@@ -289,6 +287,7 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
           <div class="seg" id="mType2">
             <button data-v="" class="active">—</button>
             <button data-v="gp" class="t-gp" data-i18n="modal.catPass"><?= te('modal.catPass') ?></button>
+            <button data-v="cr" class="t-cr" data-i18n="vx.catArmor"><?= te('vx.catArmor') ?></button>
           </div>
         </div>
         <div class="field">
@@ -377,8 +376,8 @@ $vxPlay = 'https://www.roblox.com/games/104067066727140/Vox-Seas';
   <script src="js/content.js?v=4" fetchpriority="high"></script>
   <script src="js/tiers.js?v=2" fetchpriority="high"></script>
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/vx-site.js?v=1" fetchpriority="high"></script>
-  <script src="js/app.js?v=103" fetchpriority="high"></script>
+  <script src="js/vx-site.js?v=2" fetchpriority="high"></script>
+  <script src="js/app.js?v=104" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
 </body>
 </html>
