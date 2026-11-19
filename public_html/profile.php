@@ -174,7 +174,8 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=9" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
-<?php if ($pfSkin === 'kitty'): ?><link rel="stylesheet" href="css/profile-kitty.css?v=1" /><?php endif; ?>
+<?php if ($pfSkin === 'kitty'): ?><link rel="stylesheet" href="css/profile-kitty.css?v=2" /><?php endif; ?>
+<?php if ($pfState === 'card'): ?><link rel="stylesheet" href="css/trade-kitty.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body<?php if ($pfSkin !== ''): ?> data-pf-skin="<?= $pfSkin ?>"<?php endif; ?>>
@@ -307,6 +308,9 @@ $pfTitle = $pfNick !== ''
 <?php endif; ?>
         <svg class="pf-avatar-empty" viewBox="0 0 34 34" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M17.0003 2.83325C13.0883 2.83325 9.91699 6.00457 9.91699 9.91659C9.91699 13.8286 13.0883 16.9999 17.0003 16.9999C20.9123 16.9999 24.0837 13.8286 24.0837 9.91659C24.0837 6.00457 20.9123 2.83325 17.0003 2.83325Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7503 18.4167C10.3947 18.4167 8.12945 19.4913 6.80192 21.109C6.12816 21.9301 5.65451 22.946 5.61326 24.072C5.57114 25.2218 5.98621 26.3442 6.8422 27.3234C8.92833 29.7099 12.2591 31.1667 17.0003 31.1667C21.7415 31.1667 25.0723 29.7099 27.1584 27.3234C28.0144 26.3442 28.4294 25.2218 28.3873 24.072C28.3461 22.946 27.8724 21.9301 27.1987 21.109C25.8711 19.4913 23.6058 18.4167 21.2503 18.4167H12.7503Z" fill="currentColor"/></svg>
       </div>
+<?php if ($pfSkin === 'kitty'): ?>
+      <span class="pf-hat" aria-hidden="true"></span>
+<?php endif; ?>
 
 <?php if ($pfSelf): ?>
       <nav class="pf-menu" data-i18n-label="profile.menuLabel" aria-label="<?= ta('profile.menuLabel') ?>">
@@ -652,7 +656,7 @@ $pfTitle = $pfNick !== ''
 <?php endif; ?>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=7" defer></script>
+  <script src="js/trade-cards.js?v=8" defer></script>
   <script src="js/profile-trades.js?v=4" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>

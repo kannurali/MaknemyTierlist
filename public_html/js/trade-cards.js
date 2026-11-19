@@ -200,13 +200,21 @@
       li.dataset.id = String(offer.id);
       if (offer.mine) { li.classList.add("is-mine"); }
       if (state !== "open") { li.classList.add("is-closed"); }
+      const skin = typeof offer.author.skin === "string" && /^[a-z]{1,20}$/.test(offer.author.skin) ? offer.author.skin : "";
+      if (skin) { li.dataset.skin = skin; }
 
       const art = el("article", "tr-card-in");
       const nickId = "trNick" + offer.id + (offer.mine ? "m" : "");
       art.setAttribute("aria-labelledby", nickId);
 
       const head = el("header", "tr-card-head");
-      head.appendChild(buildAvatar(offer.author));
+      if (skin) {
+        const avaBox = el("span", "tr-ava-skin");
+        avaBox.appendChild(buildAvatar(offer.author));
+        head.appendChild(avaBox);
+      } else {
+        head.appendChild(buildAvatar(offer.author));
+      }
 
       const who = el("div", "tr-who");
       let nick;

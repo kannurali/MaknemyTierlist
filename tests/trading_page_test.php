@@ -385,4 +385,22 @@ test('в чужом профиле — живые объявления игро�
     }
 });
 
+// 19.11.2026, слово владельца: у объявлений Love_Peroxide уникальный дизайн
+// (Hello Kitty, ободок с ушками на аватарке) — и в ленте, и в профиле.
+test('объявления со своей темой автора: метка у карточки, стили на ленте и в профиле', function () use ($PUB) {
+    $cards = tp_read($PUB . '/js/trade-cards.js');
+    assert_true(strpos($cards, '/^[a-z]{1,20}$/.test(offer.author.skin)') !== false, 'в атрибут уходит только имя темы');
+    assert_true(strpos($cards, 'li.dataset.skin = skin') !== false, 'карточка помечена темой автора');
+    assert_true(strpos($cards, 'el("span", "tr-ava-skin")') !== false, 'аватарка в обёртке — под ободок');
+
+    $trading = tp_read($PUB . '/trading.php');
+    assert_eq(1, substr_count($trading, '<link rel="stylesheet" href="css/trade-kitty.css?v=1" />'), 'лента подключает стили');
+    assert_true(strpos($trading, 'css/trading.css') < strpos($trading, 'css/trade-kitty.css'), 'после trading.css');
+    $profile = tp_read($PUB . '/profile.php');
+    assert_eq(1, substr_count($profile, 'css/trade-kitty.css?v=1'), 'профиль тоже — его объявления там же');
+    assert_true(strpos($profile, 'css/profile-kitty.css') < strpos($profile, 'css/trade-kitty.css'), 'карточки одинаковые и в профиле');
+    assert_true(is_file($PUB . '/css/trade-kitty.css'));
+    assert_true(is_file($PUB . '/assets/kitty/kitty-hat.webp'), 'ободок лежит на сайте');
+});
+
 run_tests();

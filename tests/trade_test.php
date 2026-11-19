@@ -619,4 +619,17 @@ test('автор объявления несёт знак у ника', function
     assert_eq(null, $a['101']['logo'], 'у остальных знака нет');
 });
 
+// 19.11.2026, слово владельца: у объявлений Love_Peroxide свой дизайн. Тему
+// карточка берёт из поля skin автора (NICK_SKINS).
+test('автор объявления несёт свою тему: у Love_Peroxide — kitty', function () {
+    $pdo = test_db();
+    $ins = $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at)
+                          VALUES (?, ?, ?, ?, ?, ?)');
+    $ins->execute([3444182117, 'chelovek5541', 'Love_Peroxide', '', NOW - 999, NOW - 999]);
+    $ins->execute([101, 'alice', 'Alice', '', NOW - 999, NOW - 999]);
+    $a = trade_authors($pdo, ['3444182117', '101'], NOW);
+    assert_eq('kitty', $a['3444182117']['skin']);
+    assert_eq('', $a['101']['skin'], 'у остальных обычные карточки');
+});
+
 run_tests();

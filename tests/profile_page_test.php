@@ -1604,7 +1604,7 @@ test('профиль Love_Peroxide: своя розовая тема, титул
 
     foreach (['чужой' => $peer, 'свой' => $self] as $who => $r) {
         assert_eq(1, preg_match('~<body data-pf-skin="kitty">~', $r['html']), "$who: тема у body");
-        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitty.css?v=1" />'), "$who: стили темы");
+        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitty.css?v=2" />'), "$who: стили темы");
         assert_true(strpos($r['html'], 'data-tip="nick.analyst"') !== false, "$who: подпись знака — «Аналитик»");
         preg_match('~<p class="nx-titles pf-titles" id="pfTitleMain">(.*?)</p>~s', $r['html'], $m);
         assert_true(strpos($m[1] ?? '', 'data-kind="economy">Министр экономики БФ<') !== false, "$who: под ником титул министра");
@@ -1617,6 +1617,9 @@ test('профиль Love_Peroxide: своя розовая тема, титул
         assert_eq(0, substr_count($r['html'], 'profile-kitty'), "$who: без розовых стилей");
     }
     assert_true(is_file($PUB . '/css/profile-kitty.css'));
+    assert_eq(1, substr_count($peer['html'], '<span class="pf-hat" aria-hidden="true"></span>'), 'ободок с ушками над аватаркой');
+    assert_eq(1, substr_count($self['html'], 'class="pf-hat"'), 'и у себя');
+    assert_eq(0, substr_count($other['html'] . $mine['html'], 'pf-hat'), 'у остальных ободка нет');
     foreach (['head', 'peek', 'peace', 'sit', 'wave'] as $k) {
         assert_true(is_file($PUB . "/assets/kitty/kitty-$k.webp"), "картинка kitty-$k");
     }
