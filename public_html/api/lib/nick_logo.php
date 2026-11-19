@@ -32,3 +32,17 @@ const NICK_LOGOS = [
 function nick_logo(string $id): ?array {
     return NICK_LOGOS[$id] ?? null;
 }
+
+// Своя тема по слову владельца: roblox_id → имя темы. Лежит здесь, рядом со
+// знаками, а не в profile.php: тему видят и профиль, и чат (chat_user_row
+// отдаёт её полем skin). Профиль — body[data-pf-skin] + css/profile-<имя>.css,
+// чат — комната и строка списка с этим собеседником (css/chat-<имя>.css).
+// Love_Peroxide (19.11.2026) — розовая, Hello Kitty: единственный не синий.
+const NICK_SKINS = [
+    '3444182117' => 'kitty',
+];
+
+/** Имя своей темы игрока либо ''. */
+function nick_skin(string $id): string {
+    return NICK_SKINS[$id] ?? '';
+}

@@ -130,6 +130,7 @@ function chat_user_row(?array $r, int $now): ?array {
         'handle' => '@' . (string)$r['username'],
         'avatar' => (string)($r['avatar_url'] ?? ''),
         'logo'   => nick_logo((string)$r['roblox_id']),
+        'skin'   => nick_skin((string)$r['roblox_id']),
         'titles' => [],
         'status' => ($seen > 0 && ($now - $seen) <= CHAT_ONLINE_WINDOW) ? 'online' : 'offline',
     ];

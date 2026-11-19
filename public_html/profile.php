@@ -76,7 +76,7 @@ $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 
 $pfOwner = $pfState === 'card' && $pfWho === PROFILE_OWNER_ID;
 $pfLogo  = $pfState === 'card' ? nick_logo($pfWho) : null;
-$pfSkin  = $pfState === 'card' ? (PROFILE_SKINS[$pfWho] ?? '') : '';
+$pfSkin  = $pfState === 'card' ? nick_skin($pfWho) : '';
 // Подпись знака («Владелец» / «Разработчик») — тем же приёмом, что статус
 // ниже: ключ словаря считается здесь, текст на языке страницы даёт ta().
 // Всплывающую подсказку рисует js/topbar.js по data-tip.

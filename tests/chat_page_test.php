@@ -142,6 +142,26 @@ test('чат подключает свои css и js с версией, и фа�
     }
 });
 
+// 19.11.2026, слово владельца: чат с Love_Peroxide выглядит как его розовый
+// профиль, а его строка в списке диалогов — розовая. Тема приходит полем skin
+// у собеседника; страница ставит data-peer-skin на ct-shell и data-chat-skin
+// на body, пока открыт его чат, и data-skin на кнопку его диалога.
+test('чат: тема собеседника — у открытой комнаты и у его строки в списке', function () use ($PUB) {
+    $s = cp_read($PUB . '/chat.php');
+    assert_eq(1, substr_count($s, '<link rel="stylesheet" href="css/chat-kitty.css?v=1" />'), 'стили темы подключены');
+    assert_true(strpos($s, 'css/giveaway.css') < strpos($s, 'css/chat-kitty.css'), 'и последними — перебивают синие');
+    assert_true(is_file($PUB . '/css/chat-kitty.css'));
+
+    $js = cp_code(cp_read($PUB . '/js/chat-page.js'));
+    assert_true(strpos($js, "shell.setAttribute('data-peer-skin', s)") !== false, 'комната помечается темой');
+    assert_true(strpos($js, "document.body.setAttribute('data-chat-skin', s)") !== false, 'и страница — пока чат открыт');
+    assert_true(strpos($js, "shell.removeAttribute('data-peer-skin')") !== false
+        && strpos($js, "document.body.removeAttribute('data-chat-skin')") !== false, 'в другом чате тема снимается');
+    assert_true(strpos($js, 'b.dataset.skin = skinOf(t.peer)') !== false, 'строка списка — своей темой');
+    assert_true(strpos($js, '/^[a-z]{1,20}$/.test(s)') !== false, 'в атрибут уходит только имя темы');
+    assert_true(strpos($js, 'roomSkin(peer);') > strpos($js, 'function renderRoom('), 'тему ставит отрисовка комнаты');
+});
+
 test('чат использует общие шапку, подвал, фон и счётчик', function () use ($PUB) {
     $s = cp_read($PUB . '/chat.php');
     foreach (['css/base.css', 'css/topbar.css', 'css/design-page.css', 'js/topbar.js'] as $shared) {
