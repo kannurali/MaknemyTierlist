@@ -1,0 +1,149 @@
+.tr-card[data-skin="kitty"] {
+  --kt-paper: #fffafc;
+  --kt-blush: #fff1f6;
+  --kt-petal: #ffe2ec;
+  --kt-line: #ffc0d7;
+  --kt-dot: #ffe4ee;
+  --kt-bow: #ff4f8b;
+  --kt-bow-deep: #d6125a;
+  --kt-ribbon: #d81b60;
+  --kt-ribbon-hi: #ec4a85;
+  --kt-ink: #5c0f2e;
+  --kt-ink-soft: #8a3558;
+  --kt-shadow: rgba(214, 18, 90, .2);
+  --kt-lace: var(--kt-ribbon);
+  --kt-lace-h: max(7px, calc(10 * var(--u)));
+
+  --tr-head: linear-gradient(180deg, var(--kt-ribbon-hi) 0%, var(--kt-ribbon) 100%);
+  --tr-grad: linear-gradient(255deg, #d81b60 0%, #b30c4a 100%);
+  --tr-glass: var(--kt-paper);
+}
+
+.tr-card[data-skin="kitty"] .tr-card-in {
+  background-color: var(--kt-paper);
+  background-image:
+    radial-gradient(circle, var(--kt-dot) 0 2.6px, transparent 3.1px),
+    radial-gradient(circle, var(--kt-dot) 0 2.6px, transparent 3.1px);
+  background-size: 20px 20px, 20px 20px;
+  background-position: 0 0, 10px 10px;
+  box-shadow: 0 0 0 1px var(--kt-line), 0 calc(6 * var(--u)) calc(20 * var(--u)) var(--kt-shadow);
+  color: var(--kt-ink);
+}
+
+.tr-card[data-skin="kitty"]:hover .tr-card-in,
+.tr-card[data-skin="kitty"]:focus-within .tr-card-in {
+  box-shadow: 0 0 0 1.5px var(--kt-bow), 0 calc(8 * var(--u)) calc(26 * var(--u)) rgba(214, 18, 90, .34);
+}
+
+.tr-card[data-skin="kitty"].is-mine .tr-card-in {
+  box-shadow: 0 0 0 1.5px rgba(30, 170, 60, .75), 0 calc(6 * var(--u)) calc(20 * var(--u)) var(--kt-shadow);
+}
+
+.tr-card[data-skin="kitty"].is-closed .tr-card-in {
+  box-shadow: 0 0 0 1px var(--kt-line);
+}
+
+.tr-card[data-skin="kitty"] .tr-card-head {
+  position: relative;
+  color: #fff;
+}
+
+.tr-card[data-skin="kitty"] .tr-card-head::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: var(--kt-lace-h);
+  background: radial-gradient(circle at 50% 0, var(--kt-lace) calc(var(--kt-lace-h) - .5px), transparent var(--kt-lace-h)) left top / calc(var(--kt-lace-h) * 2) 100% repeat-x;
+  pointer-events: none;
+}
+
+.tr-card[data-skin="kitty"] .tr-nick,
+.tr-card[data-skin="kitty"] .tr-handle { color: #fff; }
+
+.tr-card[data-skin="kitty"] .tr-nick { text-shadow: 0 1px 0 rgba(120, 6, 48, .35); }
+
+.tr-card[data-skin="kitty"] .nx-nick-badge:focus-visible .nx-nick-logo { outline-color: #fff; }
+
+.tr-card[data-skin="kitty"] .tr-who > .nx-titles .nx-title { box-shadow: inset 0 0 0 1px #f05b93, 0 0 0 1.5px rgba(255, 255, 255, .85); }
+
+.tr-ava-skin {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.tr-card[data-skin="kitty"] .tr-ava {
+  background: var(--kt-petal);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.tr-card[data-skin="kitty"] .tr-ava.is-empty { color: rgba(92, 15, 46, .45); }
+
+.tr-card[data-skin="kitty"] .tr-ava-skin::after {
+  content: "";
+  position: absolute;
+  left: -2.5%;
+  top: -20%;
+  width: 104.3%;
+  height: 56%;
+  background: url("../assets/kitty/kitty-hat-s.webp") center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+.tr-card[data-skin="kitty"] .tr-online[data-status="offline"] { background: rgba(92, 15, 46, .38); }
+
+.tr-card[data-skin="kitty"] .tr-item {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--kt-line), 0 2px 0 var(--kt-petal);
+}
+
+.tr-card[data-skin="kitty"] .tr-item.is-missing,
+.tr-card[data-skin="kitty"] .tr-item.is-pending { background: var(--kt-blush); }
+
+.tr-card[data-skin="kitty"] .tr-item.is-missing::after { color: rgba(92, 15, 46, .35); }
+
+.tr-card[data-skin="kitty"] .tr-item-value { color: var(--kt-bow-deep); }
+
+.tr-card[data-skin="kitty"] .tr-any {
+  border: 1.5px dashed var(--kt-bow);
+  background: rgba(255, 255, 255, .7);
+  color: var(--kt-bow-deep);
+}
+
+.tr-card[data-skin="kitty"] .tr-swap {
+  background: url("../assets/kitty/kitty-swap.svg") center / contain no-repeat;
+}
+
+.tr-card[data-skin="kitty"] .tr-swap use { display: none; }
+
+.tr-card[data-skin="kitty"] .tr-time { color: var(--kt-ink-soft); }
+.tr-card[data-skin="kitty"] .tr-note { color: #9a4d00; }
+.tr-card[data-skin="kitty"] .tr-note.is-good { color: #1f7a32; }
+
+.tr-card[data-skin="kitty"] .tr-act:focus-visible { outline-color: var(--kt-ink); }
+
+.tr-card[data-skin="kitty"] .tr-act-ghost {
+  box-shadow: inset 0 0 0 1px rgba(92, 15, 46, .4);
+  color: var(--kt-ink);
+}
+
+.tr-card[data-skin="kitty"] .tr-act-ghost:hover { background: var(--kt-petal); filter: none; }
+
+.tr-card[data-skin="kitty"].is-closed { --kt-lace: #84606e; }
+
+.tr-card[data-skin="kitty"].is-closed .tr-card-head { background: linear-gradient(180deg, #9a7684 0%, #84606e 100%); }
+
+@media (min-width: 901px) {
+  .tr-card[data-skin="kitty"]:not(.is-closed) .tr-card-head::after {
+    content: "";
+    position: absolute;
+    right: calc(70 * var(--u));
+    bottom: calc(-9 * var(--u));
+    width: calc(96 * var(--u));
+    height: calc(83 * var(--u));
+    background: url("../assets/kitty/kitty-peek-s.webp") center bottom / contain no-repeat;
+    pointer-events: none;
+  }
+}

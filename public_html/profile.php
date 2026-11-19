@@ -174,7 +174,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=9" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
-<?php if ($pfSkin === 'kitty'): ?><link rel="stylesheet" href="css/profile-kitty.css?v=1" /><?php endif; ?>
+<?php if ($pfSkin === 'kitty'): ?><link rel="stylesheet" href="css/profile-kitty.css?v=2" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?><link rel="stylesheet" href="css/trade-kitty.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>

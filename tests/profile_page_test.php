@@ -1604,7 +1604,7 @@ test('профиль Love_Peroxide: своя розовая тема, титул
 
     foreach (['чужой' => $peer, 'свой' => $self] as $who => $r) {
         assert_eq(1, preg_match('~<body data-pf-skin="kitty">~', $r['html']), "$who: тема у body");
-        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitty.css?v=1" />'), "$who: стили темы");
+        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitty.css?v=2" />'), "$who: стили темы");
         assert_true(strpos($r['html'], 'data-tip="nick.analyst"') !== false, "$who: подпись знака — «Аналитик»");
         preg_match('~<p class="nx-titles pf-titles" id="pfTitleMain">(.*?)</p>~s', $r['html'], $m);
         assert_true(strpos($m[1] ?? '', 'data-kind="economy">Министр экономики БФ<') !== false, "$who: под ником титул министра");
