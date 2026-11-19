@@ -106,6 +106,9 @@ function pf_fixture_db(string $file, array $tables = []): void {
     $ins->execute(['2841062255', 'Shamill_prod', 'maknemy', '', $now - 86400, $now, $now, null, 2, 0]);
     $ins->execute(['8755256557', 'kan_nurali', 'TheFool', '', $now - 86400, $now, $now, null, 0, 0]);
     $ins->execute(['3964875859', 'DANIKtyda', 'Agent_Tele2', '', $now - 86400, $now, $now, null, 0, 0]);
+    // Love_Peroxide — знак «N» с подписью «Аналитик», титул «Министр экономики
+    // БФ» и единственная не синяя тема профиля (PROFILE_SKINS).
+    $ins->execute(['3444182117', 'chelovek5541', 'Love_Peroxide', '', $now - 86400, $now, $now, null, 0, 0]);
 
     // Зеркалят docs/migrations/2026-09-23-telegram.sql и 2026-09-25-tg-prefs.sql.
     if (!empty($tables['tg'])) {
@@ -1429,9 +1432,10 @@ test('знак у ника подписан: Владелец и Разрабо�
     assert_true((bool)preg_match('~"nick\.designer":\s*"Designer"~', $i18n), 'по-английски Designer');
     assert_eq(['src' => '/assets/design/logo-bolt.png', 'role' => 'designer'], nick_logo('3964875859'),
         'у дизайнера (DANIKtyda) — молния');
-    assert_eq(['src' => '/assets/design/logo-glh.png', 'role' => 'economy'], nick_logo('3444182117'),
+    assert_eq(['src' => '/assets/design/logo-glh.png', 'role' => 'analyst'], nick_logo('3444182117'),
         'у Love_Peroxide — «N», марка GLH');
-    assert_true((bool)preg_match('~"nick\.economy":\s*"Министр экономики БФ"~u', $i18n), 'Love_Peroxide — Министр экономики БФ');
+    assert_true((bool)preg_match('~"nick\.analyst":\s*"Аналитик"~u', $i18n), 'Love_Peroxide — Аналитик');
+    assert_true(strpos($i18n, '"nick.economy"') === false, '«Министр экономики БФ» — теперь титул, не подпись знака');
     foreach (NICK_LOGOS as $logo) {
         assert_true(is_file($PUB . $logo['src']), 'знак лежит на сайте: ' . $logo['src']);
     }
@@ -1585,6 +1589,37 @@ test('под ником один титул, все — в разделе «Ти
     $js = file_get_contents($PUB . '/js/profile-page.js');
     assert_true(strpos($js, "'/api/title-pick.php'") !== false, 'выбор уходит в title-pick.php');
     assert_true(is_file($PUB . '/api/title-pick.php'));
+});
+
+// 19.11.2026, слово владельца: у Love_Peroxide единственный не синий профиль —
+// розовый, Hello Kitty; титул «Министр экономики БФ», у знака — «Аналитик».
+test('профиль Love_Peroxide: своя розовая тема, титул министра, знак «Аналитик»', function () use ($PUB) {
+    $lp    = '3444182117';
+    $peer  = pf_render('900000001', $lp);
+    $self  = pf_render($lp, '');
+    $other = pf_render('900000001', '2841062255');
+    $mine  = pf_render('900000001', '');
+    assert_true($peer !== null && $self !== null && $other !== null && $mine !== null, 'страницы отрендерились');
+    if ($peer === null || $self === null || $other === null || $mine === null) { return; }
+
+    foreach (['чужой' => $peer, 'свой' => $self] as $who => $r) {
+        assert_eq(1, preg_match('~<body data-pf-skin="kitty">~', $r['html']), "$who: тема у body");
+        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitty.css?v=1" />'), "$who: стили темы");
+        assert_true(strpos($r['html'], 'data-tip="nick.analyst"') !== false, "$who: подпись знака — «Аналитик»");
+        preg_match('~<p class="nx-titles pf-titles" id="pfTitleMain">(.*?)</p>~s', $r['html'], $m);
+        assert_true(strpos($m[1] ?? '', 'data-kind="economy">Министр экономики БФ<') !== false, "$who: под ником титул министра");
+    }
+    assert_true(strpos($peer['html'], '<head>') < strpos($peer['html'], 'css/profile-kitty.css')
+        && strpos($peer['html'], 'css/giveaway.css') < strpos($peer['html'], 'css/profile-kitty.css'), 'тема — последней, перебивает синие');
+
+    foreach (['владелец' => $other, 'другой свой' => $mine] as $who => $r) {
+        assert_eq(1, preg_match('~<body>~', $r['html']), "$who: body без темы");
+        assert_eq(0, substr_count($r['html'], 'profile-kitty'), "$who: без розовых стилей");
+    }
+    assert_true(is_file($PUB . '/css/profile-kitty.css'));
+    foreach (['head', 'peek', 'peace', 'sit', 'wave'] as $k) {
+        assert_true(is_file($PUB . "/assets/kitty/kitty-$k.webp"), "картинка kitty-$k");
+    }
 });
 
 run_tests();

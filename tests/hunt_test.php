@@ -352,8 +352,8 @@ test('выданные титулы: владелец и разработчик 
     assert_eq(['frost'], array_column(chat_users_by_id($bare, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'и чат не падает');
 });
 
-// 19.11.2026, слово владельца: Love_Peroxide «Министр экономики БФ» не только
-// подписью у знака, но и плашкой — в профиле, чате и трейдинге.
+// 19.11.2026, слово владельца: Love_Peroxide «Министр экономики БФ» — плашкой
+// в профиле, чате и трейдинге (у знака у ника подпись теперь «Аналитик»).
 test('выданный титул: Love_Peroxide — «Министр экономики БФ»', function () {
     $lp = '3444182117';
     $p = ht_db();
@@ -435,8 +435,8 @@ test('плашки выданных титулов: ледяной текст с
     assert_true(strpos($css, '.nx-title[data-kind="hellfire"] {') !== false, 'у шута своя плашка');
     assert_true(is_file(HT_ROOT . '/public_html/assets/design/logo-mk.png'));
     assert_true(strpos($css, '.nx-title[data-kind="economy"] {') !== false, 'у министра экономики своя плашка');
-    assert_true(strpos($css, 'url("../assets/design/logo-glh.png")') !== false, 'со знаком «N», как у ника');
-    assert_true(is_file(HT_ROOT . '/public_html/assets/design/logo-glh.png'));
+    assert_true(strpos($css, 'url("../assets/kitty/kitty-head-72.webp")') !== false, 'розовая, с головой Hello Kitty');
+    assert_true(is_file(HT_ROOT . '/public_html/assets/kitty/kitty-head-72.webp'));
 });
 
 // --------------------------------------------------------------------------
