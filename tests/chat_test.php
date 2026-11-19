@@ -819,6 +819,19 @@ test('собеседник несёт знак у ника из общего с�
     assert_eq(null, chat_user_row($row, CH_NOW)['logo'], 'у остальных знака нет');
 });
 
+// 19.11.2026, слово владельца: чат с Love_Peroxide — в розовой теме Hello
+// Kitty, как его профиль, и его строка в списке диалогов розовая. Тему страница
+// берёт из поля skin собеседника (общий список NICK_SKINS).
+test('собеседник несёт свою тему: у Love_Peroxide — kitty, у остальных пусто', function () {
+    $row = ['roblox_id' => 3444182117, 'username' => 'chelovek5541', 'display_name' => 'Love_Peroxide',
+            'avatar_url' => '', 'last_login_at' => 0, 'last_seen_at' => 0];
+    assert_eq('kitty', chat_user_row($row, CH_NOW)['skin']);
+    $row['roblox_id'] = 2841062255;
+    assert_eq('', chat_user_row($row, CH_NOW)['skin'], 'у владельца сайта — обычный синий');
+    $row['roblox_id'] = 42;
+    assert_eq('', chat_user_row($row, CH_NOW)['skin']);
+});
+
 // --------------------------------------------------------------------------
 //  Непрочитанное: значок на кнопке чата в шапке
 // --------------------------------------------------------------------------

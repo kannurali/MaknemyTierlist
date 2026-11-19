@@ -107,7 +107,7 @@ function pf_fixture_db(string $file, array $tables = []): void {
     $ins->execute(['8755256557', 'kan_nurali', 'TheFool', '', $now - 86400, $now, $now, null, 0, 0]);
     $ins->execute(['3964875859', 'DANIKtyda', 'Agent_Tele2', '', $now - 86400, $now, $now, null, 0, 0]);
     // Love_Peroxide — знак «N» с подписью «Аналитик», титул «Министр экономики
-    // БФ» и единственная не синяя тема профиля (PROFILE_SKINS).
+    // БФ» и единственная не синяя тема профиля (NICK_SKINS).
     $ins->execute(['3444182117', 'chelovek5541', 'Love_Peroxide', '', $now - 86400, $now, $now, null, 0, 0]);
 
     // Зеркалят docs/migrations/2026-09-23-telegram.sql и 2026-09-25-tg-prefs.sql.

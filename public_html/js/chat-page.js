@@ -48,6 +48,22 @@
     return badge;
   }
 
+  function skinOf(user) {
+    var s = user && typeof user.skin === 'string' ? user.skin : '';
+    return /^[a-z]{1,20}$/.test(s) ? s : '';
+  }
+
+  function roomSkin(peer) {
+    var s = skinOf(peer);
+    if (s) {
+      shell.setAttribute('data-peer-skin', s);
+      document.body.setAttribute('data-chat-skin', s);
+    } else {
+      shell.removeAttribute('data-peer-skin');
+      document.body.removeAttribute('data-chat-skin');
+    }
+  }
+
   function titleChips(user) {
     if (!user || !user.titles || !user.titles.length) { return null; }
     var ru = (document.documentElement.lang || 'ru') === 'ru';
@@ -140,6 +156,7 @@
       b.tabIndex = t.id === state.thread ? 0 : -1;
       b.dataset.thread = String(t.id);
       if (t.id === state.thread) { b.classList.add('is-open'); }
+      if (skinOf(t.peer)) { b.dataset.skin = skinOf(t.peer); }
 
       var ava = document.createElement('span');
       ava.className = 'ct-ava';
@@ -1012,6 +1029,7 @@
     var keepAt   = keepScroll ? log.scrollTop : 0;
 
     roomTitleFor(peer);
+    roomSkin(peer);
 
     if (delBtn) {
       delBtn.hidden = !peer;
