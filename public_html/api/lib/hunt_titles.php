@@ -24,7 +24,8 @@ const HUNT_TITLES_DEFAULT = [
 // Запись без title — титул ивента, текст берётся у последнего сезона, чтобы
 // правка в админке меняла его и здесь. Личный титул идёт первым; kind — вид
 // плашки в css/hunt.css (data-kind). «Frost General» не переводится — слово
-// владельца.
+// владельца. Love_Peroxide (19.11.2026, слово владельца) — «Министр экономики
+// БФ», розовая плашка с Hello Kitty; у знака у ника подпись «Аналитик».
 const HUNT_TITLES_GRANTED = [
     '2841062255' => [
         ['kind' => 'frost', 'title' => ['ru' => 'Frost General — maknemy owner', 'en' => 'Frost General — maknemy owner']],
@@ -35,6 +36,9 @@ const HUNT_TITLES_GRANTED = [
         ['kind' => 'hellfire', 'title' => ['ru' => 'Шут преисподней', 'en' => 'Jester of the Underworld']],
         ['kind' => 'login'],
         ['kind' => 'hours'],
+    ],
+    '3444182117' => [
+        ['kind' => 'economy', 'title' => ['ru' => 'Министр экономики БФ', 'en' => 'BF Economy Minister']],
     ],
 ];
 
