@@ -1075,7 +1075,9 @@ test('PLAYEROK занимает все четыре места калькуля�
     assert.deepEqual(PLAYEROK.pages, ['tierlist', 'calc']);
     assert.equal(PLAYEROK.enabled, true);
     assert.equal(PLAYEROK.start, '2026-10-03');
-    assert.equal(PLAYEROK.end, '');
+    // С 31 октября его места закрывал розыгрыш Hellfire, с 19 ноября кампания
+    // закрыта датой: иначе после паузы розыгрыша Playerok вылез бы на калькуляторе.
+    assert.equal(PLAYEROK.end, '2026-11-18');
     assert.equal(safeHref(PLAYEROK.href), 'https://bit.ly/maknemy0310');
     assert.equal(PLAYEROK.advertiser, 'Playerok');
     for (const slot of SLOTS) {
@@ -1328,10 +1330,13 @@ test('на тирлисте Kupa перебивает розыгрыш, Playerok
     assert.equal(PROMO.bookedOn('strip', KUPA_RUN, 'tierlist'), KUPA);
 });
 
-test('Kupa не выходит за тирлист: остальные страницы у розыгрыша Hellfire', () => {
+test('Kupa не выходит за тирлист: до 19 ноября остальные страницы у розыгрыша Hellfire', () => {
+    const before = Date.parse('2026-11-17T12:00:00Z');
     for (const slot of SLOTS) {
         for (const page of ['news', 'calc', 'trading', 'stock']) {
-            assert.equal(houseFor(slot, KUPA_RUN, page).id, HOUSE_HELLFIRE.id, `${page} / ${slot}`);
+            assert.equal(houseFor(slot, before, page).id, HOUSE_HELLFIRE.id, `${page} / ${slot}`);
+            const now = houseFor(slot, KUPA_RUN, page);
+            assert.notEqual(now && now.id, KUPA.id, `${page} / ${slot}`);
         }
     }
     assert.notEqual(houseFor('rail', KUPA_RUN).id, KUPA.id, 'без страницы (предпросмотр админки)');
@@ -1351,6 +1356,146 @@ test('выключенный Kupa возвращает тирлист розыг
         assert.equal(houseFor('rail', KUPA_RUN, 'tierlist').id, HOUSE_HELLFIRE.id);
     } finally {
         KUPA.enabled = true;
+    }
+});
+
+// ============================================================================
+//  Пауза своих кампаний и курс по трейдам
+// ============================================================================
+
+// С 19 ноября 2026 года, пока рекламу не купили, владелец убрал со всех
+// страниц, кроме тирлиста, борта, нижнюю полосу и всплывающее окно. Места
+// посередине страницы (полоса калькулятора, середина стока, ленты новостей и
+// трейдинга) отданы курсу по трейдам. Тирлист не тронут: там Kupa.
+// Проданная реклама (кампания из админки или бронь с advertiser) идёт
+// впереди курса и паузы.
+
+const { HOUSE_COURSE, HOUSE_PAUSE, pausedOn } = PROMO;
+const PAUSE_RUN = Date.parse('2026-11-20T12:00:00Z');
+const PAUSED_PAGES = ['news', 'calc', 'trading', 'stock', 'giveaways'];
+
+test('HOUSE_COURSE — одна полоса из репозитория, ведёт на пост в Telegram', () => {
+    assert.deepEqual(HOUSE_COURSE.slots, ['strip']);
+    assert.equal(HOUSE_COURSE.enabled, true);
+    assert.equal(HOUSE_COURSE.start, '2026-11-19');
+    assert.equal(HOUSE_COURSE.end, '');
+    assert.equal(HOUSE_COURSE.advertiser, '');
+    assert.deepEqual(HOUSE_COURSE.pages, ['news', 'calc', 'trading', 'stock']);
+    assert.equal(safeHref(HOUSE_COURSE.href), 'https://t.me/Nexustierlist/1403');
+    const cre = PROMO.creativeFor(HOUSE_COURSE, 'strip');
+    assert.equal(cre.src, '/assets/promo/trade-course-strip.webp');
+    assert.deepEqual([cre.w, cre.h], [1200, 300]);
+    const fs = require('node:fs');
+    assert.ok(fs.existsSync(new URL('../public_html' + cre.src, import.meta.url)), cre.src);
+    for (const key of ['rail', 'dock', 'dockMini', 'popup']) {
+        assert.equal(PROMO.creativeFor(HOUSE_COURSE, key), null, key);
+    }
+    for (const other of [HOUSE_TG, HOUSE_SLOT, HOUSE_GIVEAWAY, HOUSE_HALLOWEEN, HOUSE_HELLFIRE,
+        HOUSE_CHANNEL, PLAYEROK, STARVELL, KUPA]) {
+        assert.notEqual(HOUSE_COURSE.id, other.id);
+    }
+});
+
+test('текст курса переведён на все языки', () => {
+    const I18N = require('../public_html/js/i18n.js');
+    for (const lang of I18N.supported()) {
+        for (const key of [HOUSE_COURSE.textKey, HOUSE_COURSE.ctaKey]) {
+            const s = I18N.t(key, lang);
+            assert.ok(s && s !== key, `${lang}: ${key}`);
+        }
+    }
+    assert.equal(I18N.t(HOUSE_COURSE.ctaKey, 'ru'), 'Подробнее');
+});
+
+test('пауза начинается 19 ноября по Москве и не касается тирлиста', () => {
+    assert.equal(HOUSE_PAUSE.end, '');
+    const first = dayBoundsMsk('2026-11-19');
+    for (const page of PAUSED_PAGES) {
+        assert.equal(pausedOn(page, first.startMs - 1), false, `18 ноября ещё нет: ${page}`);
+        assert.equal(pausedOn(page, first.startMs), true, `19 ноября уже пауза: ${page}`);
+    }
+    assert.equal(pausedOn('tierlist', PAUSE_RUN), false);
+    assert.equal(pausedOn(undefined, PAUSE_RUN), false, 'предпросмотр админки без страницы');
+});
+
+test('на паузе посередине курс, бортов, нижней полосы и окна нет', () => {
+    for (const page of PAUSED_PAGES) {
+        for (const slot of ['rail', 'dock', 'popup']) {
+            assert.equal(houseFor(slot, PAUSE_RUN, page), null, `${page} / ${slot}`);
+            assert.deepEqual(eligible({}, slot, PAUSE_RUN, page), [], `${page} / ${slot}`);
+        }
+        assert.equal(popupPick({}, {}, PAUSE_RUN, 0, page), null, `${page}: окна нет`);
+    }
+    for (const page of ['news', 'calc', 'trading', 'stock']) {
+        assert.equal(houseFor('strip', PAUSE_RUN, page).id, HOUSE_COURSE.id, page);
+    }
+    assert.equal(houseFor('strip', PAUSE_RUN, 'giveaways'), null, 'на розыгрышах полосы нет');
+});
+
+test('тирлист на паузе прежний: всё у Kupa', () => {
+    for (const slot of SLOTS) {
+        assert.equal(houseFor(slot, PAUSE_RUN, 'tierlist').id, KUPA.id, slot);
+    }
+    assert.equal(popupPick({}, {}, PAUSE_RUN, 0, 'tierlist').id, KUPA.id);
+    KUPA.enabled = false;
+    try {
+        assert.equal(houseFor('rail', PAUSE_RUN, 'tierlist').id, HOUSE_HELLFIRE.id,
+            'без Kupa тирлист снова у розыгрыша, как до паузы');
+    } finally {
+        KUPA.enabled = true;
+    }
+});
+
+test('проданная реклама идёт впереди курса и паузы', () => {
+    for (const page of ['news', 'calc', 'trading', 'stock']) {
+        for (const slot of SLOTS) {
+            assert.deepEqual(eligible(PAID_EVERYWHERE, slot, PAUSE_RUN, page).map(c => c.id), ['paid'], `${page} / ${slot}`);
+        }
+        assert.equal(popupPick(PAID_EVERYWHERE, {}, PAUSE_RUN, 0, page).id, 'paid', page);
+    }
+    const pages = KUPA.pages;
+    KUPA.pages = ['news'];
+    try {
+        assert.equal(houseFor('rail', PAUSE_RUN, 'news').id, KUPA.id, 'бронь рекламодателя пауза не снимает');
+    } finally {
+        KUPA.pages = pages;
+    }
+});
+
+test('idleRails прячет пустые борта только на паузе и возвращает их под рекламу', () => {
+    const rail = () => ({ style: { visibility: '' } });
+    const a = rail(), b = rail();
+    const realNow = Date.now;
+    Date.now = () => PAUSE_RUN;
+    try {
+        assert.equal(PROMO.idleRails('news', [a, b, null], false), true);
+        assert.deepEqual([a.style.visibility, b.style.visibility], ['hidden', 'hidden']);
+        assert.equal(PROMO.idleRails('news', [a, b], true), false, 'реклама пришла — борта видны');
+        assert.deepEqual([a.style.visibility, b.style.visibility], ['', '']);
+        const t = rail();
+        assert.equal(PROMO.idleRails('tierlist', [t], false), false, 'тирлист не на паузе');
+        assert.equal(t.style.visibility, '');
+    } finally {
+        Date.now = realNow;
+    }
+    Date.now = () => Date.parse('2026-11-10T12:00:00Z');
+    try {
+        const c = rail();
+        assert.equal(PROMO.idleRails('news', [c], false), false, 'до паузы заглушка стоит как раньше');
+        assert.equal(c.style.visibility, '');
+    } finally {
+        Date.now = realNow;
+    }
+});
+
+test('конец паузы одной датой возвращает свои кампании', () => {
+    const saved = HOUSE_PAUSE.end;
+    HOUSE_PAUSE.end = '2026-11-19';
+    try {
+        assert.equal(houseFor('rail', PAUSE_RUN, 'news').id, HOUSE_HELLFIRE.id);
+        assert.equal(houseFor('strip', PAUSE_RUN, 'stock').id, HOUSE_HELLFIRE.id);
+    } finally {
+        HOUSE_PAUSE.end = saved;
     }
 });
 

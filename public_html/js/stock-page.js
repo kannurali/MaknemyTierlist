@@ -538,6 +538,7 @@
     var paid = promoDoc ? promo.eligible(promo.normalizeDoc(promoDoc), "rail", Date.now(), PROMO_PAGE) : [];
     var house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
     var rails = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+    promo.idleRails(PROMO_PAGE, [$("skRail"), $("skRailR")], rails.length > 0);
     if (rails.length) {
       fillRail($("skRail"), rails[0]);
       fillRail($("skRailR"), rails[1] || rails[0]);
@@ -546,6 +547,7 @@
 
   function renderPromo() {
     if (!window.PROMO) return;
+    window.PROMO.idleRails(PROMO_PAGE, [$("skRail"), $("skRailR")], false);
     fetch(PROMO_API, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })

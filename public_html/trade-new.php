@@ -386,13 +386,13 @@ page_lscache();
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
-  <script src="js/promo.js?v=41" fetchpriority="high"></script>
+  <script src="js/promo.js?v=42" fetchpriority="high"></script>
 
   <script src="js/promo-dock.js?v=12" fetchpriority="high"></script>
 
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
   <script src="js/calc.js?v=9" fetchpriority="high"></script>
-  <script src="js/calculator-page.js?v=29" fetchpriority="high"></script>
+  <script src="js/calculator-page.js?v=30" fetchpriority="high"></script>
   <script src="js/trade-new.js?v=3" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>

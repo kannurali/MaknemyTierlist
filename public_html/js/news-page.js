@@ -543,6 +543,7 @@
     const right = document.getElementById("newsRailR");
     const dock = document.getElementById("promoDock");
     if (!promo) return;
+    promo.idleRails(PROMO_PAGE, [left, right], false);
 
     fetch(PROMO_API, { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
@@ -563,6 +564,7 @@
 
         const house = promo.houseFor("rail", Date.now(), PROMO_PAGE);
         const list = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+        promo.idleRails(PROMO_PAGE, [left, right], list.length > 0);
         if (!list.length) return;
         fillNewsRail(left, list[0]);
 

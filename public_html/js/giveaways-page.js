@@ -171,6 +171,7 @@
   function renderRails() {
     var promo = window.PROMO;
     if (!promo || !$("gwRailL")) return;
+    promo.idleRails(PROMO_PAGE, [$("gwRailL"), $("gwRailR")], false);
     fetch(PROMO_API, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })
@@ -179,6 +180,7 @@
         var paid = doc ? promo.eligible(promo.normalizeDoc(doc), "rail", now, PROMO_PAGE) : [];
         var house = promo.houseFor("rail", now, PROMO_PAGE);
         var rails = paid.length ? paid : (house && house.id !== promo.HOUSE_SLOT.id ? [house] : []);
+        promo.idleRails(PROMO_PAGE, [$("gwRailL"), $("gwRailR")], rails.length > 0);
         if (!rails.length) return;
         fillRail($("gwRailL"), rails[0]);
         fillRail($("gwRailR"), rails[1] || rails[0]);
