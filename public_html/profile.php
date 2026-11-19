@@ -76,6 +76,7 @@ $pfSelf = $pfState === 'card' && $pfWho === $pfMe;
 
 $pfOwner = $pfState === 'card' && $pfWho === PROFILE_OWNER_ID;
 $pfLogo  = $pfState === 'card' ? nick_logo($pfWho) : null;
+$pfSkin  = $pfState === 'card' ? (PROFILE_SKINS[$pfWho] ?? '') : '';
 // Подпись знака («Владелец» / «Разработчик») — тем же приёмом, что статус
 // ниже: ключ словаря считается здесь, текст на языке страницы даёт ta().
 // Всплывающую подсказку рисует js/topbar.js по data-tip.
@@ -171,11 +172,12 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
-<link rel="stylesheet" href="css/hunt.css?v=8" />
+<link rel="stylesheet" href="css/hunt.css?v=9" />
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
+<?php if ($pfSkin === 'kitty'): ?><link rel="stylesheet" href="css/profile-kitty.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
-<body>
+<body<?php if ($pfSkin !== ''): ?> data-pf-skin="<?= $pfSkin ?>"<?php endif; ?>>
 
   <header class="mk-top">
     <a class="mk-top-brand" href="<?= u('/') ?>">

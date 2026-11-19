@@ -352,6 +352,25 @@ test('выданные титулы: владелец и разработчик 
     assert_eq(['frost'], array_column(chat_users_by_id($bare, [$owner], ht_at(9))[$owner]['titles'], 'kind'), 'и чат не падает');
 });
 
+// 19.11.2026, слово владельца: Love_Peroxide «Министр экономики БФ» — плашкой
+// в профиле, чате и трейдинге (у знака у ника подпись теперь «Аналитик»).
+test('выданный титул: Love_Peroxide — «Министр экономики БФ»', function () {
+    $lp = '3444182117';
+    $p = ht_db();
+    $h = ht_hunt($p, ['status' => 'drawn']);
+    ht_user($p, $lp, 'chelovek5541');
+    $eco = ['ru' => 'Министр экономики БФ', 'en' => 'BF Economy Minister'];
+    assert_eq([['kind' => 'economy', 'title' => $eco, 'main' => true]], hunt_titles_for($p, [$lp])[$lp], 'только личный, без титулов ивента');
+    assert_eq(['economy'], array_column(chat_users_by_id($p, [$lp], ht_at(9))[$lp]['titles'], 'kind'), 'в чате');
+    assert_eq(['economy'], array_column(trade_authors($p, [$lp], ht_at(9))[$lp]['titles'], 'kind'), 'в трейдинге');
+    assert_eq('BF Economy Minister', hunt_title_text($eco, 'de'));
+
+    ht_insert($p, 'hunt_titles', ['user_id' => $lp, 'hunt_id' => $h, 'kind' => 'login', 'created_at' => ht_at(7)]);
+    assert_eq(['economy', 'login'], array_column(hunt_titles_for($p, [$lp])[$lp], 'kind'), 'заработанный — после личного');
+    assert_eq('ok', hunt_title_pick($p, $lp, 'login', ht_at(9)), 'выбрать можно любой свой');
+    assert_eq('ok', hunt_title_pick($p, $lp, 'economy', ht_at(9, 1)));
+});
+
 // 08.11.2026, слово владельца: у ника виден один титул, все — в профиле, там
 // же человек выбирает, какой показывать.
 test('главный титул: выбор в профиле меняет титул у ника, порядок списка тот же', function () {
@@ -415,6 +434,9 @@ test('плашки выданных титулов: ледяной текст с
     assert_true(strpos($css, 'url("../assets/design/logo-mk.png")') !== false, 'со знаком владельца');
     assert_true(strpos($css, '.nx-title[data-kind="hellfire"] {') !== false, 'у шута своя плашка');
     assert_true(is_file(HT_ROOT . '/public_html/assets/design/logo-mk.png'));
+    assert_true(strpos($css, '.nx-title[data-kind="economy"] {') !== false, 'у министра экономики своя плашка');
+    assert_true(strpos($css, 'url("../assets/kitty/kitty-head-72.webp")') !== false, 'розовая, с головой Hello Kitty');
+    assert_true(is_file(HT_ROOT . '/public_html/assets/kitty/kitty-head-72.webp'));
 });
 
 // --------------------------------------------------------------------------
