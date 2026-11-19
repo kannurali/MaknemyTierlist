@@ -1617,6 +1617,9 @@ test('профиль Love_Peroxide: своя розовая тема, титул
         assert_eq(0, substr_count($r['html'], 'profile-kitty'), "$who: без розовых стилей");
     }
     assert_true(is_file($PUB . '/css/profile-kitty.css'));
+    assert_eq(1, substr_count($peer['html'], '<span class="pf-hat" aria-hidden="true"></span>'), 'ободок с ушками над аватаркой');
+    assert_eq(1, substr_count($self['html'], 'class="pf-hat"'), 'и у себя');
+    assert_eq(0, substr_count($other['html'] . $mine['html'], 'pf-hat'), 'у остальных ободка нет');
     foreach (['head', 'peek', 'peace', 'sit', 'wave'] as $k) {
         assert_true(is_file($PUB . "/assets/kitty/kitty-$k.webp"), "картинка kitty-$k");
     }
