@@ -134,6 +134,6 @@ $vxCard = og_brand_card();
   <script src="js/news.js?v=6" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=34" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=35" fetchpriority="high"></script>
 </body>
 </html>

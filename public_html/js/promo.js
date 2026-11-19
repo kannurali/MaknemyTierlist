@@ -753,7 +753,7 @@
     enabled: true,
     weight: 1,
     start: "2026-10-03",
-    end: "",
+    end: "2026-11-18",
     href: "https://bit.ly/maknemy0310",
     text: "",
     cta: "",
@@ -825,6 +825,35 @@
     notes: ""
   };
 
+  var HOUSE_COURSE = {
+    id: "house-trade-course",
+    name: "house-trade-course",
+    advertiser: "",
+    enabled: true,
+    weight: 1,
+    start: "2026-11-19",
+    end: "",
+    href: "https://t.me/Nexustierlist/1403",
+    text: "",
+    cta: "",
+    textKey: "promo.courseText",
+    ctaKey: "promo.courseCta",
+    erid: "",
+    pages: ["news", "calc", "trading", "stock"],
+    slots: ["strip"],
+    creatives: {
+      strip: { src: "/assets/promo/trade-course-strip.webp", w: 1200, h: 300, anim: false, poster: "" }
+    },
+    popup: { delayMs: 12000, capHours: 24, maxPerWeek: 3 },
+    notes: ""
+  };
+
+  var HOUSE_PAUSE = {
+    start: "2026-11-19",
+    end: "",
+    pages: ["news", "calc", "trading", "stock", "giveaways"]
+  };
+
   var BOOKED = [KUPA, HOUSE_HELLFIRE, PLAYEROK, STARVELL];
 
   function bookedFor(campaign, slot, now, page) {
@@ -834,8 +863,22 @@
       && !!creativeFor(campaign, slot);
   }
 
+  function pausedOn(page, nowMs) {
+    return onPage(HOUSE_PAUSE, page) && inWindow(HOUSE_PAUSE, nowMs);
+  }
+
+  function idleRails(page, rails, filled) {
+    var off = !filled && pausedOn(page, Date.now());
+    for (var i = 0; i < rails.length; i++) {
+      if (rails[i]) { rails[i].style.visibility = off ? "hidden" : ""; }
+    }
+    return off;
+  }
+
   function bookedOn(slot, nowMs, page) {
+    var paused = pausedOn(page, nowMs);
     for (var i = 0; i < BOOKED.length; i++) {
+      if (paused && !BOOKED[i].advertiser) { continue; }
       if (bookedFor(BOOKED[i], slot, nowMs, page)) { return BOOKED[i]; }
     }
     return null;
@@ -845,6 +888,9 @@
     var now = isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
     var booked = bookedOn(slot, now, page);
     if (booked) { return booked; }
+    if (pausedOn(page, now)) {
+      return bookedFor(HOUSE_COURSE, slot, now, page) ? HOUSE_COURSE : null;
+    }
     if (bookedFor(HOUSE_HALLOWEEN, slot, now, page)) { return HOUSE_HALLOWEEN; }
     if (bookedFor(HOUSE_GIVEAWAY, slot, now, page)) { return HOUSE_GIVEAWAY; }
     if (bookedFor(HOUSE_CHANNEL, slot, now, page)) { return HOUSE_CHANNEL; }
@@ -906,6 +952,10 @@
     HOUSE_HALLOWEEN: HOUSE_HALLOWEEN,
     HOUSE_HELLFIRE: HOUSE_HELLFIRE,
     HOUSE_CHANNEL: HOUSE_CHANNEL,
+    HOUSE_COURSE: HOUSE_COURSE,
+    HOUSE_PAUSE: HOUSE_PAUSE,
+    pausedOn: pausedOn,
+    idleRails: idleRails,
     PLAYEROK: PLAYEROK,
     STARVELL: STARVELL,
     KUPA: KUPA,

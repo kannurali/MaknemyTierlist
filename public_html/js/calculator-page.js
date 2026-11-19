@@ -566,6 +566,7 @@
     const strip = document.getElementById("tcStrip");
     const dock = document.getElementById("promoDock");
     if (!promo) return;
+    promo.idleRails(PROMO_PAGE, [left, right], false);
 
     fetch(PROMO_API, { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
@@ -585,6 +586,7 @@
         if (!left || !right) return;
 
         const list = promoList(doc, "rail");
+        promo.idleRails(PROMO_PAGE, [left, right], list.length > 0);
         if (!list.length) return;
         fillAd(left, list[0], "rail");
 

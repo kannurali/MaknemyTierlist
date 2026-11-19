@@ -419,7 +419,7 @@ if (site_skin() !== null && !defined('TESTING')) { require __DIR__ . '/' . site_
   <script src="js/news.js?v=6" fetchpriority="high"></script>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
 
-  <script src="js/promo.js?v=41" fetchpriority="high"></script>
+  <script src="js/promo.js?v=42" fetchpriority="high"></script>
 
   <script src="js/promo-feed.js?v=3" fetchpriority="high"></script>
 
@@ -428,7 +428,7 @@ if (site_skin() !== null && !defined('TESTING')) { require __DIR__ . '/' . site_
   <script src="js/promo-popup.js?v=6" fetchpriority="high"></script>
 
   <script src="js/protect.js?v=3" fetchpriority="high"></script>
-  <script src="js/news-page.js?v=34" fetchpriority="high"></script>
+  <script src="js/news-page.js?v=35" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>
   <script src="js/giveaway-pop.js?v=1" fetchpriority="high"></script>
   <script src="js/gw-card.js?v=6" fetchpriority="high"></script>

@@ -281,9 +281,9 @@ page_lscache();
   <?= i18n_dict_tag() ?>
   <script src="js/i18n.js?v=84" fetchpriority="high"></script>
   <script src="js/hunt-bar.js?v=2" fetchpriority="high"></script>
-  <script src="js/promo.js?v=41" fetchpriority="high"></script>
+  <script src="js/promo.js?v=42" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>
-  <script src="js/giveaways-page.js?v=4" fetchpriority="high"></script>
+  <script src="js/giveaways-page.js?v=5" fetchpriority="high"></script>
   <script src="js/gw-notify.js?v=2" fetchpriority="high"></script>
 </body>
 </html>
