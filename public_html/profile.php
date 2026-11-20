@@ -657,7 +657,7 @@ $pfTitle = $pfNick !== ''
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
   <script src="js/trade-cards.js?v=8" defer></script>
-  <script src="js/profile-trades.js?v=4" defer></script>
+  <script src="js/profile-trades.js?v=5" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>

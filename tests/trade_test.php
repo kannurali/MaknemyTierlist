@@ -236,6 +236,47 @@ test('порог скама на странице публикации тот ж
         'процент берётся из калькулятора, как на экране');
 });
 
+// 2026-11-20, слово владельца: для Maknemy (PROFILE_OWNER_ID) у трейдов нет
+// ограничений — ни 2 в сутки, ни паузы, ни потолка активных, ни скам-фильтра.
+test('владелец публикует без пределов, остальные — как раньше', function () {
+    $own = PROFILE_OWNER_ID;
+    $pdo = trade_db();
+    $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at, last_seen_at, likes, dislikes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$own, 'Shamill_prod', 'maknemy', '', NOW - 999, NOW - 999, NOW - 60, 0, 0]);
+    assert_true(trade_unlimited($own), 'владелец без пределов');
+    assert_true(!trade_unlimited('101') && !trade_unlimited(''), 'остальные и аноним — с пределами');
+
+    $n = TRADE_ACTIVE_MAX + TRADE_RATE_MAX + 3;
+    for ($i = 0; $i < $n; $i++) {
+        assert_eq(200, trade_create($pdo, $own, ['idDark'], [], NOW + $i)[0], "публикация №" . ($i + 1));
+    }
+    $id = (int)$pdo->query("SELECT MAX(id) FROM trade_offers WHERE user_id = $own")->fetchColumn();
+    trade_close($pdo, $own, false, $id, 'cancel', NOW + 100);
+    assert_eq(200, trade_create($pdo, $own, ['idDark'], [], NOW + 101)[0], 'сразу после «снять» — без паузы');
+    assert_eq(200, trade_create($pdo, $own, ['idBoat'], ['idDragon'], NOW + 102)[0], 'скам-фильтр не мешает');
+
+    $q = trade_quota($pdo, $own, NOW + 103);
+    assert_true($q['unlimited'], 'квота говорит «без пределов»');
+    assert_eq([0, 0], [$q['retryAt'], $q['cooldownAt']], 'ни ожидания, ни паузы');
+    assert_true(trade_quota($pdo, '101', NOW)['unlimited'] === false, 'у остальных флага нет');
+
+    $live = $n + 1;
+    assert_eq($live, count(trade_user_live($pdo, $own, '101', NOW + 103)), 'в профиле видны все его живые, а не 5');
+    assert_eq($live, count(trade_feed($pdo, $own, '', 0, NOW + 103)['mine']), 'и в ленте у себя — все');
+
+    for ($i = 0; $i < TRADE_RATE_MAX; $i++) { assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + $i)[0]); }
+    assert_eq(429, trade_create($pdo, '101', ['idDark'], [], NOW + 5)[0], 'у обычного игрока предел остался');
+    assert_eq(400, trade_create($pdo, '202', ['idBoat'], ['idDragon'], NOW)[0], 'и скам-фильтр тоже');
+
+    $api = file_get_contents(__DIR__ . '/../public_html/api/trade_create.php');
+    assert_true(strpos($api, "!trade_unlimited(\$me) && !rate_limit_allow('trade_create'") !== false, 'частота запросов владельца не режется');
+    $js = file_get_contents(__DIR__ . '/../public_html/js/trade-new.js');
+    assert_true(strpos($js, 'st.quota.unlimited') !== false, 'страница публикации понимает флаг');
+    $pf = file_get_contents(__DIR__ . '/../public_html/js/profile-trades.js');
+    assert_true(strpos($pf, 'if (!q || q.unlimited) { quotaEl.hidden = true; return; }') !== false, 'в профиле «осталось N» не пишется');
+});
+
 // --------------------------------------------------------------------------
 //  Отклик и истечение
 // --------------------------------------------------------------------------

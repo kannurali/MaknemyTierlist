@@ -12,7 +12,7 @@ if (!defined('TESTING')) {
     // целый интернет-клуб. Потолок открытых объявлений держит trade_create,
     // этот — частоту: снять и выложить заново сто раз подряд тоже спам.
     $me = trade_me($_SESSION);
-    if ($me !== '' && !rate_limit_allow('trade_create', $me, 20, 3600, time())) {
+    if ($me !== '' && !trade_unlimited($me) && !rate_limit_allow('trade_create', $me, 20, 3600, time())) {
         json_out(['ok' => false, 'error' => 'rate_limited'], 429);
         exit;
     }

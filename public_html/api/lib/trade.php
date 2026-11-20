@@ -74,6 +74,21 @@ function trade_me(array $session): string {
 }
 
 /**
+ * Публикует без пределов: владелец сайта (слово владельца, 2026-11-20).
+ * Для него не действуют ни 2 в сутки, ни пауза после закрытия, ни потолок
+ * активных, ни скам-фильтр, ни частота запросов в trade_create.php. Срок
+ * жизни объявления (TRADE_QUIET_TTL / TRADE_TTL) остаётся общим.
+ */
+function trade_unlimited(string $me): bool {
+    return $me !== '' && $me === PROFILE_OWNER_ID;
+}
+
+/** Сколько живых объявлений человека отдаёт один список. */
+function trade_live_cap(string $userId): int {
+    return trade_unlimited($userId) ? TRADE_MINE_MAX : TRADE_ACTIVE_MAX;
+}
+
+/**
  * Есть ли таблица объявлений. На бою её нет до запуска миграции
  * docs/migrations/2026-09-23-trading.sql — это штатное состояние, а не
  * ошибка: лента тогда пустая, публикация отвечает 503.
@@ -199,14 +214,19 @@ function trade_quota(PDO $pdo, string $me, int $now): array {
         }
     }
     $n = count($used);
+    $free = trade_unlimited($me);
+    if ($free) { $cooldownAt = 0; }
     return [
+        // Без пределов (trade_unlimited): числа ниже — справка, страница по
+        // этому флагу кнопку не запирает и «осталось N» не пишет.
+        'unlimited'  => $free,
         'max'        => TRADE_RATE_MAX,
         'window'     => TRADE_RATE_WINDOW,
         'used'       => $n,
         'left'       => max(0, TRADE_RATE_MAX - $n),
         // Когда можно следующее: у переполненного окна — когда из него выйдет
         // самое старое из тех, что держат предел. 0 — можно прямо сейчас.
-        'retryAt'    => $n >= TRADE_RATE_MAX ? $used[$n - TRADE_RATE_MAX] + TRADE_RATE_WINDOW : 0,
+        'retryAt'    => !$free && $n >= TRADE_RATE_MAX ? $used[$n - TRADE_RATE_MAX] + TRADE_RATE_WINDOW : 0,
         'active'     => $active,
         'activeMax'  => TRADE_ACTIVE_MAX,
         'activeLeft' => max(0, TRADE_ACTIVE_MAX - $active),
@@ -272,22 +292,24 @@ function trade_create(PDO $pdo, string $me, $giveRaw, $wantRaw, int $now): array
     if ($give === null || $want === null) { return [400, ['ok' => false, 'error' => 'bad_items']]; }
     if (!$give)                           { return [400, ['ok' => false, 'error' => 'empty_give']]; }
 
-    $pct = trade_diff_pct($give, $want, $catalog);
-    if ($pct !== null && abs($pct) > TRADE_FAIR_PCT) {
-        return [400, ['ok' => false, 'error' => 'unfair', 'pct' => (int)round(abs($pct)), 'max' => TRADE_FAIR_PCT]];
-    }
+    if (!trade_unlimited($me)) {
+        $pct = trade_diff_pct($give, $want, $catalog);
+        if ($pct !== null && abs($pct) > TRADE_FAIR_PCT) {
+            return [400, ['ok' => false, 'error' => 'unfair', 'pct' => (int)round(abs($pct)), 'max' => TRADE_FAIR_PCT]];
+        }
 
-    // Сначала «активные»: это предел, который человек снимает сам (снять,
-    // отметить сделку), и о нём ему полезнее узнать первым.
-    $quota = trade_quota($pdo, $me, $now);
-    if ($quota['activeLeft'] === 0) {
-        return [409, ['ok' => false, 'error' => 'too_many_active', 'quota' => $quota]];
-    }
-    if ($quota['left'] === 0) {
-        return [429, ['ok' => false, 'error' => 'too_many', 'quota' => $quota]];
-    }
-    if ($quota['cooldownAt'] > 0) {
-        return [429, ['ok' => false, 'error' => 'cooldown', 'quota' => $quota]];
+        // Сначала «активные»: это предел, который человек снимает сам (снять,
+        // отметить сделку), и о нём ему полезнее узнать первым.
+        $quota = trade_quota($pdo, $me, $now);
+        if ($quota['activeLeft'] === 0) {
+            return [409, ['ok' => false, 'error' => 'too_many_active', 'quota' => $quota]];
+        }
+        if ($quota['left'] === 0) {
+            return [429, ['ok' => false, 'error' => 'too_many', 'quota' => $quota]];
+        }
+        if ($quota['cooldownAt'] > 0) {
+            return [429, ['ok' => false, 'error' => 'cooldown', 'quota' => $quota]];
+        }
     }
 
     $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at)
@@ -516,7 +538,7 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now, arra
         $ms = $pdo->prepare("SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at, o.closed_at
                                FROM trade_offers o
                               WHERE o.user_id = ? AND $liveMine
-                           ORDER BY o.id DESC LIMIT " . TRADE_ACTIVE_MAX);
+                           ORDER BY o.id DESC LIMIT " . trade_live_cap($me));
         $ms->execute(array_merge([$me], $pm));
         $mine = trade_rows_out($pdo, $ms->fetchAll(PDO::FETCH_ASSOC), $me, $now);
     }
@@ -548,7 +570,8 @@ function trade_mine_all(PDO $pdo, string $me, int $now): array {
  * Живые объявления одного человека — для его профиля, который смотрит другой
  * трейдер: «что у него сейчас есть на обмен». Только то, что стоит в ленте;
  * снятые, истёкшие и сделки остаются делом автора (trade_mine_all), чужому
- * они ничего не дают. Больше TRADE_ACTIVE_MAX живых не бывает.
+ * они ничего не дают. Больше TRADE_ACTIVE_MAX живых не бывает — кроме
+ * владельца без пределов (trade_live_cap).
  */
 function trade_user_live(PDO $pdo, string $userId, string $me, int $now): array {
     if ($userId === '' || !trade_ready($pdo)) { return []; }
@@ -556,7 +579,7 @@ function trade_user_live(PDO $pdo, string $userId, string $me, int $now): array 
     $st = $pdo->prepare("SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at, o.closed_at
                            FROM trade_offers o
                           WHERE o.user_id = ? AND $live
-                       ORDER BY o.id DESC LIMIT " . TRADE_ACTIVE_MAX);
+                       ORDER BY o.id DESC LIMIT " . trade_live_cap($userId));
     $st->execute(array_merge([$userId], $params));
     return trade_rows_out($pdo, $st->fetchAll(PDO::FETCH_ASSOC), $me, $now);
 }
