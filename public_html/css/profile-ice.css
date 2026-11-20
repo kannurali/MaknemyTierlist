@@ -23,63 +23,15 @@ body[data-pf-skin="ice"] {
   --ice-glow: rgba(116, 228, 255, .45);
   --ice-btn: linear-gradient(180deg, #f6fdff 0%, #bff1ff 50%, #7cdafb 100%);
   --ice-edge: linear-gradient(180deg, rgba(222, 248, 255, .95) 0%, rgba(116, 228, 255, .5) 40%, rgba(29, 127, 203, .32) 100%);
-
-  --ice-u: min(1px, calc(100vw / 1443));
-  --ice-top: calc(464 * var(--ice-u));
-  --ice-sky:
-    radial-gradient(circle calc(150 * var(--ice-u)) at calc(50% + 640 * var(--ice-u)) calc(92 * var(--ice-u)), rgba(4, 10, 23, .8), rgba(4, 10, 23, 0)),
-    linear-gradient(90deg,
-      var(--ice-night) 0,
-      var(--ice-night) calc(50% - 800 * var(--ice-u)),
-      rgba(4, 10, 23, 0) calc(50% - 680 * var(--ice-u)),
-      rgba(4, 10, 23, 0) calc(50% + 680 * var(--ice-u)),
-      var(--ice-night) calc(50% + 800 * var(--ice-u)),
-      var(--ice-night) 100%),
-    linear-gradient(180deg,
-      rgba(4, 10, 23, .5) 0,
-      rgba(4, 10, 23, 0) calc(150 * var(--ice-u)),
-      rgba(4, 10, 23, 0) calc(360 * var(--ice-u)),
-      rgba(4, 10, 23, .75) calc(500 * var(--ice-u)),
-      var(--ice-night) calc(640 * var(--ice-u))),
-    url("../assets/ice/ice-sky.webp");
-  --ice-sky-size: 100% calc(900 * var(--ice-u)), 100% calc(900 * var(--ice-u)), 100% calc(900 * var(--ice-u)), calc(1600 * var(--ice-u)) auto;
-  --ice-sky-pos: center top, center top, center top, center top;
-  --ice-sky-rep: no-repeat, no-repeat, no-repeat, no-repeat;
   --ice-snow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480'%3E%3Cg fill='%23e1f5ff'%3E%3Ccircle cx='213' cy='249' r='0.9' fill-opacity='0.45'/%3E%3Ccircle cx='340' cy='201' r='1' fill-opacity='0.23'/%3E%3Ccircle cx='64' cy='107' r='1' fill-opacity='0.32'/%3E%3Ccircle cx='160' cy='279' r='1.1' fill-opacity='0.29'/%3E%3Ccircle cx='145' cy='59' r='0.9' fill-opacity='0.39'/%3E%3Ccircle cx='183' cy='177' r='0.7' fill-opacity='0.47'/%3E%3Ccircle cx='282' cy='171' r='1' fill-opacity='0.36'/%3E%3Ccircle cx='293' cy='249' r='0.9' fill-opacity='0.49'/%3E%3Ccircle cx='221' cy='470' r='0.9' fill-opacity='0.33'/%3E%3Ccircle cx='179' cy='352' r='1.3' fill-opacity='0.54'/%3E%3Ccircle cx='22' cy='149' r='0.7' fill-opacity='0.26'/%3E%3Ccircle cx='84' cy='392' r='0.8' fill-opacity='0.5'/%3E%3Ccircle cx='206' cy='15' r='1.5' fill-opacity='0.36'/%3E%3Ccircle cx='12' cy='332' r='0.8' fill-opacity='0.45'/%3E%3Ccircle cx='439' cy='32' r='0.9' fill-opacity='0.32'/%3E%3Ccircle cx='354' cy='396' r='0.9' fill-opacity='0.2'/%3E%3Ccircle cx='264' cy='68' r='0.7' fill-opacity='0.52'/%3E%3Ccircle cx='176' cy='107' r='1.1' fill-opacity='0.18'/%3E%3Ccircle cx='259' cy='416' r='1.3' fill-opacity='0.29'/%3E%3Ccircle cx='22' cy='413' r='0.7' fill-opacity='0.54'/%3E%3Ccircle cx='119' cy='161' r='1.5' fill-opacity='0.2'/%3E%3Ccircle cx='296' cy='366' r='0.9' fill-opacity='0.36'/%3E%3Ccircle cx='426' cy='310' r='0.9' fill-opacity='0.28'/%3E%3Ccircle cx='395' cy='88' r='0.9' fill-opacity='0.44'/%3E%3Ccircle cx='386' cy='168' r='0.8' fill-opacity='0.42'/%3E%3Ccircle cx='133' cy='447' r='1' fill-opacity='0.19'/%3E%3Ccircle cx='316' cy='114' r='1.3' fill-opacity='0.33'/%3E%3Ccircle cx='464' cy='456' r='1.5' fill-opacity='0.48'/%3E%3Ccircle cx='231' cy='328' r='1.3' fill-opacity='0.39'/%3E%3Ccircle cx='28' cy='268' r='1.1' fill-opacity='0.44'/%3E%3Ccircle cx='467' cy='153' r='1.1' fill-opacity='0.5'/%3E%3Ccircle cx='18' cy='470' r='1.3' fill-opacity='0.54'/%3E%3Ccircle cx='81' cy='243' r='1.1' fill-opacity='0.33'/%3E%3Ccircle cx='21' cy='54' r='1.5' fill-opacity='0.35'/%3E%3Ccircle cx='329' cy='450' r='1.5' fill-opacity='0.4'/%3E%3Ccircle cx='381' cy='34' r='0.9' fill-opacity='0.18'/%3E%3Ccircle cx='190' cy='424' r='1.5' fill-opacity='0.3'/%3E%3Ccircle cx='384' cy='447' r='0.8' fill-opacity='0.44'/%3E%3C/g%3E%3C/svg%3E");
 
   background-color: var(--ice-night);
-  background-image: var(--ice-snow), var(--ice-sky);
-  background-size: 480px 480px, var(--ice-sky-size);
-  background-position: 0 0, var(--ice-sky-pos);
-  background-repeat: repeat, var(--ice-sky-rep);
-}
-
-@media (max-width: 900px) {
-  body[data-pf-skin="ice"] {
-    --ice-art-w: calc(100vw + 40px);
-    --ice-art-shift: 0px;
-    --ice-top: calc(var(--ice-art-w) * .5);
-    --ice-sky:
-      radial-gradient(circle calc(var(--ice-art-w) * .1) at calc(50% + var(--ice-art-shift) + var(--ice-art-w) * .4) calc(var(--ice-art-w) * .055), rgba(4, 10, 23, .8), rgba(4, 10, 23, 0)),
-      linear-gradient(180deg,
-        rgba(4, 10, 23, .45) 0,
-        rgba(4, 10, 23, 0) calc(var(--mk-top-h) + 30px),
-        rgba(4, 10, 23, 0) calc(var(--ice-top) - 48px),
-        var(--ice-night) calc(var(--ice-art-w) * .512)),
-      url("../assets/ice/ice-cover.webp");
-    --ice-sky-size: 100% calc(var(--ice-art-w) * .52), 100% calc(var(--ice-art-w) * .52), var(--ice-art-w) auto;
-    --ice-sky-pos: center top, center top, calc(50% + var(--ice-art-shift)) top;
-    --ice-sky-rep: no-repeat, no-repeat, no-repeat;
-  }
-}
-
-@media (max-width: 560px) {
-  body[data-pf-skin="ice"] {
-    --ice-p: calc(100vw / 390);
-    --ice-art-w: calc(700 * var(--ice-p));
-    --ice-art-shift: calc(-55 * var(--ice-p));
-    --ice-top: calc(340 * var(--ice-p));
-  }
+  background-image:
+    radial-gradient(ellipse 60% 420px at 50% 300px, rgba(40, 140, 195, .16), rgba(40, 140, 195, 0)),
+    var(--ice-snow);
+  background-size: 100% 900px, 480px 480px;
+  background-position: 0 0, 0 0;
+  background-repeat: no-repeat, repeat;
 }
 
 @media (max-width: 760px) {
@@ -96,10 +48,10 @@ body[data-pf-skin="ice"] .mk-top {
 
 body[data-pf-skin="ice"] .mk-top::before {
   background-color: var(--ice-night);
-  background-image: var(--ice-snow), var(--ice-sky);
-  background-size: 480px 480px, var(--ice-sky-size);
-  background-position: 0 0, var(--ice-sky-pos);
-  background-repeat: repeat, var(--ice-sky-rep);
+  background-image: var(--ice-snow);
+  background-size: 480px 480px;
+  background-position: 0 0;
+  background-repeat: repeat;
   box-shadow: none;
 }
 
@@ -109,6 +61,10 @@ body[data-pf-skin="ice"] .mk-top::before {
 
 body[data-pf-skin="ice"] .mk-top-bar {
   box-shadow: inset 0 0 0 1px rgba(150, 225, 255, .16);
+}
+
+@media (max-width: 760px) {
+  body[data-pf-skin="ice"] .mk-top-bar { box-shadow: none; }
 }
 
 body[data-pf-skin="ice"] .mk-top.is-stuck .mk-top-bar {
@@ -172,53 +128,32 @@ body[data-pf-skin="ice"] .pf-page {
 body[data-pf-skin="ice"] .pf-page::before {
   content: "";
   position: absolute;
-  left: calc(50% - 660 * var(--u));
-  top: calc(-26 * var(--u));
-  width: calc(460 * var(--u));
-  height: calc(422 * var(--u));
-  background: url("../assets/ice/ice-char.webp") center bottom / contain no-repeat;
+  left: calc(50% - 646 * var(--u));
+  top: 0;
+  width: calc(1292 * var(--u));
+  height: calc(440 * var(--u));
+  background: url("../assets/ice/ice-poster.webp") center / 100% 100% no-repeat;
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  body[data-pf-skin="ice"] .pf-page::before {
-    animation: pf-ice-rise 1.1s var(--ease-slow) .12s backwards;
-  }
-}
-
-@keyframes pf-ice-rise {
-  from {
-    opacity: 0;
-    transform: translateY(calc(48 * var(--u)));
-  }
-}
-
 body[data-pf-skin="ice"] .pf-card {
-  margin-top: calc(var(--ice-top) - var(--mk-top-h));
-  background: linear-gradient(180deg, rgba(10, 27, 51, .95) 0, rgba(6, 16, 33, .93) calc(460 * var(--u)), rgba(5, 13, 28, .9) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(210, 245, 255, .6),
-    inset 0 0 0 1px rgba(116, 228, 255, .16);
+  margin-top: calc(440 * var(--u));
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  background: linear-gradient(180deg, rgba(10, 27, 51, .97) 0, rgba(6, 16, 33, .94) calc(460 * var(--u)), rgba(5, 13, 28, .9) 100%);
+  box-shadow: inset 0 0 0 1px rgba(116, 228, 255, .16);
   color: var(--ice-rime);
   filter: drop-shadow(0 calc(12 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, .6));
 }
 
-body[data-pf-skin="ice"] .pf-card::before {
-  top: calc(-173 * var(--u));
-  width: calc(320 * var(--u));
-  height: calc(320 * var(--u));
-  margin-left: calc(-160 * var(--u));
-  background: radial-gradient(closest-side, rgba(116, 228, 255, .42), rgba(116, 228, 255, .14) 55%, rgba(116, 228, 255, 0));
-  clip-path: none;
-  pointer-events: none;
-}
+body[data-pf-skin="ice"] .pf-card::before { content: none; }
 
 body[data-pf-skin="ice"] .pf-avatar {
   background: #0b1d37;
   box-shadow:
     0 0 0 max(2px, calc(3 * var(--u))) #e9fbff,
-    0 0 0 calc(9 * var(--u)) rgba(116, 228, 255, .3),
-    0 0 calc(36 * var(--u)) calc(6 * var(--u)) var(--ice-glow);
+    0 0 0 calc(9 * var(--u)) #05122a,
+    0 0 calc(30 * var(--u)) calc(9 * var(--u)) rgba(4, 18, 40, .55);
 }
 
 body[data-pf-skin="ice"] .pf-avatar-empty { color: rgba(170, 225, 255, .45); }
@@ -411,12 +346,31 @@ body[data-pf-skin="ice"] .pf-page :focus-visible {
 
 body[data-pf-skin="ice"] .pf-owner {
   position: relative;
+  isolation: isolate;
+  padding-top: calc(222 * var(--u));
   background: linear-gradient(180deg, rgba(10, 27, 51, .95) 0, rgba(5, 13, 28, .92) 100%);
   box-shadow:
     inset 0 1px 0 rgba(210, 245, 255, .55),
     inset 0 0 0 1px rgba(116, 228, 255, .14),
     0 calc(12 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, .5);
   color: var(--ice-rime);
+}
+
+body[data-pf-skin="ice"] .pf-owner::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: -1;
+  height: calc(270 * var(--u));
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(10, 27, 51, 0) 48%, rgba(10, 27, 51, .84) 82%, #0a1b33 100%),
+    url("../assets/ice/ice-leopard.webp") center 40% / cover no-repeat;
+  pointer-events: none;
 }
 
 body[data-pf-skin="ice"] .pf-owner-title {
@@ -519,22 +473,25 @@ body[data-pf-skin="ice"] .pf-trades .tr-tool:focus-visible { outline-color: #d6f
 
 @media (max-width: 900px) {
   body[data-pf-skin="ice"] .pf-page::before {
-    content: none;
-    background: none;
+    left: calc(50% - (100vw - 24px) * .551195);
+    top: 4px;
+    width: calc((100vw - 24px) * 1.10239);
+    height: calc((100vw - 24px) * .375427);
   }
 
-  body[data-pf-skin="ice"] .pf-card::before {
-    top: -112px;
-    width: 220px;
-    height: 220px;
-    margin-left: -110px;
-  }
+  body[data-pf-skin="ice"] .pf-card { margin-top: calc((100vw - 24px) * .375427 + 4px); }
 
   body[data-pf-skin="ice"] .pf-avatar {
     box-shadow:
       0 0 0 3px #e9fbff,
-      0 0 0 7px rgba(116, 228, 255, .28),
-      0 0 28px 4px var(--ice-glow);
+      0 0 0 7px #05122a,
+      0 0 24px 6px rgba(4, 18, 40, .55);
+  }
+
+  body[data-pf-skin="ice"] .pf-owner { padding-top: 132px; }
+  body[data-pf-skin="ice"] .pf-owner::before {
+    height: 170px;
+    background-position: 0 0, 58% 40%;
   }
 
   body[data-pf-skin="ice"] .pf-nick { text-shadow: 0 0 18px rgba(116, 228, 255, .5); }
@@ -568,4 +525,15 @@ body[data-pf-skin="ice"] .pf-trades .tr-tool:focus-visible { outline-color: #d6f
     height: 7px;
     margin-top: 6px;
   }
+}
+
+@media (max-width: 560px) {
+  body[data-pf-skin="ice"] .pf-page::before {
+    left: 0;
+    width: 100vw;
+    height: calc(100vw * .897436);
+    background-image: url("../assets/ice/ice-poster-m.webp");
+  }
+
+  body[data-pf-skin="ice"] .pf-card { margin-top: calc(100vw * .897436 + 4px); }
 }
