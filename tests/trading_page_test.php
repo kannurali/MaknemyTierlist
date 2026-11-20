@@ -403,4 +403,28 @@ test('объявления со своей темой автора: метка �
     assert_true(is_file($PUB . '/assets/kitty/kitty-hat.webp'), 'ободок лежит на сайте');
 });
 
+// 20.11.2026, слово владельца: объявления Maknemy — в его ледяной теме, как
+// профиль; и в ленте, и в профиле.
+test('объявления владельца в ледяной теме: стили на ленте и в профиле', function () use ($PUB) {
+    $trading = tp_read($PUB . '/trading.php');
+    assert_eq(1, substr_count($trading, '<link rel="stylesheet" href="css/trade-ice.css?v=1" />'), 'лента подключает стили');
+    assert_true(strpos($trading, 'css/trading.css') < strpos($trading, 'css/trade-ice.css'), 'после trading.css');
+    $profile = tp_read($PUB . '/profile.php');
+    assert_eq(1, substr_count($profile, 'css/trade-ice.css?v=1'), 'и профиль');
+    assert_true(strpos($profile, 'css/profile-ice.css') < strpos($profile, 'css/trade-ice.css'), 'после темы профиля');
+    $css = tp_read($PUB . '/css/trade-ice.css');
+    assert_true(strlen(trim($css)) > 0, 'файл стилей есть');
+    assert_eq(0, preg_match('~/\*~', $css), 'без комментариев');
+    assert_eq(0, preg_match('~blend-mode~', $css), 'без blend-mode');
+    foreach (explode('}', $css) as $block) {
+        $parts = explode('{', $block);
+        if (count($parts) < 2) { continue; }
+        $sel = trim($parts[count($parts) - 2]);
+        if ($sel === '' || $sel[0] === '@' || preg_match('~^(from|to|[\d.]+%)(\s*,\s*(from|to|[\d.]+%))*$~', $sel)) { continue; }
+        foreach (explode(',', $sel) as $one) {
+            assert_true(strpos($one, '[data-skin="ice"]') !== false, 'правило только для ледяных карточек: ' . trim($one));
+        }
+    }
+});
+
 run_tests();

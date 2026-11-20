@@ -104,6 +104,7 @@ page_lscache();
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <link rel="stylesheet" href="css/gw-card.css?v=4" />
 <link rel="stylesheet" href="css/trade-kitty.css?v=1" />
+<link rel="stylesheet" href="css/trade-ice.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body class="tr-body">
