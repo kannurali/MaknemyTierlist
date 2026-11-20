@@ -36,21 +36,26 @@
     return tx("trade.durMin", { n: Math.ceil(s / 60) });
   }
 
+  function unlimited() {
+    return !!(st.quota && st.quota.unlimited);
+  }
+
   function quotaOut() {
     const q = st.quota;
-    return !!(q && q.left === 0 && q.retryAt > Math.floor(Date.now() / 1000));
+    return !unlimited() && !!(q && q.left === 0 && q.retryAt > Math.floor(Date.now() / 1000));
   }
 
   function activeOut() {
-    return !!(st.quota && st.quota.activeLeft === 0);
+    return !unlimited() && !!(st.quota && st.quota.activeLeft === 0);
   }
 
   function cooldownOut() {
     const q = st.quota;
-    return !!(q && q.cooldownAt > Math.floor(Date.now() / 1000));
+    return !unlimited() && !!(q && q.cooldownAt > Math.floor(Date.now() / 1000));
   }
 
   function unfairPct() {
+    if (unlimited()) return 0;
     if (!window.NX_CALC || !window.NX_CALC.trade) return 0;
     const t = window.NX_CALC.trade();
     if (!(t.leftTotal > 0 && t.rightTotal > 0)) return 0;
@@ -104,7 +109,7 @@
       hint = tx("trade.unfair", { pct: unfairPct(), max: FAIR_PCT });
     } else if (!s.right.length) {
       hint = tx("trade.hintAny");
-    } else if (st.quota) {
+    } else if (st.quota && !unlimited()) {
       hint = tx("trade.quotaLeft", { active: st.quota.active, activeMax: st.quota.activeMax, n: st.quota.left });
     }
 

@@ -36,7 +36,7 @@
   function renderQuota() {
     if (!quotaEl) return;
     const q = state.quota;
-    if (!q) { quotaEl.hidden = true; return; }
+    if (!q || q.unlimited) { quotaEl.hidden = true; return; }
     quotaEl.hidden = false;
     if (q.activeLeft === 0) {
       quotaEl.textContent = tx("trade.activeOut", { max: q.activeMax });
