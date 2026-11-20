@@ -162,6 +162,31 @@ test('чат: тема собеседника — у открытой комна
     assert_true(strpos($js, 'roomSkin(peer);') > strpos($js, 'function renderRoom('), 'тему ставит отрисовка комнаты');
 });
 
+// 20.11.2026, слово владельца: чат с Maknemy — в его ледяной теме, как профиль
+// и объявления. Тема та же, что у них, — skin = ice из NICK_SKINS.
+test('чат с владельцем — ледяной: стили только под его тему', function () use ($PUB) {
+    $s = cp_read($PUB . '/chat.php');
+    assert_eq(1, substr_count($s, '<link rel="stylesheet" href="css/chat-ice.css?v=1" />'), 'стили подключены');
+    assert_true(strpos($s, 'css/giveaway.css') < strpos($s, 'css/chat-ice.css'), 'последними — перебивают синие');
+    $css = cp_read($PUB . '/css/chat-ice.css');
+    assert_true(strlen(trim($css)) > 0, 'файл есть');
+    assert_eq(0, preg_match('~/\*~', $css), 'без комментариев');
+    assert_eq(0, preg_match('~blend-mode~', $css), 'без blend-mode');
+    foreach (explode('}', $css) as $block) {
+        $parts = explode('{', $block);
+        if (count($parts) < 2) { continue; }
+        $sel = trim($parts[count($parts) - 2]);
+        if ($sel === '' || $sel[0] === '@' || preg_match('~^(from|to|[\d.]+%)(\s*,\s*(from|to|[\d.]+%))*$~', $sel)) { continue; }
+        foreach (explode(',', $sel) as $one) {
+            assert_true(preg_match('~\[data-(chat-|peer-)?skin="ice"\]~', $one) === 1, 'правило только для ледяной темы: ' . trim($one));
+        }
+    }
+    preg_match_all('~url\("\.\./assets/ice/([a-z0-9-]+\.webp)"\)~', $css, $m);
+    foreach (array_unique($m[1]) as $f) {
+        assert_true(is_file($PUB . "/assets/ice/$f"), "картинка $f на месте");
+    }
+});
+
 test('чат использует общие шапку, подвал, фон и счётчик', function () use ($PUB) {
     $s = cp_read($PUB . '/chat.php');
     foreach (['css/base.css', 'css/topbar.css', 'css/design-page.css', 'js/topbar.js'] as $shared) {

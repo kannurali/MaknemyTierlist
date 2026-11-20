@@ -54,6 +54,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <link rel="stylesheet" href="css/chat-kitty.css?v=1" />
+<link rel="stylesheet" href="css/chat-ice.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body>
