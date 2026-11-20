@@ -1613,15 +1613,49 @@ test('профиль Love_Peroxide: своя розовая тема, титул
         && strpos($peer['html'], 'css/giveaway.css') < strpos($peer['html'], 'css/profile-kitty.css'), 'тема — последней, перебивает синие');
 
     foreach (['владелец' => $other, 'другой свой' => $mine] as $who => $r) {
-        assert_eq(1, preg_match('~<body>~', $r['html']), "$who: body без темы");
         assert_eq(0, substr_count($r['html'], 'profile-kitty'), "$who: без розовых стилей");
     }
+    assert_eq(1, preg_match('~<body>~', $mine['html']), 'обычный игрок: body без темы');
     assert_true(is_file($PUB . '/css/profile-kitty.css'));
     assert_eq(1, substr_count($peer['html'], '<span class="pf-hat" aria-hidden="true"></span>'), 'ободок с ушками над аватаркой');
     assert_eq(1, substr_count($self['html'], 'class="pf-hat"'), 'и у себя');
     assert_eq(0, substr_count($other['html'] . $mine['html'], 'pf-hat'), 'у остальных ободка нет');
     foreach (['head', 'peek', 'peace', 'sit', 'wave'] as $k) {
         assert_true(is_file($PUB . "/assets/kitty/kitty-$k.webp"), "картинка kitty-$k");
+    }
+});
+
+// 20.11.2026, слово владельца: профиль Maknemy — ледяной («Frost General»),
+// на его же артах. Только у него; синие профили и Kitty не трогаются.
+test('профиль владельца: ледяная тема только у него', function () use ($PUB) {
+    $own   = '2841062255';
+    $peer  = pf_render('900000001', $own);
+    $self  = pf_render($own, '');
+    $mine  = pf_render('900000001', '');
+    $kitty = pf_render('900000001', '3444182117');
+    assert_true($peer !== null && $self !== null && $mine !== null && $kitty !== null, 'страницы отрендерились');
+    if ($peer === null || $self === null || $mine === null || $kitty === null) { return; }
+
+    foreach (['чужой' => $peer, 'свой' => $self] as $who => $r) {
+        assert_eq(1, preg_match('~<body data-pf-skin="ice">~', $r['html']), "$who: тема у body");
+        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-ice.css?v=1" />'), "$who: стили темы");
+        assert_eq(0, substr_count($r['html'], 'profile-kitty'), "$who: без розовых стилей");
+        assert_true(strpos($r['html'], 'data-tip="nick.owner"') !== false, "$who: знак владельца на месте");
+    }
+    assert_true(strpos($peer['html'], 'css/giveaway.css') < strpos($peer['html'], 'css/profile-ice.css'), 'тема — последней, перебивает синие');
+    foreach (['обычный' => $mine, 'Kitty' => $kitty] as $who => $r) {
+        assert_eq(0, substr_count($r['html'], 'profile-ice'), "$who: без ледяных стилей");
+        assert_eq(0, substr_count($r['html'], 'data-pf-skin="ice"'), "$who: без ледяной темы");
+    }
+
+    $css = (string)file_get_contents($PUB . '/css/profile-ice.css');
+    assert_true(strlen($css) > 0, 'файл темы есть');
+    assert_eq(0, preg_match('~blend-mode~', $css), 'без blend-mode: на iPhone роняли вкладку');
+    assert_eq(0, preg_match('~/\*~', $css), 'public_html — без комментариев');
+    preg_match_all('~url\("\.\./assets/ice/([a-z0-9-]+\.webp)"\)~', $css, $m);
+    assert_true(count($m[1]) >= 2, 'арты владельца подключены');
+    foreach (array_unique($m[1]) as $f) {
+        assert_true(is_file($PUB . "/assets/ice/$f"), "картинка $f на месте");
     }
 });
 

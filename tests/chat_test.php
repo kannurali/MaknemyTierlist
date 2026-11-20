@@ -822,12 +822,14 @@ test('собеседник несёт знак у ника из общего с�
 // 19.11.2026, слово владельца: чат с Love_Peroxide — в розовой теме Hello
 // Kitty, как его профиль, и его строка в списке диалогов розовая. Тему страница
 // берёт из поля skin собеседника (общий список NICK_SKINS).
-test('собеседник несёт свою тему: у Love_Peroxide — kitty, у остальных пусто', function () {
+// 20.11.2026: у владельца сайта — ледяная тема профиля; поле приходит и в
+// чат, но css/chat-ice.css нет, комната с ним остаётся синей.
+test('собеседник несёт свою тему: у Love_Peroxide — kitty, у владельца — ice, у остальных пусто', function () {
     $row = ['roblox_id' => 3444182117, 'username' => 'chelovek5541', 'display_name' => 'Love_Peroxide',
             'avatar_url' => '', 'last_login_at' => 0, 'last_seen_at' => 0];
     assert_eq('kitty', chat_user_row($row, CH_NOW)['skin']);
     $row['roblox_id'] = 2841062255;
-    assert_eq('', chat_user_row($row, CH_NOW)['skin'], 'у владельца сайта — обычный синий');
+    assert_eq('ice', chat_user_row($row, CH_NOW)['skin'], 'у владельца сайта — ледяная');
     $row['roblox_id'] = 42;
     assert_eq('', chat_user_row($row, CH_NOW)['skin']);
 });
