@@ -318,6 +318,7 @@ $pfTitle = $pfNick !== ''
 <?php if ($pfSkin === 'kitsune'): ?>
       <div class="pf-kit" aria-hidden="true">
         <span class="pf-kit-dust"></span>
+        <span class="pf-kit-galaxy"></span>
         <span class="pf-kit-far"></span>
         <span class="pf-kit-moon"></span>
         <svg class="pf-kit-sky" viewBox="0 0 320 132" focusable="false">

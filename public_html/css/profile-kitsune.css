@@ -179,6 +179,17 @@ body[data-pf-skin="kitsune"] .pf-kit-dust {
   opacity: .42;
 }
 
+body[data-pf-skin="kitsune"] .pf-kit-galaxy {
+  left: calc(318 * var(--k));
+  top: calc(-6 * var(--k));
+  width: calc(600 * var(--k));
+  height: calc(453 * var(--k));
+  background: url("../assets/kitsune/galaxy.webp") center / 100% 100% no-repeat;
+  opacity: .78;
+  transform: rotate(-8deg);
+  animation: kit-drift 26s ease-in-out infinite alternate;
+}
+
 body[data-pf-skin="kitsune"] .pf-kit-moon {
   right: calc(30 * var(--k));
   top: calc(30 * var(--k));
@@ -324,6 +335,11 @@ body[data-pf-skin="kitsune"] .pf-kit-glow {
 @keyframes kit-glint {
   0%, 100% { opacity: .85; transform: scale(1) rotate(0); }
   50% { opacity: .45; transform: scale(.7) rotate(18deg); }
+}
+
+@keyframes kit-drift {
+  0% { transform: rotate(-8deg) scale(1); }
+  100% { transform: rotate(-3deg) scale(1.05); }
 }
 
 body[data-pf-skin="kitsune"] .pf-avatar {
@@ -627,6 +643,14 @@ body[data-pf-skin="kitsune"] .pf-trades .tr-tool:focus-visible { outline-color: 
       url("../assets/kitsune/sparkles.webp") calc(-70 * var(--k)) calc(150 * var(--k)) / calc(210 * var(--k)) auto no-repeat,
       url("../assets/kitsune/sparkles.webp") calc(210 * var(--k)) calc(140 * var(--k)) / calc(230 * var(--k)) auto no-repeat;
     opacity: .4;
+  }
+
+  body[data-pf-skin="kitsune"] .pf-kit-galaxy {
+    left: calc(12 * var(--k));
+    top: calc(-34 * var(--k));
+    width: calc(370 * var(--k));
+    height: calc(280 * var(--k));
+    opacity: .72;
   }
 
   body[data-pf-skin="kitsune"] .pf-kit-sky {

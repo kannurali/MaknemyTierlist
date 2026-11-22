@@ -164,7 +164,9 @@ body[data-chat-skin="kitsune"] .ct-empty { color: var(--kc-steel); }
 }
 
 .ct-shell[data-peer-skin="kitsune"] .ct-log {
-  background: url("../assets/kitsune/chat-moon.webp") center bottom / min(100%, calc(620 * var(--u))) auto no-repeat;
+  background:
+    url("../assets/kitsune/chat-moon.webp") center bottom / min(100%, calc(620 * var(--u))) auto no-repeat,
+    url("../assets/kitsune/galaxy.webp") 50% 2% / min(44%, calc(320 * var(--u))) auto no-repeat;
   scrollbar-color: #3d8bff transparent;
 }
 
@@ -662,7 +664,8 @@ body[data-chat-skin="kitsune"] .ct-empty { color: var(--kc-steel); }
   .ct-shell[data-peer-skin="kitsune"] .ct-log {
     background:
       url("../assets/kitsune/tr-kit.webp") center 22px / 140px auto no-repeat,
-      url("../assets/kitsune/chat-moon.webp") center bottom / min(100%, 360px) auto no-repeat;
+      url("../assets/kitsune/chat-moon.webp") center bottom / min(100%, 360px) auto no-repeat,
+      url("../assets/kitsune/galaxy.webp") center 0 / 230px auto no-repeat;
   }
 
   .ct-shell[data-peer-skin="kitsune"] .ct-room-head::after,
