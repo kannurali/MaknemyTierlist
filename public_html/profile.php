@@ -176,8 +176,10 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/giveaway.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/giveaway.css?v=9" /><?php endif; ?>
 <?php if ($pfSkin === 'kitty'): ?><link rel="stylesheet" href="css/profile-kitty.css?v=2" /><?php endif; ?>
 <?php if ($pfSkin === 'ice'): ?><link rel="stylesheet" href="css/profile-ice.css?v=1" /><?php endif; ?>
+<?php if ($pfSkin === 'kitsune'): ?><link rel="stylesheet" href="css/profile-kitsune.css?v=1" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?><link rel="stylesheet" href="css/trade-kitty.css?v=1" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?><link rel="stylesheet" href="css/trade-ice.css?v=1" /><?php endif; ?>
+<?php if ($pfState === 'card'): ?><link rel="stylesheet" href="css/trade-kitsune.css?v=1" /><?php endif; ?>
 <?php echo metrika_counter_html(); ?>
 </head>
 <body<?php if ($pfSkin !== ''): ?> data-pf-skin="<?= $pfSkin ?>"<?php endif; ?>>
@@ -312,6 +314,54 @@ $pfTitle = $pfNick !== ''
       </div>
 <?php if ($pfSkin === 'kitty'): ?>
       <span class="pf-hat" aria-hidden="true"></span>
+<?php endif; ?>
+<?php if ($pfSkin === 'kitsune'): ?>
+      <div class="pf-kit" aria-hidden="true">
+        <span class="pf-kit-dust"></span>
+        <span class="pf-kit-far"></span>
+        <span class="pf-kit-moon"></span>
+        <svg class="pf-kit-sky" viewBox="0 0 320 132" focusable="false">
+          <g class="pf-kit-glow" fill="none" stroke="#3d8bff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".3">
+            <path class="pf-kit-k" d="M24 16 22 66 26 114M74 14 50 40 22 66 54 90 78 116"/>
+            <path class="pf-kit-i" d="M118 18 116 68 120 114 146 66 172 16 174 66 170 116"/>
+            <path class="pf-kit-t" d="M214 18 256 14 298 20M256 14 257 64 255 116"/>
+          </g>
+          <g class="pf-kit-lines" fill="none" stroke="#b5dcff" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round">
+            <path class="pf-kit-k" d="M24 16 22 66 26 114M74 14 50 40 22 66 54 90 78 116"/>
+            <path class="pf-kit-i" d="M118 18 116 68 120 114 146 66 172 16 174 66 170 116"/>
+            <path class="pf-kit-t" d="M214 18 256 14 298 20M256 14 257 64 255 116"/>
+          </g>
+          <g class="pf-kit-stars pf-kit-k">
+            <image href="assets/kitsune/star4.webp" x="14" y="6" width="20" height="20"/>
+            <image href="assets/kitsune/star4.webp" x="8" y="52" width="28" height="28"/>
+            <image href="assets/kitsune/star4.webp" x="16" y="104" width="20" height="20"/>
+            <image href="assets/kitsune/star4.webp" x="63" y="3" width="22" height="22"/>
+            <image href="assets/kitsune/star4.webp" x="42.5" y="32.5" width="15" height="15"/>
+            <image href="assets/kitsune/star4.webp" x="46.5" y="82.5" width="15" height="15"/>
+            <image href="assets/kitsune/star4.webp" x="67" y="105" width="22" height="22"/>
+          </g>
+          <g class="pf-kit-stars pf-kit-i">
+            <image href="assets/kitsune/star4.webp" x="107" y="7" width="22" height="22"/>
+            <image href="assets/kitsune/star4.webp" x="108.5" y="60.5" width="15" height="15"/>
+            <image href="assets/kitsune/star4.webp" x="107.5" y="101.5" width="25" height="25"/>
+            <image href="assets/kitsune/star4.webp" x="137" y="57" width="18" height="18"/>
+            <image href="assets/kitsune/star4.webp" x="159.5" y="3.5" width="25" height="25"/>
+            <image href="assets/kitsune/star4.webp" x="166.5" y="58.5" width="15" height="15"/>
+            <image href="assets/kitsune/star4.webp" x="159" y="105" width="22" height="22"/>
+          </g>
+          <g class="pf-kit-stars pf-kit-t">
+            <image href="assets/kitsune/star4.webp" x="204" y="8" width="20" height="20"/>
+            <image href="assets/kitsune/star4.webp" x="242" y="0" width="28" height="28"/>
+            <image href="assets/kitsune/star4.webp" x="288" y="10" width="20" height="20"/>
+            <image href="assets/kitsune/star4.webp" x="249.5" y="56.5" width="15" height="15"/>
+            <image href="assets/kitsune/star4.webp" x="244" y="105" width="22" height="22"/>
+          </g>
+        </svg>
+        <span class="pf-kit-jungle"></span>
+        <span class="pf-kit-aura"></span>
+        <img class="pf-kit-him" src="assets/kitsune/him-kitsune.webp" alt="" />
+        <span class="pf-kit-glint"></span>
+      </div>
 <?php endif; ?>
 
 <?php if ($pfSelf): ?>

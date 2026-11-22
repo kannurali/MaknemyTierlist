@@ -105,6 +105,7 @@ page_lscache();
 <link rel="stylesheet" href="css/gw-card.css?v=4" />
 <link rel="stylesheet" href="css/trade-kitty.css?v=1" />
 <link rel="stylesheet" href="css/trade-ice.css?v=1" />
+<link rel="stylesheet" href="css/trade-kitsune.css?v=1" />
 <?php echo metrika_counter_html(); ?>
 </head>
 <body class="tr-body">

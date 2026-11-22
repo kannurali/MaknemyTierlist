@@ -427,4 +427,32 @@ test('объявления владельца в ледяной теме: сти
     }
 });
 
+// 22.11.2026, слово владельца: объявления Him — в его теме «Китсуне», как
+// профиль; и в ленте, и в профиле.
+test('объявления Him в теме «Китсуне»: стили на ленте и в профиле', function () use ($PUB) {
+    $trading = tp_read($PUB . '/trading.php');
+    assert_eq(1, substr_count($trading, '<link rel="stylesheet" href="css/trade-kitsune.css?v=1" />'), 'лента подключает стили');
+    assert_true(strpos($trading, 'css/trading.css') < strpos($trading, 'css/trade-kitsune.css'), 'после trading.css');
+    $profile = tp_read($PUB . '/profile.php');
+    assert_eq(1, substr_count($profile, 'css/trade-kitsune.css?v=1'), 'и профиль');
+    assert_true(strpos($profile, 'css/profile-kitsune.css') < strpos($profile, 'css/trade-kitsune.css'), 'после темы профиля');
+    $css = tp_read($PUB . '/css/trade-kitsune.css');
+    assert_true(strlen(trim($css)) > 0, 'файл стилей есть');
+    assert_eq(0, preg_match('~/\*~', $css), 'без комментариев');
+    assert_eq(0, preg_match('~blend-mode~', $css), 'без blend-mode');
+    foreach (explode('}', $css) as $block) {
+        $parts = explode('{', $block);
+        if (count($parts) < 2) { continue; }
+        $sel = trim($parts[count($parts) - 2]);
+        if ($sel === '' || $sel[0] === '@' || preg_match('~^(from|to|[\d.]+%)(\s*,\s*(from|to|[\d.]+%))*$~', $sel)) { continue; }
+        foreach (explode(',', $sel) as $one) {
+            assert_true(strpos($one, '[data-skin="kitsune"]') !== false, 'правило только для карточек Китсуне: ' . trim($one));
+        }
+    }
+    preg_match_all('~url\("\.\./assets/kitsune/([a-z0-9-]+\.webp)"\)~', $css, $m);
+    foreach (array_unique($m[1]) as $f) {
+        assert_true(is_file($PUB . "/assets/kitsune/$f"), "картинка $f на месте");
+    }
+});
+
 run_tests();
