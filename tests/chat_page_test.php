@@ -904,4 +904,29 @@ test('удаление — только POST и с пределом частот
     assert_true(strpos($api, 'chat_clear(db(), $me, $thread, $upto, time())') !== false, 'логика — в lib/chat.php');
 });
 
+// 22.11.2026, слово владельца: чат с Him — в его теме «Китсуне», как профиль
+// и объявления (skin = kitsune из NICK_SKINS).
+test('чат с Him — «Китсуне»: стили только под его тему', function () use ($PUB) {
+    $s = cp_read($PUB . '/chat.php');
+    assert_eq(1, substr_count($s, '<link rel="stylesheet" href="css/chat-kitsune.css?v=1" />'), 'стили подключены');
+    assert_true(strpos($s, 'css/giveaway.css') < strpos($s, 'css/chat-kitsune.css'), 'последними — перебивают синие');
+    $css = cp_read($PUB . '/css/chat-kitsune.css');
+    assert_true(strlen(trim($css)) > 0, 'файл есть');
+    assert_eq(0, preg_match('~/\*~', $css), 'без комментариев');
+    assert_eq(0, preg_match('~blend-mode~', $css), 'без blend-mode');
+    foreach (explode('}', $css) as $block) {
+        $parts = explode('{', $block);
+        if (count($parts) < 2) { continue; }
+        $sel = trim($parts[count($parts) - 2]);
+        if ($sel === '' || $sel[0] === '@' || preg_match('~^(from|to|[\d.]+%)(\s*,\s*(from|to|[\d.]+%))*$~', $sel)) { continue; }
+        foreach (explode(',', $sel) as $one) {
+            assert_true(preg_match('~\[data-(chat-|peer-)?skin="kitsune"\]~', $one) === 1, 'правило только для темы Китсуне: ' . trim($one));
+        }
+    }
+    preg_match_all('~url\("\.\./assets/kitsune/([a-z0-9-]+\.webp)"\)~', $css, $m);
+    foreach (array_unique($m[1]) as $f) {
+        assert_true(is_file($PUB . "/assets/kitsune/$f"), "картинка $f на месте");
+    }
+});
+
 run_tests();

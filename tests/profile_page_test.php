@@ -109,6 +109,8 @@ function pf_fixture_db(string $file, array $tables = []): void {
     // Love_Peroxide — знак «N» с подписью «Аналитик», титул «Министр экономики
     // БФ» и единственная не синяя тема профиля (NICK_SKINS).
     $ins->execute(['3444182117', 'chelovek5541', 'Love_Peroxide', '', $now - 86400, $now, $now, null, 0, 0]);
+    // Him — тема «Китсуне» (NICK_SKINS), без знака у ника и без титула.
+    $ins->execute(['7401385157', 'NjfDhRdORJc', 'Him', '', $now - 86400, $now, $now, null, 1, 1]);
 
     // Зеркалят docs/migrations/2026-09-23-telegram.sql и 2026-09-25-tg-prefs.sql.
     if (!empty($tables['tg'])) {
@@ -1656,6 +1658,64 @@ test('профиль владельца: ледяная тема только у
     assert_true(count($m[1]) >= 2, 'арты владельца подключены');
     foreach (array_unique($m[1]) as $f) {
         assert_true(is_file($PUB . "/assets/ice/$f"), "картинка $f на месте");
+    }
+});
+
+// 22.11.2026, слово владельца: профиль Him — «Китсуне»: ночь, синяя луна,
+// синие джунгли, звёзды складываются в «КИТ», его аватар с фруктом. Знака у
+// ника и титула у него нет.
+test('профиль Him: тема «Китсуне», созвездие «КИТ», без знака и титула', function () use ($PUB) {
+    $him   = '7401385157';
+    $peer  = pf_render('900000001', $him);
+    $self  = pf_render($him, '');
+    $mine  = pf_render('900000001', '');
+    $ice   = pf_render('900000001', '2841062255');
+    $kitty = pf_render('900000001', '3444182117');
+    assert_true($peer !== null && $self !== null && $mine !== null && $ice !== null && $kitty !== null, 'страницы отрендерились');
+    if ($peer === null || $self === null || $mine === null || $ice === null || $kitty === null) { return; }
+
+    foreach (['чужой' => $peer, 'свой' => $self] as $who => $r) {
+        assert_eq(1, preg_match('~<body data-pf-skin="kitsune">~', $r['html']), "$who: тема у body");
+        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitsune.css?v=1" />'), "$who: стили темы");
+        assert_eq(1, substr_count($r['html'], '<div class="pf-kit" aria-hidden="true">'), "$who: небо над карточкой");
+        assert_eq(19, substr_count($r['html'], 'href="assets/kitsune/star4.webp"'), "$who: 19 звёзд созвездия");
+        foreach (['k', 'i', 't'] as $l) {
+            assert_true(strpos($r['html'], 'class="pf-kit-stars pf-kit-' . $l . '"') !== false, "$who: буква $l");
+        }
+        assert_eq(1, substr_count($r['html'], 'src="assets/kitsune/him-kitsune.webp"'), "$who: он с фруктом");
+        assert_eq(0, substr_count($r['html'], 'class="nx-nick-badge"'), "$who: знака у ника нет");
+        assert_eq(0, substr_count($r['html'], 'id="pfTitleMain"'), "$who: титула нет");
+        assert_eq(0, substr_count($r['html'], 'profile-ice') + substr_count($r['html'], 'profile-kitty'), "$who: без чужих тем");
+    }
+    assert_true(strpos($peer['html'], 'css/giveaway.css') < strpos($peer['html'], 'css/profile-kitsune.css'), 'тема — последней, перебивает синие');
+    foreach (['обычный' => $mine, 'ледяной' => $ice, 'Kitty' => $kitty] as $who => $r) {
+        assert_eq(0, substr_count($r['html'], 'profile-kitsune'), "$who: без стилей Китсуне");
+        assert_eq(0, substr_count($r['html'], 'pf-kit'), "$who: без неба Китсуне");
+    }
+
+    $css = (string)file_get_contents($PUB . '/css/profile-kitsune.css');
+    assert_true(strlen($css) > 0, 'файл темы есть');
+    assert_eq(0, preg_match('~blend-mode~', $css), 'без blend-mode: на iPhone роняли вкладку');
+    assert_eq(0, preg_match('~/\*~', $css), 'public_html — без комментариев');
+    preg_match_all('~url\("\.\./assets/kitsune/([a-z0-9-]+\.webp)"\)~', $css, $m);
+    $used = array_unique($m[1]);
+    foreach (['moon.webp', 'jungle.webp'] as $f) {
+        assert_true(in_array($f, $used, true), "картинка владельца $f в теме");
+    }
+    foreach ($used as $f) {
+        assert_true(is_file($PUB . "/assets/kitsune/$f"), "картинка $f на месте");
+    }
+    foreach (explode('}', $css) as $block) {
+        $parts = explode('{', $block);
+        if (count($parts) < 2) { continue; }
+        $sel = trim($parts[count($parts) - 2]);
+        if ($sel === '' || $sel[0] === '@' || preg_match('~^(from|to|[\d.]+%)(\s*,\s*(from|to|[\d.]+%))*$~', $sel)) { continue; }
+        foreach (explode(',', $sel) as $one) {
+            assert_true(strpos($one, 'body[data-pf-skin="kitsune"]') !== false, 'правило только для Китсуне: ' . trim($one));
+        }
+    }
+    foreach (['star4', 'him-kitsune', 'sparkles'] as $f) {
+        assert_true(is_file($PUB . "/assets/kitsune/$f.webp"), "картинка $f");
     }
 });
 

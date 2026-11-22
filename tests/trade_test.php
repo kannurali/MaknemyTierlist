@@ -673,4 +673,17 @@ test('автор объявления несёт свою тему: у Love_Pero
     assert_eq('', $a['101']['skin'], 'у остальных обычные карточки');
 });
 
+// 22.11.2026, слово владельца: объявления Him — в теме «Китсуне»; знака у
+// ника и титула у него нет.
+test('автор объявления Him несёт тему kitsune, без знака и титула', function () {
+    $pdo = test_db();
+    $ins = $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at)
+                          VALUES (?, ?, ?, ?, ?, ?)');
+    $ins->execute([7401385157, 'NjfDhRdORJc', 'Him', '', NOW - 999, NOW - 999]);
+    $a = trade_authors($pdo, ['7401385157'], NOW);
+    assert_eq('kitsune', $a['7401385157']['skin']);
+    assert_eq(null, $a['7401385157']['logo'], 'знака нет');
+    assert_eq([], $a['7401385157']['titles'] ?? [], 'титула нет');
+});
+
 run_tests();

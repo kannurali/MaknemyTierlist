@@ -834,6 +834,15 @@ test('собеседник несёт свою тему: у Love_Peroxide — ki
     assert_eq('', chat_user_row($row, CH_NOW)['skin']);
 });
 
+// 22.11.2026: у Him — тема «Китсуне», знака у ника нет.
+test('Him несёт тему kitsune, без знака у ника', function () {
+    $row = ['roblox_id' => 7401385157, 'username' => 'NjfDhRdORJc', 'display_name' => 'Him',
+            'avatar_url' => '', 'last_login_at' => 0, 'last_seen_at' => 0];
+    $u = chat_user_row($row, CH_NOW);
+    assert_eq('kitsune', $u['skin']);
+    assert_eq(null, $u['logo'], 'знака нет');
+});
+
 // --------------------------------------------------------------------------
 //  Непрочитанное: значок на кнопке чата в шапке
 // --------------------------------------------------------------------------
