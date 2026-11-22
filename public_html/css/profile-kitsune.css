@@ -244,8 +244,8 @@ body[data-pf-skin="kitsune"] .pf-kit-sky {
 }
 
 body[data-pf-skin="kitsune"] .pf-kit-jungle {
-  left: calc(-52 * var(--k));
-  right: calc(-52 * var(--k));
+  left: 0;
+  right: 0;
   bottom: 0;
   height: calc(300 * var(--k));
   background: url("../assets/kitsune/jungle-wide.webp") center bottom / 100% 100% no-repeat;
@@ -685,8 +685,8 @@ body[data-pf-skin="kitsune"] .pf-trades .tr-tool:focus-visible { outline-color: 
   }
 
   body[data-pf-skin="kitsune"] .pf-kit-jungle {
-    left: calc(-98 * var(--k));
-    right: calc(-98 * var(--k));
+    left: 0;
+    right: 0;
     height: calc(145 * var(--k));
   }
 

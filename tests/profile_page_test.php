@@ -1676,7 +1676,7 @@ test('профиль Him: тема «Китсуне», созвездие «КИ
 
     foreach (['чужой' => $peer, 'свой' => $self] as $who => $r) {
         assert_eq(1, preg_match('~<body data-pf-skin="kitsune">~', $r['html']), "$who: тема у body");
-        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitsune.css?v=1" />'), "$who: стили темы");
+        assert_eq(1, substr_count($r['html'], '<link rel="stylesheet" href="css/profile-kitsune.css?v=2" />'), "$who: стили темы");
         assert_eq(1, substr_count($r['html'], '<div class="pf-kit" aria-hidden="true">'), "$who: небо над карточкой");
         assert_eq(19, substr_count($r['html'], 'href="assets/kitsune/star4.webp"'), "$who: 19 звёзд созвездия");
         foreach (['k', 'i', 't'] as $l) {
