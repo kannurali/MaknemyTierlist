@@ -245,7 +245,9 @@ test('владелец публикует без пределов, осталь�
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
         ->execute([$own, 'Shamill_prod', 'maknemy', '', NOW - 999, NOW - 999, NOW - 60, 0, 0]);
     assert_true(trade_unlimited($own), 'владелец без пределов');
+    assert_true(trade_unlimited('3444182117'), 'Love_Peroxide без пределов (слово владельца 24.11)');
     assert_true(!trade_unlimited('101') && !trade_unlimited(''), 'остальные и аноним — с пределами');
+    assert_true(!trade_unlimited('03444182117') && !trade_unlimited('3444182117 '), 'только точный id');
 
     $n = TRADE_ACTIVE_MAX + TRADE_RATE_MAX + 3;
     for ($i = 0; $i < $n; $i++) {
