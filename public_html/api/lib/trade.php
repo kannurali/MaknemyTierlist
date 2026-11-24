@@ -74,13 +74,16 @@ function trade_me(array $session): string {
 }
 
 /**
- * Публикует без пределов: владелец сайта (слово владельца, 2026-11-20).
- * Для него не действуют ни 2 в сутки, ни пауза после закрытия, ни потолок
- * активных, ни скам-фильтр, ни частота запросов в trade_create.php. Срок
- * жизни объявления (TRADE_QUIET_TTL / TRADE_TTL) остаётся общим.
+ * Публикуют без пределов — по слову владельца: сам владелец сайта
+ * (2026-11-20) и Love_Peroxide, chelovek5541 (2026-11-24). Для них не
+ * действуют ни 2 в сутки, ни пауза после закрытия, ни потолок активных, ни
+ * скам-фильтр, ни частота запросов в trade_create.php. Срок жизни объявления
+ * (TRADE_QUIET_TTL / TRADE_TTL) остаётся общим. Ключ — roblox_id строкой.
  */
+const TRADE_UNLIMITED_IDS = [PROFILE_OWNER_ID, '3444182117'];
+
 function trade_unlimited(string $me): bool {
-    return $me !== '' && $me === PROFILE_OWNER_ID;
+    return $me !== '' && in_array($me, TRADE_UNLIMITED_IDS, true);
 }
 
 /** Сколько живых объявлений человека отдаёт один список. */
