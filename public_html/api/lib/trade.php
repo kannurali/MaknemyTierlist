@@ -410,6 +410,7 @@ function trade_authors(PDO $pdo, array $ids, int $now): array {
         if ($nick === '') { $nick = $name; }
         $avatar = (string)($r['avatar_url'] ?? '');
         if (!roblox_avatar_ok($avatar)) { $avatar = ''; }
+        $avatar = nick_avatar((string)$r['roblox_id'], $avatar);
         $seen  = (int)($r['last_seen_at'] ?? 0);
         $login = (int)($r['last_login_at'] ?? 0);
         if ($seen < $login) { $seen = $login; }

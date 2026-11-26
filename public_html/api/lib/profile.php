@@ -103,6 +103,7 @@ function profile_card(PDO $pdo, string $me, int $now): ?array {
     // стоит верить на слово при выводе в разметку.
     $avatar = (string)($row['avatar_url'] ?? '');
     if (!roblox_avatar_ok($avatar)) { $avatar = ''; }
+    $avatar = nick_avatar($me, $avatar);
 
     // Присутствие, а не вход. last_login_at пишется один раз за сессию, и по
     // нему активный посетитель выглядит ушедшим через пять минут после логина.

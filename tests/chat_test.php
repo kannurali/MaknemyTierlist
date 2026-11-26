@@ -843,6 +843,19 @@ test('Him несёт тему kitsune, без знака у ника', function 
     assert_eq(null, $u['logo'], 'знака нет');
 });
 
+// 26.11.2026: у владельца своя аватарка вместо роблоксовской — Roblox
+// переписывает avatar_url с каждым входом, подмена идёт на выводе.
+test('у владельца своя аватарка, у остальных — из Roblox', function () {
+    $rbx = 'https://tr.rbxcdn.com/abc/150/150/AvatarHeadshot/Png';
+    $row = ['roblox_id' => 2841062255, 'username' => 'Shamill_prod', 'display_name' => 'maknemy',
+            'avatar_url' => $rbx, 'last_login_at' => 0, 'last_seen_at' => 0];
+    assert_eq('/assets/design/avatar-mk.webp', chat_user_row($row, CH_NOW)['avatar']);
+    assert_true(is_file(__DIR__ . '/../public_html/assets/design/avatar-mk.webp'), 'файл аватарки на месте');
+    $row['roblox_id'] = 42;
+    assert_eq($rbx, chat_user_row($row, CH_NOW)['avatar'], 'чужая аватарка не трогается');
+    assert_eq('', nick_avatar('42', ''), 'без аватарки — пусто, как было');
+});
+
 // --------------------------------------------------------------------------
 //  Непрочитанное: значок на кнопке чата в шапке
 // --------------------------------------------------------------------------
