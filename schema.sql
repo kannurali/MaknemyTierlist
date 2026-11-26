@@ -166,6 +166,11 @@ CREATE TABLE IF NOT EXISTS login_tokens (
 -- из ленты через четыре дня (TRADE_QUIET_TTL в api/lib/trade.php), с
 -- откликом — через две недели (TRADE_TTL). Статус при этом не меняется:
 -- истечение — не отмена, и в «отменённые» профиля оно не идёт.
+--
+-- bumped_at — когда автор в последний раз поднял объявление наверх ленты
+-- (раз в полчаса, TRADE_BUMP_EVERY). Лента идёт по нему, а у не поднятого —
+-- по created_at. Срок жизни он не продлевает. Заводит его миграция
+-- docs/migrations/2026-11-26-trade-bump.sql.
 CREATE TABLE IF NOT EXISTS trade_offers (
   id         INT UNSIGNED    NOT NULL AUTO_INCREMENT PRIMARY KEY,
   user_id    BIGINT UNSIGNED NOT NULL,
@@ -174,6 +179,7 @@ CREATE TABLE IF NOT EXISTS trade_offers (
   status     VARCHAR(10)     NOT NULL DEFAULT 'open',
   created_at BIGINT UNSIGNED NOT NULL,
   replied_at BIGINT UNSIGNED NULL,
+  bumped_at  BIGINT UNSIGNED NULL,
   closed_at  BIGINT UNSIGNED NULL,
   KEY idx_feed (status, id),
   KEY idx_quota (user_id, created_at),

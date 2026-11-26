@@ -169,7 +169,7 @@ $pfTitle = $pfNick !== ''
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/design-page.css?v=43" /><?php else: ?><link rel="stylesheet" href="css/design-page.css?v=43" /><?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/profile.css?v=12" /><?php else: ?><link rel="stylesheet" href="css/profile.css?v=12" /><?php endif; ?>
 <?php if ($pfState === 'card'): ?>
-<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=8" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=8" /><?php endif; ?>
+<?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/hw/trading.css?v=9" /><?php else: ?><link rel="stylesheet" href="css/trading.css?v=9" /><?php endif; ?>
 <?php endif; ?>
 <?php if (HALLOWEEN): ?><link rel="stylesheet" href="css/halloween.css?v=4" /><?php endif; ?>
 <link rel="stylesheet" href="css/hunt.css?v=9" />
@@ -709,8 +709,8 @@ $pfTitle = $pfNick !== ''
 <?php endif; ?>
 <?php if ($pfState === 'card'): ?>
   <script src="js/calc.js?v=9" defer></script>
-  <script src="js/trade-cards.js?v=8" defer></script>
-  <script src="js/profile-trades.js?v=5" defer></script>
+  <script src="js/trade-cards.js?v=9" defer></script>
+  <script src="js/profile-trades.js?v=6" defer></script>
 <?php endif; ?>
   <script src="js/news-blocks.js?v=4" fetchpriority="high"></script>
   <script src="js/giveaway.js?v=18" fetchpriority="high"></script>

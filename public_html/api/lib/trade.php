@@ -22,14 +22,27 @@ const TRADE_ACTIVE_MAX = 5;
 // Сколько объявлений можно опубликовать за скользящее окно. Считаются ВСЕ
 // созданные в окне, включая снятые: иначе «выложил — снял — выложил» обходил
 // бы предел. Лента общая, и без него один человек забил бы её своими копиями.
-// Два за сутки — решение владельца (2026-10-14), до этого было 10 за 5 часов.
-const TRADE_RATE_MAX    = 2;
+// Пять за сутки — решение владельца (2026-11-26); с 2026-10-14 было два, а
+// ещё раньше — 10 за 5 часов.
+const TRADE_RATE_MAX    = 5;
 const TRADE_RATE_WINDOW = 86400;
 
 // Пауза после того, как автор сам закрыл объявление: снял его или отметил
 // сделку (владелец, 2026-10-14). Снятое модератором и истёкшее паузы не дают:
-// первое — не решение автора, второе случается без него.
-const TRADE_CLOSE_COOLDOWN = 30 * 60;
+// первое — не решение автора, второе случается без него. 20 минут — с
+// 2026-11-26, до этого было 30.
+const TRADE_CLOSE_COOLDOWN = 20 * 60;
+
+// «Поднять» (владелец, 2026-11-26): автор возвращает живое объявление наверх
+// ленты, каждое — не чаще раза за столько секунд. Отсчёт от последнего
+// подъёма, а у ни разу не поднятого — от публикации: только что выложенное и
+// так стоит наверху. Действует на всех, и на тех, кто публикует без пределов
+// (trade_unlimited): иначе их объявления можно было бы держать наверху вечно.
+// Срок жизни объявления подъём не продлевает — он считается от публикации.
+//
+// Время подъёма — колонка bumped_at (docs/migrations/2026-11-26-trade-bump.sql).
+// Пока её нет, лента идёт по id, как раньше, а подъём отвечает 503.
+const TRADE_BUMP_EVERY = 30 * 60;
 
 // Скам-фильтр (владелец, 2026-10-14): объявление не публикуется, если по ценам
 // тирлиста стороны расходятся больше чем на столько процентов. Процент тот
@@ -49,7 +62,7 @@ const TRADE_QUIET_TTL = 4 * 86400;
 const TRADE_TTL = 14 * 86400;
 
 // Сколько своих объявлений отдаёт профиль. Больше на одной странице не
-// прочитать, а при пределе 2 в сутки это полтора месяца активности.
+// прочитать, а при пределе 5 в сутки это три недели активности.
 const TRADE_MINE_MAX = 100;
 
 // Страница ленты. Больше за раз не нужно: карточка высокая, и двадцать штук —
@@ -76,9 +89,10 @@ function trade_me(array $session): string {
 /**
  * Публикуют без пределов — по слову владельца: сам владелец сайта
  * (2026-11-20) и Love_Peroxide, chelovek5541 (2026-11-24). Для них не
- * действуют ни 2 в сутки, ни пауза после закрытия, ни потолок активных, ни
+ * действуют ни 5 в сутки, ни пауза после закрытия, ни потолок активных, ни
  * скам-фильтр, ни частота запросов в trade_create.php. Срок жизни объявления
- * (TRADE_QUIET_TTL / TRADE_TTL) остаётся общим. Ключ — roblox_id строкой.
+ * (TRADE_QUIET_TTL / TRADE_TTL) и пауза между подъёмами (TRADE_BUMP_EVERY)
+ * остаются общими. Ключ — roblox_id строкой.
  */
 const TRADE_UNLIMITED_IDS = [PROFILE_OWNER_ID, '3444182117'];
 
@@ -104,6 +118,48 @@ function trade_ready(PDO $pdo): bool {
     } catch (PDOException $e) {
         return false;
     }
+}
+
+/**
+ * Есть ли колонка bumped_at (миграция 2026-11-26-trade-bump.sql). Без неё
+ * подъёма нет, а лента и списки идут по id, как до него.
+ */
+function trade_bump_ready(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT bumped_at FROM trade_offers LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Ключ порядка ленты: время последнего подъёма, а у не поднятого — время
+ * публикации. Без колонки — null, и порядок остаётся по id.
+ */
+function trade_sort_sql(string $alias, bool $bump): ?string {
+    return $bump ? "COALESCE($alias.bumped_at, $alias.created_at)" : null;
+}
+
+/** ORDER BY для живых списков: свежие и поднятые сверху. */
+function trade_order_sql(string $alias, bool $bump): string {
+    $sort = trade_sort_sql($alias, $bump);
+    return $sort === null ? "$alias.id DESC" : "$sort DESC, $alias.id DESC";
+}
+
+/** Колонки объявления, которые читают списки. bumped_at — если она есть. */
+function trade_cols_sql(string $alias, bool $bump): string {
+    return "$alias.id, $alias.user_id, $alias.give, $alias.want, $alias.status, $alias.created_at,"
+         . " $alias.replied_at, $alias.closed_at" . ($bump ? ", $alias.bumped_at" : '');
+}
+
+/**
+ * Когда это объявление можно поднять, если оно живое: через TRADE_BUMP_EVERY
+ * после последнего подъёма или публикации.
+ */
+function trade_bump_at(array $row): int {
+    $last = max((int)$row['created_at'], (int)($row['bumped_at'] ?? 0));
+    return $last + TRADE_BUMP_EVERY;
 }
 
 /**
@@ -379,6 +435,42 @@ function trade_close(PDO $pdo, string $me, bool $admin, int $id, string $result,
 }
 
 /**
+ * Поднять своё объявление наверх ленты (TRADE_BUMP_EVERY).
+ *
+ * Поднять можно только своё и только живое: истёкшее подъём не оживляет,
+ * срок жизни считается от публикации. Рано — 429 too_soon с bumpAt, когда
+ * будет можно: кнопка в профиле по нему и встаёт на отсчёт.
+ */
+function trade_bump(PDO $pdo, string $me, int $id, int $now): array {
+    if ($me === '') { return [401, ['ok' => false, 'error' => 'not_logged_in']]; }
+    if (!trade_ready($pdo) || !trade_bump_ready($pdo)) {
+        return [503, ['ok' => false, 'error' => 'not_ready']];
+    }
+
+    $st = $pdo->prepare('SELECT id, user_id, status, created_at, replied_at, bumped_at FROM trade_offers WHERE id = :id');
+    $st->execute([':id' => $id]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$row) { return [404, ['ok' => false, 'error' => 'not_found']]; }
+    if ((string)$row['user_id'] !== $me) { return [403, ['ok' => false, 'error' => 'forbidden']]; }
+    if (!trade_is_live($row, $now)) { return [409, ['ok' => false, 'error' => 'closed']]; }
+
+    $at = trade_bump_at($row);
+    if ($now < $at) { return [429, ['ok' => false, 'error' => 'too_soon', 'bumpAt' => $at]]; }
+
+    // Условие на время в самом UPDATE: две вкладки, нажавшие одновременно,
+    // обе прошли бы проверку выше, а поднять должна только первая.
+    $up = $pdo->prepare("UPDATE trade_offers SET bumped_at = :now
+                          WHERE id = :id AND user_id = :me AND status = 'open'
+                            AND COALESCE(bumped_at, created_at) <= :cut");
+    $up->execute([':now' => $now, ':id' => $id, ':me' => $me, ':cut' => $now - TRADE_BUMP_EVERY]);
+    if ($up->rowCount() !== 1) {
+        return [429, ['ok' => false, 'error' => 'too_soon', 'bumpAt' => $now + TRADE_BUMP_EVERY]];
+    }
+
+    return [200, ['ok' => true, 'id' => $id, 'up' => $now, 'bumpAt' => $now + TRADE_BUMP_EVERY]];
+}
+
+/**
  * Запись в журнал сделок профиля. Журнал — производное: объявление уже
  * закрыто, и отсутствие таблицы (миграцию выполнили не целиком) не должно
  * уронить само закрытие.
@@ -444,6 +536,10 @@ function trade_rows_out(PDO $pdo, array $rows, string $me, int $now): array {
             'give'    => trade_decode_side($r['give']),
             'want'    => trade_decode_side($r['want']),
             'at'      => (int)$r['created_at'],
+            // Когда подняли в последний раз, 0 — не поднимали. Карточка пишет
+            // «поднято …» вместо времени публикации: иначе вверху ленты стояло
+            // бы «3 дня назад», и порядок выглядел бы сломанным.
+            'up'      => (int)($r['bumped_at'] ?? 0),
             'mine'    => $mine,
             'state'   => trade_state($r, $now),
         ];
@@ -453,6 +549,9 @@ function trade_rows_out(PDO $pdo, array $rows, string $me, int $now): array {
             $row['replied'] = $replied;
             $row['expires'] = (int)$r['created_at'] + ($replied ? TRADE_TTL : TRADE_QUIET_TTL);
             $row['closedAt'] = isset($r['closed_at']) ? (int)$r['closed_at'] : 0;
+            // Когда можно поднять. 0 — нельзя вовсе: не живое или до миграции
+            // (колонки bumped_at в строке нет).
+            $row['bumpAt'] = (array_key_exists('bumped_at', $r) && $row['state'] === 'open') ? trade_bump_at($r) : 0;
         }
         $out[] = $row;
     }
@@ -469,11 +568,17 @@ function trade_clean_query($raw): string {
 }
 
 /**
- * Лента: открытые живые объявления, свежие сверху.
+ * Лента: открытые живые объявления, свежие и поднятые сверху.
  *
- * $before — номер последнего показанного объявления (следующая страница).
- * По id, а не по времени: две публикации одной секундой дали бы
- * неопределённый порядок, а id растёт строго.
+ * Порядок — по времени подъёма, а у не поднятого — публикации
+ * (trade_sort_sql), при равенстве — по id: две публикации одной секундой
+ * иначе дали бы неопределённый порядок. До миграции bumped_at — по id.
+ *
+ * $before — курсор следующей страницы, его отдаёт поле next: «время_id»
+ * последней показанной строки. Курсор держит само время, а не номер: строку,
+ * которую подняли, пока человек листал, по номеру нашли бы уже наверху, и
+ * следующая страница началась бы с начала ленты. Голый номер (так листали до
+ * подъёма, и так шлёт открытая до выкладки вкладка) тоже принимается.
  *
  * $q ищет по названию предмета (на любой стороне) и по нику автора. Названия
  * живут не в базе, а в тирлисте, поэтому сначала строка превращается в
@@ -487,14 +592,31 @@ function trade_clean_query($raw): string {
  * самом запросе, а не после него: иначе страница выходила бы короче
  * TRADE_PAGE_SIZE, а флаг more врал бы.
  */
-function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now, array $hidden = []): array {
-    $empty = ['ok' => true, 'ready' => false, 'offers' => [], 'mine' => [], 'more' => false];
+function trade_feed(PDO $pdo, string $me, string $q, $before, int $now, array $hidden = []): array {
+    $empty = ['ok' => true, 'ready' => false, 'offers' => [], 'mine' => [], 'more' => false, 'next' => ''];
     if (!trade_ready($pdo)) { return $empty; }
     $empty['ready'] = true;
 
+    $bump   = trade_bump_ready($pdo);
+    $sort   = trade_sort_sql('o', $bump);
+    $cursor = trade_feed_cursor($pdo, $before, $bump);
+
     [$live, $params] = trade_live_sql('o', $now);
     $where = [$live];
-    if ($before > 0) { $where[] = 'o.id < ?'; $params[] = $before; }
+    if ($cursor !== null) {
+        if ($sort === null || $cursor[0] === null) {
+            $where[] = 'o.id < ?';
+            $params[] = $cursor[1];
+        } else {
+            // Ключ — числом в самом запросе, а не параметром: execute() шлёт
+            // параметры строками, а у выражения COALESCE(...) в SQLite нет
+            // числового сродства, и число там всегда «меньше» строки — условие
+            // было бы истинным для всей ленты. Значение — (int) из курсора.
+            $s = (int)$cursor[0];
+            $where[] = "($sort < $s OR ($sort = $s AND o.id < ?))";
+            $params[] = $cursor[1];
+        }
+    }
     if ($hidden !== []) {
         $where[] = 'o.user_id NOT IN (' . implode(', ', array_fill(0, count($hidden), '?')) . ')';
         foreach ($hidden as $id) { $params[] = $id; }
@@ -526,22 +648,30 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now, arra
 
     // На одну строку больше страницы: так без второго запроса видно, есть ли
     // что показывать дальше.
-    $sql = 'SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at FROM trade_offers o
+    $sql = 'SELECT ' . trade_cols_sql('o', $bump) . ' FROM trade_offers o
              WHERE ' . implode(' AND ', $where) . '
-          ORDER BY o.id DESC LIMIT ' . (TRADE_PAGE_SIZE + 1);
+          ORDER BY ' . trade_order_sql('o', $bump) . ' LIMIT ' . (TRADE_PAGE_SIZE + 1);
     $st = $pdo->prepare($sql);
     $st->execute($params);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC);
     $more = count($rows) > TRADE_PAGE_SIZE;
     if ($more) { $rows = array_slice($rows, 0, TRADE_PAGE_SIZE); }
 
+    $next = '';
+    if ($more && $rows) {
+        $last = end($rows);
+        $next = $bump
+            ? (isset($last['bumped_at']) ? (int)$last['bumped_at'] : (int)$last['created_at']) . '_' . (int)$last['id']
+            : (string)(int)$last['id'];
+    }
+
     $mine = [];
-    if ($me !== '' && $before === 0 && $q === '') {
+    if ($me !== '' && $cursor === null && $q === '') {
         [$liveMine, $pm] = trade_live_sql('o', $now);
-        $ms = $pdo->prepare("SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at, o.closed_at
+        $ms = $pdo->prepare('SELECT ' . trade_cols_sql('o', $bump) . "
                                FROM trade_offers o
                               WHERE o.user_id = ? AND $liveMine
-                           ORDER BY o.id DESC LIMIT " . trade_live_cap($me));
+                           ORDER BY " . trade_order_sql('o', $bump) . ' LIMIT ' . trade_live_cap($me));
         $ms->execute(array_merge([$me], $pm));
         $mine = trade_rows_out($pdo, $ms->fetchAll(PDO::FETCH_ASSOC), $me, $now);
     }
@@ -552,19 +682,43 @@ function trade_feed(PDO $pdo, string $me, string $q, int $before, int $now, arra
         'offers' => trade_rows_out($pdo, $rows, $me, $now),
         'mine'   => $mine,
         'more'   => $more,
+        'next'   => $next,
     ];
+}
+
+/**
+ * Курсор ленты → [ключ порядка или null, id] либо null (первая страница).
+ * «время_id» — из поля next; голый номер — старый курсор: по нему ключ
+ * берётся из самой строки, а без колонки bumped_at остаётся только id.
+ */
+function trade_feed_cursor(PDO $pdo, $raw, bool $bump): ?array {
+    if (is_int($raw)) { $raw = $raw > 0 ? (string)$raw : ''; }
+    if (!is_string($raw) || $raw === '') { return null; }
+    if (preg_match('/^(\d{1,19})_(\d{1,19})\z/', $raw, $m) === 1) {
+        return [$bump ? (int)$m[1] : null, (int)$m[2]];
+    }
+    if (preg_match('/^\d{1,19}\z/', $raw) !== 1 || (int)$raw <= 0) { return null; }
+    $id = (int)$raw;
+    if (!$bump) { return [null, $id]; }
+    $st = $pdo->prepare('SELECT COALESCE(bumped_at, created_at) FROM trade_offers WHERE id = :id');
+    $st->execute([':id' => $id]);
+    $sort = $st->fetchColumn();
+    return [$sort === false ? null : (int)$sort, $id];
 }
 
 /**
  * Все свои объявления для профиля — и живые, и истёкшие, и закрытые, свежие
  * сверху. Модерация (removed) тоже видна: человек должен понимать, куда
  * делось его объявление.
+ *
+ * Порядок — по публикации, а не по подъёму: это архив своих объявлений, и
+ * карточка, прыгающая наверх от кнопки «Поднять», только сбивала бы.
  */
 function trade_mine_all(PDO $pdo, string $me, int $now): array {
     if ($me === '' || !trade_ready($pdo)) { return []; }
-    $st = $pdo->prepare('SELECT id, user_id, give, want, status, created_at, replied_at, closed_at
-                           FROM trade_offers WHERE user_id = :me
-                       ORDER BY id DESC LIMIT ' . TRADE_MINE_MAX);
+    $st = $pdo->prepare('SELECT ' . trade_cols_sql('o', trade_bump_ready($pdo)) . '
+                           FROM trade_offers o WHERE o.user_id = :me
+                       ORDER BY o.id DESC LIMIT ' . TRADE_MINE_MAX);
     $st->execute([':me' => $me]);
     return trade_rows_out($pdo, $st->fetchAll(PDO::FETCH_ASSOC), $me, $now);
 }
@@ -579,10 +733,11 @@ function trade_mine_all(PDO $pdo, string $me, int $now): array {
 function trade_user_live(PDO $pdo, string $userId, string $me, int $now): array {
     if ($userId === '' || !trade_ready($pdo)) { return []; }
     [$live, $params] = trade_live_sql('o', $now);
-    $st = $pdo->prepare("SELECT o.id, o.user_id, o.give, o.want, o.status, o.created_at, o.replied_at, o.closed_at
+    $bump = trade_bump_ready($pdo);
+    $st = $pdo->prepare('SELECT ' . trade_cols_sql('o', $bump) . "
                            FROM trade_offers o
                           WHERE o.user_id = ? AND $live
-                       ORDER BY o.id DESC LIMIT " . trade_live_cap($userId));
+                       ORDER BY " . trade_order_sql('o', $bump) . ' LIMIT ' . trade_live_cap($userId));
     $st->execute(array_merge([$userId], $params));
     return trade_rows_out($pdo, $st->fetchAll(PDO::FETCH_ASSOC), $me, $now);
 }

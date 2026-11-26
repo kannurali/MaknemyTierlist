@@ -2,7 +2,7 @@
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/lib/trade.php';
 
-// Лента объявлений — GET /api/trades.php[?q=строка][&before=N]
+// Лента объявлений — GET /api/trades.php[?q=строка][&before=<next прошлой страницы>]
 // Свои объявления для профиля — GET /api/trades.php?view=mine
 // Сколько ещё можно опубликовать — GET /api/trades.php?view=quota
 // Живые объявления игрока для его профиля — GET /api/trades.php?view=user&id=<roblox_id>
@@ -54,8 +54,11 @@ function handle_trades(PDO $pdo, array $session, array $get, int $now, array $cf
     }
 
     $q      = trade_clean_query($get['q'] ?? '');
-    $before = (isset($get['before']) && is_string($get['before']) && ctype_digit($get['before']))
-        ? (int)$get['before'] : 0;
+    // Курсор — поле next прошлой страницы («время_id») или, у старых
+    // вкладок, голый номер объявления. Разбирает его trade_feed_cursor.
+    $before = (isset($get['before']) && is_string($get['before'])
+               && preg_match('/^\d{1,19}(_\d{1,19})?\z/', $get['before']) === 1)
+        ? $get['before'] : '';
     $feed = trade_feed($pdo, $me, $q, $before, $now, $banned);
     $feed['authed'] = $me !== '';
     $feed['admin']  = site_role($session, $cfg) === 'admin';

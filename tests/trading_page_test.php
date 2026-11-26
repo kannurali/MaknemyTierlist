@@ -337,11 +337,23 @@ test('новые скрипты и стили отдаются без комме
 test('таблицы трейдинга в schema.sql совпадают с миграцией', function () use ($ROOT) {
     $schema = tp_read($ROOT . '/schema.sql');
     $mig    = tp_read($ROOT . '/docs/migrations/2026-09-23-trading.sql');
+    // Колонки, добавленные позже своей миграцией: в schema.sql они стоят в
+    // определении таблицы, а в исходной миграции их нет — на бою её уже
+    // запускали, и вторая колонка с тем же именем уронила бы ALTER.
+    $later = ['trade_offers' => ['bumped_at' => '2026-11-26-trade-bump.sql']];
     foreach (['trade_offers', 'profile_trades', 'support_tickets'] as $t) {
         $re = '/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;/s';
         assert_true((bool)preg_match($re, $mig, $a), "$t в миграции");
         assert_true((bool)preg_match($re, $schema, $b), "$t в schema.sql");
-        assert_eq($a[0] ?? '', $b[0] ?? '', "$t: одно и то же определение");
+        $def = $b[0] ?? '';
+        foreach ($later[$t] ?? [] as $col => $file) {
+            $line = '/^  ' . $col . ' +[^\n]*,\r?\n/m';
+            assert_true((bool)preg_match($line, $def, $c), "$t.$col в schema.sql");
+            $def = preg_replace($line, '', $def);
+            $add = tp_read($ROOT . '/docs/migrations/' . $file);
+            assert_true(strpos($add, "ALTER TABLE $t ADD COLUMN $col ") !== false, "$t.$col заводит $file");
+        }
+        assert_eq($a[0] ?? '', $def, "$t: одно и то же определение");
     }
 });
 
@@ -382,6 +394,35 @@ test('в чужом профиле — живые объявления игро�
     foreach (['profile.tradesPeerTitle', 'profile.tradesPeerEmpty'] as $k) {
         assert_eq(1, substr_count(substr($i18n, 0, $enAt), '"' . $k . '":'), "ru: $k");
         assert_eq(1, substr_count(substr($i18n, $enAt), '"' . $k . '":'), "en: $k");
+    }
+});
+
+// 26.11.2026, слово владельца: свои объявления в профиле можно поднимать
+// наверх ленты раз в полчаса. Кнопка — только в своём профиле; на /trading и
+// в чужом профиле её нет.
+test('«Поднять»: кнопка только в своём профиле, лента листается курсором сервера', function () use ($PUB) {
+    $pf = tp_read($PUB . '/js/profile-trades.js');
+    assert_true(strpos($pf, 'linkNick: !peer, bump: !peer') !== false, 'профиль включает кнопку только у себя');
+    assert_true(strpos($pf, 'if (btn.dataset.act === "bump") { bump(btn, card); return; }') !== false, 'подъём не идёт через «закрыть»');
+    assert_true(strpos($pf, 'cards.refreshBumps(list)') !== false, 'отсчёт на кнопке обновляется');
+
+    $cards = tp_read($PUB . '/js/trade-cards.js');
+    assert_true(strpos($cards, 'state === "open" && env.bump && offer.bumpAt > 0') !== false, 'кнопка — у живого своего и после миграции');
+    assert_true(strpos($cards, 'const API_BUMP = "/api/trade_bump.php";') !== false, 'адрес подъёма');
+    assert_true(strpos($cards, 'tx("trade.bumpedAgo", { t: ago(bumped) })') !== false, 'у поднятого — «поднято …»');
+
+    $feed = tp_read($PUB . '/js/trading-page.js');
+    assert_true(strpos($feed, 'TRADE_CARDS.make({ tx: tx, state: state, loginUrl: loginUrl })') !== false, 'на /trading кнопки нет');
+    assert_true(strpos($feed, 'params.set("before", state.next || String(') !== false, 'следующая страница — по курсору next');
+
+    $css = tp_read($PUB . '/css/trading.css');
+    assert_true(strpos($css, '.tr-act:disabled { opacity: .5; cursor: default; pointer-events: none; }') !== false, 'кнопка на отсчёте приглушена');
+
+    foreach (['trade.bump', 'trade.bumpWait', 'trade.bumpHint', 'trade.bumpedAgo', 'trade.bumpFailed'] as $k) {
+        foreach (['ru', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'tr', 'uk'] as $lang) {
+            $dict = json_decode(tp_read($PUB . '/lang/' . $lang . '.json'), true);
+            assert_true(isset($dict[$k]) && $dict[$k] !== '', "$lang: $k");
+        }
     }
 });
 

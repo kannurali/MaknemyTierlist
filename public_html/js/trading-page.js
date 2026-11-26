@@ -27,6 +27,7 @@
     offers: [],
     mine: [],
     more: false,
+    next: "",
     query: "",
     loading: false,
     error: false,
@@ -91,6 +92,7 @@
     if (reset) {
       state.offers = [];
       state.more = false;
+      state.next = "";
       state.error = false;
     }
     render();
@@ -98,7 +100,7 @@
     const params = new URLSearchParams();
     if (state.query) { params.set("q", state.query); }
     if (!reset && state.offers.length) {
-      params.set("before", String(state.offers[state.offers.length - 1].id));
+      params.set("before", state.next || String(state.offers[state.offers.length - 1].id));
     }
     const qs = params.toString();
 
@@ -115,6 +117,7 @@
       const fresh = (Array.isArray(d.offers) ? d.offers : []).filter(o => !seen.has(o.id));
       state.offers = state.offers.concat(fresh);
       state.more = !!d.more;
+      state.next = typeof d.next === "string" ? d.next : "";
       state.error = false;
     } catch (e) {
       if (seq !== state.seq) { return; }
