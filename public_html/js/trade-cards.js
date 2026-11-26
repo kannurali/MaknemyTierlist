@@ -6,6 +6,7 @@
   const API_TIERLIST = "/api/tierlist.php";
   const siteUrl = path => (root.I18N && root.I18N.url ? root.I18N.url(path) : path);
   const API_CLOSE = "/api/trade_close.php";
+  const API_BUMP = "/api/trade_bump.php";
 
   function el(tag, cls, text) {
     const node = document.createElement(tag);
@@ -186,6 +187,24 @@
       return b;
     }
 
+    function paintBump(b) {
+      const wait = Number(b.dataset.bumpAt) - Math.floor(Date.now() / 1000);
+      b.textContent = wait > 0 ? tx("trade.bumpWait", { t: duration(wait) }) : tx("trade.bump");
+      b.disabled = wait > 0;
+    }
+
+    function bumpButton(offer) {
+      const b = actButton("trade.bump", "bump", "tr-act-up", offer.id);
+      b.dataset.bumpAt = String(offer.bumpAt);
+      b.title = tx("trade.bumpHint");
+      paintBump(b);
+      return b;
+    }
+
+    function refreshBumps(box) {
+      box.querySelectorAll("button[data-act='bump']").forEach(paintBump);
+    }
+
     const STATE_KEY = {
       open: "trade.stateOpen",
       expired: "trade.stateExpired",
@@ -275,8 +294,9 @@
 
       const foot = el("footer", "tr-card-foot");
       const meta = el("div", "tr-meta");
-      const time = el("time", "tr-time", ago(offer.at));
-      time.dateTime = new Date(offer.at * 1000).toISOString();
+      const bumped = offer.up > 0 ? offer.up : 0;
+      const time = el("time", "tr-time", bumped ? tx("trade.bumpedAgo", { t: ago(bumped) }) : ago(offer.at));
+      time.dateTime = new Date((bumped || offer.at) * 1000).toISOString();
       meta.appendChild(time);
       if (offer.mine && state === "open" && offer.expires) {
         const left = offer.expires - Math.floor(Date.now() / 1000);
@@ -287,6 +307,9 @@
 
       const actions = el("div", "tr-actions");
       if (offer.mine) {
+        if (state === "open" && env.bump && offer.bumpAt > 0) {
+          actions.appendChild(bumpButton(offer));
+        }
         if (state === "open") {
           actions.appendChild(actButton("trade.done", "done", "tr-act-good", offer.id));
           actions.appendChild(actButton("trade.cancel", "cancel", "tr-act-ghost", offer.id));
@@ -317,7 +340,7 @@
       return li;
     }
 
-    return { buildCard: buildCard, ago: ago, duration: duration };
+    return { buildCard: buildCard, ago: ago, duration: duration, refreshBumps: refreshBumps };
   }
 
   async function loadCatalog() {
@@ -353,5 +376,20 @@
     }
   }
 
-  root.TRADE_CARDS = { make: make, loadCatalog: loadCatalog, close: close, silhouette: silhouette };
+  async function bump(id) {
+    try {
+      const r = await fetch(API_BUMP, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: id })
+      });
+      const d = await r.json().catch(() => null);
+      return d && typeof d === "object" ? d : { ok: false };
+    } catch (_) {
+      return { ok: false };
+    }
+  }
+
+  root.TRADE_CARDS = { make: make, loadCatalog: loadCatalog, close: close, bump: bump, silhouette: silhouette };
 })(window);

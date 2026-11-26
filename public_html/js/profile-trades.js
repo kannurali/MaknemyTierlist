@@ -31,7 +31,7 @@
     error: false
   };
 
-  const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: () => I18N.url("/profile"), linkNick: !peer });
+  const cards = TRADE_CARDS.make({ tx: tx, state: state, loginUrl: () => I18N.url("/profile"), linkNick: !peer, bump: !peer });
 
   function renderQuota() {
     if (!quotaEl) return;
@@ -94,10 +94,36 @@
     render();
   }
 
+  async function bump(btn, card) {
+    const id = Number(btn.dataset.id);
+    btn.disabled = true;
+    if (card) { card.classList.add("is-busy"); }
+    const d = await TRADE_CARDS.bump(id);
+    const offer = (state.offers || []).find(o => o.id === id);
+    if (d.ok && offer) {
+      offer.up = d.up;
+      offer.bumpAt = d.bumpAt;
+    } else if (d.error === "too_soon" && d.bumpAt && offer) {
+      offer.bumpAt = d.bumpAt;
+    } else if (d.error === "closed") {
+      load();
+      return;
+    } else {
+      if (card) { card.classList.remove("is-busy"); }
+      btn.disabled = false;
+      window.alert(tx("trade.bumpFailed"));
+      return;
+    }
+    render();
+    const again = list.querySelector(".tr-card[data-id='" + id + "'] button[data-act='bump']");
+    if (again) { again.focus(); }
+  }
+
   list.addEventListener("click", async e => {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
     const card = btn.closest(".tr-card");
+    if (btn.dataset.act === "bump") { bump(btn, card); return; }
     if (card) { card.classList.add("is-busy"); }
     const ok = await TRADE_CARDS.close(Number(btn.dataset.id), btn.dataset.act, tx);
     if (ok) {
@@ -121,4 +147,5 @@
   render();
   loadCatalog();
   load();
+  if (!peer) { setInterval(() => cards.refreshBumps(list), 20000); }
 })();

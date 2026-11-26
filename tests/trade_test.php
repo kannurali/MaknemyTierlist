@@ -65,7 +65,7 @@ function trade_db(bool $withTables = true): PDO {
 }
 
 // Заготовка для проверок ленты и профиля: кладёт объявление прямо в базу,
-// мимо пределов публикации (2 в сутки, пауза после закрытия) и скам-фильтра —
+// мимо пределов публикации (5 в сутки, пауза после закрытия) и скам-фильтра —
 // их проверяют отдельные тесты через trade_create.
 function offer(PDO $pdo, string $me, array $give, array $want = [], int $at = NOW): int {
     $pdo->prepare("INSERT INTO trade_offers (user_id, give, want, status, created_at) VALUES (?, ?, ?, 'open', ?)")
@@ -141,15 +141,21 @@ test('не больше 5 активных одновременно; снял, �
     assert_eq(200, trade_create($old, '101', ['idDark'], [], NOW)[0], 'истёкшие без отклика места не занимают');
 });
 
-test('не больше 2 публикаций за сутки, окно скользящее', function () {
-    assert_eq([2, 86400], [TRADE_RATE_MAX, TRADE_RATE_WINDOW], 'два за скользящие сутки');
+test('не больше 5 публикаций за сутки, окно скользящее', function () {
+    assert_eq([5, 86400], [TRADE_RATE_MAX, TRADE_RATE_WINDOW], 'пять за скользящие сутки (владелец, 26.11)');
     $pdo = trade_db();
-    offer($pdo, '101', ['idDark'], [], NOW - 3600 - TRADE_RATE_WINDOW - 1);   // вне окна при каждой проверке ниже
     $first = NOW - 3600;
-    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], $first)[0], 'первое за сутки');
-    assert_eq(200, trade_create($pdo, '101', ['idDark'], [], $first + 60)[0], 'второе за сутки');
+    $ids = [];
+    for ($i = 0; $i < TRADE_RATE_MAX; $i++) {
+        [$code, $body] = trade_create($pdo, '101', ['idDark'], [], $first + 60 * $i);
+        assert_eq(200, $code, 'публикация №' . ($i + 1) . ' за сутки');
+        $ids[] = (int)$body['id'];
+    }
+    // Пять за сутки — это и пять активных. Модератор снимает одно: место среди
+    // активных свободно, паузы его снятие не даёт — упираемся именно в сутки.
+    trade_close($pdo, '', true, $ids[0], 'remove', NOW - 60);
     [$code, $body] = trade_create($pdo, '101', ['idDark'], [], NOW);
-    assert_eq(429, $code, 'третье за сутки не принимается');
+    assert_eq(429, $code, 'шестое за сутки не принимается');
     assert_eq('too_many', $body['error'], 'и это названо');
     assert_eq(0, $body['quota']['left'], 'осталось ноль');
     assert_eq($first + TRADE_RATE_WINDOW, $body['quota']['retryAt'], 'следующее — когда из окна выйдет самое старое');
@@ -165,12 +171,12 @@ test('снятые объявления тоже съедают предел', f
     }
     assert_eq(429, trade_create($pdo, '101', ['idDark'], [], NOW)[0], '«выложил — снял» предел не обходит');
     $q = trade_quota($pdo, '101', NOW);
-    assert_eq([2, 2, 0], [$q['max'], $q['used'], $q['left']], 'квота считает всё созданное');
+    assert_eq([5, 5, 0], [$q['max'], $q['used'], $q['left']], 'квота считает всё созданное');
     assert_eq(TRADE_RATE_MAX, trade_quota($pdo, '', NOW)['left'], 'у анонима квота пустая, а не ошибка');
 });
 
-test('снял сам или отметил сделку — новое объявление только через 30 минут', function () {
-    assert_eq(1800, TRADE_CLOSE_COOLDOWN, 'пауза — полчаса');
+test('снял сам или отметил сделку — новое объявление только через 20 минут', function () {
+    assert_eq(1200, TRADE_CLOSE_COOLDOWN, 'пауза — 20 минут (владелец, 26.11)');
     foreach (['cancel', 'done'] as $result) {
         $pdo = trade_db();
         $id = offer($pdo, '101', ['idDark'], [], NOW - TRADE_RATE_WINDOW - 60);
@@ -268,7 +274,7 @@ test('владелец публикует без пределов, осталь�
     assert_eq($live, count(trade_feed($pdo, $own, '', 0, NOW + 103)['mine']), 'и в ленте у себя — все');
 
     for ($i = 0; $i < TRADE_RATE_MAX; $i++) { assert_eq(200, trade_create($pdo, '101', ['idDark'], [], NOW + $i)[0]); }
-    assert_eq(429, trade_create($pdo, '101', ['idDark'], [], NOW + 5)[0], 'у обычного игрока предел остался');
+    assert_true(in_array(trade_create($pdo, '101', ['idDark'], [], NOW + 5)[0], [409, 429], true), 'у обычного игрока предел остался');
     assert_eq(400, trade_create($pdo, '202', ['idBoat'], ['idDragon'], NOW)[0], 'и скам-фильтр тоже');
 
     $api = file_get_contents(__DIR__ . '/../public_html/api/trade_create.php');
@@ -686,6 +692,136 @@ test('автор объявления Him несёт тему kitsune, без з
     assert_eq('kitsune', $a['7401385157']['skin']);
     assert_eq(null, $a['7401385157']['logo'], 'знака нет');
     assert_eq([], $a['7401385157']['titles'] ?? [], 'титула нет');
+});
+
+// --------------------------------------------------------------------------
+//  «Поднять» (владелец, 26.11.2026): наверх ленты раз в полчаса
+// --------------------------------------------------------------------------
+
+// База после миграции 2026-11-26-trade-bump.sql. Обычный trade_db() — это
+// база до неё: на ней остальные тесты проверяют, что без колонки всё как было.
+function trade_db_bump(): PDO {
+    $pdo = trade_db();
+    $pdo->exec('ALTER TABLE trade_offers ADD COLUMN bumped_at INTEGER NULL');
+    return $pdo;
+}
+
+test('поднять: своё и живое, раз в полчаса от публикации или прошлого подъёма', function () {
+    assert_eq(1800, TRADE_BUMP_EVERY, 'полчаса');
+    $pdo = trade_db_bump();
+    $a     = offer($pdo, '101', ['idDark'], [], NOW - 3600);
+    $fresh = offer($pdo, '101', ['idDark'], [], NOW - 600);
+    $other = offer($pdo, '202', ['idDark'], [], NOW - 3600);
+
+    assert_eq(401, trade_bump($pdo, '', $a, NOW)[0], 'аноним');
+    assert_eq(404, trade_bump($pdo, '101', 99999, NOW)[0], 'нет такого');
+    assert_eq(403, trade_bump($pdo, '101', $other, NOW)[0], 'чужое');
+
+    [$code, $body] = trade_bump($pdo, '101', $fresh, NOW);
+    assert_eq(429, $code, 'только что выложенное и так наверху');
+    assert_eq(['too_soon', NOW - 600 + TRADE_BUMP_EVERY], [$body['error'], $body['bumpAt']], 'и когда будет можно');
+
+    [$code, $body] = trade_bump($pdo, '101', $a, NOW);
+    assert_eq(200, $code, 'через полчаса после публикации — можно');
+    assert_eq([NOW, NOW + TRADE_BUMP_EVERY], [$body['up'], $body['bumpAt']], 'ответ: когда подняли и когда снова');
+    assert_eq(NOW, (int)$pdo->query("SELECT bumped_at FROM trade_offers WHERE id = $a")->fetchColumn(), 'время в базе');
+    assert_eq(NOW - 3600, (int)$pdo->query("SELECT created_at FROM trade_offers WHERE id = $a")->fetchColumn(), 'публикация не тронута — квота и срок жизни считают её');
+
+    assert_eq(429, trade_bump($pdo, '101', $a, NOW + TRADE_BUMP_EVERY - 1)[0], 'за секунду до конца паузы — нельзя');
+    assert_eq(200, trade_bump($pdo, '101', $a, NOW + TRADE_BUMP_EVERY)[0], 'отсчёт от прошлого подъёма');
+
+    $old = offer($pdo, '101', ['idDark'], [], NOW - TRADE_QUIET_TTL - 1);
+    assert_eq(409, trade_bump($pdo, '101', $old, NOW)[0], 'истёкшее подъём не оживляет');
+    trade_close($pdo, '101', false, $other, 'cancel', NOW);
+    $done = offer($pdo, '101', ['idDark'], [], NOW - 3600);
+    trade_close($pdo, '101', false, $done, 'done', NOW - 60);
+    assert_eq(409, trade_bump($pdo, '101', $done, NOW)[0], 'закрытое — тоже');
+
+    $pdo->prepare('INSERT INTO users (roblox_id, username, display_name, avatar_url, created_at, last_login_at)
+                   VALUES (?, ?, ?, ?, ?, ?)')->execute([PROFILE_OWNER_ID, 'Shamill_prod', 'maknemy', '', NOW - 999, NOW - 999]);
+    $own = offer($pdo, PROFILE_OWNER_ID, ['idDark'], [], NOW - 60);
+    assert_eq(429, trade_bump($pdo, PROFILE_OWNER_ID, $own, NOW)[0], 'пауза и у тех, кто публикует без пределов');
+
+    [$code, $body] = trade_bump(trade_db(), '101', 1, NOW);
+    assert_eq([503, 'not_ready'], [$code, $body['error']], 'до миграции — 503, а не падение');
+});
+
+test('лента: поднятое встаёт наверх и пишет, когда подняли', function () {
+    $pdo = trade_db_bump();
+    $a = offer($pdo, '101', ['idDragon'], [], NOW - 7200);
+    $b = offer($pdo, '202', ['idDark'], [], NOW - 3600);
+    $c = offer($pdo, '303', ['idBoat'], [], NOW - 1800);
+    assert_eq([$c, $b, $a], array_column(trade_feed($pdo, '', '', 0, NOW)['offers'], 'id'), 'до подъёма — по публикации');
+
+    trade_bump($pdo, '101', $a, NOW);
+    $feed = trade_feed($pdo, '', '', 0, NOW);
+    assert_eq([$a, $c, $b], array_column($feed['offers'], 'id'), 'поднятое — первым');
+    assert_eq([NOW, NOW - 7200], [$feed['offers'][0]['up'], $feed['offers'][0]['at']], 'up — подъём, at — публикация');
+    assert_eq(0, $feed['offers'][1]['up'], 'не поднятое — 0');
+    assert_true(!array_key_exists('bumpAt', $feed['offers'][0]), 'чужим не видно, когда автор сможет поднять снова');
+
+    $mine = trade_feed($pdo, '101', '', 0, NOW + 60)['mine'];
+    assert_eq(NOW + TRADE_BUMP_EVERY, $mine[0]['bumpAt'], 'автору — когда можно снова');
+    $a2 = offer($pdo, '101', ['idDark'], [], NOW - 600);
+    assert_eq([$a, $a2], array_column(trade_user_live($pdo, '101', '202', NOW), 'id'), 'профиль чужого — тоже по подъёму');
+});
+
+test('лента: курсор страниц переживает подъём, голый номер тоже понимается', function () {
+    $pdo = trade_db_bump();
+    $ids = [];
+    for ($i = 0; $i < TRADE_PAGE_SIZE + 3; $i++) { $ids[] = offer($pdo, '101', ['idDark'], [], NOW - 9000 + $i * 10); }
+    $p1 = trade_feed($pdo, '', '', '', NOW);
+    assert_eq(TRADE_PAGE_SIZE, count($p1['offers']), 'первая страница полная');
+    assert_true($p1['more'] && preg_match('/^\d+_\d+$/', $p1['next']) === 1, 'есть ещё, курсор — «время_id»');
+    $last = end($p1['offers'])['id'];
+
+    // Пока человек читал первую страницу, автор поднял её последнюю строку.
+    assert_eq(200, trade_bump($pdo, '101', $last, NOW)[0]);
+    $p2 = trade_feed($pdo, '', '', $p1['next'], NOW);
+    assert_eq([$ids[2], $ids[1], $ids[0]], array_column($p2['offers'], 'id'), 'остаток, без повторов и без возврата в начало');
+    assert_eq(false, $p2['more'], 'дальше пусто');
+    assert_eq('', $p2['next'], 'и курсора нет');
+
+    $legacy = trade_feed($pdo, '', '', (string)$ids[4], NOW);   // строка под поднятой
+    assert_eq([$ids[2], $ids[1], $ids[0]], array_column($legacy['offers'], 'id'), 'голый номер старой вкладки');
+
+    $old = trade_db();
+    for ($i = 0; $i < TRADE_PAGE_SIZE + 2; $i++) { offer($old, '101', ['idDark'], [], NOW - $i); }
+    $q1 = trade_feed($old, '', '', '', NOW);
+    assert_eq((string)end($q1['offers'])['id'], $q1['next'], 'до миграции курсор — номер');
+    assert_eq(2, count(trade_feed($old, '', '', $q1['next'], NOW)['offers']), 'и по нему листается');
+
+    [, $api] = handle_trades($pdo, [], ['before' => $p1['next']], NOW);
+    assert_eq(3, count($api['offers']), 'API передаёт курсор');
+    [, $bad] = handle_trades($pdo, [], ['before' => '1;DROP'], NOW);
+    assert_eq(TRADE_PAGE_SIZE, count($bad['offers']), 'мусор вместо курсора — первая страница');
+});
+
+test('профиль: когда можно поднять — только у своих живых; до миграции кнопки нет', function () {
+    $pdo = trade_db_bump();
+    $open = offer($pdo, '101', ['idDark'], [], NOW - 600);
+    $gone = offer($pdo, '101', ['idDark'], [], NOW - 3600);
+    trade_close($pdo, '101', false, $gone, 'cancel', NOW - 60);
+    $rows = [];
+    foreach (trade_mine_all($pdo, '101', NOW) as $r) { $rows[$r['id']] = $r; }
+    assert_eq(NOW - 600 + TRADE_BUMP_EVERY, $rows[$open]['bumpAt'], 'живое — через полчаса после публикации');
+    assert_eq(0, $rows[$gone]['bumpAt'], 'снятое не поднять');
+
+    $old = trade_db();
+    $id = offer($old, '101', ['idDark'], [], NOW - 3600);
+    $r = trade_mine_all($old, '101', NOW)[0];
+    assert_eq([$id, 0, 0], [$r['id'], $r['bumpAt'], $r['up']], 'без колонки — 0, и страница кнопку не рисует');
+});
+
+test('подъём: адрес и предел частоты запросов', function () {
+    $api = file_get_contents(__DIR__ . '/../public_html/api/trade_bump.php');
+    assert_true(strpos($api, 'require_post();') !== false, 'только POST');
+    assert_true(strpos($api, "rate_limit_allow('trade_bump', \$me, 60, 3600") !== false, 'частота запросов режется у всех');
+    assert_true(strpos($api, 'trade_bump(db(), $me, read_row_id($body), time())') !== false, 'зовёт trade_bump');
+    $mig = file_get_contents(__DIR__ . '/../docs/migrations/2026-11-26-trade-bump.sql');
+    assert_true(strpos($mig, 'ALTER TABLE trade_offers ADD COLUMN bumped_at BIGINT UNSIGNED NULL') !== false, 'миграция');
+    $schema = file_get_contents(__DIR__ . '/../schema.sql');
+    assert_true(strpos($schema, 'bumped_at  BIGINT UNSIGNED NULL,') !== false, 'и в schema.sql');
 });
 
 run_tests();

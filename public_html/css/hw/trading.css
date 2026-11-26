@@ -617,6 +617,7 @@ a.tr-nick:focus-visible { text-decoration: underline; text-underline-offset: .15
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
 }
 .tr-act-bad { background: var(--tr-red); }
+.tr-act:disabled { opacity: .5; cursor: default; pointer-events: none; }
 
 .tr-card-in:has(.tr-stretch) { cursor: pointer; }
 
