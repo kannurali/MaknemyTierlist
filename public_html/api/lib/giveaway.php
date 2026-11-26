@@ -98,6 +98,7 @@
 // PHP 7.4: без match, без str_contains, без именованных аргументов.
 
 require_once __DIR__ . '/telegram.php';
+require_once __DIR__ . '/nick_logo.php';
 require_once __DIR__ . '/gw_prefs.php';
 require_once __DIR__ . '/news_blocks.php';
 require_once __DIR__ . '/translate.php';
@@ -698,7 +699,7 @@ function gw_winners(PDO $pdo, array $ids): array {
             'id'      => (string)$r['user_id'],
             'name'    => (string)(($tg ? $r['p_user'] ?? '' : $r['username']) ?? ''),
             'display' => (string)(($tg ? $r['p_name'] ?? '' : $r['display_name']) ?? ''),
-            'avatar'  => $tg ? '' : (string)($r['avatar_url'] ?? ''),
+            'avatar'  => $tg ? '' : nick_avatar((string)$r['user_id'], (string)($r['avatar_url'] ?? '')),
             'tg'      => $tg,
         ];
     }
@@ -1328,7 +1329,7 @@ function gw_admin_item(PDO $pdo, array $row, int $now): array {
             'id'        => (string)$e['user_id'],
             'name'      => $tgOnly ? '' : (string)($e['username'] ?? ''),
             'display'   => $tgOnly ? (string)($e['p_name'] ?? '') : (string)($e['display_name'] ?? ''),
-            'avatar'    => $tgOnly ? '' : (string)($e['avatar_url'] ?? ''),
+            'avatar'    => $tgOnly ? '' : nick_avatar((string)$e['user_id'], (string)($e['avatar_url'] ?? '')),
             'tg'        => $tgOnly ? ($tgUser !== '' ? '@' . $tgUser : (string)($e['p_name'] ?? '')) : (string)($e['tg_name'] ?? ''),
             'tg_only'   => $tgOnly,
             'tg_user'   => $tgUser,

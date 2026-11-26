@@ -1362,6 +1362,16 @@ test('с главной блок «Обо мне» убран, кнопка ве
     assert_eq(0, preg_match('/hm-about|hm-social/', pf_read($PUB . '/css/home.css')), 'мёртвых стилей не осталось');
 });
 
+test('в профиле владельца — его своя аватарка, хотя в базе пусто', function () {
+    $mk    = pf_render('900000001', '2841062255');
+    $other = pf_render('900000001', '900000004');
+    assert_true($mk !== null && $other !== null, 'страницы отрендерились');
+    if ($mk === null || $other === null) { return; }
+    assert_true(strpos($mk['html'], '<div class="pf-avatar has-photo">') !== false, 'аватарка есть');
+    assert_true(strpos($mk['html'], 'id="pfAvatar" src="/assets/design/avatar-mk.webp"') !== false, 'своя картинка');
+    assert_eq(0, substr_count($other['html'], 'avatar-mk.webp'), 'у остальных её нет');
+});
+
 test('у ника владельца и разработчика стоит их знак', function () use ($PUB) {
     $mk    = pf_render('900000001', '2841062255');
     $fool  = pf_render('8755256557', '');

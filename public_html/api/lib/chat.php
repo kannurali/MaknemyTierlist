@@ -128,7 +128,7 @@ function chat_user_row(?array $r, int $now): ?array {
         'id'     => (string)$r['roblox_id'],
         'nick'   => (string)($r['display_name'] !== '' ? $r['display_name'] : $r['username']),
         'handle' => '@' . (string)$r['username'],
-        'avatar' => (string)($r['avatar_url'] ?? ''),
+        'avatar' => nick_avatar((string)$r['roblox_id'], (string)($r['avatar_url'] ?? '')),
         'logo'   => nick_logo((string)$r['roblox_id']),
         'skin'   => nick_skin((string)$r['roblox_id']),
         'titles' => [],

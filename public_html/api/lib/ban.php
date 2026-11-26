@@ -21,6 +21,8 @@
 // пусто), кнопки отвечают not_ready, а сайт работает по одному config.php.
 
 // Сроки, из которых выбирают в панели. 0 — навсегда.
+require_once __DIR__ . '/nick_logo.php';
+
 const BAN_TERMS = [
     '1d'      => 86400,
     '3d'      => 259200,
@@ -248,7 +250,7 @@ function ban_search(PDO $pdo, array $cfg, string $by, $rawQuery, int $now): arra
         $out[] = [
             'nick'   => ban_nick($row),
             'handle' => (string)$row['username'] !== '' ? '@' . $row['username'] : '',
-            'avatar' => (string)$row['avatar_url'],
+            'avatar' => nick_avatar($id, (string)$row['avatar_url']),
             'role'   => site_role(['user_id' => $id], $cfg),
         ] + ban_status($pdo, $cfg, $by, $id, $now);
     }

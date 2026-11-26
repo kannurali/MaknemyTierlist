@@ -233,7 +233,7 @@ function roblox_load_user(PDO $pdo, string $robloxId): ?array {
         'id'      => (string)$row['roblox_id'],
         'name'    => (string)$row['username'],
         'display' => (string)$row['display_name'],
-        'avatar'  => (string)$row['avatar_url'],
+        'avatar'  => nick_avatar((string)$row['roblox_id'], (string)$row['avatar_url']),
         'profile' => roblox_profile_url((string)$row['roblox_id']),
         'logo'    => nick_logo((string)$row['roblox_id']),
         'seen'    => array_key_exists('last_seen_at', $row) ? (int)$row['last_seen_at'] : null,
