@@ -15,6 +15,11 @@
 // Отвечают: чат-менеджер в группах (cm_cmd_site, api/lib/cm/router.php) и
 // личка бота (tg_handle_update, api/lib/telegram.php). Слова команд в
 // чат-менеджере — CM_COMMANDS (parse.php), тест сверяет их с TG_PAGE_WORDS.
+//
+// Игры (TG_APP_GAMES, просьба владельца 28.11.2026: змейка) идут той же
+// кнопкой, но страницы на сайте у них нет: tg-app.php по ключу сам рисует
+// игру (js/tg-snake.js), а путь в TG_PAGES — тот же tg-app с ключом, чтобы
+// ссылка без имени бота открыла игру в браузере.
 
 // ключ startapp => [путь на сайте, текст сообщения, надпись кнопки]
 const TG_PAGES = [
@@ -24,7 +29,11 @@ const TG_PAGES = [
     'trading'   => ['/trading', '🤝 Трейды — объявления игроков об обмене.', 'Открыть трейды'],
     'news'      => ['/news', '📰 Новости Blox Fruits и Maknemy.', 'Открыть новости'],
     'giveaways' => ['/giveaways', '🎁 Розыгрыши фруктов на Maknemy.', 'Открыть розыгрыши'],
+    'snake'     => ['/tg-app?tgWebAppStartParam=snake', '🐍 Змейка — собирай фрукты и не врезайся в стены и в свой хвост.', 'Играть в змейку'],
 ];
+
+// Ключи-игры: мини-приложение показывает их само, без перехода на сайт.
+const TG_APP_GAMES = ['snake'];
 
 // Слово команды (нижний регистр, «е» вместо «ё») => ключ. Латинские — они же
 // команды меню бота: /tierlist, /stock, /calc, /trading, /news, /giveaways.
@@ -44,6 +53,9 @@ const TG_PAGE_WORDS = [
     'news'        => 'news',
     'розыгрыши'   => 'giveaways',
     'giveaways'   => 'giveaways',
+    'змейка'      => 'snake',
+    'змейку'      => 'snake',
+    'snake'       => 'snake',
 ];
 
 const TG_PAGES_SITE = 'https://maknemy.com';
@@ -69,9 +81,15 @@ function tg_page_from_text(string $text, string $bot): ?string {
     return TG_PAGE_WORDS[$t] ?? null;
 }
 
-// Куда мини-приложению перейти по ключу из ссылки; '' — ключ не раздел сайта.
+// Куда мини-приложению перейти по ключу из ссылки; '' — ключ не раздел сайта
+// (розыгрыш, партия или игра, которую tg-app.php рисует сам).
 function tg_page_path(string $start): string {
+    if (tg_app_game($start)) { return ''; }
     return isset(TG_PAGES[$start]) ? TG_PAGES[$start][0] : '';
+}
+
+function tg_app_game(string $start): bool {
+    return in_array($start, TG_APP_GAMES, true);
 }
 
 // Команды для меню бота (setMyCommands): латинские слова по разделам.

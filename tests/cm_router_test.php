@@ -432,6 +432,24 @@ test('разделы сайта: в речи и у чужого бота мол�
     assert_eq(true, strpos(cm_plain(cm_help_text()), 'тирлист · сток') !== false, 'в помощи');
 });
 
+test('«змейка» — кнопка игры в мини-приложении, в помощи среди игр, «дк игры 6» выключает', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    rt_run($pdo, cm_gmsg(7, 'Змейка'), $log);
+    $p = cm_calls($log, 'sendMessage')[0][1];
+    assert_eq(TG_PAGES['snake'][1], $p['text']);
+    assert_eq([[['text' => 'Играть в змейку', 'url' => 'https://t.me/' . CM_BOT . '?startapp=snake']]], $p['reply_markup']['inline_keyboard']);
+    rt_run($pdo, cm_gmsg(7, 'змейка это кто'), $log);
+    assert_eq(1, count(cm_calls($log, 'sendMessage')), 'в речи молчим');
+    assert_eq(true, strpos(cm_plain(cm_help_text()), 'шахматы · змейка') !== false, 'в помощи');
+    cm_do(cm_ctx_for($pdo, $log, CM_OWNER), 'дк игры 6');
+    rt_run($pdo, cm_gmsg(7, '/snake'), $log);
+    assert_eq(cm_t('cmd_off'), cm_last_text($log), 'игры выключены');
+    $n = count(cm_calls($log, 'sendMessage'));
+    rt_run($pdo, cm_gmsg(7, 'змейка'), $log);
+    assert_eq($n, count(cm_calls($log, 'sendMessage')), 'без префикса — молча');
+});
+
 test('слова разделов у чат-менеджера и у лички — одни и те же', function () {
     $cm = [];
     foreach (CM_COMMANDS as $phrase => $def) {

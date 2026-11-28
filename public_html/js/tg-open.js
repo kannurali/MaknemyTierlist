@@ -17,6 +17,10 @@
   if (!start || !Object.prototype.hasOwnProperty.call(pages, start)) { return; }
 
   window.NX_TG_PAGE = true;
+  if (String(pages[start]).indexOf("/tg-app?") === 0) {
+    window.location.replace(pages[start] + window.location.hash);
+    return;
+  }
   var url = new URL(pages[start], window.location.href).href;
 
   if (tg && /^web/.test(String(tg.platform || ""))) {

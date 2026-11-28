@@ -199,6 +199,10 @@ const CM_COMMANDS = [
     'news'               => ['site', 'сайт', 0, true, false],
     'розыгрыши'          => ['site', 'сайт', 0, true, false],
     'giveaways'          => ['site', 'сайт', 0, true, false],
+    // игры мини-приложения (TG_APP_GAMES) — той же кнопкой, раздел «игры»
+    'змейка'             => ['site', 'игры', 0, true, false],
+    'змейку'             => ['site', 'игры', 0, true, false],
+    'snake'              => ['site', 'игры', 0, true, false],
 ];
 
 const CM_PREFIXES = ['!', '.', '/'];
