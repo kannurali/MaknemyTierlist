@@ -6,12 +6,14 @@
 // чат-менеджера (js/tg-chess.js, api/cm_chess.php). Остальное (gw<id> или
 // пусто) — розыгрыш, js/tg-app.js. Карта разделов лежит в <meta> и для
 // случая, когда ключ пришёл только в initData: tg-open.js проверит его там и
-// партию тоже перезагрузит с ключом в адресе.
+// партию тоже перезагрузит с ключом в адресе. snake — игра «Змейка»
+// (TG_APP_GAMES, js/tg-snake.js): одиночная, без сервера, рекорд у игрока.
 require_once __DIR__ . '/api/lib/tg_pages.php';
 header('Cache-Control: no-cache, must-revalidate');
 $tgStart = is_string($_GET['tgWebAppStartParam'] ?? null) ? $_GET['tgWebAppStartParam'] : '';
 $tgChess = preg_match('/^ch[1-9][0-9]{0,9}\z/', $tgStart) === 1;
-$tgGo = $tgChess ? '' : tg_page_path($tgStart);
+$tgSnake = $tgStart === 'snake';
+$tgGo = $tgChess || $tgSnake ? '' : tg_page_path($tgStart);
 $tgMap = [];
 foreach (TG_PAGES as $tgKey => $tgPage) { $tgMap[$tgKey] = $tgPage[0]; }
 ?>
@@ -29,13 +31,19 @@ foreach (TG_PAGES as $tgKey => $tgPage) { $tgMap[$tgKey] = $tgPage[0]; }
 <base href="/" />
 <link rel="stylesheet" href="css/tg-chess.css?v=4" />
 <script src="js/tg-chess.js?v=6" defer></script>
+<?php elseif ($tgSnake): ?>
+<title>Змейка — MAKNEMY</title>
+<script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+<base href="/" />
+<link rel="stylesheet" href="css/tg-snake.css?v=1" />
+<script src="js/tg-snake.js?v=1" defer></script>
 <?php else: ?>
 <meta name="nx-tg-pages" content="<?= htmlspecialchars(json_encode($tgMap), ENT_QUOTES, 'UTF-8') ?>" />
 <base href="/" />
 <title><?= $tgGo !== '' ? 'MAKNEMY' : 'Розыгрыш — MAKNEMY' ?></title>
 <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
 <link rel="stylesheet" href="css/tg-app.css?v=4" />
-<script src="js/tg-open.js?v=2" defer></script>
+<script src="js/tg-open.js?v=3" defer></script>
 <?php if ($tgGo === ''): ?>
 <script src="js/tg-app.js?v=5" defer></script>
 <?php endif; ?>
@@ -46,6 +54,9 @@ foreach (TG_PAGES as $tgKey => $tgPage) { $tgMap[$tgKey] = $tgPage[0]; }
 <?php if ($tgChess): ?>
 <main class="tc" id="tc" aria-busy="true"></main>
 <noscript><p class="tc-noscript">Включите JavaScript, чтобы играть в шахматы.</p></noscript>
+<?php elseif ($tgSnake): ?>
+<main class="ts" id="ts" aria-busy="true"></main>
+<noscript><p class="ts-noscript">Включите JavaScript, чтобы играть в змейку.</p></noscript>
 <?php elseif ($tgGo !== ''): ?>
 <main class="ta" id="ta" aria-busy="true"></main>
 <noscript><p class="ta-noscript">Включите JavaScript или откройте <a href="<?= htmlspecialchars(TG_PAGES_SITE . $tgGo, ENT_QUOTES, 'UTF-8') ?>">страницу на сайте</a>.</p></noscript>

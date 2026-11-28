@@ -912,16 +912,24 @@ test('разделы сайта: слова, ссылки, пути и меню 
     assert_eq('https://maknemy.com/tierlist', tg_page_link('bad name!', 'tierlist'));
     $ht = file_get_contents(__DIR__ . '/../public_html/.htaccess');
     foreach (TG_PAGES as $key => $page) {
-        assert_eq(1, preg_match('~^RewriteRule \^' . preg_quote(ltrim($page[0], '/'), '~') . '(/\?)?\$ /~m', $ht), "$key: адрес {$page[0]} есть на сайте");
+        if (tg_app_game($key)) {
+            assert_eq('/tg-app?tgWebAppStartParam=' . $key, $page[0], "$key: игра открывается самим мини-приложением");
+            assert_eq('', tg_page_path($key), "$key: игра — не переход на сайт");
+        } else {
+            assert_eq(1, preg_match('~^RewriteRule \^' . preg_quote(ltrim($page[0], '/'), '~') . '(/\?)?\$ /~m', $ht), "$key: адрес {$page[0]} есть на сайте");
+        }
         assert_true(preg_match('/^[A-Za-z0-9_-]{1,64}\z/', $key) === 1, "$key: годится для startapp");
         assert_eq(1, count(array_filter(tg_page_commands(), function ($c) use ($key) { return TG_PAGE_WORDS[$c['command']] === $key; })), "$key: одна команда в меню");
     }
+    assert_eq('snake', tg_page_from_text('Змейка', 'MaknemyBot'));
+    assert_eq('snake', tg_page_from_text('/snake@MaknemyBot', 'MaknemyBot'));
+    assert_eq('https://maknemy.com/tg-app?tgWebAppStartParam=snake', tg_page_link('', 'snake'), 'без имени бота — игра в браузере');
     $log = [];
     tg_setup_webhook(tg_recorder($log), TG_TOKEN);
     $menus = array_values(array_filter($log, function ($c) { return $c[0] === 'setMyCommands'; }));
     assert_eq(3, count($menus), 'личка RU, личка EN, группы');
-    assert_eq(['tierlist', 'stock', 'calc', 'trading', 'news', 'giveaways', 'stop'], array_column($menus[0][1]['commands'], 'command'));
-    assert_eq(['tierlist', 'stock', 'calc', 'trading', 'news', 'giveaways'], array_column($menus[2][1]['commands'], 'command'));
+    assert_eq(['tierlist', 'stock', 'calc', 'trading', 'news', 'giveaways', 'snake', 'stop'], array_column($menus[0][1]['commands'], 'command'));
+    assert_eq(['tierlist', 'stock', 'calc', 'trading', 'news', 'giveaways', 'snake'], array_column($menus[2][1]['commands'], 'command'));
     assert_eq(['type' => 'all_group_chats'], $menus[2][1]['scope']);
 });
 
@@ -954,6 +962,12 @@ test('мини-приложение: ключ раздела — переход 
     assert_eq(false, strpos($bad, 'js/tg-chess.js'), 'ch0 — не партия');
     $open = file_get_contents(__DIR__ . '/../public_html/js/tg-open.js');
     assert_true(strpos($open, '/tg-app?tgWebAppStartParam=') !== false, 'ключ партии только в initData — перезагрузка с ключом');
+    $sn = $render(['tgWebAppStartParam' => 'snake']);
+    assert_true(strpos($sn, 'js/tg-snake.js') !== false && strpos($sn, 'css/tg-snake.css') !== false, 'змейка');
+    assert_true(strpos($sn, 'id="ts"') !== false);
+    assert_eq([false, false, false, false], [strpos($sn, 'js/tg-open.js'), strpos($sn, 'js/tg-app.js'), strpos($sn, 'ta-skel'), strpos($sn, 'js/tg-chess.js')]);
+    assert_eq('/tg-app?tgWebAppStartParam=snake', $map['snake'] ?? null, 'ключ змейки только в initData — перезагрузка с ключом');
+    assert_true(strpos($open, '"/tg-app?"') !== false, 'tg-open.js не уводит игру на сайт');
 });
 
 run_tests();
