@@ -21,10 +21,19 @@
 // изменение пишутся условием «rev не менялся»: два быстрых запроса не
 // сделают двух ходов. Счёт — cm_game_stats, вид chess; «шахматы» без цели —
 // лучшие игроки чата.
+//
+// Шахматы 960 (Фишера, просьба владельца 28.11.2026): «шахматы 960» или
+// «шахматы фишер» — с цветом и минутами в любом порядке. В приглашении это
+// тысяча в ref_id (1105 — 960, зовущий белыми, 5 минут). Расстановка — из 960
+// по жребию при «Принять», FEN начала хранится в start_fen (миграция
+// 2026-11-28-cm-chess960.sql); у обычной партии там пусто. Пока колонки нет,
+// «шахматы 960» отвечают «не настроено», обычные партии пишутся без неё.
+// Счёт — общий с обычными шахматами.
 
 const CM_CHESS_DEFAULT = 10;
 const CM_CHESS_MAX     = 30;
 const CM_CHESS_FIRST   = 180;
+const CM_CHESS_960     = 1000;
 
 function cm_chess_ready(PDO $pdo): bool {
     try {
@@ -35,6 +44,20 @@ function cm_chess_ready(PDO $pdo): bool {
     }
 }
 
+function cm_chess960_ready(PDO $pdo): bool {
+    try {
+        $pdo->query('SELECT start_fen FROM cm_chess LIMIT 1');
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// FEN начала партии: своя расстановка у 960, обычная у остальных.
+function cm_chess_start(array $g): string {
+    return $g['start_fen'] !== '' ? $g['start_fen'] : CHESS_START;
+}
+
 function cm_chess_get(PDO $pdo, int $id): ?array {
     $st = $pdo->prepare('SELECT * FROM cm_chess WHERE id = :id');
     $st->execute([':id' => $id]);
@@ -43,6 +66,7 @@ function cm_chess_get(PDO $pdo, int $id): ?array {
     foreach (['id', 'chat_id', 'white_id', 'black_id', 'base_ms', 'white_ms', 'black_ms', 'turn_at', 'due_at',
               'msg_id', 'rev', 'created_at'] as $k) { $r[$k] = (int)$r[$k]; }
     foreach (['fen', 'draw_by', 'status', 'result', 'reason'] as $k) { $r[$k] = (string)$r[$k]; }
+    $r['start_fen'] = (string)($r['start_fen'] ?? '');
     $r['moves'] = (string)$r['moves'] === '' ? [] : explode(' ', (string)$r['moves']);
     $r['san'] = (string)$r['san'] === '' ? [] : explode(' ', (string)$r['san']);
     return $r;
@@ -147,7 +171,7 @@ function cm_chess_play(PDO $pdo, array $g, int $uid, string $uci, int $nowMs): a
             'turn_at' => $nowMs, 'draw_by' => ''];
     if (count($g['moves']) >= 2) { $set[$mine] = max(1, $g[$mine] - max(0, $nowMs - $g['turn_at'])); }
     $set['due_at'] = $nowMs + (count($moves) < 2 ? CM_CHESS_FIRST * 1000 : $g[$theirs]);
-    $end = chess_outcome($n, chess_keys($moves));
+    $end = chess_outcome($n, chess_keys($moves, cm_chess_start($g)));
     if ($end !== '') {
         $set['status'] = 'done';
         $set['result'] = $end === 'mate' ? ($me === 'w' ? '1-0' : '0-1') : '1/2';
@@ -202,9 +226,10 @@ function cm_chess_person(PDO $pdo, int $id): array {
 }
 
 // Партия глазами $uid — контракт мини-приложения (js/tg-chess.js). legal —
-// только тому, чей ход; зрителю (me = null) — пусто.
+// только тому, чей ход; зрителю (me = null) — пусто. Рокировка в 960 —
+// ход короля на свою ладью (e1h1), c960 — true.
 function cm_chess_view(PDO $pdo, array $g, int $uid, int $nowMs): array {
-    $p = chess_from_fen($g['fen']) ?? chess_from_fen(CHESS_START);
+    $p = chess_from_fen($g['fen']) ?? chess_from_fen(cm_chess_start($g));
     $turn = $p['t'];
     $me = cm_chess_side($g, $uid);
     $on = $g['status'] === 'on';
@@ -213,7 +238,7 @@ function cm_chess_view(PDO $pdo, array $g, int $uid, int $nowMs): array {
     $result = $g['result'] !== '' ? $g['result'] : null;
     return [
         'ok' => true, 'id' => $g['id'], 'rev' => $g['rev'], 'now' => $nowMs,
-        'fen' => $g['fen'], 'turn' => $turn, 'moves' => $g['moves'], 'san' => $g['san'],
+        'c960' => $g['start_fen'] !== '', 'fen' => $g['fen'], 'turn' => $turn, 'moves' => $g['moves'], 'san' => $g['san'],
         'last' => $plies > 0 ? $g['moves'][$plies - 1] : null,
         'check' => chess_in_check($p) ? chess_sq_name(chess_king_sq($p['b'], $turn)) : null,
         'legal' => ($on && $me === $turn) ? array_keys(chess_legal($p)) : [],
@@ -241,7 +266,7 @@ function cm_chess_buttons(string $bot, int $id, bool $done = false): array {
 }
 
 function cm_chess_head(PDO $pdo, array $g): string {
-    return cm_t('chess_head', ['min' => intdiv($g['base_ms'], 60000), 'w' => cm_user_who($pdo, $g['white_id']),
+    return cm_t($g['start_fen'] !== '' ? 'chess_head960' : 'chess_head', ['min' => intdiv($g['base_ms'], 60000), 'w' => cm_user_who($pdo, $g['white_id']),
         'b' => cm_user_who($pdo, $g['black_id'])]);
 }
 
@@ -301,6 +326,7 @@ function cm_chess_tick(PDO $pdo, array $cfg, callable $send, int $now): int {
 // «шахматы белый 5 минут», «шахматы 5 минут чёрными» — цвет зовущего, в любом
 // порядке (просьба владельца 15.11.2026); без цвета — жребий. Цвет едет в
 // ref_id приглашения сотнями: 5 — жребий, 105 — зовущий белыми, 205 — чёрными.
+// «шахматы 960» / «шахматы фишер» — шахматы Фишера, +1000 к ref_id.
 // «шахматы» без цели — лучшие игроки.
 function cm_cmd_chess(array $ctx, array $cmd): void {
     if (!cm_need3($ctx)) { return; }
@@ -312,6 +338,11 @@ function cm_cmd_chess(array $ctx, array $cmd): void {
     $args = $cmd['args'];
     $min = 0;
     $side = 0;
+    $c960 = false;
+    if (preg_match('~(?:^|\s)(?:960|фишера?)(?=\s|$)~iu', $args, $v, PREG_OFFSET_CAPTURE)) {
+        $c960 = true;
+        $args = trim(substr_replace($args, ' ', $v[0][1], strlen($v[0][0])));
+    }
     if (preg_match('~(?:^|\s)(?:за\s+)?(бел|ч[её]рн)(?:ыми|ый|ые|ым|ых|ое|ая)(?=\s|$)~iu', $args, $c, PREG_OFFSET_CAPTURE)) {
         $side = mb_strtolower($c[1][0]) === 'бел' ? 1 : 2;
         $args = trim(substr_replace($args, ' ', $c[0][1], strlen($c[0][0])));
@@ -325,7 +356,7 @@ function cm_cmd_chess(array $ctx, array $cmd): void {
     if ($t === null) {
         if ($why === 'unknown') {
             cm_reply($ctx, cm_t('target_unknown'));
-        } elseif ($min > 0 || $side > 0 || trim($args) !== '') {
+        } elseif ($min > 0 || $side > 0 || $c960 || trim($args) !== '') {
             cm_reply($ctx, cm_t('need_target'));
         } else {
             cm_game_top($ctx, 'chess', 'chess_top_head', 'chess_top_empty', true);
@@ -344,31 +375,41 @@ function cm_cmd_chess(array $ctx, array $cmd): void {
         cm_reply($ctx, cm_t('target_self'));
         return;
     }
+    if ($c960 && !cm_chess960_ready($pdo)) {
+        cm_reply($ctx, cm_t('not_ready2'));
+        return;
+    }
     $min = $min > 0 ? $min : CM_CHESS_DEFAULT;
     $from = is_array($ctx['msg']['from'] ?? null) ? $ctx['msg']['from'] : [];
-    $text = cm_t('chess_offer', ['to' => $t['who'], 'from' => cm_who_from($from), 'min' => $min]);
+    $text = cm_t($c960 ? 'chess_offer960' : 'chess_offer', ['to' => $t['who'], 'from' => cm_who_from($from), 'min' => $min]);
     if ($side > 0) { $text .= ' ' . cm_t($side === 1 ? 'chess_offer_w' : 'chess_offer_b', ['from' => cm_who_from($from)]); }
-    cm_offer_send($ctx, 'chess', (int)$t['id'], $side * 100 + $min, $text);
+    cm_offer_send($ctx, 'chess', (int)$t['id'], ($c960 ? CM_CHESS_960 : 0) + $side * 100 + $min, $text);
 }
 
-// «Принять»: цвет из приглашения или жребий, партия, в сообщении — кто чем
-// играет и кнопка доски.
+// «Принять»: цвет из приглашения или жребий, у 960 — жребий расстановки из
+// 960 (после жребия цвета), партия, в сообщении — кто чем играет и кнопка
+// доски. Обычная партия пишется без start_fen: работает и до миграции 960.
 function cm_offer_yes_chess(array $ctx, array $o): string {
     $pdo = $ctx['pdo'];
     if (!cm_chess_ready($pdo)) { return 'not_ready2'; }
     if (!preg_match('/^[A-Za-z0-9_]{3,64}\z/', (string)$ctx['bot'])) { return 'chess_no_bot'; }
-    $side = intdiv((int)$o['ref_id'], 100);
-    $min = (int)$o['ref_id'] % 100;
+    $ref = (int)$o['ref_id'];
+    $c960 = $ref >= CM_CHESS_960;
+    if ($c960 && !cm_chess960_ready($pdo)) { return 'not_ready2'; }
+    $ref %= CM_CHESS_960;
+    $side = intdiv($ref, 100);
+    $min = $ref % 100;
     $min = $min >= 1 && $min <= CM_CHESS_MAX ? $min : CM_CHESS_DEFAULT;
     $fromWhite = $side === 1 || ($side !== 2 && cm_rand($ctx, 0, 1) === 0);
+    $fen = $c960 ? chess960_fen(cm_rand($ctx, 0, 959)) : CHESS_START;
     $ms = (int)$ctx['now'] * 1000;
     $base = $min * 60000;
     $pdo->prepare("INSERT INTO cm_chess (chat_id, white_id, black_id, base_ms, white_ms, black_ms, fen, moves, san,
-                   turn_at, due_at, draw_by, msg_id, status, result, reason, rev, created_at)
-                   VALUES (:c, :w, :b, :b1, :b2, :b3, :fen, '', '', :t, :due, '', :m, 'on', '', '', 0, :n)")
+                   turn_at, due_at, draw_by, msg_id, status, result, reason, rev, created_at" . ($c960 ? ', start_fen' : '') . ")
+                   VALUES (:c, :w, :b, :b1, :b2, :b3, :fen, '', '', :t, :due, '', :m, 'on', '', '', 0, :n" . ($c960 ? ', :fen0' : '') . ")")
         ->execute([':c' => $o['chat_id'], ':w' => $fromWhite ? $o['from_id'] : $o['to_id'], ':b' => $fromWhite ? $o['to_id'] : $o['from_id'],
-                   ':b1' => $base, ':b2' => $base, ':b3' => $base, ':fen' => CHESS_START, ':t' => $ms, ':due' => $ms + CM_CHESS_FIRST * 1000,
-                   ':m' => $o['msg_id'], ':n' => (int)$ctx['now']]);
+                   ':b1' => $base, ':b2' => $base, ':b3' => $base, ':fen' => $fen, ':t' => $ms, ':due' => $ms + CM_CHESS_FIRST * 1000,
+                   ':m' => $o['msg_id'], ':n' => (int)$ctx['now']] + ($c960 ? [':fen0' => $fen] : []));
     $g = cm_chess_get($pdo, (int)$pdo->lastInsertId());
     cm_edit($ctx, $g['msg_id'], cm_chess_start_text($pdo, $g), cm_chess_buttons((string)$ctx['bot'], $g['id']));
     return '';
