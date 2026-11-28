@@ -316,4 +316,101 @@ test('нет таблицы партий — «не настроено», без
     assert_eq(0, cm_chess_tick($pdo, cm_cfg(), cm_rec($log), CM_NOW));
 });
 
+// Шахматы 960: «Принять» с подставной случайностью — сначала цвет (если не
+// выбран), потом номер расстановки.
+function chs_start960(PDO $pdo, array &$log, string $text, array $rand): int {
+    cm_do(cm_ctx_for($pdo, $log, 7), $text);
+    $offer = (int)$pdo->query('SELECT MAX(id) FROM cm_offers')->fetchColumn();
+    assert_eq(cm_t('offer_accepted'), cm_press($pdo, $log, 20, 'cm:p:' . $offer . ':y', [], CM_NOW, cm_seq($rand)));
+    return (int)$pdo->query('SELECT MAX(id) FROM cm_chess')->fetchColumn();
+}
+
+test('960: вызов — «960» или «фишер», с цветом и минутами в любом порядке', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    chs_people($pdo);
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы 960 @petya');
+    assert_eq(1010, cm_offer_get($pdo, 1)['ref_id']);
+    assert_eq('♟ Петя, U7 вызывает вас на партию в шахматы 960 — по 10 мин на каждого! Фигуры встанут в случайном порядке.', cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы фишер белый 5 минут @petya');
+    assert_eq(1105, cm_offer_get($pdo, 2)['ref_id']);
+    cm_do(cm_ctx_for($pdo, $log, 7, '', ['reply_to_message' => cm_gmsg(20, 'го')]), 'Шахматы 3 мин чёрными Фишера');
+    assert_eq(1203, cm_offer_get($pdo, 3)['ref_id'], 'ответом, всё вперемешку');
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы @petya 15 960');
+    assert_eq(1015, cm_offer_get($pdo, 4)['ref_id']);
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы 960');
+    assert_eq(cm_t('need_target'), cm_last_text($log));
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы 96 @petya');
+    assert_eq(cm_t('chess_minutes', ['max' => 30]), cm_last_text($log));
+    foreach (['шахматы 960 5 @petya' => true, 'шахматы фишер чёрными 5 минут @petya' => true,
+              'шахматы 960 это скучно' => false, 'шахматы фишер лучший' => false] as $text => $want) {
+        assert_eq($want, cm_bare_ok(cm_ctx_for($pdo, $log, 7, $text), cm_parse($text, CM_BOT)), $text);
+    }
+});
+
+test('960: «Принять» — расстановка по жребию, хранится у партии, в сообщении «Шахматы 960»', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    chs_people($pdo);
+    $id = chs_start960($pdo, $log, 'шахматы 960 @petya', [1, 192]);
+    $g = cm_chess_get($pdo, $id);
+    assert_eq([20, 7, chess960_fen(192), chess960_fen(192)], [$g['white_id'], $g['black_id'], $g['start_fen'], $g['fen']]);
+    assert_eq('bbqnrknr/pppppppp/8/8/8/8/PPPPPPPP/BBQNRKNR w HEhe - 0 1', $g['fen']);
+    $e = chs_last_edit($log);
+    assert_eq("♟ Шахматы 960 · по 10 мин\n⚪ Белые — Петя\n⚫ Чёрные — U7\n\nПервый ход за белыми — Петя. Откройте доску: на первый ход 3 минуты.", $e['text']);
+    $id2 = chs_start960($pdo, $log, 'шахматы 960 белыми 5 @petya', [517]);
+    $g2 = cm_chess_get($pdo, $id2);
+    assert_eq([7, 300000, chess960_fen(517)], [$g2['white_id'], $g2['base_ms'], $g2['start_fen']], 'цвет выбран — жребий только расстановки');
+    $id3 = chs_start($pdo, $log, 'шахматы @petya');
+    assert_eq(['', CHESS_START, false], [cm_chess_get($pdo, $id3)['start_fen'], cm_chess_get($pdo, $id3)['fen'],
+        cm_chess_view($pdo, cm_chess_get($pdo, $id3), 7, CHS_T0)['c960']], 'обычная партия — как раньше');
+});
+
+test('960: рокировка «король на ладью» через мини-приложение, запись O-O', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    chs_people($pdo);
+    $id = chs_start960($pdo, $log, 'шахматы 960 белыми @petya', [192]);
+    chs_moves($pdo, $id, ['g1h3', 'g8h6']);
+    $v = cm_chess_view($pdo, cm_chess_get($pdo, $id), 7, CHS_T0 + 3000);
+    assert_eq([true, true, true], [$v['c960'], in_array('f1h1', $v['legal'], true), in_array('f1g1', $v['legal'], true)],
+        'рокировка — король на ладью; на g1 — простой ход короля');
+    assert_eq('illegal', chs_play($pdo, $id, 7, 'f1e1', CHS_T0 + 3500)[0]);
+    [$err, $g] = chs_play($pdo, $id, 7, 'f1h1', CHS_T0 + 4000);
+    assert_eq(['', 'O-O', 'bbqnrk1r/pppppppp/7n/8/8/7N/PPPPPPPP/BBQNRRK1 b he - 3 2'], [$err, $g['san'][2], $g['fen']]);
+    $v = cm_chess_view($pdo, $g, 20, CHS_T0 + 4500);
+    assert_eq(['f1h1', 'b'], [$v['last'], $v['me']]);
+});
+
+test('960: троекратное повторение считается от своей расстановки', function () {
+    $pdo = cm_test_pdo();
+    $log = [];
+    chs_people($pdo);
+    $id = chs_start960($pdo, $log, 'шахматы 960 белыми @petya', [192]);
+    $t = chs_moves($pdo, $id, ['g1h3', 'g8h6', 'h3g1', 'h6g8', 'g1h3', 'g8h6', 'h3g1']);
+    [$err, $g, $ended] = chs_play($pdo, $id, 20, 'h6g8', $t + 1000);
+    assert_eq(['', true, '1/2', 'repeat'], [$err, $ended, $g['result'], $g['reason']]);
+});
+
+test('960 до миграции: «не настроено», обычные шахматы работают без колонки', function () {
+    $pdo = cm_test_pdo();
+    $pdo->exec('DROP TABLE cm_chess');
+    $pdo->exec("CREATE TABLE cm_chess (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, white_id INTEGER NOT NULL,
+        black_id INTEGER NOT NULL, base_ms INTEGER NOT NULL, white_ms INTEGER NOT NULL, black_ms INTEGER NOT NULL,
+        fen TEXT NOT NULL, moves TEXT NOT NULL, san TEXT NOT NULL, turn_at INTEGER NOT NULL,
+        due_at INTEGER NOT NULL DEFAULT 0, draw_by TEXT NOT NULL DEFAULT '', msg_id INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'on', result TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '',
+        rev INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)");
+    $log = [];
+    chs_people($pdo);
+    cm_do(cm_ctx_for($pdo, $log, 7), 'шахматы 960 @petya');
+    assert_eq(cm_t('not_ready2'), cm_last_text($log));
+    $id = chs_start($pdo, $log);
+    $g = cm_chess_get($pdo, $id);
+    assert_eq([CHESS_START, ''], [$g['fen'], $g['start_fen']]);
+    chs_moves($pdo, $id, ['e2e4', 'e7e5']);
+    assert_eq(false, cm_chess_view($pdo, cm_chess_get($pdo, $id), 7, CHS_T0 + 3000)['c960']);
+});
+
 run_tests();

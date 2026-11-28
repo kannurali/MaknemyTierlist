@@ -9,8 +9,18 @@
 // подстрокой 'KQkq' ('' — никаких); ep — клетка взятия на проходе или -1;
 // h — полуходы без взятия и хода пешкой (правило 50 ходов); f — номер хода.
 // Ходы — в UCI: e2e4, превращение — e7e8q, рокировка — ход короля e1g1.
+//
+// Chess960 (шахматы Фишера, просьба владельца 28.11.2026): x — true, права
+// рокировки в c — буквами вертикалей ладей, как в Shredder-FEN (HAha: белые
+// заглавными, у каждой стороны сначала дальняя по алфавиту). Рокировка —
+// ход короля на свою ладью (e1h1, как UCI_Chess960): в 960 король может
+// стоять на g1 и рядом с ладьёй, и «два поля» не отличить от простого хода.
+// Король встаёт на g/c, ладья на f/d; между ними всё пусто, кроме самих
+// короля и ладьи; король не под шахом и не проходит через битое поле.
+// Обычная позиция — та же с x = false: старые партии читаются как раньше.
 
 const CHESS_START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const CHESS960_KNIGHTS = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]];
 
 const CHESS_KNIGHT = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
 const CHESS_KING   = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
@@ -44,7 +54,9 @@ function chess_step(int $sq, int $df, int $dr): int {
     return ($f < 0 || $f > 7 || $r < 0 || $r > 7) ? -1 : $r * 8 + $f;
 }
 
-function chess_from_fen(string $fen): ?array {
+// $c960 — читать права как X-FEN: KQkq — крайняя ладья со своей стороны от
+// короля. Буквы вертикалей (HAha) включают 960 и без него.
+function chess_from_fen(string $fen, bool $c960 = false): ?array {
     $p = preg_split('/\s+/', trim($fen));
     if (count($p) !== 6) { return null; }
     $rows = explode('/', $p[0]);
@@ -67,12 +79,89 @@ function chess_from_fen(string $fen): ?array {
         if ($f !== 8) { return null; }
     }
     if ($p[1] !== 'w' && $p[1] !== 'b') { return null; }
-    if (!preg_match('/^(?:-|K?Q?k?q?)\z/', $p[2]) || $p[2] === '') { return null; }
+    $x = $c960 || preg_match('/[A-Ha-h]/', $p[2]) === 1;
+    if (!preg_match($x ? '/^(?:-|[KQA-H]{1,2}[kqa-h]{0,2}|[kqa-h]{1,2})\z/' : '/^(?:-|K?Q?k?q?)\z/', $p[2]) || $p[2] === '') { return null; }
     $ep = $p[3] === '-' ? -1 : chess_sq($p[3]);
     if ($p[3] !== '-' && $ep < 0) { return null; }
     if (!ctype_digit($p[4]) || !ctype_digit($p[5])) { return null; }
     if (count(array_keys($b, 'K', true)) !== 1 || count(array_keys($b, 'k', true)) !== 1) { return null; }
-    return ['b' => $b, 't' => $p[1], 'c' => $p[2] === '-' ? '' : $p[2], 'ep' => $ep, 'h' => (int)$p[4], 'f' => max(1, (int)$p[5])];
+    $c = $p[2] === '-' ? '' : $p[2];
+    if ($x) {
+        $c = chess_x_rights($b, $c);
+        if ($c === null) { return null; }
+    }
+    return ['b' => $b, 't' => $p[1], 'c' => $c, 'ep' => $ep, 'h' => (int)$p[4], 'f' => max(1, (int)$p[5]), 'x' => $x];
+}
+
+// Права 960 в один вид: буквы вертикалей ладей, белые заглавными, у каждой
+// стороны по убыванию (HAha). K / Q из X-FEN — крайняя ладья справа / слева
+// от короля; если её нет, права нет. null — больше двух прав у стороны.
+function chess_x_rights(array $b, string $c): ?string {
+    $have = ['w' => [], 'b' => []];
+    foreach ($c === '' ? [] : str_split($c) as $ch) {
+        $side = ctype_upper($ch) ? 'w' : 'b';
+        $row = $side === 'w' ? 0 : 56;
+        $u = strtoupper($ch);
+        $file = -1;
+        if ($u === 'K' || $u === 'Q') {
+            $k = chess_king_sq($b, $side) - $row;
+            $rook = $side === 'w' ? 'R' : 'r';
+            for ($f = 0; $f < 8 && $k >= 0 && $k < 8; $f++) {
+                if ($b[$row + $f] === $rook && ($u === 'K' ? $f > $k : $f < $k) && ($u === 'K' || $file < 0)) { $file = $f; }
+            }
+            if ($file < 0) { continue; }
+        } else {
+            $file = ord($u) - 65;
+        }
+        $have[$side][$file] = true;
+    }
+    $out = '';
+    foreach (['w' => 65, 'b' => 97] as $side => $base) {
+        $files = array_keys($have[$side]);
+        if (count($files) > 2) { return null; }
+        rsort($files);
+        foreach ($files as $f) { $out .= chr($base + $f); }
+    }
+    return $out;
+}
+
+// Права рокировки: [буква права => клетка ладьи].
+function chess_rights(array $p): array {
+    $out = [];
+    foreach ($p['c'] === '' ? [] : str_split($p['c']) as $ch) {
+        $u = strtoupper($ch);
+        $file = empty($p['x']) ? ($u === 'K' ? 7 : 0) : ord($u) - 65;
+        $out[$ch] = (ctype_upper($ch) ? 0 : 56) + $file;
+    }
+    return $out;
+}
+
+// Начальная расстановка Chess960 по номеру 0–959 (нумерация Шарнагля, как
+// на lichess: 518 — обычная RNBQKBNR): слоны на полях разного цвета, ферзь,
+// кони, на оставшихся трёх полях — ладья, король, ладья.
+function chess960_rank(int $n): string {
+    $n = (($n % 960) + 960) % 960;
+    $r = array_fill(0, 8, '');
+    $r[2 * ($n % 4) + 1] = 'B';
+    $n = intdiv($n, 4);
+    $r[2 * ($n % 4)] = 'B';
+    $n = intdiv($n, 4);
+    $e = array_keys($r, '', true);
+    $r[$e[$n % 6]] = 'Q';
+    $n = intdiv($n, 6);
+    $e = array_keys($r, '', true);
+    foreach (CHESS960_KNIGHTS[$n] as $k) { $r[$e[$k]] = 'N'; }
+    $e = array_keys($r, '', true);
+    foreach (['R', 'K', 'R'] as $i => $pc) { $r[$e[$i]] = $pc; }
+    return implode('', $r);
+}
+
+// FEN начала партии 960 с правами в Shredder-FEN.
+function chess960_fen(int $n): string {
+    $w = chess960_rank($n);
+    $rooks = array_keys(str_split($w), 'R', true);
+    $rights = chr(65 + $rooks[1]) . chr(65 + $rooks[0]);
+    return strtolower($w) . '/pppppppp/8/8/8/8/PPPPPPPP/' . $w . ' w ' . $rights . strtolower($rights) . ' - 0 1';
 }
 
 // Расстановка — первая часть FEN.
@@ -231,28 +320,47 @@ function chess_push_pawn(array &$out, int $from, int $to, bool $promo): void {
     foreach (['q', 'r', 'b', 'n'] as $x) { $out[] = [$from, $to, $x]; }
 }
 
-// Рокировка: право есть, король и ладья на местах, между ними пусто, король
-// не под шахом и не проходит и не встаёт на битое поле.
+// Рокировка: право есть, король и ладья на местах, король встаёт на g/c, ладья
+// на f/d; все поля между ними и их полями назначения пусты, кроме самих
+// короля и ладьи; король не под шахом и не проходит и не встаёт на битое
+// поле (битость — без короля и этой ладьи на доске). В обычных шахматах это
+// те же правила при короле на e1 и ладьях в углах; ход там — король на два
+// поля, в 960 — король на свою ладью.
 function chess_push_castles(array &$out, array $p): void {
     $b = $p['b'];
     $c = $p['t'];
     $w = $c === 'w';
-    $e = $w ? 4 : 60;
-    if ($b[$e] !== ($w ? 'K' : 'k')) { return; }
+    $x = !empty($p['x']);
+    $row = $w ? 0 : 56;
+    $k = chess_king_sq($b, $c);
+    if ($k < $row || $k > $row + 7 || (!$x && $k !== $row + 4)) { return; }
     $them = chess_other($c);
     $rook = $w ? 'R' : 'r';
-    $sides = [[$w ? 'K' : 'k', 7, [1, 2], [0, 1, 2]], [$w ? 'Q' : 'q', 0, [-1, -2, -3], [0, -1, -2]]];
-    foreach ($sides as [$right, $rookFile, $empty, $safe]) {
-        if (strpos($p['c'], $right) === false || $b[$e - 4 + $rookFile] !== $rook) { continue; }
+    foreach (chess_rights($p) as $right => $r) {
+        if (chess_color($right) !== $c || $b[$r] !== $rook || $r === $k) { continue; }
+        $long = $r < $k;
+        $kTo = $row + ($long ? 2 : 6);
+        $rTo = $row + ($long ? 3 : 5);
         $ok = true;
-        foreach ($empty as $d) {
-            if ($b[$e + $d] !== '') { $ok = false; }
+        for ($s = min($k, $kTo, $r, $rTo), $hi = max($k, $kTo, $r, $rTo); $ok && $s <= $hi; $s++) {
+            if ($s !== $k && $s !== $r && $b[$s] !== '') { $ok = false; }
         }
-        foreach ($safe as $d) {
-            if ($ok && chess_attacked($b, $e + $d, $them)) { $ok = false; }
+        $bare = $b;
+        $bare[$k] = '';
+        $bare[$r] = '';
+        for ($s = min($k, $kTo), $hi = max($k, $kTo); $ok && $s <= $hi; $s++) {
+            if (chess_attacked($bare, $s, $them)) { $ok = false; }
         }
-        if ($ok) { $out[] = [$e, $e + ($rookFile === 7 ? 2 : -2), '']; }
+        if ($ok) { $out[] = [$k, $x ? $r : $kTo, '']; }
     }
+}
+
+// Ход — рокировка: король на свою ладью (960) или на два поля (обычные).
+function chess_is_castle(array $p, int $from, int $to): bool {
+    $pc = $p['b'][$from];
+    if (strtolower($pc) !== 'k') { return false; }
+    if ($p['b'][$to] === ($pc === 'K' ? 'R' : 'r')) { return true; }
+    return empty($p['x']) && abs($to - $from) === 2;
 }
 
 // Сделать ход без проверки правил (ход уже из списка разрешённых).
@@ -261,24 +369,29 @@ function chess_make(array $p, int $from, int $to, string $promo = ''): array {
     $pc = $b[$from];
     $c = chess_color($pc);
     $kind = strtolower($pc);
-    $capture = $b[$to] !== '';
-    if ($kind === 'p' && $to === $p['ep'] && $from % 8 !== $to % 8 && !$capture) {
-        $b[$to + ($c === 'w' ? -8 : 8)] = '';
-        $capture = true;
-    }
-    $b[$to] = $promo !== '' ? ($c === 'w' ? strtoupper($promo) : strtolower($promo)) : $pc;
-    $b[$from] = '';
-    if ($kind === 'k' && abs($to - $from) === 2) {
-        $kingSide = $to > $from;
-        $rf = $kingSide ? $from + 3 : $from - 4;
-        $rt = $kingSide ? $from + 1 : $from - 1;
-        $b[$rt] = $b[$rf];
+    $capture = false;
+    if (chess_is_castle($p, $from, $to)) {
+        $row = $from - $from % 8;
+        $long = $to < $from;
+        $rf = $b[$to] !== '' ? $to : $row + ($long ? 0 : 7);
+        $rook = $b[$rf];
+        $b[$from] = '';
         $b[$rf] = '';
+        $b[$row + ($long ? 2 : 6)] = $pc;
+        $b[$row + ($long ? 3 : 5)] = $rook;
+    } else {
+        $capture = $b[$to] !== '';
+        if ($kind === 'p' && $to === $p['ep'] && $from % 8 !== $to % 8 && !$capture) {
+            $b[$to + ($c === 'w' ? -8 : 8)] = '';
+            $capture = true;
+        }
+        $b[$to] = $promo !== '' ? ($c === 'w' ? strtoupper($promo) : strtolower($promo)) : $pc;
+        $b[$from] = '';
     }
-    $rights = $p['c'];
-    if ($kind === 'k') { $rights = str_replace($c === 'w' ? ['K', 'Q'] : ['k', 'q'], '', $rights); }
-    foreach ([0 => 'Q', 7 => 'K', 56 => 'q', 63 => 'k'] as $corner => $right) {
-        if ($from === $corner || $to === $corner) { $rights = str_replace($right, '', $rights); }
+    $rights = '';
+    foreach (chess_rights($p) as $right => $sq) {
+        if (($kind === 'k' && chess_color($right) === $c) || $sq === $from || $sq === $to) { continue; }
+        $rights .= $right;
     }
     return [
         'b' => $b,
@@ -287,6 +400,7 @@ function chess_make(array $p, int $from, int $to, string $promo = ''): array {
         'ep' => ($kind === 'p' && abs($to - $from) === 16) ? intdiv($from + $to, 2) : -1,
         'h' => ($kind === 'p' || $capture) ? 0 : $p['h'] + 1,
         'f' => $p['f'] + ($p['t'] === 'b' ? 1 : 0),
+        'x' => !empty($p['x']),
     ];
 }
 
@@ -319,7 +433,7 @@ function chess_san(array $p, string $uci): string {
     [$from, $to, $promo] = $m;
     $pc = $p['b'][$from];
     $kind = strtoupper($pc);
-    if ($kind === 'K' && abs($to - $from) === 2) {
+    if (chess_is_castle($p, $from, $to)) {
         $s = $to > $from ? 'O-O' : 'O-O-O';
     } else {
         $capture = $p['b'][$to] !== '' || ($kind === 'P' && $to === $p['ep'] && $from % 8 !== $to % 8);
@@ -399,10 +513,11 @@ function chess_outcome(array $p, array $keys): string {
     return $n >= 3 ? 'repeat' : '';
 }
 
-// Партия из начальной позиции по списку ходов: [позиция, ключи позиций] или
-// null, если какой-то ход нельзя сделать.
-function chess_replay(array $moves): ?array {
-    $p = chess_from_fen(CHESS_START);
+// Партия из начальной позиции ($start — FEN начала, для 960 своя) по списку
+// ходов: [позиция, ключи позиций] или null, если какой-то ход нельзя сделать.
+function chess_replay(array $moves, string $start = CHESS_START): ?array {
+    $p = chess_from_fen($start);
+    if ($p === null) { return null; }
     $keys = [chess_key($p)];
     foreach ($moves as $uci) {
         $p = chess_move($p, (string)$uci);
@@ -414,8 +529,8 @@ function chess_replay(array $moves): ?array {
 
 // Ключи позиций партии по уже проверенным ходам — без генератора ходов:
 // так повторение после каждого хода считается быстро и на длинной партии.
-function chess_keys(array $moves): array {
-    $p = chess_from_fen(CHESS_START);
+function chess_keys(array $moves, string $start = CHESS_START): array {
+    $p = chess_from_fen($start) ?? chess_from_fen(CHESS_START);
     $keys = [chess_key($p)];
     foreach ($moves as $uci) {
         $uci = (string)$uci;

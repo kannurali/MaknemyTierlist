@@ -90,6 +90,8 @@ function cm_sqlite_tables(PDO $pdo): void {
         due_at INTEGER NOT NULL DEFAULT 0, draw_by TEXT NOT NULL DEFAULT '', msg_id INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'on', result TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '',
         rev INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)");
+    // docs/migrations/2026-11-28-cm-chess960.sql
+    $pdo->exec("ALTER TABLE cm_chess ADD COLUMN start_fen TEXT NOT NULL DEFAULT ''");
     $pdo->exec("CREATE TABLE IF NOT EXISTS cm_couples (
         id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id INTEGER NOT NULL, a_id INTEGER NOT NULL, b_id INTEGER NOT NULL,
         since INTEGER NOT NULL, xp INTEGER NOT NULL DEFAULT 0, xp_day INTEGER NOT NULL DEFAULT 0,
