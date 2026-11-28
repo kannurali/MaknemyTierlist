@@ -27,8 +27,8 @@ foreach (TG_PAGES as $tgKey => $tgPage) { $tgMap[$tgKey] = $tgPage[0]; }
 <title>Шахматы — MAKNEMY</title>
 <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
 <base href="/" />
-<link rel="stylesheet" href="css/tg-chess.css?v=3" />
-<script src="js/tg-chess.js?v=5" defer></script>
+<link rel="stylesheet" href="css/tg-chess.css?v=4" />
+<script src="js/tg-chess.js?v=6" defer></script>
 <?php else: ?>
 <meta name="nx-tg-pages" content="<?= htmlspecialchars(json_encode($tgMap), ENT_QUOTES, 'UTF-8') ?>" />
 <base href="/" />

@@ -89,7 +89,10 @@
     promoCancel: "Отменить превращение",
     to: ", сюда можно пойти",
     take: ", можно взять",
+    castle: ", рокировка",
     picked: ", выбрано",
+    c960: "960",
+    c960Name: "Шахматы Фишера: расстановка 960",
     sndOn: "Выключить звук",
     sndOff: "Включить звук"
   };
@@ -338,7 +341,7 @@
     var f = idx(uci.slice(0, 2)), t = idx(uci.slice(2, 4));
     var kind = (board[f] || "").toLowerCase();
     var df = (t % 8) - (f % 8);
-    if (kind === "k" && Math.abs(df) === 2) { return "castle"; }
+    if (kind === "k" && (Math.abs(df) === 2 || isCastle(board, f, t))) { return "castle"; }
     if (uci.length > 4) { return "promote"; }
     return board[t] || (kind === "p" && df !== 0) ? "capture" : "move";
   }
@@ -414,9 +417,20 @@
     return b;
   }
 
-  function legalMap(list) {
+  function isCastle(board, f, t) {
+    var pc = board[f];
+    return !!pc && pc.toLowerCase() === "k" && board[t] === (pc === "K" ? "R" : "r");
+  }
+
+  function castleTo(f, long) {
+    var row = Math.floor(f / 8) * 8;
+    return { k: row + (long ? 2 : 6), r: row + (long ? 3 : 5) };
+  }
+
+  function legalMap(list, board) {
     var m = {};
     if (!list || !list.length) { return null; }
+    var castles = [];
     list.forEach(function (u) {
       if (typeof u !== "string" || u.length < 4) { return; }
       var f = idx(u.slice(0, 2)), t = idx(u.slice(2, 4));
@@ -424,8 +438,35 @@
       if (!m[f]) { m[f] = {}; }
       if (!m[f][t]) { m[f][t] = []; }
       m[f][t].push(u);
+      if (board && isCastle(board, f, t)) { castles.push([f, t, u]); }
+    });
+    castles.forEach(function (c) {
+      var k = castleTo(c[0], (c[1] % 8) < (c[0] % 8)).k;
+      if (k !== c[0] && !m[c[0]][k]) { m[c[0]][k] = [c[2]]; }
     });
     return m;
+  }
+
+  function lastPair(uci, side) {
+    if (typeof uci !== "string" || uci.length < 4) { return null; }
+    var f = idx(uci.slice(0, 2)), t = idx(uci.slice(2, 4));
+    if (f < 0 || t < 0) { return null; }
+    if (!side) { return [f, t]; }
+    var c = castleTo(f, side === "long");
+    return [f, c.k === f ? c.r : c.k];
+  }
+
+  function sanSide(san) {
+    if (typeof san !== "string" || san.indexOf("O-O") !== 0) { return ""; }
+    return san.indexOf("O-O-O") === 0 ? "long" : "short";
+  }
+
+  function uciSide(board, uci) {
+    var f = idx(uci.slice(0, 2)), t = idx(uci.slice(2, 4));
+    var pc = board[f] || "";
+    var df = (t % 8) - (f % 8);
+    if (!isCastle(board, f, t) && !(pc.toLowerCase() === "k" && Math.abs(df) === 2)) { return ""; }
+    return df < 0 ? "long" : "short";
   }
 
   function applyUci(board, uci) {
@@ -435,6 +476,15 @@
     if (!pc) { return b; }
     var kind = pc.toLowerCase();
     var df = (t % 8) - (f % 8);
+    if (isCastle(b, f, t)) {
+      var to = castleTo(f, df < 0);
+      var rk = b[t];
+      b[f] = "";
+      b[t] = "";
+      b[to.k] = pc;
+      b[to.r] = rk;
+      return b;
+    }
     if (kind === "p" && df !== 0 && !b[t]) { b[Math.floor(f / 8) * 8 + (t % 8)] = ""; }
     if (kind === "k" && Math.abs(df) === 2) {
       var row = Math.floor(f / 8) * 8;
@@ -721,6 +771,12 @@
     body.appendChild(ui.note);
     info.appendChild(ui.dot);
     info.appendChild(body);
+    ui.variant = el("span", "tc-var", T.c960);
+    ui.variant.setAttribute("role", "note");
+    ui.variant.setAttribute("aria-label", T.c960Name);
+    ui.variant.title = T.c960Name;
+    ui.variant.hidden = true;
+    info.appendChild(ui.variant);
     ui.snd = btn("tc-snd");
     ui.snd.addEventListener("click", toggleSnd);
     info.appendChild(ui.snd);
@@ -850,11 +906,8 @@
 
   function paint() {
     if (!ui || !view) { return; }
-    var lf = -1, lt = -1;
-    if (typeof view.last === "string" && view.last.length >= 4) {
-      lf = idx(view.last.slice(0, 2));
-      lt = idx(view.last.slice(2, 4));
-    }
+    var lp = view.lastPair || [-1, -1];
+    var lf = lp[0], lt = lp[1];
     var chk = typeof view.check === "string" ? idx(view.check) : -1;
     var over = down && down.over != null ? down.over : -1;
     for (var i = 0; i < 64; i++) {
@@ -867,8 +920,9 @@
       if (i === sel) { cls += " is-sel"; lab += T.picked; }
       if (i === chk) { cls += " is-check"; }
       if (targets && targets[i]) {
+        var cas = sel >= 0 && targets[i].length === 1 && uciSide(view.board, targets[i][0]) !== "";
         cls += code || isPassant(i) ? " is-take" : " is-to";
-        lab += code ? T.take : T.to;
+        lab += cas ? T.castle : code ? T.take : T.to;
       }
       if (i === over) { cls += " is-over"; }
       if (b.className !== cls) { b.className = cls; }
@@ -884,12 +938,16 @@
 
   function fromState(s) {
     var me = s.me === "w" || s.me === "b" ? s.me : null;
+    var board = parseFen(s.fen);
+    var n = sanCount(s);
+    var last = typeof s.last === "string" ? s.last : null;
     return {
-      board: parseFen(s.fen),
+      board: board,
       turn: s.turn,
-      last: typeof s.last === "string" ? s.last : null,
+      last: last,
+      lastPair: lastPair(last, n ? sanSide(String(s.san[n - 1])) : ""),
       check: typeof s.check === "string" ? s.check : null,
-      legal: s.status === "on" && me && me === s.turn ? legalMap(s.legal) : null,
+      legal: s.status === "on" && me && me === s.turn ? legalMap(s.legal, board) : null,
       frozen: false
     };
   }
@@ -1134,6 +1192,7 @@
     if (!me && s.status === "on") { ui.note.insertBefore(icon("eye"), ui.note.firstChild); }
     ui.dot.className = "tc-dot" + (turn ? " is-" + turn : "");
     ui.dot.hidden = !turn;
+    ui.variant.hidden = s.c960 !== true;
     ui.info.className = "tc-info " + mode;
   }
 
@@ -1701,10 +1760,12 @@
       setPos(pcs[from], idx(uci.slice(2, 4)));
       pcs[from]._i = from;
     }
+    var side = uciSide(view.board, uci);
     view = {
       board: applyUci(view.board, uci),
       turn: other(mover),
       last: uci.slice(0, 4),
+      lastPair: lastPair(uci.slice(0, 4), side),
       check: null,
       legal: null,
       frozen: true,

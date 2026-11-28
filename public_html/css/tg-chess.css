@@ -451,6 +451,18 @@ button { font: inherit; color: inherit; }
 }
 .tc-info.is-mine .tc-dot::after { animation: tc-ping 1.8s var(--out) infinite; }
 .tc-info-body { flex: 1; min-width: 0; }
+.tc-var {
+  flex: none;
+  padding: 4px 9px 3px;
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--link);
+  font-family: var(--display);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: .04em;
+}
+.tc-var[hidden] { display: none; }
 .tc-snd {
   flex: none;
   display: grid;
