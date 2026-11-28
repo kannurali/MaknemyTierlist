@@ -36,7 +36,7 @@ foreach (TG_PAGES as $tgKey => $tgPage) { $tgMap[$tgKey] = $tgPage[0]; }
 <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
 <base href="/" />
 <link rel="stylesheet" href="css/tg-snake.css?v=1" />
-<script src="js/tg-snake.js?v=1" defer></script>
+<script src="js/tg-snake.js?v=2" defer></script>
 <?php else: ?>
 <meta name="nx-tg-pages" content="<?= htmlspecialchars(json_encode($tgMap), ENT_QUOTES, 'UTF-8') ?>" />
 <base href="/" />
