@@ -83,7 +83,7 @@
     var sch = q ? q.get("scheme") : "";
     return {
       slow: num("slow", 1, 0.02, 4),
-      speed: num("speed", 6.75, 3, 20),
+      speed: num("speed", 5.25, 3, 20),
       seed: isFinite(seed) ? seed : Math.floor(Math.random() * 1e9),
       scheme: sch === "light" || sch === "dark" ? sch : ""
     };
